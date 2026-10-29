@@ -1,12 +1,8 @@
 # Como publicar uma versão
 
 1. Atualize `version` em `package.json` (o Tauri lê a versão de lá) e registre as novidades em `CHANGELOG.md`.
-2. Faça commit e envie uma tag com o mesmo número:
-   ```bash
-   git tag v0.2.0
-   git push origin main --tags
-   ```
-3. O GitHub Actions (`.github/workflows/release.yml`) gera o instalador do Windows, assina a atualização e publica a Release com o arquivo `latest.json`.
+2. Faça commit e envie para a `main`.
+3. O GitHub Actions (`.github/workflows/release.yml`) percebe a versão nova, gera o instalador do Windows, assina a atualização e publica a Release `vX.Y.Z` com o arquivo `latest.json`. Se a Release daquela versão já existir, nada acontece.
 4. Quem já tem o jogo instalado recebe o aviso "Nova versão disponível" na próxima vez que abrir.
 
 ## Assinatura das atualizações

@@ -1,16 +1,42 @@
 name: Release (Windows)
 
-# Dispara quando uma tag de versão é enviada, por exemplo: v0.2.0
+# Publica uma versão nova sempre que o número em package.json muda na main.
+# Se a Release daquela versão já existir, nada é feito.
 on:
   push:
-    tags: ['v*']
+    branches: [main]
+    paths:
+      - 'package.json'
+      - '.github/workflows/release.yml'
   workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+      should_release: ${{ steps.v.outputs.should_release }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: v
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          if gh release view "v$VERSION" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release v$VERSION já existe; nada a fazer."
+            echo "should_release=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "should_release=true" >> "$GITHUB_OUTPUT"
+          fi
+
   build-windows:
+    needs: check
+    if: needs.check.outputs.should_release == 'true'
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -34,9 +60,10 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
-          tagName: ${{ github.ref_name }}
-          releaseName: 'GoverNation ${{ github.ref_name }}'
+          tagName: v${{ needs.check.outputs.version }}
+          releaseName: 'GoverNation v${{ needs.check.outputs.version }}'
           releaseBody: 'Veja as novidades em CHANGELOG.md.'
+          releaseCommitish: ${{ github.sha }}
           releaseDraft: false
           prerelease: false
           includeUpdaterJson: true
