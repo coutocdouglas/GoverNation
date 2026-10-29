@@ -16,6 +16,10 @@ Baixe o instalador `.exe` mais recente em **Releases** e execute. Depois disso, 
 npm install
 npm run tauri dev     # abre o jogo em modo de desenvolvimento
 npm run dev           # só a interface, no navegador
+npm test              # testes do motor do jogo
+npm run sim           # simula mandatos inteiros com estratégias diferentes
 ```
+
+O motor do jogo fica em `src/game/` e os números de balanceamento em `src/game/data/`.
 
 Requisitos para rodar o app localmente: Node 22 e Rust (via rustup).

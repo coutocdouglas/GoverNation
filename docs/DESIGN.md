@@ -199,8 +199,8 @@ Descontos: crises não respondidas, impeachment, inflação acima de 10%.
 
 | Versão | Conteúdo |
 |---|---|
-| 0.1 | Estrutura do app, atualização automática, tela inicial |
-| 0.2 | Motor de economia e grupos, turno mensal, salvar e carregar |
+| 0.1 | Estrutura do app, atualização automática, tela inicial ✓ |
+| 0.2 | Motor de economia e grupos, turno mensal, ações por decreto, salvar e carregar ✓ |
 | 0.3 | Congresso com 513 deputados e votação |
 | 0.4 | Catálogo de medidas, crises, nota final (primeiro mandato completo jogável) |
 | 0.5 | Texto livre com IA preenchendo a estrutura de medida |
