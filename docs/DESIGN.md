@@ -481,3 +481,44 @@ Saves antigos sem promessas: a parte das promessas sai e as outras são reescala
 - **Save versão 9:** `rival`, `profile` e `promises`. Migração: força = 35 + (50 − aprovação) × 0,5; pesquisas recalculadas pelo histórico; perfil vazio; sem promessas.
 - **Simulador** (`npm run sim`, agora com 5 promessas "de qualquer governo"): a ordem das estratégias não mudou (responde aos fatos 588 > austero 551 > equilibrado 509 > passivo 460 > populista 311; antes, 622 / 620 / 558 / 488 / 393, numa escala sem promessas). Com aprovação final perto de 48% o governo lidera a pesquisa em 27 de 30 partidas; perto de 42%, o rival lidera em quase todas. A obstrução só aparece com governo fraco.
 - **Fica para a 5B e a 5C:** a eleição de verdade (votos, 27 estados, apuração), falas do rival por IA, rival com metas próprias (derrubar ministro, derrotar o governo no plenário) e herança para o mandato seguinte.
+
+---
+
+## 24. Etapa 4C: Senado e Supremo (plano de 30/10, aguardando aprovação)
+
+- **Decisão do Douglas (30/10):** fazer a 4C depois da 5A e antes da 5B. Substitui a decisão 2 da seção 11 e a regra da seção 13 ("o Senado não vota leis"). Base: `docs/levantamento-video-1.md`, itens 25, 29, 30 e 31. Tudo fictício e próprio. Ficam fora: CPIs, vice, inteligência e governadores.
+- **Sugestão de divisão:** **4C1 Senado** (v0.12) e **4C2 Supremo** (v0.13), cada uma testada e publicada separadamente.
+
+### 24.1 Senado (4C1)
+
+- **81 senadores** dos 9 partidos fictícios, com bancadas próprias (o Senado é mais de centro e mais governista que a Câmara), lealdade e ruído como os deputados. A regra de voto é a mesma da Câmara (`deputyScore`), com pesos próprios em `src/game/data/senado.ts`.
+- **O que passa pelo Senado:** lei ordinária e MP (maioria dos presentes), lei complementar (41 votos) e PEC (49 votos, em dois turnos). Decreto não passa.
+- **Quando vota:** lei, LC e MP aprovadas na Câmara vão ao Senado **no mesmo encerramento de mês**, logo depois (assim a resposta ao fato do mês continua resolvendo no mesmo mês). PEC vai ao Senado **no mês seguinte**.
+- **Presidente do Senado** (personagem novo, com retrato): tem relação com o governo e, se estiver de mal, segura um projeto por mês, como o presidente da Câmara. Conversar com ele é uma articulação.
+- **Negociação no Senado:** mesma janela da Câmara, com aba "Senado": previsão de placar, plenário de 81 cadeiras e lideranças. Até **2 lideranças por mês** no Senado (além das 3 da Câmara), com os mesmos preços (emendas, pauta, cargos ou "não vende").
+- **Rejeitado no Senado:** o projeto volta para a fila com o mesmo prazo de 6 meses, custa um pouco de aprovação, conta como derrota para o rival (5A) e vira manchete ("o assunto volta, e você volta mais fraco"). A obstrução do rival também vale no Senado.
+- **Animação:** o painel de votação ganha a versão do Senado (81 cadeiras). Votação simbólica vale nas duas casas.
+- **Fica para a 5B:** negociação por bancada estadual (3 senadores por estado, cada estado pedindo uma coisa), que precisa dos 27 estados.
+
+### 24.2 Supremo (4C2)
+
+- **11 ministros fictícios**, cada um com doutrina (garantista, moderado ou conservador, mais uma inclinação econômica), relação com o governo e quem o indicou (presidentes anteriores fictícios). Personagens no `CAST`, com retrato.
+- **Risco jurídico das medidas:** hoje só as medidas criadas pela IA têm. Passa a existir em todas (padrão "baixo"); umas 20 medidas do catálogo, as mais polêmicas, ganham "médio" ou "alto". A leitura do gabinete passa a mostrar o risco antes de assinar.
+- **Ação no Supremo:** todo mês, leis, MPs e decretos em vigor com risco médio ou alto podem ser contestados por partidos de oposição. A chance cresce com o risco e com a força do rival. No máximo um julgamento por mês.
+- **Julgamento:** um relator sorteado; os 11 votos aparecem um a um (painel pequeno). Cada ministro vota pela doutrina contra o texto da medida, pelo risco jurídico e pela relação com o governo. Maioria (6) derruba.
+- **Medida derrubada:** os efeitos são desfeitos (como a MP derrubada, que já existe), os grupos que ganharam sentem a perda, e vem um **fato do mês** com caminhos:
+  - **acatar** (custo pequeno);
+  - **mandar nova proposta** com instrumento mais forte (ex.: virou PEC), liberando o reenvio na hora;
+  - **criticar o Supremo** em público (a base gosta, o mercado e os ministros do Supremo não).
+- **Vaga no Supremo:** um ministro faz 75 anos durante o mandato (data fixa por ministro) e se aposenta. O presidente escolhe entre 3 nomes fictícios (técnico, aliado, conservador ou garantista, conforme o partido), cada um com bônus e risco. O **Senado sabatina** (41 votos) e pode rejeitar.
+- **Aba Governo** ganha a subaba "Supremo": os 11 ministros, ações em andamento e decisões passadas. Tudo vai para biografias e para a crônica.
+
+### 24.3 Save, testes e balanceamento
+
+- **Save:** versão 10 (Senado) e 11 (Supremo), com migração: projetos que já passaram na Câmara em saves antigos são considerados aprovados no Senado; o Supremo começa sem ações.
+- **Testes:** composição do Senado; quóruns (41 e 49); PEC em dois turnos nas duas casas; rejeição no Senado; negociação com limite de 2; voto de cada ministro; derrubada desfazendo efeitos; vaga e sabatina; retratos sem repetir; migrações.
+- **Simulador:** a ordem das estratégias não pode mudar; conferir quantas leis caem no Senado e no Supremo por mandato (alvo: o Senado barra poucas coisas que passaram na Câmara; o Supremo derruba de 0 a 2 medidas por mandato).
+
+### 24.4 Retratos
+
+- Precisam de rosto: presidente do Senado (1), 11 ministros do Supremo e 3 a 4 indicáveis para vaga, cerca de 16 pessoas. Há 1 retrato reservado para a magistratura; o resto sai dos retratos livres. A escolha de rosto do presidente cai de 54 para cerca de 39 opções.

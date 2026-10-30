@@ -9,11 +9,11 @@
 
 ## Próximo passo
 
-**Etapa 5B** (27 estados e apuração da eleição) ou **4C** (Senado e Supremo), à escolha do Douglas. A 5C (governo seguinte e herança) espera o vídeo do fim de mandato e da eleição. O levantamento do jogo de referência está em `docs/levantamento-video-1.md`.
+**Etapa 4C** (Senado e Supremo), escolhida pelo Douglas em 30/10. Plano em `docs/DESIGN.md`, seção 24, **aguardando aprovação**. Depois, 5B (27 estados e apuração). A 5C (governo seguinte e herança) espera o vídeo do fim de mandato e da eleição. O levantamento do jogo de referência está em `docs/levantamento-video-1.md`.
 
 Complexidade: alta. Use o **Opus**, numa conversa nova.
 
-Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdouglas/GoverNation. Leia CLAUDE.md, docs/ESTADO.md e docs/DESIGN.md. Quero fazer a etapa 5B."*
+Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdouglas/GoverNation. Leia CLAUDE.md, docs/ESTADO.md e docs/DESIGN.md. Quero fazer a etapa 4C (plano na seção 24 do DESIGN.md)."*
 
 ---
 
@@ -106,3 +106,4 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 | 30/10/2026 | v0.10.0 | Etapa 4B: comissões, relator e jabutis, presidente da Câmara, urgência, deixar na pauta, frentes, pautas-bomba, sanção/veto e derrubada, ministérios cedidos; votação animada no painel, voto simbólico e página de reação da sociedade; save 8 |
 | 30/10/2026 | — | Levantamento do vídeo 1 copiado para `docs/levantamento-video-1.md`; etapa 5 dividida em 5A, 5B e 5C; plano da 5A no DESIGN.md (seção 23), aguardando aprovação |
 | 30/10/2026 | v0.11.0 | Etapa 5A: posse em 3 passos, traços e hábitos, 5 promessas de posse com meta, rival com força, postura, ataques, obstrução e pesquisa mensal; nota final com promessas; save 9 |
+| 30/10/2026 | — | Decisão: 4C (Senado e Supremo) antes da 5B; plano no DESIGN.md (seção 24), aguardando aprovação |
