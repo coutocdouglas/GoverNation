@@ -624,7 +624,7 @@ Exposição a escândalo visível de 0 a 100 (item 20), CPIs (35), vice-presiden
 
 ### 26.1 Risco jurídico por regra (e não só por lista)
 
-- `legalRiskOf` passa a ser o **maior** entre a ficha (medidas da IA), a lista `LEGAL_RISK` e a **regra do instrumento**, calculada com o que o jogo já sabe de ccada assunto (`MATTERS` e `minimumInstrument` em `custom.ts`):
+- `legalRiskOf` passa a ser o **maior** entre a ficha (medidas da IA), a lista `LEGAL_RISK` e a **regra do instrumento**, calculada com o que o jogo já sabe de cada assunto (`MATTERS` e `minimumInstrument` em `custom.ts`):
   - decreto que **cria ou muda imposto** (efeito em receita): alto, "decreto não pode criar imposto";
   - decreto com **despesa nova permanente** acima de um limite (a definir no simulador, perto de 0,15% do PIB): médio, "despesa nova precisa de lei"; acima do dobro, alto;
   - **MP** sobre matéria que só lei pode tratar (penal, direito fundamental, Constituição): alto;
