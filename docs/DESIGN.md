@@ -484,10 +484,10 @@ Saves antigos sem promessas: a parte das promessas sai e as outras são reescala
 
 ---
 
-## 24. Etapa 4C: Senado e Supremo (plano de 30/10, aguardando aprovação)
+## 24. Etapa 4C: Senado e Supremo (plano aprovado em 30/10)
 
 - **Decisão do Douglas (30/10):** fazer a 4C depois da 5A e antes da 5B. Substitui a decisão 2 da seção 11 e a regra da seção 13 ("o Senado não vota leis"). Base: `docs/levantamento-video-1.md`, itens 25, 29, 30 e 31. Tudo fictício e próprio. Ficam fora: CPIs, vice, inteligência e governadores.
-- **Sugestão de divisão:** **4C1 Senado** (v0.12) e **4C2 Supremo** (v0.13), cada uma testada e publicada separadamente.
+- **Divisão aprovada:** **4C1 Senado** (v0.12) e depois **4C2 Supremo** (v0.13), cada uma testada e publicada separadamente.
 
 ### 24.1 Senado (4C1)
 
@@ -521,4 +521,4 @@ Saves antigos sem promessas: a parte das promessas sai e as outras são reescala
 
 ### 24.4 Retratos
 
-- Precisam de rosto: presidente do Senado (1), 11 ministros do Supremo e 3 a 4 indicáveis para vaga, cerca de 16 pessoas. Há 1 retrato reservado para a magistratura; o resto sai dos retratos livres. A escolha de rosto do presidente cai de 54 para cerca de 39 opções.
+- Precisam de rosto: presidente do Senado (1), 11 ministros do Supremo e 3 a 4 indicáveis para vaga, cerca de 16 pessoas. Há 1 retrato reservado para a magistratura; o resto sai dos retratos livres. A escolha de rosto do presidente cai de 54 para cerca de 39 opções (aprovado pelo Douglas).
