@@ -1,4 +1,5 @@
-import { interpretPrompt, ministerAdvicePrompt, parseAdvice, parseInterpretation, type Advice } from '../game/ai'
+import { interpretPrompt, ministerAdvicePrompt, ministerReviewPrompt, parseAdvice, parseInterpretation, parseReview, type Advice, type Review } from '../game/ai'
+import type { BillId } from '../game/types'
 import type { EventDef } from '../game/data/events'
 import type { AreaId } from '../game/data/ministers'
 import { interpretMeasure, interpretResponse, type MeasureRef } from '../game/interpret'
@@ -14,6 +15,7 @@ export interface Reading {
   matches: MeasureRef[]
   /** Fala de quem leu (só quando a IA respondeu). */
   speech: string
+  constraints: string[]
   source: 'ia' | 'palavras'
   fallback: string | null
 }
@@ -23,23 +25,29 @@ export async function readText(state: GameState, text: string, area: AreaId | nu
     if (area) return interpretResponse(text, area).map((id): MeasureRef => ({ kind: 'bill', id }))
     return interpretMeasure(text).matches
   }
-  if (!aiReady()) return { matches: keywords(), speech: '', source: 'palavras', fallback: null }
+  if (!aiReady()) return { matches: keywords(), speech: '', constraints: [], source: 'palavras', fallback: null }
   try {
     const raw = await callAi('interpretar', interpretPrompt(state, text, area))
     const r = parseInterpretation(raw, area)
     if (!r) throw new AiError('A IA respondeu fora do formato.')
     // A IA pode achar que nada serve; aí as palavras-chave ainda têm uma chance.
-    if (r.matches.length === 0) return { matches: keywords(), speech: r.speech, source: 'palavras', fallback: null }
-    return { matches: r.matches, speech: r.speech, source: 'ia', fallback: null }
+    if (r.matches.length === 0) return { matches: keywords(), speech: r.speech, constraints: [], source: 'palavras', fallback: null }
+    return { matches: r.matches, speech: r.speech, constraints: r.constraints, source: 'ia', fallback: null }
   } catch (e) {
-    return { matches: keywords(), speech: '', source: 'palavras', fallback: e instanceof AiError ? e.message : 'Falha na IA.' }
+    return { matches: keywords(), speech: '', constraints: [], source: 'palavras', fallback: e instanceof AiError ? e.message : 'Falha na IA.' }
   }
 }
 
-/** Conselho do ministro. Lança AiError se a IA não puder responder (o botão só aparece com IA ligada). */
-export async function askAdvice(state: GameState, ev: EventDef): Promise<Advice[]> {
-  const raw = await callAi('fala', ministerAdvicePrompt(state, ev))
-  const advice = parseAdvice(raw, ev.area)
-  if (advice.length === 0) throw new AiError('O ministro não conseguiu responder agora. Use o catálogo ou as suas palavras.')
+/** Opinião do ministro sobre o fato. Lança AiError se a IA não puder responder. */
+export async function askAdvice(state: GameState, ev: EventDef): Promise<Advice> {
+  const advice = parseAdvice(await callAi('fala', ministerAdvicePrompt(state, ev)), ev.area)
+  if (!advice) throw new AiError('O ministro não conseguiu responder agora. Tente de novo ou escreva com suas palavras.')
   return advice
+}
+
+/** Parecer do ministro sobre a ordem antes de assinar. */
+export async function askReview(state: GameState, area: AreaId, order: string, measure: BillId): Promise<Review> {
+  const r = parseReview(await callAi('fala', ministerReviewPrompt(state, area, order, measure)))
+  if (!r) throw new AiError('O ministro não conseguiu opinar agora.')
+  return r
 }

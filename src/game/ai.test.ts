@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { countryContext, interpretPrompt, ministerAdvicePrompt, parseAdvice, parseInterpretation, relationWith } from './ai'
+import { countryContext, interpretPrompt, ministerAdvicePrompt, ministerReviewPrompt, parseAdvice, parseInterpretation, parseReview, relationWith } from './ai'
 import { BILLS } from './data/bills'
 import { EVENTS } from './data/events'
 import { MINISTER_BY_AREA, MINISTERS } from './data/ministers'
@@ -52,26 +52,46 @@ describe('camada de IA (etapa 3B): pedidos', () => {
 })
 
 describe('camada de IA (etapa 3B): conferência das respostas', () => {
-  it('aceita JSON embrulhado e descarta ids inventados, repetidos ou de outra área', () => {
+  it('opinião: aceita JSON embrulhado e descarta ids inventados, repetidos ou de outra área', () => {
     const raw = '```json\n' + JSON.stringify({
-      sugestoes: [
-        { fala: 'Vamos salvar vidas.', medida: saude.id },
-        { fala: 'Inventei isto.', medida: 'medida_inexistente' },
-        { fala: 'Outra área.', medida: outra.id },
-        { fala: 'Repetida.', medida: saude.id },
-        { fala: 'Segunda boa.', medida: saude2.id },
+      parecer: 'Presidente, isto é sério.',
+      opcoes: [
+        { ordem: 'Declare emergência.', medida: saude.id },
+        { ordem: 'Inventei isto.', medida: 'medida_inexistente' },
+        { ordem: 'Outra área.', medida: outra.id },
+        { ordem: 'Repetida.', medida: saude.id },
+        { ordem: 'Segunda boa.', medida: saude2.id },
       ],
     }) + '\n```'
-    const a = parseAdvice(raw, 'saude')
-    expect(a.map((x) => x.measure)).toEqual([saude.id, saude2.id])
-    expect(a[0].speech).toBe('Vamos salvar vidas.')
+    const a = parseAdvice(raw, 'saude')!
+    expect(a.opinion).toBe('Presidente, isto é sério.')
+    expect(a.options.map((x) => x.measure)).toEqual([saude.id, saude2.id])
+    expect(a.options[0].order).toBe('Declare emergência.')
   })
 
-  it('resposta quebrada vira lista vazia (o jogo cai no plano B)', () => {
-    expect(parseAdvice('não sei', 'saude')).toEqual([])
-    expect(parseAdvice('{"sugestoes": "x"}', 'saude')).toEqual([])
+  it('resposta quebrada vira null (o jogo cai no plano B)', () => {
+    expect(parseAdvice('não sei', 'saude')).toBeNull()
+    expect(parseAdvice('{"parecer":"x","opcoes":"x"}', 'saude')).toBeNull()
+    expect(parseAdvice(JSON.stringify({ opcoes: [{ ordem: 'a', medida: saude.id }] }), 'saude')).toBeNull()
     expect(parseInterpretation('{quebrado', null)).toBeNull()
-    expect(parseInterpretation('{"fala":"oi"}', null)).toBeNull()
+    expect(parseInterpretation('{"resumo":"oi"}', null)).toBeNull()
+  })
+
+  it('leitura traz resumo e condições do presidente', () => {
+    const r = parseInterpretation(JSON.stringify({ medidas: [saude.id], resumo: 'Você decreta.', respeitando: ['sem novo tributo', 5, '', 'a', 'b', 'c'] }), 'saude')!
+    expect(r.speech).toBe('Você decreta.')
+    expect(r.constraints).toEqual(['sem novo tributo', 'a', 'b', 'c'])
+  })
+
+  it('parecer antes de assinar: posição, fala e até 3 sugestões', () => {
+    const req = ministerReviewPrompt(s, 'saude', 'Declare emergência', saude.id)
+    expect(req.user).toContain(saude.name)
+    const r = parseReview(JSON.stringify({ posicao: 'Apoia com ressalva', fala: '"Concordo."', sugestoes: ['a', 'b', 'c', 'd'] }))!
+    expect(r.stance).toBe('ressalva')
+    expect(r.speech).toBe('Concordo.')
+    expect(r.suggestions).toHaveLength(3)
+    expect(parseReview(JSON.stringify({ posicao: 'contra', fala: 'Não.' }))!.stance).toBe('contra')
+    expect(parseReview('{}')).toBeNull()
   })
 
   it('interpreta decretos rápidos só na medida do mês', () => {
@@ -84,6 +104,6 @@ describe('camada de IA (etapa 3B): conferência das respostas', () => {
     const ids = BILLS.slice(0, 6).map((b) => b.id)
     const r = parseInterpretation(JSON.stringify({ medidas: ids, fala: 'a'.repeat(1000) }), null)!
     expect(r.matches).toHaveLength(3)
-    expect(r.speech.length).toBe(300)
+    expect(r.speech.length).toBe(600)
   })
 })

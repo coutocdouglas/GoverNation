@@ -56,23 +56,25 @@ export interface AiRequest {
   maxTokens: number
 }
 
-/** Pedido de conselho: o ministro sugere 2 ou 3 respostas ao fato do mês, no estilo dele. */
+/** Pedido de opinião: o ministro dá um parecer e 2 ou 3 ordens prontas, no estilo dele. */
 export function ministerAdvicePrompt(state: GameState, ev: EventDef): AiRequest {
   const m = MINISTER_BY_AREA[ev.area]
   const catalog = BILLS.filter((b) => b.area === ev.area).map((b) => billLine(b.id)).join('\n')
   return {
     system: [
-      `Você é ${m.name}, ${m.role} do Brasil num jogo de simulação política. Todos os personagens são fictícios.`,
+      `Você é ${m.name}, ${m.role} do Brasil num jogo de simulação política. Todos os personagens são fictícios; não cite pessoas reais.`,
       `Partido: ${PARTY_BY_ID[m.party].name}. Você é ${relationWith(state, m)}.`,
       `Seu jeito: ${m.style}`,
-      'Fale com o presidente em português do Brasil, em primeira pessoa, no seu estilo. Seja breve.',
-      'Você só pode propor medidas da lista do catálogo da sua área, pelo id exato. Não invente medidas, números, custos ou votos: o jogo calcula isso.',
+      'O presidente pediu a sua opinião sobre o fato do mês. Fale como numa reunião de gabinete de verdade, em português do Brasil, em primeira pessoa, no seu estilo e com os seus interesses políticos.',
+      'Primeiro, um parecer de 3 a 5 frases: o que está em jogo (vidas, votos, mercado, aliados, estados), o risco de não agir e o que você defende. Pode ser franco e até puxar a sardinha para o seu lado.',
+      'Depois, 2 ou 3 opções de ordem que o presidente pode dar. Cada opção é UMA frase no imperativo, como o presidente assinaria (ex.: "Declare emergência sanitária e libere verba extra aos estados afetados."), com detalhes concretos.',
+      'Cada opção precisa corresponder a uma medida do catálogo da sua área, informada pelo id exato. Não invente custos, números de votos ou efeitos.',
       'Responda SOMENTE com JSON, sem texto fora dele, no formato:',
-      '{"sugestoes":[{"fala":"até 2 frases suas defendendo a ideia","medida":"id_do_catalogo"}]}',
-      'Dê 2 ou 3 sugestões diferentes, da que você mais defende para a que menos defende.',
+      '{"parecer":"...","opcoes":[{"ordem":"...","medida":"id_do_catalogo"}]}',
+      'Ordene as opções da que você mais defende para a que menos defende.',
     ].join('\n'),
     user: `${countryContext(state)}\n\nFato do mês (${ev.title}): ${ev.text}\n\nCatálogo da sua área (id | nome):\n${catalog}`,
-    maxTokens: 500,
+    maxTokens: 900,
   }
 }
 
@@ -92,11 +94,13 @@ export function interpretPrompt(state: GameState, text: string, area: AreaId | n
       'O presidente escreveu, com as palavras dele, o que quer fazer. Sua tarefa é achar no catálogo as medidas que fazem isso.',
       'Use só ids exatos do catálogo. Não invente medidas nem números. Se nada no catálogo serve, devolva a lista vazia.',
       'Responda SOMENTE com JSON, sem texto fora dele, no formato:',
-      '{"medidas":["id_mais_provavel","segunda_opcao"],"fala":"1 frase sua ao presidente explicando o que entendeu"}',
+      '{"medidas":["id_mais_provavel","segunda_opcao"],"resumo":"...","respeitando":["..."]}',
       'No máximo 3 medidas, da mais provável para a menos provável.',
+      '"resumo": 2 a 3 frases, em segunda pessoa ("Você decreta..."), dizendo o que a ordem faz na prática, com os detalhes que o presidente deu.',
+      '"respeitando": até 4 condições curtas que o presidente impôs (ex.: "sem criar novo tributo"). Lista vazia se não houver.',
     ].join('\n'),
     user: `${countryContext(state)}\n\nO presidente escreveu: """${text.slice(0, 600)}"""\n\nCatálogo (id | nome):\n${lines.join('\n')}`,
-    maxTokens: 300,
+    maxTokens: 500,
   }
 }
 
@@ -117,33 +121,42 @@ const cleanText = (t: unknown, max: number) =>
 const validBill = (id: unknown, area: AreaId | null): id is BillId =>
   typeof id === 'string' && id in BILL_BY_ID && (area === null || BILL_BY_ID[id].area === area)
 
-export interface Advice {
-  speech: string
+export interface AdviceOption {
+  /** Ordem pronta, no imperativo: vai para o campo de resposta. */
+  order: string
   measure: BillId
 }
+export interface Advice {
+  opinion: string
+  options: AdviceOption[]
+}
 
-/** Confere o conselho do ministro. Sugestões com id inválido ou de outra área são descartadas. */
-export function parseAdvice(raw: string, area: AreaId): Advice[] {
-  const data = extractJson(raw) as { sugestoes?: unknown } | null
-  if (!data || !Array.isArray(data.sugestoes)) return []
-  const out: Advice[] = []
-  for (const s of data.sugestoes as { fala?: unknown; medida?: unknown }[]) {
-    if (!s || !validBill(s.medida, area) || out.some((o) => o.measure === s.medida)) continue
-    const speech = cleanText(s.fala, 300)
-    if (speech) out.push({ speech, measure: s.medida })
-    if (out.length === 3) break
+/** Confere a opinião do ministro. Opções com id inválido ou de outra área são descartadas. */
+export function parseAdvice(raw: string, area: AreaId): Advice | null {
+  const data = extractJson(raw) as { parecer?: unknown; opcoes?: unknown } | null
+  if (!data || !Array.isArray(data.opcoes)) return null
+  const options: AdviceOption[] = []
+  for (const o of data.opcoes as { ordem?: unknown; medida?: unknown }[]) {
+    if (!o || !validBill(o.medida, area) || options.some((x) => x.measure === o.medida)) continue
+    const order = cleanText(o.ordem, 300)
+    if (order) options.push({ order, measure: o.medida })
+    if (options.length === 3) break
   }
-  return out
+  const opinion = cleanText(data.parecer, 900)
+  return options.length && opinion ? { opinion, options } : null
 }
 
 export interface AiReading {
   matches: MeasureRef[]
+  /** O que a ordem faz, na leitura da IA. */
   speech: string
+  /** Condições que o presidente impôs. */
+  constraints: string[]
 }
 
 /** Confere a interpretação. Só sobram ids reais do catálogo (e da área, quando houver). */
 export function parseInterpretation(raw: string, area: AreaId | null): AiReading | null {
-  const data = extractJson(raw) as { medidas?: unknown; fala?: unknown } | null
+  const data = extractJson(raw) as { medidas?: unknown; resumo?: unknown; fala?: unknown; respeitando?: unknown } | null
   if (!data || !Array.isArray(data.medidas)) return null
   const matches: MeasureRef[] = []
   for (const id of data.medidas) {
@@ -157,5 +170,41 @@ export function parseInterpretation(raw: string, area: AreaId | null): AiReading
     if (ref && !matches.some((m) => m.kind === ref.kind && m.id === ref.id)) matches.push(ref)
     if (matches.length === 3) break
   }
-  return { matches, speech: cleanText(data.fala, 300) }
+  const constraints = Array.isArray(data.respeitando) ? data.respeitando.map((c) => cleanText(c, 120)).filter(Boolean).slice(0, 4) : []
+  return { matches, speech: cleanText(data.resumo ?? data.fala, 600), constraints }
+}
+
+/** Pedido de parecer do ministro sobre a ordem que o presidente vai assinar. */
+export function ministerReviewPrompt(state: GameState, area: AreaId, order: string, measure: BillId): AiRequest {
+  const m = MINISTER_BY_AREA[area]
+  const b = BILL_BY_ID[measure]
+  return {
+    system: [
+      `Você é ${m.name}, ${m.role} do Brasil num jogo de simulação política. Todos os personagens são fictícios; não cite pessoas reais.`,
+      `Partido: ${PARTY_BY_ID[m.party].name}. Você é ${relationWith(state, m)}.`,
+      `Seu jeito: ${m.style}`,
+      'O presidente vai assinar uma ordem e quer ouvir você antes. Opine pelo que você acredita e pelos seus interesses, não necessariamente pelo melhor para o país.',
+      'Responda SOMENTE com JSON: {"posicao":"apoia|ressalva|contra","fala":"2 a 4 frases suas, entre aspas na boca do personagem","sugestoes":["até 3 ajustes concretos, cada um uma frase no imperativo"]}',
+      'Não invente custos, votos ou números de efeito: o jogo calcula isso.',
+    ].join('\n'),
+    user: `${countryContext(state)}\n\nOrdem do presidente: """${order.slice(0, 900)}"""\nComo o gabinete entendeu: ${b.name} (${INSTRUMENTS[b.instrument].label}). ${b.summary} Prós: ${b.pros} Contras: ${b.cons}`,
+    maxTokens: 600,
+  }
+}
+
+export type Stance = 'apoia' | 'ressalva' | 'contra'
+export interface Review {
+  stance: Stance
+  speech: string
+  suggestions: string[]
+}
+
+export function parseReview(raw: string): Review | null {
+  const data = extractJson(raw) as { posicao?: unknown; fala?: unknown; sugestoes?: unknown } | null
+  if (!data) return null
+  const pos = String(data.posicao ?? '').toLowerCase()
+  const stance: Stance = pos.startsWith('contra') ? 'contra' : pos.includes('ressalva') ? 'ressalva' : 'apoia'
+  const speech = cleanText(data.fala, 700).replace(/^["“]|["”]$/g, '')
+  const suggestions = Array.isArray(data.sugestoes) ? data.sugestoes.map((x) => cleanText(x, 250)).filter(Boolean).slice(0, 3) : []
+  return speech ? { stance, speech, suggestions } : null
 }

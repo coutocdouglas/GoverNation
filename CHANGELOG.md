@@ -1,5 +1,11 @@
 # Novidades
 
+## 0.7.2
+- **Opinião do ministro como numa reunião de verdade:** com a IA ligada, “🗣️ Pedir a opinião” traz um parecer em parágrafo (o que está em jogo, o risco de não agir, o que ele defende, puxando para os interesses do partido dele) e 2 ou 3 ordens prontas. Clique em **“Usar: …”** e a ordem vai para o campo **A sua resposta**, onde você pode editar.
+- **Leitura do gabinete antes de assinar:** “Ler com os ministros” abre uma folha com o que a ordem faz na prática, as condições que você impôs, o que ela vira (decreto, MP, lei, PEC), o impacto fiscal, quando resolve o fato, o que muda no país e **quem sente** (aprovação de cada grupo hoje → depois). Nada é assinado até você confirmar.
+- **Ouvir o ministro antes de assinar:** ele diz se apoia, apoia com ressalva ou é contra, explica com as palavras dele e sugere ajustes. “Acatar as sugestões e reescrever” junta os ajustes à sua ordem.
+- Os números continuam vindo do jogo; a IA escreve as falas e escolhe a medida do catálogo.
+
 ## 0.7.1
 - **Outros provedores de IA:** nas configurações (🤖 IA), escolha entre Claude, **Gemini (Google)**, Groq ou OpenRouter. Cada um guarda a própria chave, só neste computador.
 - Modelos sugeridos por provedor e tarefa (no Gemini: Flash-Lite para as falas, Flash para ler o texto). Dá para digitar o nome de outro modelo se o provedor lançar um novo.
