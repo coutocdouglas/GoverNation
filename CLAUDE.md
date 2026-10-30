@@ -4,6 +4,7 @@ Jogo pessoal de simulação política para Windows (Tauri + React + TypeScript).
 
 ## Antes de mexer
 
+0. Leia **`docs/ESTADO.md`**: onde o projeto está e qual é o próximo passo. **Atualize-o a cada mudança** (estado atual, próximo passo e uma linha no histórico).
 1. Leia `docs/DESIGN.md` (decisões e roteiro) e `CHANGELOG.md` (o que já existe).
 2. Rode `npm ci`, `npm test`, `npx tsc -b`, `npx oxlint`.
 3. Trabalhe **uma etapa por vez** e feche-a antes de abrir outra. Cada etapa termina com: testes passando, partida jogada no navegador (`npx vite build && npx vite preview`), CHANGELOG e DESIGN.md atualizados, versão nova publicada.
@@ -33,7 +34,7 @@ Cada mensagem faz o Claude reler a conversa inteira; conversas longas custam mui
 
 Continue na mesma conversa quando estiver no meio de uma etapa, corrigindo algo que acabou de ser feito.
 
-**Como começar a conversa nova:** "Projeto GoverNation, repositório coutocdouglas/GoverNation. Leia CLAUDE.md e docs/DESIGN.md. Quero fazer a etapa X." Não precisa reenviar prints antigos: o que importa já está no DESIGN.md.
+**Como começar a conversa nova:** "Projeto GoverNation, repositório coutocdouglas/GoverNation. Leia CLAUDE.md, docs/ESTADO.md e docs/DESIGN.md. Quero fazer a etapa X." Não precisa reenviar prints antigos: o que importa já está no ESTADO.md e no DESIGN.md.
 
 ## Roteiro atual (detalhes em docs/DESIGN.md, seções 11 a 16)
 

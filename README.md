@@ -2,6 +2,7 @@
 
 Jogo de simulação política para Windows: governe um país por 48 meses, negocie com o Congresso, equilibre a economia e receba uma nota no fim do mandato.
 
+- **Estado atual e próximo passo: [`docs/ESTADO.md`](docs/ESTADO.md)**
 - Desenho do jogo: [`docs/DESIGN.md`](docs/DESIGN.md)
 - Novidades: [`CHANGELOG.md`](CHANGELOG.md)
 - Como publicar versões: [`docs/RELEASES.md`](docs/RELEASES.md)
