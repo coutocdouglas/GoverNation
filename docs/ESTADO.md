@@ -9,14 +9,16 @@
 
 ## Próximo passo
 
-**Etapa 4B: resto do Congresso 2.0.** A 4A (votação com negociação por lideranças) ficou pronta na v0.8.0.
+**Etapa 3C: medidas livres montadas pela IA** (decidida em 30/10, antes da 4B). Ver DESIGN.md, seção 21.
 
-- Veto presidencial e derrubada do veto; relator e emendas ao texto; comissões; presidente da Câmara; frentes temáticas; pautas-bomba; ministérios cedidos de verdade (troca de ministro); "deixar na pauta" sem votar; risco no Supremo (ver DESIGN.md, seção 20).
-- Opcional: falas das lideranças geradas pela IA (hoje são modelos fixos).
+- A IA primeiro procura no catálogo; se nada servir, monta uma ficha de medida nova (instrumento, área, posição, custo, ganhadores e perdedores, risco jurídico).
+- O motor confere e corrige (instrumento obrigatório, limites, "não existe almoço grátis") e calcula votos, contas e aprovação como hoje.
+- A medida aprovada entra no catálogo daquele mandato e pode ser reusada.
+- Corrigir junto: hoje, quando a IA diz que nada serve, o jogo mostra a medida mais parecida mesmo assim.
 
-Complexidade: alta. Use o **Opus**, numa conversa nova.
+Complexidade: alta. Use o **Opus**, numa conversa nova. Depois vem a **4B** (resto do Congresso 2.0).
 
-Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdouglas/GoverNation. Leia CLAUDE.md, docs/ESTADO.md e docs/DESIGN.md. Quero fazer a etapa 4B."*
+Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdouglas/GoverNation. Leia CLAUDE.md, docs/ESTADO.md e docs/DESIGN.md. Quero fazer a etapa 3C."*
 
 ---
 
@@ -95,3 +97,4 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 | 30/10/2026 | v0.7.2 | Opinião do ministro em parágrafo com ordens "Usar", folha de leitura antes de assinar (vira, custo, quem sente) e parecer do ministro com sugestões |
 | 30/10/2026 | v0.7.3 | Gemini: modelo padrão corrigido (gemini-3.5-flash-lite nas duas tarefas, testado pelo Douglas); motivo da última falha visível no gasto medido |
 | 30/10/2026 | v0.8.0 | Etapa 4A: janela de votação com plenário e negociação com lideranças (3 por mês: emendas, pauta, cargos); risco de escândalo; sem opções prontas com IA fora do modo fácil |
+| 30/10/2026 | — | Decisão: etapa 3C (medidas livres montadas pela IA, entrando no catálogo do mandato) antes da 4B |
