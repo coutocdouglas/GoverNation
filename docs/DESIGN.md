@@ -234,3 +234,13 @@ Tomadas depois de estudar o tutorial do jogo de referência. Valem para as próx
 10. **Vários finais**, tutorial revisável nas configurações e botão de bugs e sugestões em toda tela.
 
 Fica para os blocos seguintes: gabinete, governadores, gabinete secreto, empresas, diplomacia, projetos de mandato inteiro, vida pessoal do presidente.
+
+---
+
+## 12. Visual e painel (29/10/2026, v0.2.1)
+
+1. **Cara de jogo sem perder complexidade:** ícones, animações e elementos visuais que contam a história (banca de jornal, calendário virando, plantão). Os ícones atuais são emojis provisórios.
+2. **O mês em 3 passos visíveis:** o que aconteceu → suas decisões → encerrar o mês.
+3. **A medida do mês fica sempre à vista**, num quadro próprio. Hoje ela é lida por palavras-chave (`src/game/interpret.ts`) e aponta para o catálogo de decretos; na v0.5 a IA preenche a mesma estrutura.
+4. **Seções futuras aparecem bloqueadas no menu**, para o jogador entender o que vem.
+5. **Antes de governar haverá uma campanha** (criação do personagem, semanas de palanque, mapa por estado, pesquisas, montagem do ministério), como no jogo de referência. Entra depois que o governo estiver completo.

@@ -1,13 +1,40 @@
-import { useRef, useState } from 'react'
-import { ACTIONS, ACTIONS_PER_MONTH, blockedReason, effectMultiplier } from '../game/actions'
+import { useEffect, useRef, useState } from 'react'
+import { ACTION_BY_ID, ACTIONS, ACTIONS_PER_MONTH, blockedReason, effectMultiplier } from '../game/actions'
 import { GROUPS, GROUP_BY_ID } from '../game/data/groups'
 import { advanceMonth, isCopomMonth, monthLabel, TERM_MONTHS } from '../game/game'
 import { econPull } from '../game/groups'
+import { interpretMeasure } from '../game/interpret'
 import type { ActionId, Cause, GameState, GroupId, IndicatorKey } from '../game/types'
 import { INDICATORS, num, signed, type IndicatorMeta } from './format'
 import { Sparkline } from './Sparkline'
+import './painel.css'
 
 type Detail = { kind: 'indicator'; key: IndicatorKey } | { kind: 'group'; id: GroupId } | null
+type Step = 1 | 2 | 3
+
+/** Ícones provisórios (emojis). Serão trocados por ícones próprios do jogo. */
+const INDICATOR_ICON: Record<IndicatorKey, string> = {
+  growth: '📈', inflation: '🛒', selic: '🏦', unemployment: '👷',
+  debt: '📉', primary: '💰', confidence: '🤝', fx: '💵',
+}
+const GROUP_ICON: Record<GroupId, string> = {
+  trabalhadores: '👷', baixaRenda: '🏘️', classeMedia: '🏠', empresarios: '🏢',
+  agro: '🚜', servidores: '🏛️', jovens: '🎓',
+}
+const ACTION_ICON: Record<ActionId, string> = {
+  cortarGastos: '✂️', liberarGastos: '💸', anteciparObras: '🏗️', pressionarBC: '📣',
+  subirIOF: '⬆️', reduzirIOF: '⬇️', pronunciamento: '📺',
+}
+/** Seções do menu que ainda não existem, com a versão prevista. */
+const SECTIONS = [
+  { icon: '🏛️', name: 'Governo', soon: 'Congresso chega na v0.3' },
+  { icon: '🗺️', name: 'Nação', soon: 'Em versão futura' },
+  { icon: '💹', name: 'Economia', soon: 'Orçamento e impostos em versão futura' },
+  { icon: '🌎', name: 'Diplomacia', soon: 'Em versão futura' },
+  { icon: '🚀', name: 'Programas', soon: 'Em versão futura' },
+  { icon: '👤', name: 'Vida pessoal', soon: 'Em versão futura' },
+]
+const ELECTION_MONTH = 45 // outubro do 4º ano (mês 46, contando de 1)
 
 export function GameScreen({ state, onChange, onExit }: {
   state: GameState
@@ -16,138 +43,438 @@ export function GameScreen({ state, onChange, onExit }: {
 }) {
   const [selected, setSelected] = useState<ActionId[]>([])
   const [detail, setDetail] = useState<Detail>(null)
-  const centerRef = useRef<HTMLElement>(null)
+  const [step, setStep] = useState<Step>(1)
+  const [turning, setTurning] = useState(false)
+  const [toasts, setToasts] = useState<{ id: number; text: string }[]>([])
+  const medidaRef = useRef<HTMLElement>(null)
   const history = state.history
   const now = history[history.length - 1]
   const prev = history.length > 1 ? history[history.length - 2] : null
   const report = state.lastReport
+
+  const toast = (text: string) => {
+    const id = Date.now() + Math.random()
+    setToasts((t) => [...t, { id, text }])
+    setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 5000)
+  }
 
   const toggle = (id: ActionId) =>
     setSelected((cur) =>
       cur.includes(id) ? cur.filter((x) => x !== id) : cur.length < ACTIONS_PER_MONTH ? [...cur, id] : cur,
     )
 
-  const endMonth = () => {
-    onChange(advanceMonth(state, selected))
-    setSelected([])
-    centerRef.current?.scrollTo({ top: 0 })
+  const goStep = (s: Step) => {
+    setStep(s)
+    if (s === 2) medidaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
   }
 
+  const endMonth = () => {
+    setTurning(true)
+    const next = advanceMonth(state, selected)
+    setTimeout(() => {
+      onChange(next)
+      setSelected([])
+      setStep(1)
+      setTurning(false)
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+      const news = next.lastReport?.headlines ?? []
+      news.slice(0, 2).forEach((h, i) => setTimeout(() => toast(`${h.tone === 'good' ? '🟢' : h.tone === 'bad' ? '🔴' : '📰'} ${h.text}`), 300 + i * 600))
+    }, 1500)
+  }
+
+  const nextMonth = state.month + 1
+
   return (
-    <div className="game">
-      <header className="game__top">
-        <div>
-          <div className="game__date">{monthLabel(state.month)}</div>
-          <div className="game__sub">
-            Presidente {state.presidentName} · mês {state.month + 1} de {TERM_MONTHS}
-            {isCopomMonth(state.month) ? ' · reunião do Copom este mês' : ''}
+    <div className="pn">
+      <header className="pn-top">
+        <div className="pn-flag" />
+        <div className="pn-bar">
+          <div className="pn-logo">GOVER<span>NATION</span></div>
+          <div className="pn-chips">
+            <span className="pn-chip" title="Juros básicos definidos pelo Banco Central">🏦 Selic <b>{num(now.indicators.selic, 2)}%</b></span>
+            {isCopomMonth(state.month) && <span className="pn-chip pn-chip--hot" title="O Banco Central decide os juros no fim deste mês">📅 Copom este mês</span>}
+            <span className="pn-chip" title="Decisões que você ainda pode tomar neste mês">✍️ Decisões <b>{ACTIONS_PER_MONTH - selected.length}/{ACTIONS_PER_MONTH}</b></span>
+            <button className="pn-chip pn-chip--btn" onClick={onExit}>☰ Menu</button>
           </div>
         </div>
-        <div className="game__approval">
-          <span>Aprovação</span>
-          <strong>{num(now.approval, 0)}%</strong>
-          {prev && <Delta value={now.approval - prev.approval} good={1} d={1} />}
-        </div>
-        <button className="btn" onClick={onExit}>Menu</button>
+        <nav className="pn-nav">
+          <a className="on">🏠 Painel</a>
+          {SECTIONS.map((s) => (
+            <a key={s.name} className="off" title={s.soon}>{s.icon} {s.name} <span className="pn-lock">🔒</span></a>
+          ))}
+        </nav>
       </header>
 
-      <div className="game__body">
-        <section className="panel">
-          <h2>Indicadores</h2>
-          <div className="indicators">
-            {INDICATORS.map((m) => (
-              <IndicatorCard
-                key={m.key}
-                meta={m}
-                values={history.map((h) => h.indicators[m.key])}
-                onClick={() => setDetail({ kind: 'indicator', key: m.key })}
-              />
-            ))}
+      <main className="pn-main">
+        <section className="pn-hero">
+          <div>
+            <div className="pn-sub">🇧🇷 Presidente da República</div>
+            <h1>{state.presidentName.toUpperCase()}</h1>
+            <div className="pn-sub">
+              Aprovação <b className={now.approval >= 50 ? 'up' : now.approval >= 35 ? 'warn' : 'dn'}>{num(now.approval, 0)}%</b>
+              {prev && <> · <Delta value={now.approval - prev.approval} good={1} d={1} /> no mês</>}
+            </div>
           </div>
-        </section>
-
-        <section className="panel panel--center" ref={centerRef}>
-          <h2>Diário do mês</h2>
-          {report ? (
-            <ul className="headlines">
-              {report.actionsTaken.length > 0 && (
-                <li className="headline headline--neutral">Governo: {report.actionsTaken.join(' e ').toLowerCase()}</li>
-              )}
-              {report.headlines.map((h, i) => (
-                <li key={i} className={`headline headline--${h.tone}`}>{h.text}</li>
+          <div className="pn-turn">
+            <div className="pn-month">{monthLabel(state.month)}</div>
+            <div className="pn-sub">
+              Mês <b>{state.month + 1}</b> de {TERM_MONTHS}
+              {state.month < ELECTION_MONTH ? <> · faltam <b>{ELECTION_MONTH - state.month}</b> meses para a eleição</> : <> · ano eleitoral</>}
+            </div>
+            <div className="pn-pips">
+              {Array.from({ length: TERM_MONTHS }, (_, i) => (
+                <span
+                  key={i}
+                  className={`pip ${i < state.month ? 'done' : ''} ${i === state.month ? 'now' : ''} ${i === ELECTION_MONTH ? 'elec' : ''}`}
+                  title={`${monthLabel(i)}${i === ELECTION_MONTH ? ' · eleição' : ''}`}
+                />
               ))}
-              {report.headlines.length === 0 && report.actionsTaken.length === 0 && (
-                <li className="headline headline--neutral">Mês tranquilo em Brasília.</li>
-              )}
-            </ul>
-          ) : (
-            <p className="intro">
-              Bem-vindo ao Planalto. A economia vem de juros altos e inflação acima da meta, e a dívida cresce.
-              Cada mês você pode tomar até {ACTIONS_PER_MONTH} decisões por decreto. Clique em qualquer indicador
-              ou grupo para ver o que está mexendo nele.
-            </p>
-          )}
+            </div>
+          </div>
+        </section>
 
-          <h2 className="actions__title">
-            Decisões do mês <small>{selected.length}/{ACTIONS_PER_MONTH}</small>
-          </h2>
-          <div className="actions">
-            {ACTIONS.map((a) => {
-              const blocked = blockedReason(state, a.id)
-              const isSel = selected.includes(a.id)
-              const full = !isSel && selected.length >= ACTIONS_PER_MONTH
-              const k = effectMultiplier(state, a.id)
-              return (
-                <button
-                  key={a.id}
-                  className={`action ${isSel ? 'action--selected' : ''}`}
-                  disabled={!!blocked || full}
-                  onClick={() => toggle(a.id)}
-                >
-                  <strong>{a.name}</strong>
-                  <span className="action__summary">{a.summary}</span>
-                  <span className="action__pro">+ {a.pros}</span>
-                  <span className="action__con">− {a.cons}</span>
-                  {blocked && <span className="action__blocked">{blocked}</span>}
-                  {!blocked && k < 1 && (
-                    <span className="action__blocked">Efeito reduzido a {Math.round(k * 100)}% por repetição.</span>
+        <section className="pn-kpis">
+          {INDICATORS.map((m) => (
+            <KpiCard
+              key={`${m.key}-${state.month}`}
+              meta={m}
+              values={history.map((h) => h.indicators[m.key])}
+              onClick={() => setDetail({ kind: 'indicator', key: m.key })}
+            />
+          ))}
+        </section>
+
+        <div className="pn-grid">
+          <div className="pn-col">
+            <section className="pn-card">
+              <h3>🎯 Seu mês em 3 passos <span className="pn-badge">clique nos indicadores e grupos para ver o porquê</span></h3>
+              <div className="pn-steps">
+                <StepButton n={1} cur={step} done={step > 1} icon="📰" title="O que aconteceu" sub={report ? `${report.headlines.length} notícias` : 'primeiro mês'} onClick={() => goStep(1)} />
+                <StepButton n={2} cur={step} done={selected.length > 0} icon="✍️" title="Suas decisões" sub={selected.length ? `${selected.length} de ${ACTIONS_PER_MONTH} escolhidas` : 'até 2 por mês'} onClick={() => goStep(2)} />
+                <StepButton n={3} cur={step} done={false} icon="⏭️" title="Encerrar o mês" sub="ver as consequências" onClick={() => goStep(3)} />
+              </div>
+
+              {step !== 3 && (
+                <div className="pn-pane" key={`p1-${state.month}`}>
+                  <div className="pn-news-head">
+                    <span className="pn-ill">🗞️</span>
+                    <div>
+                      <span className="pn-tag">Banca de jornal · {monthLabel(state.month)}</span>
+                      <h2>{report ? 'O que mudou no mês passado' : 'Bem-vindo ao Planalto'}</h2>
+                    </div>
+                  </div>
+                  {report ? (
+                    <ul className="pn-news">
+                      {report.actionsTaken.length > 0 && (
+                        <li className="neutral">🖊️ Governo: {report.actionsTaken.join(' e ').toLowerCase()}</li>
+                      )}
+                      {report.headlines.map((h, i) => (
+                        <li key={i} className={h.tone} style={{ animationDelay: `${i * 90}ms` }}>
+                          {h.tone === 'good' ? '🟢' : h.tone === 'bad' ? '🔴' : '📰'} {h.text}
+                        </li>
+                      ))}
+                      {report.headlines.length === 0 && report.actionsTaken.length === 0 && (
+                        <li className="neutral">☕ Mês tranquilo em Brasília.</li>
+                      )}
+                    </ul>
+                  ) : (
+                    <p className="pn-hint">
+                      A economia vem de juros altos e inflação acima da meta, e a dívida cresce. Todo mês você pode
+                      tomar até {ACTIONS_PER_MONTH} decisões por decreto. Escreva a medida do mês abaixo ou escolha no
+                      catálogo, e encerre o mês para ver o país reagir.
+                    </p>
                   )}
-                </button>
-              )
-            })}
-          </div>
-          <button className="btn btn--primary btn--end" onClick={endMonth}>
-            {selected.length === 0 ? 'Encerrar o mês sem decisões' : 'Encerrar o mês'} →
-          </button>
-        </section>
+                  <div className="pn-row">
+                    <button className="pn-btn" onClick={() => goStep(2)}>Entendi, vamos decidir →</button>
+                  </div>
+                </div>
+              )}
 
-        <section className="panel">
-          <h2>Grupos sociais</h2>
-          <div className="groups">
-            {GROUPS.map((g) => {
-              const v = now.groups[g.id]
-              const d = prev ? v - prev.groups[g.id] : 0
-              return (
-                <button key={g.id} className="group" onClick={() => setDetail({ kind: 'group', id: g.id })}>
-                  <div className="group__head">
-                    <span>{g.name}</span>
-                    <span>
-                      <strong>{num(v, 0)}%</strong> {prev && <Delta value={d} good={1} d={1} />}
-                    </span>
+              {step === 3 && (
+                <div className="pn-pane">
+                  <div className="pn-news-head">
+                    <span className="pn-ill">🗓️</span>
+                    <div>
+                      <h2>Tudo pronto para virar o mês?</h2>
+                      <p className="pn-hint">
+                        {selected.length === 0
+                          ? 'Você não tomou nenhuma decisão. O país segue sozinho este mês.'
+                          : `Você vai assinar: ${selected.map((id) => ACTION_BY_ID[id].name.toLowerCase()).join(' e ')}.`}
+                        {isCopomMonth(state.month) ? ' O Banco Central decide os juros no fim do mês.' : ''}
+                      </p>
+                    </div>
                   </div>
-                  <div className="bar">
-                    <div style={{ width: `${v}%`, background: v >= 50 ? 'var(--green)' : v >= 35 ? 'var(--gold)' : 'var(--red)' }} />
+                  <div className="pn-row">
+                    <button className="pn-btn pn-btn--big" onClick={endMonth} disabled={turning}>
+                      ⏭️ Encerrar {monthLabel(state.month).split(' de ')[0].toLowerCase()}
+                    </button>
+                    <button className="pn-btn pn-btn--ghost" onClick={() => goStep(2)}>Voltar às decisões</button>
                   </div>
-                  <small>{Math.round(g.weight * 100)}% da população</small>
-                </button>
-              )
-            })}
+                </div>
+              )}
+            </section>
+
+            <section className="pn-card pn-card--gold" ref={medidaRef}>
+              <MeasureBox
+                key={state.month}
+                state={state}
+                selected={selected}
+                onSign={(id) => {
+                  if (selected.includes(id)) return
+                  if (selected.length >= ACTIONS_PER_MONTH) {
+                    toast(`✋ Você já escolheu ${ACTIONS_PER_MONTH} decisões neste mês.`)
+                    return
+                  }
+                  setSelected([...selected, id])
+                  toast(`🖊️ Assinado: ${ACTION_BY_ID[id].name}. Vale ao encerrar o mês.`)
+                  confetti()
+                }}
+              />
+            </section>
+
+            <section className="pn-card">
+              <h3>🗂️ Catálogo de decisões por decreto <span className="pn-badge">{selected.length}/{ACTIONS_PER_MONTH} escolhidas</span></h3>
+              <p className="pn-hint">Não precisam do Congresso. Clique para escolher ou desfazer.</p>
+              <div className="pn-actions">
+                {ACTIONS.map((a) => {
+                  const blocked = blockedReason(state, a.id)
+                  const isSel = selected.includes(a.id)
+                  const full = !isSel && selected.length >= ACTIONS_PER_MONTH
+                  const k = effectMultiplier(state, a.id)
+                  return (
+                    <button
+                      key={a.id}
+                      className={`pn-action ${isSel ? 'sel' : ''}`}
+                      disabled={!!blocked || full}
+                      onClick={() => toggle(a.id)}
+                    >
+                      <span className="pn-action__ic">{isSel ? '✅' : ACTION_ICON[a.id]}</span>
+                      <strong>{a.name}</strong>
+                      <span className="pn-action__sum">{a.summary}</span>
+                      <span className="up">+ {a.pros}</span>
+                      <span className="dn">− {a.cons}</span>
+                      {blocked && <span className="pn-action__blk">⏳ {blocked}</span>}
+                      {!blocked && k < 1 && <span className="pn-action__blk">♻️ Efeito reduzido a {Math.round(k * 100)}% por repetição.</span>}
+                    </button>
+                  )
+                })}
+              </div>
+              <div className="pn-row">
+                <button className="pn-btn" onClick={() => goStep(3)}>Pronto, ir para o encerramento →</button>
+              </div>
+            </section>
           </div>
-        </section>
-      </div>
+
+          <div className="pn-col">
+            <section className="pn-card">
+              <h3>❤️ Aprovação do governo</h3>
+              <ApprovalRing value={now.approval} />
+              <p className="pn-hint">É a média dos grupos abaixo, pesada pelo tamanho de cada um.</p>
+            </section>
+
+            <section className="pn-card">
+              <h3>👥 Grupos sociais</h3>
+              <div className="pn-groups">
+                {GROUPS.map((g) => {
+                  const v = now.groups[g.id]
+                  const d = prev ? v - prev.groups[g.id] : 0
+                  return (
+                    <button key={g.id} className="pn-group" onClick={() => setDetail({ kind: 'group', id: g.id })}>
+                      <span className="pn-group__ic">{GROUP_ICON[g.id]}</span>
+                      <span className="pn-group__body">
+                        <span className="pn-group__head">
+                          <span>{g.name}</span>
+                          <span><b>{num(v, 0)}%</b> {prev && <Delta value={d} good={1} d={1} />}</span>
+                        </span>
+                        <span className="pn-meter"><span style={{ width: `${v}%`, background: tone(v) }} /></span>
+                        <small>{Math.round(g.weight * 100)}% da população</small>
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            </section>
+
+            <section className="pn-card">
+              <h3>🔜 Ainda não está no jogo</h3>
+              <p className="pn-hint">
+                Congresso e votações, crises com escolhas, cobranças dos grupos e as outras seções do menu chegam nas
+                próximas versões. Este painel já é o formato definitivo.
+              </p>
+            </section>
+          </div>
+        </div>
+      </main>
+
+      <footer className="pn-ticker">
+        <span className="lab">🔴 PLANTÃO</span>
+        <span className="mv" key={state.month}>
+          {(report?.headlines.length ? report.headlines.map((h) => h.text) : ['Começa um novo governo em Brasília', 'Mercado aguarda as primeiras decisões da equipe econômica'])
+            .concat(nextMonth === ELECTION_MONTH ? ['Eleição no mês que vem'] : [])
+            .map((t, i) => <span key={i}>📰 {t}</span>)}
+        </span>
+      </footer>
+
+      {turning && (
+        <div className="pn-ov">
+          <div className="pn-cal">
+            <div className="top">{monthLabel(nextMonth).split(' de ')[0].toUpperCase()}</div>
+            <div className="num">{Math.min(nextMonth + 1, TERM_MONTHS)}</div>
+            <div className="yr">{monthLabel(nextMonth).split(' de ')[1]} · mês {Math.min(nextMonth + 1, TERM_MONTHS)} de {TERM_MONTHS}</div>
+          </div>
+        </div>
+      )}
+      <div className="pn-toasts">{toasts.map((t) => <div key={t.id} className="pn-toast">{t.text}</div>)}</div>
 
       {detail && <DetailPanel state={state} detail={detail} onClose={() => setDetail(null)} />}
     </div>
+  )
+}
+
+const tone = (v: number) => (v >= 50 ? 'var(--pn-green)' : v >= 35 ? 'var(--pn-gold)' : 'var(--pn-red)')
+
+function confetti() {
+  const colors = ['#009c3b', '#ffdf00', '#002776', '#ffffff']
+  for (let i = 0; i < 36; i++) {
+    const c = document.createElement('div')
+    c.className = 'pn-confetti'
+    c.style.left = `${Math.random() * 100}vw`
+    c.style.background = colors[i % colors.length]
+    c.style.animationDelay = `${Math.random() * 0.4}s`
+    document.body.appendChild(c)
+    setTimeout(() => c.remove(), 2400)
+  }
+}
+
+function StepButton({ n, cur, done, icon, title, sub, onClick }: {
+  n: Step; cur: Step; done: boolean; icon: string; title: string; sub: string; onClick: () => void
+}) {
+  return (
+    <button className={`pn-step ${cur === n ? 'on' : ''} ${done ? 'ok' : ''}`} onClick={onClick}>
+      <span className="n">{done ? '✓' : icon}</span>
+      <span><span className="t">{title}</span><span className="s">{sub}</span></span>
+    </button>
+  )
+}
+
+function ApprovalRing({ value }: { value: number }) {
+  const [shown, setShown] = useState(value)
+  const from = useRef(value)
+  useEffect(() => {
+    const start = performance.now()
+    const a = from.current
+    let raf = 0
+    const tick = (t: number) => {
+      const f = Math.min(1, (t - start) / 1000)
+      setShown(a + (value - a) * f)
+      if (f < 1) raf = requestAnimationFrame(tick)
+      else from.current = value
+    }
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, [value])
+  const p = Math.max(0, Math.min(100, shown))
+  return (
+    <div className="pn-ring">
+      <svg viewBox="0 0 120 120">
+        <circle cx="60" cy="60" r="50" className="bg" />
+        <circle cx="60" cy="60" r="50" className="fg" style={{ strokeDashoffset: 314 - (314 * p) / 100, stroke: tone(p) }} />
+      </svg>
+      <div>
+        <div className="big">{num(p, 1)}%</div>
+        <div className="pn-hint">{p >= 50 ? 'Maioria aprova o governo.' : p >= 35 ? 'País dividido.' : 'Governo impopular: cuidado.'}</div>
+      </div>
+    </div>
+  )
+}
+
+function MeasureBox({ state, selected, onSign }: { state: GameState; selected: ActionId[]; onSign: (id: ActionId) => void }) {
+  const [text, setText] = useState('')
+  const [result, setResult] = useState<ActionId[] | null>(null)
+  const full = selected.length >= ACTIONS_PER_MONTH
+  const read = () => setResult(interpretMeasure(text).matches.slice(0, 2))
+  return (
+    <>
+      <h3>✍️ Medida do mês <span className="pn-badge">{full ? '✔ decisões do mês completas' : 'escreva com suas palavras'}</span></h3>
+      <p className="pn-hint">
+        Diga o que quer fazer: cortar gastos, acelerar obras, mexer em imposto, cobrar juros menores, falar ao país.
+        O gabinete lê e diz como isso pode ser feito.
+      </p>
+      <textarea
+        className="pn-textarea"
+        value={text}
+        disabled={full}
+        onChange={(e) => { setText(e.target.value); setResult(null) }}
+        onKeyDown={(e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) read() }}
+        placeholder={full ? 'Você já usou as decisões deste mês. Volte no mês que vem.' : 'Ex.: “Acelerar as obras de rodovias” ou “Cortar 10% dos gastos de custeio”'}
+      />
+      <div className="pn-row">
+        <button className="pn-btn" disabled={full || !text.trim()} onClick={read}>📋 Pedir leitura do gabinete</button>
+      </div>
+      {result && (
+        <div className="pn-preview">
+          {result.length === 0 ? (
+            <>
+              <b>🧑‍💼 O gabinete não encontrou como fazer isso por decreto.</b>
+              <p className="pn-hint">
+                Nesta versão o governo só age por decreto, com as decisões do catálogo abaixo. Medidas que precisam
+                do Congresso chegam junto com as votações. Tente reescrever com outras palavras.
+              </p>
+            </>
+          ) : (
+            <>
+              <b>🧑‍💼 Os ministros entenderam assim:</b>
+              {result.map((id, i) => {
+                const a = ACTION_BY_ID[id]
+                const blocked = blockedReason(state, id)
+                const taken = selected.includes(id)
+                return (
+                  <div key={id} className="pn-reading">
+                    <div className="pn-reading__head">
+                      <span className="pn-action__ic">{ACTION_ICON[id]}</span>
+                      <div>
+                        <strong>{i === 0 ? a.name : `Ou talvez: ${a.name}`}</strong>
+                        <div className="pn-hint">{a.summary}</div>
+                      </div>
+                    </div>
+                    <div className="pn-pv">
+                      <div>📜 Vira<b>Decreto</b></div>
+                      <div>🗳️ No Congresso<b>Não precisa</b></div>
+                      <div>⏳ Pode repetir<b>{a.cooldown === 1 ? 'todo mês' : `a cada ${a.cooldown} meses`}</b></div>
+                    </div>
+                    <div className="up">+ {a.pros}</div>
+                    <div className="dn">− {a.cons}</div>
+                    <div className="pn-row">
+                      <button className="pn-btn" disabled={!!blocked || taken || full} onClick={() => onSign(id)}>
+                        {taken ? '✔ Já assinada' : '🖊️ Assinar'}
+                      </button>
+                      {blocked && <span className="pn-action__blk">⏳ {blocked}</span>}
+                    </div>
+                  </div>
+                )
+              })}
+            </>
+          )}
+        </div>
+      )}
+    </>
+  )
+}
+
+function KpiCard({ meta, values, onClick }: { meta: IndicatorMeta; values: number[]; onClick: () => void }) {
+  const v = values[values.length - 1]
+  const d = values.length > 1 ? v - values[values.length - 2] : 0
+  const moved = Math.abs(d) >= Math.pow(10, -meta.decimals) / 2
+  const full = meta.format(v)
+  const perGdp = full.endsWith(' do PIB')
+  return (
+    <button className={`pn-kpi ${moved ? 'flash' : ''}`} onClick={onClick} title={meta.explain}>
+      <span className="ic">{INDICATOR_ICON[meta.key]}</span>
+      <span className="v">{full.replace(' do PIB', '')}</span>
+      <span className="l">{meta.label}{perGdp ? ' (do PIB)' : ''}</span>
+      <span className="d">{values.length > 1 ? <Delta value={d} good={meta.goodDirection} d={meta.decimals} /> : 'início do mandato'}</span>
+      <Sparkline values={values.slice(-24)} width={110} height={22} color="var(--pn-teal)" />
+    </button>
   )
 }
 
@@ -155,21 +482,6 @@ function Delta({ value, good, d = 1 }: { value: number; good: 1 | -1 | 0; d?: nu
   if (Math.abs(value) < Math.pow(10, -d) / 2) return <span className="delta">=</span>
   const tone = good === 0 ? 'neutral' : value * good > 0 ? 'good' : 'bad'
   return <span className={`delta delta--${tone}`}>{value > 0 ? '▲' : '▼'} {num(Math.abs(value), d)}</span>
-}
-
-function IndicatorCard({ meta, values, onClick }: { meta: IndicatorMeta; values: number[]; onClick: () => void }) {
-  const v = values[values.length - 1]
-  const d = values.length > 1 ? v - values[values.length - 2] : 0
-  return (
-    <button className="indicator" onClick={onClick}>
-      <span className="indicator__label">{meta.label}</span>
-      <span className="indicator__row">
-        <span className="indicator__value">{meta.format(v)}</span>
-        {values.length > 1 ? <Delta value={d} good={meta.goodDirection} d={meta.decimals} /> : <span />}
-        <Sparkline values={values.slice(-24)} width={70} height={22} />
-      </span>
-    </button>
-  )
 }
 
 function CauseList({ causes, decimals = 2, unit = '' }: { causes: Cause[]; decimals?: number; unit?: string }) {
