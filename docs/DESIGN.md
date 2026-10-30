@@ -560,21 +560,22 @@ Saves antigos sem promessas: a parte das promessas sai e as outras são reescala
 ## 25. Etapas 4D, 4E e 4F: Congresso ao vivo, janelas e mês mais vivo (plano aprovado em 30/10)
 
 - **Pedido do Douglas (30/10, depois da 4C2):** o Senado ficou simples; a votação deve acontecer quando o jogador mandar, não no fechamento do mês; mais complexidade com líderes e bancadas; negociação com probabilidade e contraoferta; janela para a medida (com opção de desistir); sorteio do relator no Supremo; fato bom com botão de agir. Base: `docs/levantamento-video-1.md` (itens 12, 13, 14, 17, 24, 26, 27, 28). Tudo fictício e próprio.
-- **Divisão aprovada:** **4D Congresso ao vivo** (v0.14, Opus) · **4E Janelas** (v0.15, Sonnet serve) · **4F Mês mais vivo** (v0.16). A 5B (27 estados e apuração) passa para depois da 4F.
+- **Divisão aprovada:** **4C3 Supremo no caminho das medidas e abas** (v0.14, seção 26) · **4D Congresso ao vivo** (v0.15, Opus) · **4E Janelas** (v0.16, Sonnet serve) · **4F Mês mais vivo** (v0.17). A 5B (27 estados e apuração) passa para depois da 4F.
 - **Decisões do Douglas sobre as dúvidas:** (1) **uma votação por casa por mês**: uma na Câmara e uma no Senado; um projeto aprovado na Câmara pode votar no Senado no mesmo mês, se a votação do Senado ainda estiver livre; (2) **PEC**: cada turno é uma votação marcada por você, em meses diferentes, e cada um gasta a votação da casa no mês; (3) **recesso** (janeiro e julho): continua sem votação; (4) o que não for votado **fica parado na fila**, e as gavetas (comissão, presidentes da Câmara e do Senado) continuam valendo.
 
-### 25.1 Etapa 4D: Congresso ao vivo (v0.14)
+### 25.1 Etapa 4D: Congresso ao vivo (v0.15)
 
 **Votar na hora**
 - Cada projeto na pauta ganha o botão **"Pautar agora"** (Câmara e Senado). A votação roda na hora, com painel animado; **a lei aprovada entra em vigor no mês atual**, antes de encerrar, e já aparece no Painel, nos indicadores e na resposta ao fato do mês.
 - O fechamento do mês **não vota mais sozinho**. Continuam acontecendo no fechamento: comissões avançando, gaveta, sanção ou veto, derrubada de veto, pautas-bomba e o Supremo.
 - **MP:** vale na hora, como hoje, mas precisa ser votada. Passado o prazo de 4 meses sem votar, **caduca** e os efeitos são desfeitos (manchete e crônica).
 - **Motor:** `voteNow(estado, projeto, casa)` devolve o estado novo e o registro da votação; `advanceMonth` deixa de votar plenário. Estado do mês (`GameState.monthUse`): votação da Câmara e do Senado usadas, medida negociada. Zera ao virar o mês.
+- **Supremo:** projeto com votação suspensa pelo Supremo (seção 26.3) aparece com o botão "Pautar agora" bloqueado e o motivo.
 - **Gavetas à vista:** se a comissão ou o presidente da casa vão barrar, o botão avisa o motivo antes, sem gastar a votação do mês.
 - **Negociação:** uma medida negociada por mês em cada casa (a janela atual de lideranças passa a valer para um projeto só por casa).
 
 **Página própria do Senado**
-- Subabas da aba Governo: **Câmara · Senado · Supremo**.
+- Subabas da aba Governo: **Câmara · Senado · Supremo · Ministérios** (o esqueleto das quatro é montado na 4C3, seção 26; aqui a do Senado ganha o conteúdo).
 - A página do Senado tem: os 81 senadores por bancada, **líder de cada bancada** (9 personagens novos, fictícios, com retrato), presidente da casa, **relação individual** com as lideranças, comissões do Senado (CCJ, assuntos econômicos...) com o partido que preside, o que está na fila, **os indecisos** da próxima votação (até 5 senadores mais perto do limite, cada um com preço próprio: ligar, obra no estado, cargo regional) e o histórico das votações.
 - **Bancada estadual** (3 por estado) fica para a 5B, quando houver os 27 estados.
 
@@ -592,19 +593,19 @@ Saves antigos sem promessas: a parte das promessas sai e as outras são reescala
 - **Placar com traidores** (item 27): quantos votaram contra a própria liderança e como cada bancada votou.
 
 **Save, testes e balanceamento**
-- **Save versão 12:** `monthUse`, líderes (`congress.leaders`), líderes do Senado, eleições internas e da Mesa, ofertas em andamento. Migração: líderes atuais mantidos, `monthUse` zerado, projetos que esperavam votação seguem na fila.
-- **Testes:** uma votação por casa por mês; efeito da lei no mesmo mês; MP caduca; PEC em turnos separados; gavetas avisadas; contraoferta (aceita, recusa, rodadas); eleições internas e da Mesa; migração 11 → 12.
+- **Save versão 13:** `monthUse`, líderes (`congress.leaders`), líderes do Senado, eleições internas e da Mesa, ofertas em andamento. Migração: líderes atuais mantidos, `monthUse` zerado, projetos que esperavam votação seguem na fila.
+- **Testes:** uma votação por casa por mês; efeito da lei no mesmo mês; MP caduca; PEC em turnos separados; gavetas avisadas; contraoferta (aceita, recusa, rodadas); eleições internas e da Mesa; migração 12 → 13.
 - **Simulador:** os bots passam a chamar `voteNow` (um projeto por casa por mês); a ordem das estratégias não pode mudar; conferir quantas leis passam por mandato (hoje cerca de 17 a 23 com um projeto a cada 2 meses).
 - **Retratos:** 9 líderes do Senado + 4 candidatos à Mesa = 13 pessoas. A escolha de rosto do presidente cairia de 41 para cerca de 28. **Pendência para o Douglas:** mandar mais retratos antes da 4D (sugestão: +30).
 
-### 25.2 Etapa 4E: Janelas (v0.15)
+### 25.2 Etapa 4E: Janelas (v0.16)
 
 - **Janela da medida** (levantamento, item 24): ao pedir a leitura do gabinete, abre uma janela na frente, bem diagramada, em etapas: **1 leitura** (o que o gabinete entendeu e o parecer do ministro), **2 impacto fiscal e prazos**, **3 Congresso e Supremo** (nota de 0 a 10 de quanto a medida sobrevive no Congresso e no Supremo, com o risco jurídico que já existe) e **4 decisão**. **Nada vai ao Congresso até confirmar**: dá para descartar e voltar atrás. A medida enviada fica no plano do mês e pode ser **retirada** até a votação (depois de votada, não).
 - **Nome da medida** (item 14): opcional, vira a manchete do telejornal.
 - **Sorteio do relator no Supremo:** janela separada que abre na frente quando uma ação é aberta: os 11 retratos giram e param no relator. Entra na fila do pós-mês, antes do julgamento quando os dois caem no mesmo mês.
 - **Fato bom com botão de agir:** no modo **fácil** só as sugestões; nos modos **médio e difícil**, o botão de agir como nos fatos ruins (as opções prontas ficam como "se deixar passar"). A resposta escrita é lida pelo ministro e vira promover, dar crédito ou ignorar, mais uma medida da área, se houver. Sem IA continuam as opções prontas.
 
-### 25.3 Etapa 4F: Mês mais vivo (v0.16)
+### 25.3 Etapa 4F: Mês mais vivo (v0.17)
 
 - **Três caminhos para responder a uma crise** (item 12): escrever uma medida, **fazer um post** (a assessoria redige; não resolve o problema material, mas mexe em quem leva a culpa e na lealdade da base) ou **tratar com quem está na rua** (receber, ceder, mandar desobstruir, falar em cadeia nacional).
 - **"Sua agenda está limpa"** (item 13): em mês sem crise, a chance de liderar nos seus termos, com sugestões de iniciativa.
@@ -612,4 +613,54 @@ Saves antigos sem promessas: a parte das promessas sai e as outras são reescala
 
 ### 25.4 Fica para depois
 
-Exposição a escândalo visível de 0 a 100 (item 20), CPIs (35), vice-presidente (32), execução e regulamentação das leis (34), bancada estadual no Senado e mapa por estado (5B), governadores (36), serviço de inteligência (33), conquistas (19) e cenas de transição (22). Ordem: 4D, 4E, 4F e depois a 5B.
+Exposição a escândalo visível de 0 a 100 (item 20), CPIs (35), vice-presidente (32), execução e regulamentação das leis (34), bancada estadual no Senado e mapa por estado (5B), governadores (36), serviço de inteligência (33), conquistas (19) e cenas de transição (22). Ordem: 4C3, 4D, 4E, 4F e depois a 5B.
+
+---
+
+## 26. Etapa 4C3: o Supremo no caminho das medidas e as abas do Governo (plano aprovado em 30/10; v0.14)
+
+- **Pedido do Douglas (30/10):** hoje tudo vai direto ao Congresso e ao Senado e o Supremo só aparece, raramente, depois. Algumas medidas devem passar pelo Supremo. Criar abas ao lado do Senado para o **Supremo** e para os **Ministérios**. Decisões dele: fazer a 4C3 **antes** da 4D; entram **liminar**, **travar votação durante a tramitação** e **consulta ao Supremo**. Base: `docs/levantamento-video-1.md`, itens 29, 30 e 37.
+- **Por que:** nas simulações da 4C2 o Supremo derrubava só 0,4 a 0,5 medida por mandato e abria 1,3 a 1,6 ação, e o jogador quase nunca o sentia. A meta passa a ser **1 a 3 julgamentos por mandato** para quem usa medidas arriscadas, quase nenhum para quem não usa, sempre avisado antes.
+
+### 26.1 Risco jurídico por regra (e não só por lista)
+
+- `legalRiskOf` passa a ser o **maior** entre a ficha (medidas da IA), a lista `LEGAL_RISK` e a **regra do instrumento**, calculada com o que o jogo já sabe de ccada assunto (`MATTERS` e `minimumInstrument` em `custom.ts`):
+  - decreto que **cria ou muda imposto** (efeito em receita): alto, "decreto não pode criar imposto";
+  - decreto com **despesa nova permanente** acima de um limite (a definir no simulador, perto de 0,15% do PIB): médio, "despesa nova precisa de lei"; acima do dobro, alto;
+  - **MP** sobre matéria que só lei pode tratar (penal, direito fundamental, Constituição): alto;
+  - instrumento **mais fraco que o mínimo** do assunto: alto, "vício de forma".
+- O motivo aparece na leitura do gabinete, com a chance de a medida cair. Meta: de 24 para cerca de 30 a 35 medidas do catálogo com risco médio ou alto. Os números ficam em `data/supremo.ts`.
+
+### 26.2 Ação mais certa e liminar
+
+- **Ação (medida em vigor):** risco alto passa a ter chance alta de ser contestada (cerca de 35% ao mês, vezes a força do rival) e o julgamento sai em **1 a 2 meses**; médio sobe um pouco. Até 3 ações abertas ao mesmo tempo. A leitura diz "o Supremo deve ser provocado".
+- **Liminar:** no dia da ação, o relator sorteado pode **suspender a medida na hora**, antes do plenário. Chance pela própria inclinação dele (`strikeProb` do relator, com risco alto). Medida suspensa: gasto, receita e confiança são desfeitos e voltam se o plenário mantiver. O Painel e a página do Supremo mostram **"suspensa por liminar"**.
+- **Fato do mês `stfLiminar`** (só escolhas prontas): **esperar o plenário** (nada muda), **recuar** (revogar a medida sem custo político) ou **recorrer** (leva ao plenário no mês seguinte; a corte gosta menos), mais **criticar o Supremo**, como na derrubada.
+
+### 26.3 Durante a tramitação: travar a votação
+
+- A oposição também pode contestar um **projeto ainda no Congresso**: PEC que mexe em direito fundamental, projeto de risco alto ou texto com jabuti. O relator pode **suspender a tramitação**: o projeto não é votado até o plenário julgar (1 a 3 meses). Se o plenário derruba, o projeto é arquivado e só volta em 6 meses; se mantém, segue.
+- Na 4C3 o projeto suspenso é pulado no fechamento do mês; na 4D o botão "Pautar agora" aparece bloqueado, com o motivo.
+
+### 26.4 Filtro da CCJ
+
+- Na etapa de comissão, projeto de risco alto passa pela CCJ, que pode **aprovar**, **aprovar com emenda de adequação** (risco cai um nível, efeitos ×0,85) ou **barrar como inconstitucional** (volta em 6 meses). A chance depende da relação com o partido que preside, da doutrina e do risco, e a **previsão aparece antes de enviar**.
+
+### 26.5 Consulta ao Supremo
+
+- Opção na janela da medida: **"Pedir parecer ao Supremo"**. A medida espera **2 meses** e só uma consulta fica aberta por vez. O resultado sai por sorteio com a própria previsão (`1 − chance de cair`): **chancelada** (fica imune a ações por 24 meses) ou **reprovada** (você sabe antes de gastar a votação; a relação dos ministros cai 3). Custa tempo e a corte "fica de olho" em você.
+
+### 26.6 As quatro abas
+
+- **Governo: Câmara · Senado · Supremo · Ministérios.**
+  - **Câmara:** o que já está na página do Congresso (menos o Senado e os ministérios).
+  - **Senado:** o cartão do Senado e as previsões do Senado saem da página da Câmara e viram a aba (conteúdo básico agora; a 4D amplia).
+  - **Supremo:** a subaba atual, com ações, liminares, consultas, projetos suspensos e decisões.
+  - **Ministérios:** os 13 ministros com retrato, partido (se a pasta foi cedida), **desgaste** de 0 a 100 (cresce com crise mal resolvida e medida da área derrubada, cai com sucesso), **meta por pasta** medida pelo motor (um indicador ligado à área, com situação: no rumo, em risco, longe), **reforma ministerial** (trocar o ministro, com custo político e indicado pelo partido) e ceder ou retomar pastas (o cartão que hoje mora no Congresso).
+- Sem personagens novos com retrato: a reforma usa os indicados que já existem.
+
+### 26.7 Save, testes e balanceamento
+
+- **Save versão 12:** `supremo.liminares`, `supremo.consultas`, ações sobre projetos em tramitação, e `ministries` (desgaste e meta). Migração: sem liminares nem consultas; desgaste calculado do histórico.
+- **Testes:** cada regra de risco por instrumento; ação quase certa para risco alto; liminar suspende e desfaz os efeitos, e a medida volta se mantida; recuar e recorrer; projeto suspenso é pulado e volta depois; CCJ (aprova, adequa, barra); consulta (chancela imune a ação, reprova); abas; reforma ministerial; migração 11 → 12.
+- **Simulador:** a ordem das estratégias não pode mudar; conferir ações, liminares e derrubadas por mandato com a meta de 26 (1 a 3 julgamentos para quem usa medidas arriscadas; quase nenhum para quem só usa decretos seguros).
