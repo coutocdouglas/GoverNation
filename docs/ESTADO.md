@@ -3,22 +3,19 @@
 > **Leia este arquivo primeiro.** Ele diz onde o projeto está e qual é o próximo passo.
 > Atualize-o a cada mudança: seção "Estado atual", "Próximo passo" e uma linha no "Histórico".
 
-**Última atualização:** 30/10/2026 · **Versão publicada:** v0.8.0
+**Última atualização:** 30/10/2026 · **Versão publicada:** v0.9.0
 
 ---
 
 ## Próximo passo
 
-**Etapa 3C: medidas livres montadas pela IA** (decidida em 30/10, antes da 4B). Ver DESIGN.md, seção 21.
+**Etapa 4B: Congresso 2.0** (resto da etapa 4). Ver DESIGN.md, seção 20 ("Falta na etapa 4").
 
-- A IA primeiro procura no catálogo; se nada servir, monta uma ficha de medida nova (instrumento, área, posição, custo, ganhadores e perdedores, risco jurídico).
-- O motor confere e corrige (instrumento obrigatório, limites, "não existe almoço grátis") e calcula votos, contas e aprovação como hoje.
-- A medida aprovada entra no catálogo daquele mandato e pode ser reusada.
-- Corrigir junto: hoje, quando a IA diz que nada serve, o jogo mostra a medida mais parecida mesmo assim.
+- Veto e derrubada do veto, relator e emendas ao texto, comissões, presidente da Câmara, frentes temáticas, pautas-bomba, ministérios cedidos de verdade, "deixar na pauta" sem votar.
 
-Complexidade: alta. Use o **Opus**, numa conversa nova. Depois vem a **4B** (resto do Congresso 2.0).
+Complexidade: alta. Use o **Opus**, numa conversa nova.
 
-Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdouglas/GoverNation. Leia CLAUDE.md, docs/ESTADO.md e docs/DESIGN.md. Quero fazer a etapa 3C."*
+Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdouglas/GoverNation. Leia CLAUDE.md, docs/ESTADO.md e docs/DESIGN.md. Quero fazer a etapa 4B."*
 
 ---
 
@@ -27,7 +24,7 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 **Base técnica**
 - App de Windows (Tauri 2 + React + TypeScript). O instalador é gerado pelo GitHub Actions e o jogo se atualiza sozinho, com atualização assinada.
 - O motor do jogo (`src/game/`) fica separado das telas (`src/ui/`). Os números de balanceamento ficam em `src/game/data/`.
-- 86 testes automáticos. Saves antigos são migrados (versão atual do save: 6).
+- 103 testes automáticos. Saves antigos são migrados (versão atual do save: 7).
 
 **Jogabilidade**
 - Mandato de 48 meses (jan/2027 a dez/2030), com o mês em 4 passos: notícias, fato do mês, decisões e encerrar.
@@ -35,6 +32,7 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 - **7 grupos sociais** com memória: ganhos são esquecidos em cerca de 9 meses e perdas em cerca de 2 anos.
 - **Medida do mês em texto livre**, lida por palavras-chave. Leva aos 7 decretos rápidos ou a um catálogo de 91 medidas em 13 áreas (decreto, MP, lei, lei complementar ou PEC) e mostra o instrumento, o custo e o placar previsto.
 - **Agir no fato do mês:** além das opções prontas, o jogador escreve a resposta; o ministro da área lê e mostra até 3 caminhos. A resposta segue o trâmite normal e não gasta a medida do mês. Decreto e MP resolvem na hora; lei e PEC, se aprovadas no mesmo mês.
+- **Medidas livres (v0.9):** com IA, se nada do catálogo faz o que o jogador pediu, o gabinete redige uma medida nova. O jogo confere a ficha (instrumento mínimo pela matéria, números nas faixas do catálogo, "não existe almoço grátis", risco jurídico) e a medida entra no catálogo do mandato com a marca "criada pelo governo".
 - **Ministros:** 13 áreas, cada uma com um ministro responsável, partido e estilo próprio.
 - **IA opcional (v0.7):** com chave própria de Claude, Gemini, Groq ou OpenRouter, o ministro dá um parecer com ordens prontas, o gabinete mostra a leitura antes de assinar e o ministro opina sobre a ordem e a IA lê o texto livre, sempre escolhendo do catálogo. Sem chave ou sem internet, palavras-chave.
 - **Congresso:** 513 deputados de 9 partidos fictícios. O voto depende de ideologia, orientação do partido, relação com o governo, popularidade, aprovação e emendas.
@@ -53,7 +51,7 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 
 **Onde está cada coisa**
 - `CLAUDE.md`: regras do projeto e quando abrir uma conversa nova.
-- `docs/DESIGN.md`: decisões de desenho, seções 1 a 20.
+- `docs/DESIGN.md`: decisões de desenho, seções 1 a 21.
 - `CHANGELOG.md`: novidades de cada versão.
 - `docs/RELEASES.md`: como publicar.
 
@@ -63,7 +61,7 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 
 1. ✅ Retratos e elenco fixo (v0.4.1)
 2. ✅ Memória do mundo, consequências, importância, fatos bons e herdados, biografias (v0.5.0)
-3. ✅ **3A** resposta em texto ao fato do mês, ministro responsável, catálogo grande de medidas (v0.6.0) · ✅ **3B** camada de IA: conselho do ministro, interpretação do texto livre, chave própria, plano B (v0.7.0)
+3. ✅ **3A** resposta em texto ao fato do mês, ministro responsável, catálogo grande de medidas (v0.6.0) · ✅ **3B** camada de IA: conselho do ministro, interpretação do texto livre, chave própria, plano B (v0.7.0) · ✅ **3C** medidas livres montadas pela IA (v0.9.0)
 4. 🔶 **4A** votação com negociação por lideranças (v0.8.0) · ⏭️ **4B** Congresso 2.0: veto e derrubada, relator e emendas ao texto, comissões, presidente da Câmara, frentes temáticas, pautas-bomba, ministérios cedidos
 5. Entre mandatos (campanha contínua): painel de eleição com escolha de candidato pela ficha, governo seguinte simulado se o jogador perder, herança
 6. Depois: Senado com poderes próprios (sabatinas, impeachment), Supremo, imprensa e pesquisas, orçamento anual, ícones próprios
@@ -98,3 +96,4 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 | 30/10/2026 | v0.7.3 | Gemini: modelo padrão corrigido (gemini-3.5-flash-lite nas duas tarefas, testado pelo Douglas); motivo da última falha visível no gasto medido |
 | 30/10/2026 | v0.8.0 | Etapa 4A: janela de votação com plenário e negociação com lideranças (3 por mês: emendas, pauta, cargos); risco de escândalo; sem opções prontas com IA fora do modo fácil |
 | 30/10/2026 | — | Decisão: etapa 3C (medidas livres montadas pela IA, entrando no catálogo do mandato) antes da 4B |
+| 30/10/2026 | v0.9.0 | Etapa 3C: medidas livres redigidas pela IA quando nada do catálogo serve, conferidas pelo motor (instrumento mínimo, faixas, almoço grátis, risco jurídico) e guardadas no catálogo do mandato; fim da "medida mais parecida" quando a IA diz que nada serve |

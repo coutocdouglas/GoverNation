@@ -5,12 +5,14 @@ import { GROUPS } from './data/groups'
 import { MINISTER_BY_AREA, type AreaId, type Minister } from './data/ministers'
 import { PARTIES } from './data/parties'
 import type { MeasureRef } from './interpret'
+import { MATTERS, type CustomDraft } from './custom'
 import type { ActionId, BillId, GameState } from './types'
 
 /**
  * Camada de IA (etapa 3B), parte sem internet: monta os pedidos e confere as respostas.
  *
- * Regra de ouro: a IA só ESCOLHE medidas do catálogo e escreve falas. Ela nunca define números.
+ * Regra de ouro: a IA escolhe medidas do catálogo e escreve falas. Quando nada serve (etapa 3C),
+ * ela redige uma ficha nova, que custom.ts confere e corrige: os números finais são sempre do motor.
  * Toda resposta passa por aqui; o que não for um id válido do catálogo é descartado,
  * e sem nada válido o jogo volta às palavras-chave (interpret.ts).
  */
@@ -47,7 +49,7 @@ export function countryContext(state: GameState): string {
 
 const billLine = (id: BillId) => {
   const b = BILL_BY_ID[id]
-  return `- ${b.id} | ${b.name} (${INSTRUMENTS[b.instrument].label}): ${b.summary}`
+  return `- ${b.id} | ${b.name} (${INSTRUMENTS[b.instrument].label}${b.custom ? ', criada por este governo' : ''}): ${b.summary}`
 }
 
 export interface AiRequest {
@@ -88,19 +90,33 @@ export function interpretPrompt(state: GameState, text: string, area: AreaId | n
   const lines = bills.map((b) => billLine(b.id))
   if (!area) for (const a of ACTIONS) lines.push(`- ${DECREE_PREFIX}${a.id} | ${a.name} (decreto rápido): ${a.summary}`)
   const who = area ? `${MINISTER_BY_AREA[area].name}, ${MINISTER_BY_AREA[area].role}` : 'o gabinete da Presidência'
+  const areas = area ? `"${area}"` : Object.keys(MINISTER_BY_AREA).map((a) => `"${a}"`).join(', ')
+  const groups = GROUPS.map((g) => `"${g.id}" (${g.name})`).join(', ')
   return {
     system: [
       `Você é ${who} num jogo de simulação política do Brasil. Todos os personagens são fictícios.`,
-      'O presidente escreveu, com as palavras dele, o que quer fazer. Sua tarefa é achar no catálogo as medidas que fazem isso.',
-      'Use só ids exatos do catálogo. Não invente medidas nem números. Se nada no catálogo serve, devolva a lista vazia.',
-      'Responda SOMENTE com JSON, sem texto fora dele, no formato:',
-      '{"medidas":["id_mais_provavel","segunda_opcao"],"resumo":"...","respeitando":["..."]}',
-      'No máximo 3 medidas, da mais provável para a menos provável.',
+      'O presidente escreveu, com as palavras dele, o que quer fazer. Primeiro procure no catálogo uma medida que faça ISSO, e não algo apenas parecido ou do mesmo tema.',
+      'Use só ids exatos do catálogo em "medidas", no máximo 3, da mais provável para a menos provável. Se nenhuma faz o que foi pedido, deixe "medidas" vazia e redija uma medida nova em "nova".',
       '"resumo": 2 a 3 frases, em segunda pessoa ("Você decreta..."), dizendo o que a ordem faz na prática, com os detalhes que o presidente deu.',
       '"respeitando": até 4 condições curtas que o presidente impôs (ex.: "sem criar novo tributo"). Lista vazia se não houver.',
+      'Regras da medida nova (só quando "medidas" estiver vazia; senão, "nova": null):',
+      `- area: ${area ? `obrigatoriamente ${areas}` : `uma de ${areas}`}.`,
+      '- instrumento: "decreto" (só regulamenta; não cria tributo, crime, órgão nem gasto grande), "mp" (urgente; vale na hora), "lei", "complementar" ou "pec" (muda a Constituição ou direito fundamental).',
+      `- materia: lista com o que se aplicar entre ${Object.keys(MATTERS).map((m) => `"${m}"`).join(', ')}.`,
+      '- economia e costumes: posição de -100 (estatista / progressista) a +100 (liberal / conservador); costumes null se o tema não mexe com costumes.',
+      '- gasto e receita: % do PIB por ano (0,1 ≈ R$ 12,5 bi); temporario: {"valor": % do PIB ao ano, "meses"} para gasto passageiro, ou null.',
+      '- potencial (crescimento de longo prazo, -0,1 a 0,15), divida (pontos do PIB, negativo reduz), confianca do mercado (-8 a 8), expectativa de inflação (-0,3 a 0,3). Use 0 quando não houver efeito.',
+      `- grupos: efeito na aprovação de cada grupo, de -8 a +8 (1 a 3 para medidas pequenas): ${groups}.`,
+      '- Toda medida tem custo: se alguém ganha, alguém paga (dinheiro público, um grupo perdedor, o mercado ou o Congresso). Seja realista e não exagere.',
+      '- risco_juridico: "baixo", "medio" ou "alto" (alto se fere a Constituição ou direitos).',
+      '- pros e contras: uma frase cada. palavras: 3 a 6 palavras-chave sem acento.',
+      'Responda SOMENTE com JSON, sem texto fora dele, no formato:',
+      '{"medidas":["id"],"resumo":"...","respeitando":["..."],"nova":null}',
+      'ou, sem medida do catálogo:',
+      '{"medidas":[],"resumo":"...","respeitando":[],"nova":{"nome":"...","resumo":"...","area":"...","instrumento":"lei","materia":[],"economia":0,"costumes":null,"gasto":0,"receita":0,"temporario":null,"potencial":0,"divida":0,"confianca":0,"expectativa":0,"grupos":{},"risco_juridico":"baixo","pros":"...","contras":"...","palavras":[]}}',
     ].join('\n'),
     user: `${countryContext(state)}\n\nO presidente escreveu: """${text.slice(0, 600)}"""\n\nCatálogo (id | nome):\n${lines.join('\n')}`,
-    maxTokens: 500,
+    maxTokens: 1200,
   }
 }
 
@@ -148,6 +164,8 @@ export function parseAdvice(raw: string, area: AreaId): Advice | null {
 
 export interface AiReading {
   matches: MeasureRef[]
+  /** Ficha de medida nova, ainda sem conferência (ver custom.ts), quando nada do catálogo serve. */
+  draft: CustomDraft | null
   /** O que a ordem faz, na leitura da IA. */
   speech: string
   /** Condições que o presidente impôs. */
@@ -156,7 +174,7 @@ export interface AiReading {
 
 /** Confere a interpretação. Só sobram ids reais do catálogo (e da área, quando houver). */
 export function parseInterpretation(raw: string, area: AreaId | null): AiReading | null {
-  const data = extractJson(raw) as { medidas?: unknown; resumo?: unknown; fala?: unknown; respeitando?: unknown } | null
+  const data = extractJson(raw) as { medidas?: unknown; resumo?: unknown; fala?: unknown; respeitando?: unknown; nova?: unknown } | null
   if (!data || !Array.isArray(data.medidas)) return null
   const matches: MeasureRef[] = []
   for (const id of data.medidas) {
@@ -171,7 +189,8 @@ export function parseInterpretation(raw: string, area: AreaId | null): AiReading
     if (matches.length === 3) break
   }
   const constraints = Array.isArray(data.respeitando) ? data.respeitando.map((c) => cleanText(c, 120)).filter(Boolean).slice(0, 4) : []
-  return { matches, speech: cleanText(data.resumo ?? data.fala, 600), constraints }
+  const draft = !matches.length && data.nova && typeof data.nova === 'object' ? (data.nova as CustomDraft) : null
+  return { matches, draft, speech: cleanText(data.resumo ?? data.fala, 600), constraints }
 }
 
 /** Pedido de parecer do ministro sobre a ordem que o presidente vai assinar. */

@@ -371,4 +371,17 @@ Substitui a decisão 4 da seção 15 ("texto livre sem IA por enquanto").
   3. O motor valida: instrumento mínimo pela matéria (direitos fundamentais, tributo novo e estrutura do Estado pedem lei, LC ou PEC; decreto não cria tributo nem despesa nova grande); todos os números presos a faixas tiradas do catálogo atual; regra de "não existe almoço grátis" (soma dos ganhos nos grupos limitada pelo custo e pelos perdedores); sementes de consequência padrão por área.
   4. A medida nova vai para `GameState.customBills` (save sobe de versão) e passa a aparecer no catálogo daquele mandato, com a marca "criada pelo governo". Medidas repetidas não são duplicadas.
   5. Sem IA, nada muda: palavras-chave e catálogo fixo.
-- **Em aberto:** biblioteca compartilhada entre mandatos (medidas criadas num jogo aparecendo em outro); balanceamento pelo simulador.
+- **Em aberto:** biblioteca compartilhada entre jogos (medidas criadas num jogo aparecendo em outro); balanceamento pelo simulador.
+
+### 21.1 Como ficou (v0.9)
+
+- **Arquivos:** `src/game/custom.ts` (conferência, registro e save), números em `src/game/data/custom.ts`, testes em `custom.test.ts`. Telas: `src/ui/NewBill.tsx` (marca e notas), `MeasureBox` em `GameScreen.tsx` e `ResponseBox.tsx`.
+- **Um pedido só:** `interpretPrompt` pede `{"medidas","resumo","respeitando","nova"}`. Com `medidas` vazia, `nova` traz a ficha em português (`nome, resumo, area, instrumento, materia[], economia, costumes, gasto, receita, temporario, potencial, divida, confianca, expectativa, grupos, risco_juridico, pros, contras, palavras`). `maxTokens` subiu para 1.200.
+- **Conferência (`buildCustomBill`):** área válida (na resposta ao fato, a área do fato é imposta); efeitos presos a `LIMITS` (mínimo e máximo de cada efeito no catálogo fixo, calculados ao carregar); instrumento mínimo por `MATTERS` (`fixInstrument`; MP não serve para matéria penal, direito fundamental ou Constituição); risco jurídico médio −1 e alto −3 de confiança e aviso nos contras; "não existe almoço grátis" (`noFreeLunch`): soma dos ganhos ≤ 5 + 1,3 × custo, com custo = gasto/renúncia em % do PIB × 40 (temporário pelo ritmo anual) + perdas nos grupos + perda de confiança × 0,5 + peso do instrumento (MP 0,5, lei 1, LC 2, PEC 3). A régua aceita 90 das 91 medidas do catálogo fixo (só a força-tarefa contra a corrupção, que não custa nada, passa do teto; teste exige mais de 95%).
+- **Repetidas:** mesmo nome normalizado, ou nome quase igual (Jaccard ≥ 0,75 nas palavras longas) na mesma área → usa a existente. Limite de 40 medidas criadas por mandato.
+- **Catálogo vivo:** `BILLS`, `BILL_BY_ID` e `SEED_RULES` são preenchidos com as medidas do save (`syncCustomBills` em `newGame` e no `migrate`), então o motor, a Câmara, os acordos, as sementes (regra padrão `frutos_<área>`) e a IA tratam a medida como qualquer outra. Medidas criadas não viram projeto-bandeira de partido.
+- **Quando entra no catálogo:** assim que o gabinete redige (na leitura), para a previsão de votos funcionar; mesmo sem assinar, ela fica disponível para reuso. Biografia do ministro da área e crônica do país registram a criação.
+- **Fim do "mais parecido":** se a IA diz que nada serve e não manda ficha válida, a leitura fica vazia (não cai mais nas palavras-chave). Palavras-chave só quando a IA falha ou está desligada.
+- **Save versão 7:** `GameState.customBills` (vazio nos saves antigos).
+- **Fica para depois:** biblioteca compartilhada entre jogos; Supremo usando o risco jurídico para suspender medidas (etapa 6); IA nas falas das lideranças.
+

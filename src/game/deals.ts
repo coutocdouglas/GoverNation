@@ -45,7 +45,7 @@ export function flagshipOf(s: GameState, party: PartyId, except?: BillId): BillI
   const promised = new Set(c.promises.map((x) => x.bill))
   let best: { id: BillId; score: number } | null = null
   for (const b of BILLS) {
-    if (b.id === except || b.instrument === 'decreto' || c.laws.includes(b.id) || c.pending.some((x) => x.id === b.id) || promised.has(b.id)) continue
+    if (b.id === except || b.custom || b.instrument === 'decreto' || c.laws.includes(b.id) || c.pending.some((x) => x.id === b.id) || promised.has(b.id)) continue
     const score = affinity(p.econ, p.costumes, b)
     if (!best || score > best.score) best = { id: b.id, score }
   }

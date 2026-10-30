@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { billBlockedReason, CONGRESS, isRecess } from '../game/congress'
-import { BILL_BY_ID, GDP_BILLIONS, INSTRUMENTS } from '../game/data/bills'
+import { BILL_BY_ID, GDP_BILLIONS, INSTRUMENTS, type BillDef } from '../game/data/bills'
+import { addCustomBill } from '../game/custom'
+import { NewBadge, NewBillNotes } from './NewBill'
 import { playerPortraitId } from '../game/data/cast'
 import { EVENT_BY_ID } from '../game/data/events'
 import { PARTY_BY_ID } from '../game/data/parties'
@@ -55,6 +57,8 @@ export function GameScreen({ state, onChange, onExit }: {
   const [deals, setDeals] = useState<Deal[]>([])
   const [listened, setListened] = useState<PartyId[]>([])
   const [voteSheet, setVoteSheet] = useState<BillId | null>(null)
+  /** Medida nova montada pela IA (etapa 3C): entra no catálogo deste mandato e fica salva. */
+  const addBill = (b: BillDef): BillId => { onChange(addCustomBill(state, b)); return b.id }
   const goesToVote = (id: BillId) => BILL_BY_ID[id].instrument !== 'decreto'
   /** Troca um projeto do mês: acordos do projeto antigo caem. */
   const dropDeals = (old: BillId | null) => { if (old) setDeals((ds) => ds.filter((d) => d.bill !== old)) }
@@ -295,6 +299,7 @@ export function GameScreen({ state, onChange, onExit }: {
                 onChoose={(i) => { setEventChoice(i); if (i !== null) toast(`🔥 Decisão anotada: ${currentEventLabel(state, i)}`) }}
                 response={eventResponse}
                 plannedBill={bill}
+                onAddBill={addBill}
                 onRespond={(id) => {
                   if (eventResponse && eventResponse !== id) dropDeals(eventResponse)
                   setEventResponse(id)
@@ -314,6 +319,7 @@ export function GameScreen({ state, onChange, onExit }: {
                 state={state}
                 selected={selected}
                 bill={bill}
+                onAddBill={addBill}
                 onSend={(id) => {
                   if (bill && bill !== id) dropDeals(bill)
                   setBill(id)
@@ -520,22 +526,26 @@ const billCost = (id: BillId) => {
   return ((fx.spending ?? 0) - (fx.revenue ?? 0)) / 100 * GDP_BILLIONS
 }
 
-function MeasureBox({ state, selected, bill, onSign, onSend }: {
+function MeasureBox({ state, selected, bill, onSign, onSend, onAddBill }: {
   state: GameState
+  onAddBill: (b: BillDef) => BillId
   selected: ActionId[]
   bill: BillId | null
   onSign: (id: ActionId) => void
   onSend: (id: BillId) => void
 }) {
   const [text, setText] = useState('')
-  const [result, setResult] = useState<{ matches: MeasureRef[]; speech: string; fallback: string | null } | null>(null)
+  const [result, setResult] = useState<{ matches: MeasureRef[]; speech: string; fallback: string | null; notes: string[] } | null>(null)
   const [busy, setBusy] = useState(false)
   const read = async () => {
     if (!text.trim() || busy) return
     setBusy(true)
     const r = await readText(state, text, null)
     setBusy(false)
-    setResult({ matches: r.matches.slice(0, r.source === 'ia' ? 3 : 2), speech: r.speech, fallback: r.fallback })
+    const matches = r.matches.slice(0, r.source === 'ia' ? 3 : 2)
+    // Etapa 3C: nada do catálogo servia e a IA redigiu uma medida nova; ela entra no catálogo do mandato.
+    if (r.draft) matches.push({ kind: 'bill', id: onAddBill(r.draft) })
+    setResult({ matches, speech: r.speech, fallback: r.fallback, notes: r.notes })
   }
   return (
     <>
@@ -560,8 +570,9 @@ function MeasureBox({ state, selected, bill, onSign, onSend }: {
           {result.matches.length === 0 ? (
             <>
               <b>🧑‍💼 O gabinete não encontrou como fazer isso.</b>
+              {result.notes.length > 0 && <p className="pn-hint">⚠️ {result.notes.join(' ')}</p>}
               <p className="pn-hint">
-                Por enquanto o governo conhece {ACTIONS.length + Object.keys(BILL_BY_ID).length} medidas, em 13 áreas. Tente reescrever com
+                O governo conhece {ACTIONS.length + Object.keys(BILL_BY_ID).length} medidas, em 13 áreas.{aiReady() ? '' : ' Com a IA ligada, o gabinete redige medidas novas.'} Tente reescrever com
                 outras palavras ou escolha no catálogo abaixo. Para responder ao fato do mês, use o campo “agir” no próprio fato.
               </p>
             </>
@@ -573,7 +584,10 @@ function MeasureBox({ state, selected, bill, onSign, onSend }: {
                 m.kind === 'decree' ? (
                   <DecreeReading key={m.id} state={state} id={m.id} first={i === 0} selected={selected} onSign={onSign} />
                 ) : (
-                  <BillReading key={m.id} state={state} id={m.id} first={i === 0} chosen={bill} onSend={onSend} />
+                  <div key={m.id}>
+                    <BillReading state={state} id={m.id} first={i === 0} chosen={bill} onSend={onSend} />
+                    {BILL_BY_ID[m.id].custom && <NewBillNotes id={m.id} notes={result.notes} />}
+                  </div>
                 ),
               )}
             </>
@@ -630,7 +644,7 @@ function BillReading({ state, id, first, chosen, onSend }: {
       <div className="pn-reading__head">
         <span className="pn-action__ic">{b.instrument === 'pec' ? '📘' : b.instrument === 'mp' ? '⚡' : b.instrument === 'decreto' ? '🖊️' : '📜'}</span>
         <div>
-          <strong>{first ? b.name : `Ou talvez: ${b.name}`}</strong>
+          <strong>{first ? b.name : `Ou talvez: ${b.name}`} <NewBadge id={id} /></strong>
           <div className="pn-hint">{b.summary}</div>
         </div>
       </div>

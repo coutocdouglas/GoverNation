@@ -1,5 +1,18 @@
 # Novidades
 
+## 0.9.0
+- **Medidas livres montadas pela IA (etapa 3C):** quando nada do catálogo faz o que você escreveu (ex.: “PEC proibindo greve de caminhoneiros”), o gabinete **redige uma medida nova**: nome, resumo, área, instrumento, custo, quem ganha e quem perde, risco jurídico, prós e contras.
+- **O jogo confere a ficha da IA**, que nunca decide números sozinha:
+  - **instrumento mínimo pela matéria:** direito fundamental ou Constituição pedem PEC; regra fiscal e sistema tributário, lei complementar; tributo novo, crime e pena, ou órgão novo pedem lei; decreto não cria gasto grande;
+  - **números presos às faixas** das medidas que já existem;
+  - **não existe almoço grátis:** se a medida promete agradar demais sem custo, o efeito nos grupos é reduzido;
+  - **risco jurídico** médio ou alto pesa na confiança do mercado.
+  - A leitura mostra o que foi corrigido (“Não dá por decreto: a medida mexe em direito fundamental”).
+- A medida nova ganha a marca **🆕 criada pelo governo**, entra no catálogo deste mandato (aparece na lista da área, a IA passa a reconhecê-la e dá para reenviar) e segue o trâmite normal: decreto, MP, votação com negociação, consequências futuras e biografias. Medidas repetidas não são duplicadas.
+- **Correção:** quando a IA dizia que nada servia, o jogo mostrava mesmo assim a medida “mais parecida” por palavras-chave, que não era o que você pediu. Agora vem a medida nova (ou o aviso de que não deu).
+- Sem IA, nada muda: palavras-chave e catálogo fixo.
+- Mandatos salvos continuam normalmente (save versão 7).
+
 ## 0.8.0
 - **Votação com negociação (etapa 4A):** ao mandar algo para a Câmara (lei, lei complementar, PEC ou MP), abre a janela da votação: placar previsto se a sessão fosse agora, piso de votos, quantos faltam e o plenário com um quadrado por deputado (sim, não, abstenção, ausente).
 - **Lideranças:** cada partido mostra a orientação (sim, não, liberado), quantos votam sim hoje e por quê. Você pode **ouvir até 3 lideranças por mês**. Cada uma cobra conforme o alinhamento com o texto e o perfil da bancada:

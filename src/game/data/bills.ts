@@ -24,6 +24,19 @@ export interface BillDef {
   cons: string
   effects: ActionEffects
   keywords: string[]
+  /** Medida montada pela IA a pedido do presidente (etapa 3C). Ausente nas medidas do catálogo fixo. */
+  custom?: CustomInfo
+}
+
+export type LegalRisk = 'baixo' | 'medio' | 'alto'
+
+export interface CustomInfo {
+  /** Mês absoluto (desde jan/2027) em que o gabinete redigiu a medida. */
+  createdAt: number
+  term: number
+  legalRisk: LegalRisk
+  /** O que o presidente escreveu, cortado. */
+  request: string
 }
 
 export const INSTRUMENTS: Record<Instrument, { label: string; rule: string }> = {

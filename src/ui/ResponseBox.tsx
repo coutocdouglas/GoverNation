@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { isRecess } from '../game/congress'
-import { BILL_BY_ID, GDP_BILLIONS, INSTRUMENTS } from '../game/data/bills'
+import { BILL_BY_ID, GDP_BILLIONS, INSTRUMENTS, type BillDef } from '../game/data/bills'
+import { NewBadge, NewBillNotes } from './NewBill'
 import { MINISTER_BY_AREA } from '../game/data/ministers'
 import type { EventDef } from '../game/data/events'
 import { responseBlockedReason } from '../game/game'
@@ -38,8 +39,9 @@ const ICON = { decreto: '🖊️', mp: '⚡', lei: '📜', complementar: '📜',
  * ("Usar: ..."), que vão para o campo de resposta; o gabinete lê a ordem e mostra, antes de assinar,
  * o que ela vira, quanto custa e quem sente; o ministro pode opinar e sugerir ajustes.
  */
-export function ResponseBox({ state, ev, response, plannedBill, onRespond }: {
+export function ResponseBox({ state, ev, response, plannedBill, onRespond, onAddBill }: {
   state: GameState
+  onAddBill: (b: BillDef) => BillId
   ev: EventDef
   response: BillId | null
   plannedBill: BillId | null
@@ -65,11 +67,13 @@ export function ResponseBox({ state, ev, response, plannedBill, onRespond }: {
     const r = await readText(state, text, ev.area)
     setBusy(null)
     const ids = r.matches.filter((x) => x.kind === 'bill').map((x) => x.id as BillId).slice(0, 3)
+    // Etapa 3C: nada do catálogo servia e a IA redigiu uma medida nova; ela entra no catálogo do mandato.
+    if (r.draft) ids.push(onAddBill(r.draft))
     if (ids.length === 0) {
-      setNoMatch(r.fallback ? `${r.fallback} Lido por palavras-chave, sem resultado.` : '')
+      setNoMatch(r.fallback ? `${r.fallback} Lido por palavras-chave, sem resultado.` : r.notes.join(' ') || (r.source === 'ia' ? 'A IA não conseguiu redigir uma medida para isso.' : ''))
       return
     }
-    setReading({ ids, summary: r.speech, constraints: r.constraints, fallback: r.fallback })
+    setReading({ ids, summary: r.speech, constraints: r.constraints, fallback: r.fallback, notes: r.notes })
   }
   const counsel = async () => {
     if (busy) return
@@ -172,7 +176,7 @@ export function ResponseBox({ state, ev, response, plannedBill, onRespond }: {
   )
 }
 
-interface SheetData { ids: BillId[]; summary: string; constraints: string[]; fallback: string | null }
+interface SheetData { ids: BillId[]; summary: string; constraints: string[]; fallback: string | null; notes: string[] }
 
 const STANCE = {
   apoia: { label: 'Apoia', cls: 'up' },
@@ -225,8 +229,9 @@ function ReadingSheet({ state, ev, order, data, plannedBill, onClose, onSign, on
           {data.constraints.length > 0 && id === data.ids[0] && (
             <div className="pn-memo__terms">{data.constraints.map((c, i) => <div key={i}>respeitando: {c}</div>)}</div>
           )}
-          <div className="pn-memo__terms"><div>no catálogo do governo: <b>{b.name}</b></div></div>
+          <div className="pn-memo__terms"><div>{b.custom ? 'medida nova, redigida agora:' : 'no catálogo do governo:'} <b>{b.name}</b> <NewBadge id={id} /></div></div>
         </div>
+        {b.custom && <NewBillNotes id={id} notes={data.notes} />}
         {data.fallback && <p className="pn-hint">⚠️ {data.fallback} Lido por palavras-chave.</p>}
         {data.ids.length > 1 && (
           <div className="pn-row">
@@ -316,7 +321,7 @@ function Reading({ state, id, first, plannedBill, onRespond, compact }: {
       <div className="pn-reading__head">
         <span className="pn-action__ic">{ICON[b.instrument]}</span>
         <div>
-          <strong>{first ? b.name : `Ou talvez: ${b.name}`}</strong>
+          <strong>{first ? b.name : `Ou talvez: ${b.name}`} <NewBadge id={id} /></strong>
           <div className="pn-hint">{b.summary}</div>
         </div>
       </div>

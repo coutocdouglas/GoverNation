@@ -1,5 +1,5 @@
 import { ACTION_BY_ID } from '../game/actions'
-import { BILL_BY_ID } from '../game/data/bills'
+import { BILL_BY_ID, type BillDef } from '../game/data/bills'
 import { DEMAND_BY_ID } from '../game/data/demands'
 import { GROUP_BY_ID } from '../game/data/groups'
 import { defaultOption, currentEvent } from '../game/events'
@@ -13,8 +13,10 @@ import { MINISTER_BY_AREA } from '../game/data/ministers'
 import { aiReady } from '../lib/ai'
 
 /** Painel do fato do mês: quem traz o problema, o que aconteceu e as escolhas. */
-export function EventPanel({ state, choice, onChoose, response, onRespond, plannedBill }: {
+export function EventPanel({ state, choice, onChoose, response, onRespond, plannedBill, onAddBill }: {
   state: GameState
+  /** Põe no catálogo do mandato uma medida nova montada pela IA (etapa 3C). */
+  onAddBill: (b: BillDef) => BillId
   choice: number | null
   onChoose: (i: number | null) => void
   response: BillId | null
@@ -85,7 +87,7 @@ export function EventPanel({ state, choice, onChoose, response, onRespond, plann
         ))}
       </div>
       )}
-      {kind !== 'bom' && <ResponseBox key={`${state.month}-${ev.id}`} state={state} ev={ev} response={response} plannedBill={plannedBill} onRespond={onRespond} />}
+      {kind !== 'bom' && <ResponseBox key={`${state.month}-${ev.id}`} state={state} ev={ev} response={response} plannedBill={plannedBill} onRespond={onRespond} onAddBill={onAddBill} />}
     </section>
   )
 }

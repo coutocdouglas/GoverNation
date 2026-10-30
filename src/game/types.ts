@@ -1,4 +1,5 @@
 // Tipos centrais do motor do jogo. Nada aqui depende da interface.
+import type { BillDef } from './data/bills'
 
 export type IndicatorKey =
   | 'growth'
@@ -119,7 +120,7 @@ export interface MonthReport {
 }
 
 export interface GameState {
-  saveVersion: 6
+  saveVersion: 7
   /** Mês atual, de 0 (janeiro do 1º ano) a 47. Em 48 o mandato acabou. */
   month: number
   presidentName: string
@@ -155,6 +156,8 @@ export interface GameState {
   actionLog: { month: number; id: string }[]
   lastReport: MonthReport | null
   finished: boolean
+  /** Medidas novas montadas pela IA a pedido do presidente (etapa 3C), no catálogo deste jogo. */
+  customBills: BillDef[]
 }
 
 export type ActionId =

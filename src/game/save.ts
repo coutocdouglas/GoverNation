@@ -1,4 +1,5 @@
 import { initialCongress } from './congress'
+import { syncCustomBills } from './custom'
 import type { GameState } from './types'
 
 // O jogo instalado guarda o localStorage na pasta de dados do usuário no Windows
@@ -65,7 +66,13 @@ export function migrate(raw: unknown): GameState | null {
       s.congress.scandal = 0
       s.saveVersion = 6
     }
-    if (s.saveVersion !== 6) return null
+    if (s.saveVersion === 6) {
+      // v0.8 → v0.9: medidas livres montadas pela IA (etapa 3C).
+      s.customBills = []
+      s.saveVersion = 7
+    }
+    if (s.saveVersion !== 7) return null
+    syncCustomBills(s as GameState)
     return s as GameState
   } catch {
     return null

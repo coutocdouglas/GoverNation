@@ -15,6 +15,7 @@ import { initialGroups, overallApproval, stepGroup } from './groups'
 import { Rng } from './rng'
 import { DEALS } from './data/deals'
 import { dealBlockedReason, flagshipOf } from './deals'
+import { syncCustomBills } from './custom'
 import type { ActionId, Deal, Articulation, BillId, Cause, Economy, GameState, GroupId, Headline, Impulse, MonthReport, PartyId, Snapshot, VoteRecord } from './types'
 
 export const TERM_MONTHS = 48
@@ -55,7 +56,7 @@ export function newGame(
   const rngState = seed ?? Math.floor(Math.random() * 2 ** 31)
   const bonus = DIFFICULTY[difficulty].approvalBonus
   const state: GameState = {
-    saveVersion: 6,
+    saveVersion: 7,
     month: 0,
     presidentName: presidentName.trim() || 'Presidente',
     difficulty,
@@ -79,7 +80,9 @@ export function newGame(
     actionLog: [],
     lastReport: null,
     finished: false,
+    customBills: [],
   }
+  syncCustomBills(state)
   state.history.push(snapshot(state))
   const rng = new Rng(state.rngState)
   plantInheritance(state, rng)
