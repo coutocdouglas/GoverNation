@@ -71,7 +71,17 @@ export function migrate(raw: unknown): GameState | null {
       s.customBills = []
       s.saveVersion = 7
     }
-    if (s.saveVersion !== 7) return null
+    if (s.saveVersion === 7) {
+      // v0.9 → v0.10: Congresso 2.0. Projetos já na Câmara seguem no plenário, com o texto original.
+      const c = s.congress
+      c.speaker = { relation: c.parties.ucd?.relation ?? 50, lastTalk: -99 }
+      c.toSanction = []
+      c.vetoes = []
+      c.bombLog = []
+      s.cabinet = {}
+      s.saveVersion = 8
+    }
+    if (s.saveVersion !== 8) return null
     syncCustomBills(s as GameState)
     return s as GameState
   } catch {

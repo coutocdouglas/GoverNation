@@ -3,19 +3,17 @@
 > **Leia este arquivo primeiro.** Ele diz onde o projeto está e qual é o próximo passo.
 > Atualize-o a cada mudança: seção "Estado atual", "Próximo passo" e uma linha no "Histórico".
 
-**Última atualização:** 30/10/2026 · **Versão publicada:** v0.9.0
+**Última atualização:** 30/10/2026 · **Versão publicada:** v0.10.0
 
 ---
 
 ## Próximo passo
 
-**Etapa 4B: Congresso 2.0** (resto da etapa 4). Ver DESIGN.md, seção 20 ("Falta na etapa 4").
-
-- Veto e derrubada do veto, relator e emendas ao texto, comissões, presidente da Câmara, frentes temáticas, pautas-bomba, ministérios cedidos de verdade, "deixar na pauta" sem votar.
+**Etapa 5: entre mandatos** (campanha contínua). Painel de eleição com escolha de candidato pela ficha, governo seguinte simulado se o jogador perder, herança.
 
 Complexidade: alta. Use o **Opus**, numa conversa nova.
 
-Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdouglas/GoverNation. Leia CLAUDE.md, docs/ESTADO.md e docs/DESIGN.md. Quero fazer a etapa 4B."*
+Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdouglas/GoverNation. Leia CLAUDE.md, docs/ESTADO.md e docs/DESIGN.md. Quero fazer a etapa 5."*
 
 ---
 
@@ -24,7 +22,7 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 **Base técnica**
 - App de Windows (Tauri 2 + React + TypeScript). O instalador é gerado pelo GitHub Actions e o jogo se atualiza sozinho, com atualização assinada.
 - O motor do jogo (`src/game/`) fica separado das telas (`src/ui/`). Os números de balanceamento ficam em `src/game/data/`.
-- 103 testes automáticos. Saves antigos são migrados (versão atual do save: 7).
+- 119 testes automáticos. Saves antigos são migrados (versão atual do save: 8).
 
 **Jogabilidade**
 - Mandato de 48 meses (jan/2027 a dez/2030), com o mês em 4 passos: notícias, fato do mês, decisões e encerrar.
@@ -41,13 +39,16 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
   - Articulação: conversar com partidos ou liberar emendas, até 2 por mês.
   - **Votação com negociação (v0.8):** janela com placar previsto e plenário; ouvir até 3 lideranças por mês, que cobram emendas, pauta do projeto-bandeira ou cargos (ou não vendem); confiabilidade, promessas e risco de escândalo.
   - O jogador escolhe o partido (esquerda, centro ou direita).
+  - **Congresso 2.0 (v0.10):** comissões que engavetam, relator que mantém, desidrata ou enfia "jabuti", presidente da Câmara dono da pauta (segura projetos, escolhe relatores), urgência, deixar na pauta, 7 frentes parlamentares, pautas-bomba, sanção e veto com sessão de derrubada (257 votos) e ministérios cedidos a partidos (o indicado assume).
+  - **Votação no painel (v0.10):** cada votação aparece com os votos acendendo um a um; maioria esmagadora em lei ou MP permite votação simbólica, sem painel.
+  - **Reação da sociedade (v0.10):** depois de cada lei, página com nota de popularidade (0 a 10), % a favor, reação de cada grupo, mercado, frentes, partidos, custo e prós e contras.
 - **Fato do mês** com importância de 1 a 5, crises, boas notícias (promover, dar crédito ou ignorar) e consequências de leis antigas.
 - **Cobranças dos grupos** com prazo, recompensa e penalidade.
 - **Memória do mundo:** leis, MPs e obras plantam consequências que brotam meses ou anos depois. Há herança do governo anterior e o tempo é absoluto, pronto para vários mandatos.
 - **Fichas:** biografia acumulada de cada personagem e memória do país.
 - **Retratos:** 110 fotos, cada uma usada por uma pessoa só. O presidente escolhe o rosto na posse (65 livres) e 16 retratos ficam reservados para Defesa, Supremo, povos indígenas, campo e tradições.
 
-**Telas:** Painel (com cara de jogo, animações e plantão de notícias), Governo (plenário, pauta, partidos e articulação) e Fichas. Nação, Economia, Diplomacia, Programas e Vida pessoal aparecem bloqueadas.
+**Telas:** Painel (com cara de jogo, animações e plantão de notícias), Governo (mesa de sanção, presidente da Câmara, pauta, partidos e articulação, ministérios, frentes, leis com reação) e Fichas. Nação, Economia, Diplomacia, Programas e Vida pessoal aparecem bloqueadas.
 
 **Onde está cada coisa**
 - `CLAUDE.md`: regras do projeto e quando abrir uma conversa nova.
@@ -62,8 +63,8 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 1. ✅ Retratos e elenco fixo (v0.4.1)
 2. ✅ Memória do mundo, consequências, importância, fatos bons e herdados, biografias (v0.5.0)
 3. ✅ **3A** resposta em texto ao fato do mês, ministro responsável, catálogo grande de medidas (v0.6.0) · ✅ **3B** camada de IA: conselho do ministro, interpretação do texto livre, chave própria, plano B (v0.7.0) · ✅ **3C** medidas livres montadas pela IA (v0.9.0)
-4. 🔶 **4A** votação com negociação por lideranças (v0.8.0) · ⏭️ **4B** Congresso 2.0: veto e derrubada, relator e emendas ao texto, comissões, presidente da Câmara, frentes temáticas, pautas-bomba, ministérios cedidos
-5. Entre mandatos (campanha contínua): painel de eleição com escolha de candidato pela ficha, governo seguinte simulado se o jogador perder, herança
+4. ✅ **4A** votação com negociação por lideranças (v0.8.0) · ✅ **4B** Congresso 2.0, votação animada, voto simbólico e reação da sociedade (v0.10.0)
+5. ⏭️ Entre mandatos (campanha contínua): painel de eleição com escolha de candidato pela ficha, governo seguinte simulado se o jogador perder, herança
 6. Depois: Senado com poderes próprios (sabatinas, impeachment), Supremo, imprensa e pesquisas, orçamento anual, ícones próprios
 
 ## Decisões já tomadas (resumo; detalhes no DESIGN.md)
@@ -97,3 +98,4 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 | 30/10/2026 | v0.8.0 | Etapa 4A: janela de votação com plenário e negociação com lideranças (3 por mês: emendas, pauta, cargos); risco de escândalo; sem opções prontas com IA fora do modo fácil |
 | 30/10/2026 | — | Decisão: etapa 3C (medidas livres montadas pela IA, entrando no catálogo do mandato) antes da 4B |
 | 30/10/2026 | v0.9.0 | Etapa 3C: medidas livres redigidas pela IA quando nada do catálogo serve, conferidas pelo motor (instrumento mínimo, faixas, almoço grátis, risco jurídico) e guardadas no catálogo do mandato; fim da "medida mais parecida" quando a IA diz que nada serve |
+| 30/10/2026 | v0.10.0 | Etapa 4B: comissões, relator e jabutis, presidente da Câmara, urgência, deixar na pauta, frentes, pautas-bomba, sanção/veto e derrubada, ministérios cedidos; votação animada no painel, voto simbólico e página de reação da sociedade; save 8 |

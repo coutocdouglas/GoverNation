@@ -41,6 +41,6 @@ Continue na mesma conversa quando estiver no meio de uma etapa, corrigindo algo 
 1. ✅ Retratos e elenco fixo (v0.4.1)
 2. ✅ Memória do mundo, consequências, importância, fatos bons e herdados, biografias (v0.5.0)
 3. ✅ **3A** resposta em texto ao fato do mês, ministro responsável, catálogo grande de medidas por área (v0.6.0) · ✅ **3B** camada de IA (v0.7.0) · ✅ **3C** medidas livres montadas pela IA (v0.9.0)
-4. 🔶 4A votação com negociação (v0.8.0) · 4B Congresso 2.0: veto e derrubada, relator e emendas ao texto, comissões, presidente da Câmara, frentes, pautas-bomba, ministérios cedidos
+4. ✅ 4A votação com negociação (v0.8.0) · ✅ 4B Congresso 2.0, votação animada, voto simbólico, reação da sociedade (v0.10.0)
 5. Entre mandatos: painel de eleição (escolher candidato pela ficha), governo seguinte simulado, herança
 6. Depois: Senado com poderes próprios, Supremo, imprensa e pesquisas, orçamento anual

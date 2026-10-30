@@ -4,6 +4,7 @@ import { SEED_RULES } from './data/consequences'
 import { CUSTOM } from './data/custom'
 import { GROUPS } from './data/groups'
 import { MINISTER_BY_AREA, type AreaId } from './data/ministers'
+import { ministerOf } from './camara'
 import { normalize } from './interpret'
 import { absMonth, addBio, addChronicle } from './memory'
 import type { BillId, GameState, GroupId, Instrument } from './types'
@@ -286,7 +287,7 @@ export function addCustomBill(s: GameState, bill: BillDef): GameState {
     world: { ...s.world, chronicle: [...s.world.chronicle] },
   }
   register(bill)
-  const m = MINISTER_BY_AREA[bill.area]
+  const m = ministerOf(s, bill.area)
   addBio(next, m.name, `Redigiu, a pedido do presidente, uma medida nova: “${bill.name}”.`)
   addChronicle(next, `Gabinete redige medida nova: ${bill.name}, no governo ${s.presidentName}`, 'neutral')
   return next

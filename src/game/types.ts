@@ -1,5 +1,6 @@
 // Tipos centrais do motor do jogo. Nada aqui depende da interface.
 import type { BillDef } from './data/bills'
+import type { AreaId } from './data/ministers'
 
 export type IndicatorKey =
   | 'growth'
@@ -117,10 +118,12 @@ export interface MonthReport {
   /** Fato do mês resolvido e a opção escolhida. */
   /** option = -1 quando a resposta escrita resolveu o fato. */
   event?: { id: string; option: number; chosen: boolean; response?: BillId; resolved?: boolean }
+  /** Leis que entraram em vigor no mês (aprovadas pela Câmara ou sancionadas), para a página de reação (etapa 4B). */
+  sanctioned?: BillId[]
 }
 
 export interface GameState {
-  saveVersion: 7
+  saveVersion: 8
   /** Mês atual, de 0 (janeiro do 1º ano) a 47. Em 48 o mandato acabou. */
   month: number
   presidentName: string
@@ -158,6 +161,8 @@ export interface GameState {
   finished: boolean
   /** Medidas novas montadas pela IA a pedido do presidente (etapa 3C), no catálogo deste jogo. */
   customBills: BillDef[]
+  /** Ministérios cedidos a partidos (etapa 4B): a área passa a ter o indicado do partido. */
+  cabinet: Partial<Record<AreaId, { party: PartyId; since: number }>>
 }
 
 export type ActionId =
@@ -207,6 +212,53 @@ export interface PendingBill {
   sentMonth: number
   /** Acordos fechados com partidos para esta votação (etapa 4). */
   deals?: { party: PartyId; kind: DealKind }[]
+  /** Etapa 4B: onde o projeto está. Ausente = plenário (saves antigos). */
+  stage?: 'comissao' | 'plenario'
+  /** Parecer do relator (etapa 4B). */
+  amendment?: Amendment
+  /** O governo insiste no texto original, contra o parecer do relator. */
+  original?: boolean
+  /** Regime de urgência: pula a comissão e a gaveta do presidente da Câmara. */
+  urgent?: boolean
+  /** Meses que ficou parado na gaveta (comissão ou presidente da Câmara). */
+  holds?: number
+}
+
+/** Parecer do relator: o texto que vai a voto (etapa 4B). */
+export interface Amendment {
+  relator: PartyId
+  kind: 'mantem' | 'jabuti' | 'desidrata'
+  /** Quanto o texto se aproxima da posição do partido do relator (0 a 1). */
+  shift: number
+  /** Multiplicador dos efeitos do texto original (desidratar < 1). */
+  scale: number
+  /** O "jabuti": benefício enxertado no texto, que o presidente pode vetar. */
+  extra?: { label: string; spending?: number; revenue?: number; confidence?: number; groups: Partial<Record<GroupId, number>> }
+}
+
+/** Projeto aprovado esperando sanção ou veto do presidente (etapa 4B). */
+export interface SanctionItem {
+  /** Id único do item. */
+  id: string
+  /** Pauta-bomba inteira, ou só o jabuti enxertado num projeto do governo (veto parcial). */
+  kind: 'bomba' | 'jabuti'
+  bill: BillId
+  month: number
+  /** Placar da aprovação na Câmara. */
+  vote?: { yes: number; no: number }
+  /** Partido que puxou (dono da pauta-bomba ou relator do jabuti). */
+  party: PartyId
+  amendment?: Amendment
+}
+
+/** Veto do presidente esperando a Câmara decidir se derruba (etapa 4B). */
+export interface VetoItem {
+  id: string
+  kind: 'bomba' | 'jabuti'
+  bill: BillId
+  month: number
+  party: PartyId
+  amendment?: Amendment
 }
 
 /** Preço que um partido cobra pelo voto (etapa 4). */
@@ -239,9 +291,16 @@ export interface VoteRecord {
   approved: boolean
   /** Como cada partido votou, em maioria. */
   byParty: Record<PartyId, { yes: number; no: number }>
+  /** Etapa 4B: votação simbólica (sem painel) ou sessão para derrubar um veto. */
+  kind?: 'simbolica' | 'veto'
+  /** Título quando não é o nome da medida (ex.: "Veto: ..."). */
+  title?: string
+  /** Texto desidratado pelo relator: fração dos efeitos que ficou. */
+  scale?: number
 }
 
-export type Articulation = { kind: 'conversar' | 'emendas'; party: PartyId }
+/** 'presidente' = conversar com o presidente da Câmara (party é o partido dele). */
+export type Articulation = { kind: 'conversar' | 'emendas' | 'presidente'; party: PartyId }
 
 export interface CongressState {
   parties: Record<PartyId, PartyState>
@@ -256,6 +315,14 @@ export interface CongressState {
   promises: Promise_[]
   /** Risco de escândalo acumulado por cargos e emendas, 0 a 100. */
   scandal: number
+  /** Etapa 4B: relação com o presidente da Câmara (0 a 100) e última conversa. */
+  speaker: { relation: number; lastTalk: number }
+  /** Aprovados esperando sanção ou veto. */
+  toSanction: SanctionItem[]
+  /** Vetos esperando a Câmara. */
+  vetoes: VetoItem[]
+  /** Pautas-bomba já levadas ao plenário (para não repetir logo). */
+  bombLog: { id: BillId; month: number }[]
 }
 
 /** De onde veio um fato do mês: a lei, o autor e o ano. */

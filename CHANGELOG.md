@@ -1,5 +1,22 @@
 # Novidades
 
+## 0.10.0
+- **Congresso 2.0 (etapa 4B).** O caminho de um projeto agora tem etapas, e cada uma pode travar:
+  - **Comissões:** cada área tem uma comissão presidida por um partido. Se o presidente da comissão for contra o texto e estiver longe do governo, ela **engaveta** o projeto por um mês. PEC passa pela CCJ e gasta um mês na comissão especial antes do plenário.
+  - **Relator:** quem relata muda o texto. Pode manter, **desidratar** (efeito menor, texto mais perto do partido dele) ou enfiar um **“jabuti”** (um benefício para o setor dele). Você aceita o parecer ou insiste no texto original, e o partido do relator fica contrariado.
+  - **Presidente da Câmara** (Dagoberto Leme, UCD): é o dono da pauta. De bem com o governo, escolhe relatores amigos; de mal, escolhe adversários e **segura um projeto por mês** na gaveta. Dá para conversar com ele (ação de articulação).
+  - **Urgência:** um pedido por mês, pula a comissão e a gaveta, mas gasta relação com o presidente da Câmara.
+  - **Deixar na pauta:** segure um projeto sem votar para negociar mais (MP não pode passar do prazo).
+  - **Frentes parlamentares:** ruralista, evangélica, segurança, sindical, ambientalista, empresarial e municipalista. Cruzam os partidos e puxam o voto de quem faz parte delas quando o tema é delas.
+  - **Pautas-bomba:** com o governo fraco na Câmara, a Mesa aprova por conta própria reajustes, perdões de dívida e cortes de imposto que vão à sua mesa.
+  - **Sanção e veto:** pautas-bomba e jabutis esperam a sua caneta. Vetar irrita quem pediu; no mês seguinte a Câmara vota se **derruba o veto** (257 votos). Sem decisão, vale a sanção tácita.
+  - **Ministérios cedidos de verdade:** entregue uma pasta a um partido (POL, UCD, PSN, MRB, MDN ou PRA). O indicado assume, com retrato próprio, e a bancada vota mais com o governo. Seu partido não gosta, quem perdeu a pasta reclama, e demitir depois custa caro.
+- **Votação no painel:** ao encerrar o mês, cada votação aparece no painel eletrônico da Câmara, com os votos acendendo um a um, o placar correndo e o carimbo de aprovado ou rejeitado (dá para pular).
+- **Votação simbólica:** quando a maioria é esmagadora (lei ou MP), dá para pedir votação simbólica: o projeto passa sem painel e sem risco.
+- **Reação da sociedade:** depois de cada lei aprovada abre uma página com a nota de popularidade (0 a 10), quanto da população é a favor, o que cada um dos 7 grupos achou (com a fala de alguém do grupo), a reação do mercado, das frentes e dos partidos, o custo por ano e os prós e contras. Leis antigas podem ser revistas na aba Governo.
+- 7 personagens novos (presidente da Câmara e indicados dos partidos), cada um com retrato próprio. Quem já tinha escolhido um desses rostos para o presidente continua com ele: o personagem usa outro.
+- Mandatos salvos continuam normalmente (save versão 8).
+
 ## 0.9.0
 - **Medidas livres montadas pela IA (etapa 3C):** quando nada do catálogo faz o que você escreveu (ex.: “PEC proibindo greve de caminhoneiros”), o gabinete **redige uma medida nova**: nome, resumo, área, instrumento, custo, quem ganha e quem perde, risco jurídico, prós e contras.
 - **O jogo confere a ficha da IA**, que nunca decide números sozinha:

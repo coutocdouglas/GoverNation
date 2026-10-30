@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { CAST, castMember, fallbackPortrait, PLAYER_POOL, RESERVED } from './data/cast'
+import { CAST, castMember, castPortrait, fallbackPortrait, PLAYER_POOL, RESERVED, setPresidentPortrait } from './data/cast'
 import { EVENTS } from './data/events'
 import { PARTIES } from './data/parties'
 import { PORTRAIT_COUNT, PORTRAITS } from './data/portraits'
@@ -40,10 +40,23 @@ describe('elenco e retratos', () => {
 
   it('o presidente só escolhe entre retratos livres', () => {
     const taken = new Set([...CAST.map((c) => c.portrait), ...RESERVED])
-    expect(PLAYER_POOL.length).toBeGreaterThan(60)
+    expect(PLAYER_POOL.length).toBeGreaterThan(55)
     for (const id of PLAYER_POOL) expect(taken.has(id)).toBe(false)
     expect(PLAYER_POOL.some((id) => PORTRAITS[id - 1].gender === 'f')).toBe(true)
     expect(PLAYER_POOL.some((id) => PORTRAITS[id - 1].gender === 'm')).toBe(true)
+  })
+
+  it('retrato reserva não é de ninguém e só entra quando o presidente usa o mesmo rosto', () => {
+    const primaries = new Set(CAST.map((c) => c.portrait))
+    for (const c of CAST.filter((x) => x.alt)) {
+      expect(primaries.has(c.alt!), c.name).toBe(false)
+      expect(RESERVED).not.toContain(c.alt)
+      expect(PORTRAITS[c.alt! - 1].gender, c.name).toBe(c.gender)
+      setPresidentPortrait(c.portrait)
+      expect(castPortrait(c.name)).toBe(c.alt)
+      setPresidentPortrait(undefined)
+      expect(castPortrait(c.name)).toBe(c.portrait)
+    }
   })
 
   it('saves antigos ganham um retrato livre e sempre o mesmo', () => {

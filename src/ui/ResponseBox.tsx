@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { isRecess } from '../game/congress'
 import { BILL_BY_ID, GDP_BILLIONS, INSTRUMENTS, type BillDef } from '../game/data/bills'
 import { NewBadge, NewBillNotes } from './NewBill'
-import { MINISTER_BY_AREA } from '../game/data/ministers'
+import { ministerOf } from '../game/camara'
 import type { EventDef } from '../game/data/events'
 import { responseBlockedReason } from '../game/game'
 import { measuresOfArea } from '../game/interpret'
@@ -47,7 +47,7 @@ export function ResponseBox({ state, ev, response, plannedBill, onRespond, onAdd
   plannedBill: BillId | null
   onRespond: (id: BillId | null) => void
 }) {
-  const m = MINISTER_BY_AREA[ev.area]
+  const m = ministerOf(state, ev.area)
   const [text, setText] = useState('')
   const [reading, setReading] = useState<SheetData | null>(null)
   const [noMatch, setNoMatch] = useState<string | null>(null)
@@ -189,7 +189,7 @@ function ReadingSheet({ state, ev, order, data, plannedBill, onClose, onSign, on
   state: GameState; ev: EventDef; order: string; data: SheetData; plannedBill: BillId | null
   onClose: () => void; onSign: (id: BillId) => void; onRewrite: (text: string) => void
 }) {
-  const m = MINISTER_BY_AREA[ev.area]
+  const m = ministerOf(state, ev.area)
   const [id, setId] = useState(data.ids[0])
   const [review, setReview] = useState<Review | null>(null)
   const [reviewBusy, setReviewBusy] = useState(false)

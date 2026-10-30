@@ -10,6 +10,7 @@ import { effectChips } from './effects'
 import { GROUP_ICON } from './icons'
 import { ResponseBox } from './ResponseBox'
 import { MINISTER_BY_AREA } from '../game/data/ministers'
+import { ministerOf } from '../game/camara'
 import { aiReady } from '../lib/ai'
 
 /** Painel do fato do mês: quem traz o problema, o que aconteceu e as escolhas. */
@@ -39,7 +40,9 @@ export function EventPanel({ state, choice, onChoose, response, onRespond, plann
     )
   }
   const def = defaultOption(ev)
-  const p = ev.presenter
+  // Se a pasta foi cedida a um partido, quem apresenta é o ministro de agora (etapa 4B).
+  const resp = ministerOf(state, ev.area)
+  const p = ev.presenter.name === MINISTER_BY_AREA[ev.area].name ? { name: resp.name, role: resp.role, feminine: resp.feminine, color: resp.color } : ev.presenter
   const origin = state.event?.origin
   const kind = ev.kind ?? 'crise'
   return (
@@ -59,7 +62,7 @@ export function EventPanel({ state, choice, onChoose, response, onRespond, plann
             </span>
           </div>
           <h2>{fillText(ev.title, origin)}</h2>
-          {MINISTER_BY_AREA[ev.area].name !== p.name && <p className="pn-hint" style={{ margin: '0 0 4px' }}>{MINISTER_BY_AREA[ev.area].icon} Área: {MINISTER_BY_AREA[ev.area].areaName} · responsável: <b>{MINISTER_BY_AREA[ev.area].name}</b></p>}
+          {resp.name !== p.name && <p className="pn-hint" style={{ margin: '0 0 4px' }}>{resp.icon} Área: {resp.areaName} · responsável: <b>{resp.name}</b></p>}
           <p>{fillText(ev.text, origin)}</p>
           {origin && <p className="pn-event__origin">🌱 Consequência de <b>{origin.label}</b> · {origin.author} · {origin.year}</p>}
           <p className="pn-event__ask">{kind === 'bom' ? '“Presidente, temos uma boa notícia. Como quer usar?”' : '“Presidente, precisamos de uma decisão.”'}</p>

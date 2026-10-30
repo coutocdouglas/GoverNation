@@ -9,6 +9,11 @@ export interface CastMember {
   role: string
   gender: 'f' | 'm'
   portrait: number
+  /**
+   * Retrato reserva (etapa 4B): personagens que entraram depois da posse de mandatos já salvos
+   * usam este se o presidente do save escolheu o mesmo rosto. Nunca é retrato de outro personagem.
+   */
+  alt?: number
 }
 
 export const CAST: CastMember[] = [
@@ -44,6 +49,14 @@ export const CAST: CastMember[] = [
   { name: 'Márcio Antunes', role: 'Ministro das Cidades', gender: 'm', portrait: 18 },
   { name: 'Beatriz Okada', role: 'Ministra da Ciência e Tecnologia', gender: 'f', portrait: 17 },
   { name: 'Paulo Henrique Duarte', role: 'Ministro das Relações Institucionais', gender: 'm', portrait: 4 },
+  // Congresso 2.0 (etapa 4B, data/camara.ts): presidente da Câmara e nomes que os partidos indicam para ministérios
+  { name: 'Dagoberto Leme', role: 'Presidente da Câmara dos Deputados', gender: 'm', portrait: 59, alt: 16 },
+  { name: 'Wanderley Cotrim', role: 'Indicado do POL para ministério', gender: 'm', portrait: 79, alt: 83 },
+  { name: 'Rosângela Teixeira', role: 'Indicada do UCD para ministério', gender: 'f', portrait: 54, alt: 84 },
+  { name: 'Fábio Medeiros', role: 'Indicado do PSN para ministério', gender: 'm', portrait: 70, alt: 77 },
+  { name: 'Pastora Elisa Monteiro', role: 'Indicada do MRB para ministério', gender: 'f', portrait: 72, alt: 86 },
+  { name: 'Anselmo Bragança', role: 'Indicado do MDN para ministério', gender: 'm', portrait: 49, alt: 51 },
+  { name: 'Kátia Rangel', role: 'Indicada do PRA para ministério', gender: 'f', portrait: 76, alt: 96 },
 ]
 
 /**
@@ -61,7 +74,14 @@ export const RESERVED: number[] = [
 const BY_NAME = new Map(CAST.map((c) => [c.name, c]))
 
 export const castMember = (name: string) => BY_NAME.get(name)
-export const castPortrait = (name: string) => BY_NAME.get(name)?.portrait
+let presidentPortrait: number | undefined
+/** A tela informa o rosto do presidente do mandato, para ninguém mais usar o mesmo. */
+export const setPresidentPortrait = (id: number | undefined) => { presidentPortrait = id }
+export const castPortrait = (name: string) => {
+  const c = BY_NAME.get(name)
+  if (!c) return undefined
+  return c.portrait === presidentPortrait && c.alt ? c.alt : c.portrait
+}
 
 const taken = new Set([...CAST.map((c) => c.portrait), ...RESERVED])
 

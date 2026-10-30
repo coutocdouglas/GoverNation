@@ -1,6 +1,7 @@
 import type { ActionEffects } from '../actions'
 import type { BillId, Instrument } from '../types'
 import { CATALOG } from './measures'
+import { BOMBS } from './camara'
 import type { AreaId } from './ministers'
 
 /**
@@ -130,6 +131,8 @@ export const isDecree = (id: BillId) => BILL_BY_ID[id]?.instrument === 'decreto'
 export const actsNow = (id: BillId) => { const i = BILL_BY_ID[id]?.instrument; return i === 'decreto' || i === 'mp' }
 
 export const BILL_BY_ID = Object.fromEntries(BILLS.map((b) => [b.id, b])) as Record<BillId, BillDef>
+// Pautas-bomba (etapa 4B) são projetos da própria Câmara: têm ficha, mas não entram no catálogo do governo.
+for (const b of BOMBS) BILL_BY_ID[b.id] = b
 
 /** Meses até poder reenviar um projeto rejeitado. */
 export const RESUBMIT_COOLDOWN = 6

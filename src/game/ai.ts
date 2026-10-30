@@ -3,6 +3,7 @@ import { BILL_BY_ID, BILLS, INSTRUMENTS } from './data/bills'
 import type { EventDef } from './data/events'
 import { GROUPS } from './data/groups'
 import { MINISTER_BY_AREA, type AreaId, type Minister } from './data/ministers'
+import { ministerOf } from './camara'
 import { PARTIES } from './data/parties'
 import type { MeasureRef } from './interpret'
 import { MATTERS, type CustomDraft } from './custom'
@@ -60,7 +61,7 @@ export interface AiRequest {
 
 /** Pedido de opinião: o ministro dá um parecer e 2 ou 3 ordens prontas, no estilo dele. */
 export function ministerAdvicePrompt(state: GameState, ev: EventDef): AiRequest {
-  const m = MINISTER_BY_AREA[ev.area]
+  const m = ministerOf(state, ev.area)
   const catalog = BILLS.filter((b) => b.area === ev.area).map((b) => billLine(b.id)).join('\n')
   return {
     system: [
@@ -89,7 +90,7 @@ export function interpretPrompt(state: GameState, text: string, area: AreaId | n
   const bills = area ? BILLS.filter((b) => b.area === area) : BILLS
   const lines = bills.map((b) => billLine(b.id))
   if (!area) for (const a of ACTIONS) lines.push(`- ${DECREE_PREFIX}${a.id} | ${a.name} (decreto rápido): ${a.summary}`)
-  const who = area ? `${MINISTER_BY_AREA[area].name}, ${MINISTER_BY_AREA[area].role}` : 'o gabinete da Presidência'
+  const who = area ? `${ministerOf(state, area).name}, ${ministerOf(state, area).role}` : 'o gabinete da Presidência'
   const areas = area ? `"${area}"` : Object.keys(MINISTER_BY_AREA).map((a) => `"${a}"`).join(', ')
   const groups = GROUPS.map((g) => `"${g.id}" (${g.name})`).join(', ')
   return {
@@ -195,7 +196,7 @@ export function parseInterpretation(raw: string, area: AreaId | null): AiReading
 
 /** Pedido de parecer do ministro sobre a ordem que o presidente vai assinar. */
 export function ministerReviewPrompt(state: GameState, area: AreaId, order: string, measure: BillId): AiRequest {
-  const m = MINISTER_BY_AREA[area]
+  const m = ministerOf(state, area)
   const b = BILL_BY_ID[measure]
   return {
     system: [
