@@ -275,3 +275,12 @@
 .pn-respond { margin-top: 16px; padding: 14px; border: 1px dashed var(--pn-line); border-radius: 12px; display: flex; flex-direction: column; gap: 8px; }
 .pn-respond__head { display: flex; gap: 12px; align-items: center; }
 .pn-option:disabled { opacity: .45; cursor: not-allowed; }
+
+/* Etapa 3B: IA */
+.pn-input { font: inherit; padding: 7px 10px; border-radius: 8px; border: 1px solid var(--pn-line); background: #0e141c; color: var(--pn-ink); min-width: 260px; }
+.pn-input option { color: #111; }
+.pn-advice { margin: 8px 0; padding: 8px 12px; border-left: 3px solid var(--pn-gold); background: rgba(127,127,127,.08); border-radius: 6px; font-style: italic; }
+.pn-advice p { margin: 0 0 6px; }
+.pn-advice .pn-row { font-style: normal; }
+.pn-usage { width: 100%; border-collapse: collapse; font-size: .85rem; margin: 6px 0; }
+.pn-usage th, .pn-usage td { text-align: left; padding: 4px 6px; border-bottom: 1px solid rgba(127,127,127,.25); }

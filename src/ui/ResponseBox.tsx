@@ -4,7 +4,10 @@ import { BILL_BY_ID, GDP_BILLIONS, INSTRUMENTS } from '../game/data/bills'
 import { MINISTER_BY_AREA } from '../game/data/ministers'
 import type { EventDef } from '../game/data/events'
 import { responseBlockedReason } from '../game/game'
-import { interpretResponse, measuresOfArea } from '../game/interpret'
+import { measuresOfArea } from '../game/interpret'
+import type { Advice } from '../game/ai'
+import { aiReady, AiError } from '../lib/ai'
+import { askAdvice, readText } from '../lib/aiActions'
 import type { BillId, GameState } from '../game/types'
 import { ForecastRow } from './CongressView'
 import { effectChips } from './effects'
@@ -41,9 +44,29 @@ export function ResponseBox({ state, ev, response, plannedBill, onRespond }: {
 }) {
   const m = MINISTER_BY_AREA[ev.area]
   const [text, setText] = useState('')
-  const [result, setResult] = useState<BillId[] | null>(null)
+  const [result, setResult] = useState<{ ids: BillId[]; speech: string; fallback: string | null } | null>(null)
   const [showCatalog, setShowCatalog] = useState(false)
-  const read = () => setResult(interpretResponse(text, ev.area).slice(0, 3))
+  const [busy, setBusy] = useState<'ler' | 'conselho' | null>(null)
+  const [advice, setAdvice] = useState<Advice[] | null>(null)
+  const [adviceError, setAdviceError] = useState<string | null>(null)
+  const ai = aiReady()
+  const read = async () => {
+    if (!text.trim() || busy) return
+    setBusy('ler')
+    const r = await readText(state, text, ev.area)
+    setBusy(null)
+    setResult({ ids: r.matches.filter((x) => x.kind === 'bill').map((x) => x.id as BillId).slice(0, 3), speech: r.speech, fallback: r.fallback })
+  }
+  const counsel = async () => {
+    if (busy) return
+    setBusy('conselho'); setAdviceError(null)
+    try {
+      setAdvice(await askAdvice(state, ev))
+    } catch (e) {
+      setAdviceError(e instanceof AiError ? e.message : 'Falha na IA.')
+    }
+    setBusy(null)
+  }
   const catalog = measuresOfArea(ev.area)
   const he = m.feminine ? 'a ministra' : 'o ministro'
 
@@ -76,14 +99,41 @@ export function ResponseBox({ state, ev, response, plannedBill, onRespond }: {
             placeholder={`Diga a ${he} o que fazer. Ex.: “${catalog[0]?.name ?? 'Agir já'}”`}
           />
           <div className="pn-row">
-            <button className="pn-btn" disabled={!text.trim()} onClick={read}>🗂️ Pedir leitura {m.feminine ? 'da ministra' : 'do ministro'}</button>
+            <button className="pn-btn" disabled={!text.trim() || !!busy} onClick={read}>
+              {busy === 'ler' ? '⏳ Lendo…' : `🗂️ Pedir leitura ${m.feminine ? 'da ministra' : 'do ministro'}`}
+            </button>
+            {ai && (
+              <button className="pn-btn pn-btn--ghost" disabled={!!busy} onClick={counsel} title="A IA faz o ministro sugerir respostas no estilo dele">
+                {busy === 'conselho' ? '⏳ Pensando…' : `💬 Pedir conselho ${m.feminine ? 'da ministra' : 'do ministro'}`}
+              </button>
+            )}
             <button className="pn-btn pn-btn--ghost" onClick={() => setShowCatalog((v) => !v)}>
               📚 {showCatalog ? 'Esconder' : 'Ver'} o que dá para fazer em {m.areaName.toLowerCase()} ({catalog.length})
             </button>
           </div>
+          {adviceError && <p className="pn-hint">⚠️ {adviceError}</p>}
+          {advice && (
+            <div className="pn-preview">
+              <b>💬 {m.name} sugere:</b>
+              {advice.map((a) => (
+                <div key={a.measure} className="pn-advice">
+                  <p>“{a.speech}”</p>
+                  <div className="pn-row">
+                    <span className="pn-hint" style={{ margin: 0 }}>{ICON[BILL_BY_ID[a.measure].instrument]} {BILL_BY_ID[a.measure].name}</span>
+                    <button className="pn-btn pn-btn--ghost" onClick={() => { setText(BILL_BY_ID[a.measure].name); setResult({ ids: [a.measure], speech: '', fallback: null }); setAdvice(null) }}>
+                      Ver custo e placar
+                    </button>
+                    <button className="pn-btn pn-btn--ghost" onClick={() => { setText(a.speech); setResult(null); setAdvice(null) }}>Editar com minhas palavras</button>
+                  </div>
+                </div>
+              ))}
+              <div className="pn-row"><button className="pn-btn pn-btn--ghost" onClick={() => setAdvice(null)}>Ignorar os conselhos</button></div>
+            </div>
+          )}
           {result && (
             <div className="pn-preview">
-              {result.length === 0 ? (
+              {result.fallback && <p className="pn-hint">⚠️ {result.fallback} Lido por palavras-chave.</p>}
+              {result.ids.length === 0 ? (
                 <>
                   <b>🧑‍💼 {m.name}: “Presidente, não sei fazer isso pela {m.areaName.toLowerCase()}.”</b>
                   <p className="pn-hint">Tente outras palavras ou escolha no catálogo da área. Medidas de outras áreas não resolvem este problema.</p>
@@ -91,7 +141,8 @@ export function ResponseBox({ state, ev, response, plannedBill, onRespond }: {
               ) : (
                 <>
                   <b>🧑‍💼 {m.name} entendeu assim:</b>
-                  {result.map((id, i) => <Reading key={id} state={state} id={id} first={i === 0} plannedBill={plannedBill} onRespond={onRespond} />)}
+                  {result.speech && <p className="pn-advice">“{result.speech}”</p>}
+                  {result.ids.map((id, i) => <Reading key={id} state={state} id={id} first={i === 0} plannedBill={plannedBill} onRespond={onRespond} />)}
                 </>
               )}
             </div>

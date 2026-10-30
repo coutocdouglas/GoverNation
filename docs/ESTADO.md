@@ -3,23 +3,19 @@
 > **Leia este arquivo primeiro.** Ele diz onde o projeto está e qual é o próximo passo.
 > Atualize-o a cada mudança: seção "Estado atual", "Próximo passo" e uma linha no "Histórico".
 
-**Última atualização:** 30/10/2026 · **Versão publicada:** v0.6.0
+**Última atualização:** 30/10/2026 · **Versão publicada:** v0.7.0
 
 ---
 
 ## Próximo passo
 
-**Etapa 3B: camada de IA.** Decidido em 30/10 (DESIGN.md, seção 17). A base dela, a etapa 3A, ficou pronta na v0.6.0.
+**Testar a IA com a chave real e fixar os modelos.** A etapa 3B ficou pronta na v0.7.0, mas foi testada com uma API simulada.
 
-- Botão **"pedir leitura do ministro"** com IA: o ministro sugere 2 ou 3 respostas em texto, no estilo dele, a partir da ficha, do partido, da relação com o presidente e do estado real do país. O jogador aceita, edita ou ignora.
-- A IA também interpreta o texto livre do jogador e devolve uma medida do catálogo (ou a mesma estrutura `BillDef`); o motor valida e calcula. A IA nunca define números sozinha.
-- Chave de API própria, digitada nas configurações e guardada só no computador. Nunca no repositório (é público), no save ou nos logs.
-- Modo híbrido: sem chave, sem internet ou com resposta inválida, o jogo usa as palavras-chave da 3A (`interpretResponse` e `interpretMeasure`).
-- Modelos por tarefa (barato para falas, intermediário para interpretar), com custo medido antes de fixar.
+- Douglas: criar a chave em console.anthropic.com, colar no botão 🤖 IA e jogar alguns meses. Ver se as falas soam bem e anotar o "Gasto medido".
+- Com os números reais, decidir se Haiku/Sonnet ficam como estão. Ajustes de texto dos prompts ficam em `src/game/ai.ts`.
+- Depois: **etapa 4, Congresso 2.0** (veto e derrubada, relator e emendas, comissões, presidente da Câmara, frentes, pautas-bomba, ministérios cedidos). Complexidade alta: use o **Opus**, numa conversa nova.
 
-Complexidade: alta. Use o **Opus** para desenhar a 3B (segurança da chave, formato das respostas, plano B). O Sonnet pode fazer a tela de configurações depois.
-
-Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdouglas/GoverNation. Leia CLAUDE.md, docs/ESTADO.md e docs/DESIGN.md. Quero fazer a etapa 3B."*
+Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdouglas/GoverNation. Leia CLAUDE.md, docs/ESTADO.md e docs/DESIGN.md. Quero fazer a etapa 4."*
 
 ---
 
@@ -28,7 +24,7 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 **Base técnica**
 - App de Windows (Tauri 2 + React + TypeScript). O instalador é gerado pelo GitHub Actions e o jogo se atualiza sozinho, com atualização assinada.
 - O motor do jogo (`src/game/`) fica separado das telas (`src/ui/`). Os números de balanceamento ficam em `src/game/data/`.
-- 64 testes automáticos. Saves antigos são migrados (versão atual do save: 5).
+- 74 testes automáticos. Saves antigos são migrados (versão atual do save: 5).
 
 **Jogabilidade**
 - Mandato de 48 meses (jan/2027 a dez/2030), com o mês em 4 passos: notícias, fato do mês, decisões e encerrar.
@@ -36,7 +32,8 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 - **7 grupos sociais** com memória: ganhos são esquecidos em cerca de 9 meses e perdas em cerca de 2 anos.
 - **Medida do mês em texto livre**, lida por palavras-chave. Leva aos 7 decretos rápidos ou a um catálogo de 91 medidas em 13 áreas (decreto, MP, lei, lei complementar ou PEC) e mostra o instrumento, o custo e o placar previsto.
 - **Agir no fato do mês:** além das opções prontas, o jogador escreve a resposta; o ministro da área lê e mostra até 3 caminhos. A resposta segue o trâmite normal e não gasta a medida do mês. Decreto e MP resolvem na hora; lei e PEC, se aprovadas no mesmo mês.
-- **Ministros:** 13 áreas, cada uma com um ministro responsável (7 novos na v0.6).
+- **Ministros:** 13 áreas, cada uma com um ministro responsável, partido e estilo próprio.
+- **IA opcional (v0.7):** com chave própria, o ministro dá conselhos no estilo dele e a IA lê o texto livre, sempre escolhendo do catálogo. Sem chave ou sem internet, palavras-chave.
 - **Congresso:** 513 deputados de 9 partidos fictícios. O voto depende de ideologia, orientação do partido, relação com o governo, popularidade, aprovação e emendas.
   - Lei ordinária, lei complementar (257 votos), PEC (308 votos, em dois turnos) e MP, que vale na hora e cai se for rejeitada.
   - Recesso em janeiro e julho.
@@ -52,7 +49,7 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 
 **Onde está cada coisa**
 - `CLAUDE.md`: regras do projeto e quando abrir uma conversa nova.
-- `docs/DESIGN.md`: decisões de desenho, seções 1 a 18.
+- `docs/DESIGN.md`: decisões de desenho, seções 1 a 19.
 - `CHANGELOG.md`: novidades de cada versão.
 - `docs/RELEASES.md`: como publicar.
 
@@ -62,7 +59,7 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 
 1. ✅ Retratos e elenco fixo (v0.4.1)
 2. ✅ Memória do mundo, consequências, importância, fatos bons e herdados, biografias (v0.5.0)
-3. ✅ **3A** resposta em texto ao fato do mês, ministro responsável, catálogo grande de medidas (v0.6.0) · ⏭️ **3B** camada de IA: leitura do ministro, interpretação do texto livre, chave própria, plano B
+3. ✅ **3A** resposta em texto ao fato do mês, ministro responsável, catálogo grande de medidas (v0.6.0) · ✅ **3B** camada de IA: conselho do ministro, interpretação do texto livre, chave própria, plano B (v0.7.0)
 4. Congresso 2.0: veto e derrubada, relator e emendas ao texto, comissões, presidente da Câmara, frentes temáticas, pautas-bomba, ministérios cedidos
 5. Entre mandatos (campanha contínua): painel de eleição com escolha de candidato pela ficha, governo seguinte simulado se o jogador perder, herança
 6. Depois: Senado com poderes próprios (sabatinas, impeachment), Supremo, imprensa e pesquisas, orçamento anual, ícones próprios
@@ -91,3 +88,4 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 | 29/10/2026 | — | Criado este arquivo de estado (docs/ESTADO.md) |
 | 30/10/2026 | — | Decisão: IA entra na etapa 3B; etapa 3 dividida em 3A (catálogo) e 3B (IA). Documentos atualizados |
 | 30/10/2026 | v0.6.0 | Etapa 3A: agir em texto no fato do mês, 13 áreas com ministro responsável (7 ministros novos), catálogo de 91 medidas por palavras-chave, boas notícias por área |
+| 30/10/2026 | v0.7.0 | Etapa 3B: IA opcional com chave própria, conselho do ministro no estilo dele, leitura do texto livre por IA, plano B por palavras-chave, medidor de gasto |

@@ -1,5 +1,15 @@
 # Novidades
 
+## 0.7.0
+- **Inteligência artificial opcional (etapa 3B).** Botão **🤖 IA** no topo do Painel: cole sua chave da Anthropic, o jogo testa e guarda só neste computador (nunca no save nem no GitHub).
+- **Conselho do ministro:** no fato do mês, “💬 Pedir conselho” faz o ministro da área sugerir 2 ou 3 respostas, com as palavras e o jeito dele, levando em conta o partido dele, a relação com você e o estado real do país. Você aceita (vê custo e placar), edita com suas palavras ou ignora.
+- **Leitura mais esperta do que você escreve:** na medida do mês e na resposta ao fato, a IA entende frases como “apertar o cinto” e acha a medida certa no catálogo, com uma frase explicando o que entendeu.
+- A IA só escolhe medidas do catálogo: custos, votos e efeitos continuam calculados pelo jogo. Escolhas inventadas por ela são descartadas.
+- **Plano B automático:** sem chave, sem internet, com a IA fora do ar ou com resposta estranha, o jogo lê por palavras-chave, como antes, e avisa.
+- Cada tarefa usa um modelo (Haiku para falas, Sonnet para interpretar), trocável nas configurações, que também mostram o gasto medido em tokens.
+- Os 13 ministros ganharam partido e estilo próprio.
+- Mandatos salvos continuam normalmente (o save não mudou).
+
 ## 0.6.0
 - **Agir com suas palavras no fato do mês:** além das opções prontas, você escreve o que quer fazer. O ministro da área lê o texto e mostra até 3 caminhos, com instrumento, custo, quando resolve e o placar provável. A resposta vira decreto, MP, lei ou PEC e segue o trâmite normal, **sem gastar a medida do mês**.
 - Decreto e MP resolvem o problema na hora. Lei e PEC resolvem se a Câmara aprovar no mesmo mês; em recesso ou se for rejeitada, o problema segue e vale o que aconteceria se ninguém agisse.

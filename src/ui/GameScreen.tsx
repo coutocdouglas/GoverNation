@@ -8,7 +8,10 @@ import { ACTION_BY_ID, ACTIONS, ACTIONS_PER_MONTH, blockedReason, effectMultipli
 import { GROUPS, GROUP_BY_ID } from '../game/data/groups'
 import { advanceMonth, isCopomMonth, monthLabel, TERM_MONTHS } from '../game/game'
 import { econPull } from '../game/groups'
-import { interpretMeasure, type MeasureRef } from '../game/interpret'
+import type { MeasureRef } from '../game/interpret'
+import { readText } from '../lib/aiActions'
+import { AiSettings } from './AiSettings'
+import { aiReady } from '../lib/ai'
 import type { ActionId, Articulation, BillId, Cause, GameState, GroupId, IndicatorKey } from '../game/types'
 import { CongressView, ForecastRow, Scoreboard } from './CongressView'
 import { DemandsCard, EventPanel } from './EventPanel'
@@ -47,6 +50,7 @@ export function GameScreen({ state, onChange, onExit }: {
   const [tab, setTab] = useState<'painel' | 'governo' | 'fichas'>('painel')
   const [eventChoice, setEventChoice] = useState<number | null>(null)
   const [eventResponse, setEventResponse] = useState<BillId | null>(null)
+  const [showAi, setShowAi] = useState(false)
   const eventRef = useRef<HTMLDivElement>(null)
   const medidaRef = useRef<HTMLElement>(null)
   const history = state.history
@@ -105,6 +109,7 @@ export function GameScreen({ state, onChange, onExit }: {
             <span className="pn-chip" title="Juros básicos definidos pelo Banco Central">🏦 Selic <b>{num(now.indicators.selic, 2)}%</b></span>
             {isCopomMonth(state.month) && <span className="pn-chip pn-chip--hot" title="O Banco Central decide os juros no fim deste mês">📅 Copom este mês</span>}
             <span className="pn-chip" title="Decisões que você ainda pode tomar neste mês">✍️ Decisões <b>{ACTIONS_PER_MONTH - selected.length}/{ACTIONS_PER_MONTH}</b></span>
+            <button className="pn-chip pn-chip--btn" onClick={() => setShowAi(true)} title="Configurar a inteligência artificial dos ministros">🤖 IA {aiReady() ? 'ligada' : 'desligada'}</button>
             <button className="pn-chip pn-chip--btn" onClick={onExit}>☰ Menu</button>
           </div>
         </div>
@@ -119,6 +124,7 @@ export function GameScreen({ state, onChange, onExit }: {
           ))}
         </nav>
       </header>
+      {showAi && <AiSettings onClose={() => setShowAi(false)} />}
 
       <main className="pn-main">
         <section className="pn-hero">
@@ -487,8 +493,15 @@ function MeasureBox({ state, selected, bill, onSign, onSend }: {
   onSend: (id: BillId) => void
 }) {
   const [text, setText] = useState('')
-  const [result, setResult] = useState<MeasureRef[] | null>(null)
-  const read = () => setResult(interpretMeasure(text).matches.slice(0, 2))
+  const [result, setResult] = useState<{ matches: MeasureRef[]; speech: string; fallback: string | null } | null>(null)
+  const [busy, setBusy] = useState(false)
+  const read = async () => {
+    if (!text.trim() || busy) return
+    setBusy(true)
+    const r = await readText(state, text, null)
+    setBusy(false)
+    setResult({ matches: r.matches.slice(0, r.source === 'ia' ? 3 : 2), speech: r.speech, fallback: r.fallback })
+  }
   return (
     <>
       <h3>✍️ Medida do mês <span className="pn-badge">escreva com suas palavras</span></h3>
@@ -504,11 +517,12 @@ function MeasureBox({ state, selected, bill, onSign, onSend }: {
         placeholder="Ex.: “Isentar do imposto de renda quem ganha até R$ 5 mil” ou “Acelerar as obras de rodovias”"
       />
       <div className="pn-row">
-        <button className="pn-btn" disabled={!text.trim()} onClick={read}>📋 Pedir leitura do gabinete</button>
+        <button className="pn-btn" disabled={!text.trim() || busy} onClick={read}>{busy ? '⏳ Lendo…' : '📋 Pedir leitura do gabinete'}</button>
       </div>
       {result && (
         <div className="pn-preview">
-          {result.length === 0 ? (
+          {result.fallback && <p className="pn-hint">⚠️ {result.fallback} Lido por palavras-chave.</p>}
+          {result.matches.length === 0 ? (
             <>
               <b>🧑‍💼 O gabinete não encontrou como fazer isso.</b>
               <p className="pn-hint">
@@ -519,7 +533,8 @@ function MeasureBox({ state, selected, bill, onSign, onSend }: {
           ) : (
             <>
               <b>🧑‍💼 Os ministros entenderam assim:</b>
-              {result.map((m, i) =>
+              {result.speech && <p className="pn-advice">“{result.speech}”</p>}
+              {result.matches.map((m, i) =>
                 m.kind === 'decree' ? (
                   <DecreeReading key={m.id} state={state} id={m.id} first={i === 0} selected={selected} onSign={onSign} />
                 ) : (
