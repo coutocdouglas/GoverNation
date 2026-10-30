@@ -3,24 +3,31 @@
 > **Leia este arquivo primeiro.** Ele diz onde o projeto está e qual é o próximo passo.
 > Atualize-o a cada mudança: seção "Estado atual", "Próximo passo" e uma linha no "Histórico".
 
-**Última atualização:** 29/10/2026 · **Versão publicada:** v0.5.0
+**Última atualização:** 30/10/2026 · **Versão publicada:** v0.5.0
 
 ---
 
 ## Próximo passo
 
-**Etapa 3: resposta em texto ao fato do mês, leitura do ministro e catálogo grande de medidas.**
+**Etapa 3A: resposta em texto ao fato do mês, ministro responsável e catálogo grande de medidas (por palavras-chave).**
 
 - O fato do mês ganha um campo "agir" em texto livre (o mesmo interpretador da medida do mês).
-- Botão **"pedir leitura do ministro"**: o ministro da área sugere 2 ou 3 respostas em texto, que o jogador aceita, edita ou ignora.
 - A resposta aceita vira decreto, projeto de lei, MP ou PEC e segue o trâmite normal. **Não gasta a medida do mês**: é a resolução do problema, num espaço à parte.
 - O catálogo de medidas cresce de 17 para cerca de 80, organizado por área (saúde, educação, segurança, energia, agro, transportes, trabalho, ambiente...), cada uma com palavras-chave, efeitos e sementes de consequência.
 - Cada fato do mês passa a ter uma área e um ministro responsável (ministros novos entram no elenco com retrato livre ou reservado).
-- **Sem IA por enquanto.** O texto livre é lido por palavras-chave. A IA fica para depois, como modelo local ou chave própria.
+- Esta etapa fica **sem IA** de propósito: é a base e o plano B da 3B.
 
-Complexidade: alta. Use o Opus para desenhar e o Sonnet para escrever o catálogo.
+**Etapa 3B (logo depois): camada de IA.** Decidido em 30/10 (DESIGN.md, seção 17).
 
-Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdouglas/GoverNation. Leia CLAUDE.md, docs/ESTADO.md e docs/DESIGN.md. Quero fazer a etapa 3."*
+- Botão **"pedir leitura do ministro"**: o ministro sugere 2 ou 3 respostas em texto, no estilo dele, a partir da ficha, do partido, da relação com o presidente e do estado real do país. O jogador aceita, edita ou ignora.
+- A IA também interpreta o texto livre do jogador e devolve a estrutura de medida; o motor valida e calcula. A IA nunca define números sozinha.
+- Chave de API própria, digitada nas configurações e guardada só no computador. Nunca no repositório (é público), no save ou nos logs.
+- Modo híbrido: sem chave, sem internet ou com resposta inválida, o jogo usa as palavras-chave.
+- Modelos por tarefa (barato para falas, intermediário para interpretar), com custo medido antes de fixar.
+
+Complexidade: alta. Use o Opus para desenhar (principalmente a 3B) e o Sonnet para escrever o catálogo e as telas.
+
+Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdouglas/GoverNation. Leia CLAUDE.md, docs/ESTADO.md e docs/DESIGN.md. Quero fazer a etapa 3A."*
 
 ---
 
@@ -61,16 +68,16 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 
 1. ✅ Retratos e elenco fixo (v0.4.1)
 2. ✅ Memória do mundo, consequências, importância, fatos bons e herdados, biografias (v0.5.0)
-3. ⏭️ Resposta em texto ao fato do mês, leitura do ministro, catálogo grande de medidas
+3. ⏭️ **3A** resposta em texto ao fato do mês, ministro responsável, catálogo grande de medidas (palavras-chave) · **3B** camada de IA: leitura do ministro, interpretação do texto livre, chave própria, plano B
 4. Congresso 2.0: veto e derrubada, relator e emendas ao texto, comissões, presidente da Câmara, frentes temáticas, pautas-bomba, ministérios cedidos
 5. Entre mandatos (campanha contínua): painel de eleição com escolha de candidato pela ficha, governo seguinte simulado se o jogador perder, herança
-6. Depois: Senado com poderes próprios (sabatinas, impeachment), Supremo, imprensa e pesquisas, orçamento anual, ícones próprios, IA opcional
+6. Depois: Senado com poderes próprios (sabatinas, impeachment), Supremo, imprensa e pesquisas, orçamento anual, ícones próprios
 
 ## Decisões já tomadas (resumo; detalhes no DESIGN.md)
 
 - Mecânicas inspiradas no jogo de referência; nomes, textos, arte e números próprios. Personagens e partidos fictícios, com bancadas inspiradas na Câmara eleita em 2026.
 - Campanha contínua entre mandatos, com painel de eleição.
-- IA fora por enquanto: o jogo é pessoal e o catálogo com palavras-chave resolve. Se vier, será um modelo local ou uma chave própria.
+- IA entra na etapa 3B, com chave de API própria e plano B por palavras-chave. Modelo local descartado por ora (DESIGN.md, seção 17).
 - O Senado não vota leis por enquanto. A profundidade vem da Câmara; o Senado ganha poderes próprios depois.
 - Retratos: um por pessoa, sem repetir. Chegaram 110 (o plano era 200).
 - Uma etapa por vez, fechada antes da próxima, integrando ao jogo a cada etapa.
@@ -88,3 +95,4 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 | 29/10/2026 | v0.4.1 | 110 retratos e elenco fixo, escolha do rosto na posse |
 | 29/10/2026 | v0.5.0 | Memória do mundo, consequências, importância 1–5, boas notícias, herança, biografias e Fichas; CLAUDE.md |
 | 29/10/2026 | — | Criado este arquivo de estado (docs/ESTADO.md) |
+| 30/10/2026 | — | Decisão: IA entra na etapa 3B; etapa 3 dividida em 3A (catálogo) e 3B (IA). Documentos atualizados |

@@ -36,11 +36,11 @@ Continue na mesma conversa quando estiver no meio de uma etapa, corrigindo algo 
 
 **Como começar a conversa nova:** "Projeto GoverNation, repositório coutocdouglas/GoverNation. Leia CLAUDE.md, docs/ESTADO.md e docs/DESIGN.md. Quero fazer a etapa X." Não precisa reenviar prints antigos: o que importa já está no ESTADO.md e no DESIGN.md.
 
-## Roteiro atual (detalhes em docs/DESIGN.md, seções 11 a 16)
+## Roteiro atual (detalhes em docs/DESIGN.md, seções 11 a 17)
 
 1. ✅ Retratos e elenco fixo (v0.4.1)
 2. ✅ Memória do mundo, consequências, importância, fatos bons e herdados, biografias (v0.5.0)
-3. Resposta em texto ao fato do mês, leitura do ministro, catálogo grande de medidas por área
+3. **3A** resposta em texto ao fato do mês, ministro responsável, catálogo grande de medidas por área (palavras-chave) · **3B** camada de IA (leitura do ministro, texto livre, chave própria, plano B)
 4. Congresso 2.0: veto e derrubada, relator e emendas ao texto, comissões, presidente da Câmara, frentes, pautas-bomba, ministérios cedidos
 5. Entre mandatos: painel de eleição (escolher candidato pela ficha), governo seguinte simulado, herança
-6. Depois: Senado com poderes próprios, Supremo, imprensa e pesquisas, orçamento anual, IA opcional (local ou chave própria)
+6. Depois: Senado com poderes próprios, Supremo, imprensa e pesquisas, orçamento anual
