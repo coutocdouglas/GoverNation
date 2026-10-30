@@ -48,3 +48,16 @@ describe('provedores de IA (v0.7.1)', () => {
     await expect(callAi('fala', req)).rejects.not.toThrow(/gsk_segredo/)
   })
 })
+
+describe('falhas visíveis (v0.7.3)', () => {
+  it('guarda o motivo da última falha e troca o modelo do Gemini que não existia', async () => {
+    store['gn.ai.config'] = JSON.stringify({ enabled: true, provider: 'gemini', modelsBy: { gemini: { fala: 'gemini-3.5-flash-lite', interpretar: 'gemini-3.8-flash' } } })
+    expect(getAiConfig().modelsBy.gemini.interpretar).toBe('gemini-3.5-flash-lite')
+    setApiKey('AIza-x', 'gemini')
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify([{ error: { message: 'models/x is not found' } }]), { status: 404 })))
+    await expect(callAi('interpretar', req)).rejects.toThrow(/Modelo não encontrado/)
+    const u = JSON.parse(store['gn.ai.usage'])['gemini:gemini-3.5-flash-lite']
+    expect(u.failures).toBe(1)
+    expect(u.lastError).toMatch(/Modelo não encontrado/)
+  })
+})

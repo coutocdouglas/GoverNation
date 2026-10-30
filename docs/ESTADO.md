@@ -3,7 +3,7 @@
 > **Leia este arquivo primeiro.** Ele diz onde o projeto está e qual é o próximo passo.
 > Atualize-o a cada mudança: seção "Estado atual", "Próximo passo" e uma linha no "Histórico".
 
-**Última atualização:** 30/10/2026 · **Versão publicada:** v0.7.2
+**Última atualização:** 30/10/2026 · **Versão publicada:** v0.7.3
 
 ---
 
@@ -24,7 +24,7 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 **Base técnica**
 - App de Windows (Tauri 2 + React + TypeScript). O instalador é gerado pelo GitHub Actions e o jogo se atualiza sozinho, com atualização assinada.
 - O motor do jogo (`src/game/`) fica separado das telas (`src/ui/`). Os números de balanceamento ficam em `src/game/data/`.
-- 80 testes automáticos. Saves antigos são migrados (versão atual do save: 5).
+- 81 testes automáticos. Saves antigos são migrados (versão atual do save: 5).
 
 **Jogabilidade**
 - Mandato de 48 meses (jan/2027 a dez/2030), com o mês em 4 passos: notícias, fato do mês, decisões e encerrar.
@@ -91,3 +91,4 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 | 30/10/2026 | v0.7.0 | Etapa 3B: IA opcional com chave própria, conselho do ministro no estilo dele, leitura do texto livre por IA, plano B por palavras-chave, medidor de gasto |
 | 30/10/2026 | v0.7.1 | Provedores de IA: Gemini, Groq e OpenRouter além do Claude, com chave e modelos por provedor |
 | 30/10/2026 | v0.7.2 | Opinião do ministro em parágrafo com ordens "Usar", folha de leitura antes de assinar (vira, custo, quem sente) e parecer do ministro com sugestões |
+| 30/10/2026 | v0.7.3 | Gemini: modelo padrão corrigido (gemini-3.5-flash-lite nas duas tarefas, testado pelo Douglas); motivo da última falha visível no gasto medido |

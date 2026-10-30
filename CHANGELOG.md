@@ -1,5 +1,9 @@
 # Novidades
 
+## 0.7.3
+- **Gemini:** o modelo que vinha escolhido para ler as ordens (`gemini-3.8-flash`) não existia e falhava sempre. Agora as duas tarefas usam `gemini-3.5-flash-lite`, que funciona; quem tinha o nome antigo salvo é corrigido sozinho.
+- **Falhas com motivo:** a tabela “Gasto medido” mostra, em vermelho, o motivo da última falha de cada modelo (ex.: “Modelo não encontrado”, “chave recusada”, “sem conexão”).
+
 ## 0.7.2
 - **Opinião do ministro como numa reunião de verdade:** com a IA ligada, “🗣️ Pedir a opinião” traz um parecer em parágrafo (o que está em jogo, o risco de não agir, o que ele defende, puxando para os interesses do partido dele) e 2 ou 3 ordens prontas. Clique em **“Usar: …”** e a ordem vai para o campo **A sua resposta**, onde você pode editar.
 - **Leitura do gabinete antes de assinar:** “Ler com os ministros” abre uma folha com o que a ordem faz na prática, as condições que você impôs, o que ela vira (decreto, MP, lei, PEC), o impacto fiscal, quando resolve o fato, o que muda no país e **quem sente** (aprovação de cada grupo hoje → depois). Nada é assinado até você confirmar.

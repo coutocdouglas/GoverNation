@@ -108,8 +108,8 @@ export function AiSettings({ onClose }: { onClose: () => void }) {
                 {models.map(([id, u]) => {
                   const ok = Math.max(1, u.calls - u.failures)
                   return (
-                    <tr key={id}>
-                      <td>{id}</td><td>{u.calls}</td><td>{u.failures}</td><td>{u.input.toLocaleString('pt-BR')}</td><td>{u.output.toLocaleString('pt-BR')}</td>
+                    <tr key={id} title={u.lastError ?? ''}>
+                      <td>{id}{u.lastError && <div className="dn" style={{ fontSize: 12 }}>⚠️ {u.lastError}</div>}</td><td>{u.calls}</td><td className={u.failures ? 'dn' : ''}>{u.failures}</td><td>{u.input.toLocaleString('pt-BR')}</td><td>{u.output.toLocaleString('pt-BR')}</td>
                       <td>{Math.round(u.input / ok)} + {Math.round(u.output / ok)}</td>
                     </tr>
                   )

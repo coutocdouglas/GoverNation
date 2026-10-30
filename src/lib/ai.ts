@@ -40,8 +40,8 @@ export const PROVIDERS: ProviderDef[] = [
   {
     id: 'gemini', label: 'Gemini (Google)', keyHint: 'AIza…', keyUrl: 'aistudio.google.com', format: 'openai',
     url: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
-    defaults: { fala: 'gemini-3.5-flash-lite', interpretar: 'gemini-3.8-flash' },
-    models: ['gemini-3.5-flash-lite', 'gemini-3.6-flash', 'gemini-3.8-flash', 'gemini-2.5-flash', 'gemini-2.5-pro'],
+    defaults: { fala: 'gemini-3.5-flash-lite', interpretar: 'gemini-3.5-flash-lite' },
+    models: ['gemini-3.5-flash-lite', 'gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.5-pro'],
   },
   {
     id: 'groq', label: 'Groq (grátis com limite)', keyHint: 'gsk_…', keyUrl: 'console.groq.com', format: 'openai',
@@ -77,7 +77,7 @@ const DEFAULT_CONFIG: AiConfig = {
 }
 
 /** Gasto medido, por modelo (para decidir os modelos com base em custo real). */
-export type AiUsage = Record<string, { calls: number; input: number; output: number; failures: number }>
+export type AiUsage = Record<string, { calls: number; input: number; output: number; failures: number; lastError?: string }>
 
 function read<T>(key: string, fallback: T): T {
   try {
@@ -118,6 +118,8 @@ export const getAiConfig = (): AiConfig => {
   const c = read(CFG_STORE, DEFAULT_CONFIG)
   const modelsBy = { ...DEFAULT_CONFIG.modelsBy }
   for (const p of PROVIDERS) modelsBy[p.id] = { ...p.defaults, ...(c.modelsBy?.[p.id] ?? {}) }
+  // v0.7.3: o padrão antigo do Gemini (gemini-3.8-flash) não existia; troca pelo que funciona.
+  for (const t of ['fala', 'interpretar'] as AiTask[]) if (modelsBy.gemini[t] === 'gemini-3.8-flash') modelsBy.gemini[t] = PROVIDER_BY_ID.gemini.defaults[t]
   if (c.models) modelsBy.anthropic = { ...modelsBy.anthropic, ...c.models } // configuração da v0.7.0
   return { enabled: c.enabled, provider: PROVIDER_BY_ID[c.provider] ? c.provider : 'anthropic', modelsBy }
 }
@@ -128,13 +130,13 @@ export const resetAiUsage = () => write(USAGE_STORE, {})
 /** A IA está pronta para usar? (ligada e com chave). Sem isso, o jogo usa as palavras-chave. */
 export const aiReady = () => getAiConfig().enabled && getApiKey().length > 0
 
-function record(model: string, input: number, output: number, failed: boolean) {
+function record(model: string, input: number, output: number, failed: boolean, error?: string) {
   const u = getAiUsage()
   const m = (u[model] ??= { calls: 0, input: 0, output: 0, failures: 0 })
   m.calls++
   m.input += input
   m.output += output
-  if (failed) m.failures++
+  if (failed) { m.failures++; m.lastError = error } else delete m.lastError
   write(USAGE_STORE, u)
 }
 
@@ -147,6 +149,7 @@ function safeError(status: number | null, key: string, detail = ''): AiError {
     status === null ? 'Sem conexão com a IA (internet ou tempo esgotado).'
       : status === 401 ? 'A chave da IA foi recusada. Confira nas configurações.'
         : status === 403 ? 'A chave não tem permissão para este modelo.'
+          : status === 404 ? 'Modelo não encontrado: confira o nome do modelo nas configurações.'
           : status === 429 ? 'A IA está ocupada ou o limite da chave acabou. Tente daqui a pouco.'
             : status >= 500 ? 'A IA está fora do ar agora.'
               : `A IA recusou o pedido (erro ${status}).`
@@ -186,19 +189,21 @@ export async function callAi(task: AiTask, req: AiRequest, key?: string, provide
   try {
     res = await fetch(prov.url, { method: 'POST', signal: ctrl.signal, headers, body: JSON.stringify(body) })
   } catch {
-    record(usageKey, 0, 0, true)
-    throw safeError(null, k)
+    const err = safeError(null, k)
+    record(usageKey, 0, 0, true, err.message)
+    throw err
   } finally {
     clearTimeout(timer)
   }
   if (!res.ok) {
-    record(usageKey, 0, 0, true)
     let detail = ''
     try {
       const j = (await res.json()) as { error?: { message?: string } } | { error?: { message?: string } }[]
       detail = (Array.isArray(j) ? j[0] : j)?.error?.message ?? ''
     } catch { /* corpo sem JSON */ }
-    throw safeError(res.status, k, detail)
+    const err = safeError(res.status, k, detail)
+    record(usageKey, 0, 0, true, err.message)
+    throw err
   }
   if (anthropic) {
     const data = (await res.json()) as { content?: { type: string; text?: string }[]; usage?: { input_tokens?: number; output_tokens?: number } }
