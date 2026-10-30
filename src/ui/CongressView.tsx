@@ -245,7 +245,7 @@ export function Scoreboard({ v, compact }: { v: VoteRecord; compact?: boolean })
       <div className="pn-score__head">
         <span className="pn-score__stamp">{veto ? (v.approved ? '❌ VETO DERRUBADO' : '✅ VETO MANTIDO') : v.approved ? (v.kind === 'simbolica' ? '✅ APROVADO (SIMBÓLICA)' : '✅ APROVADO') : '❌ REJEITADO'}</span>
         <b>{v.title ?? b?.name ?? v.bill}</b>
-        <span className="pn-hint" style={{ margin: 0 }}>{monthLabel(v.month)} · {v.house === 'senado' ? 'Senado · ' : 'Câmara · '}{veto ? 'Sessão do veto' : INSTRUMENTS[b.instrument].label}</span>
+        <span className="pn-hint" style={{ margin: 0 }}>{monthLabel(v.month)} · {v.house === 'senado' ? 'Senado · ' : 'Câmara · '}{veto ? 'Sessão do veto' : v.kind === 'sabatina' ? 'Sabatina para o Supremo' : INSTRUMENTS[b?.instrument ?? 'lei'].label}</span>
       </div>
       <VoteBar yes={v.yes} no={v.no} target={v.needed || Math.ceil((v.yes + v.no) / 2) + 1} needLabel={v.needed ? `precisa ${v.needed}` : 'maioria'} total={houseSeats(v.house ?? 'camara')} />
       {!compact && v.kind !== 'simbolica' && (

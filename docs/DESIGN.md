@@ -484,7 +484,7 @@ Saves antigos sem promessas: a parte das promessas sai e as outras são reescala
 
 ---
 
-## 24. Etapa 4C: Senado e Supremo (plano aprovado em 30/10)
+## 24. Etapa 4C: Senado e Supremo (plano aprovado em 30/10; feito na v0.12 e na v0.13)
 
 - **Decisão do Douglas (30/10):** fazer a 4C depois da 5A e antes da 5B. Substitui a decisão 2 da seção 11 e a regra da seção 13 ("o Senado não vota leis"). Base: `docs/levantamento-video-1.md`, itens 25, 29, 30 e 31. Tudo fictício e próprio. Ficam fora: CPIs, vice, inteligência e governadores.
 - **Divisão aprovada:** **4C1 Senado** (v0.12) e depois **4C2 Supremo** (v0.13), cada uma testada e publicada separadamente.
@@ -527,6 +527,22 @@ Saves antigos sem promessas: a parte das promessas sai e as outras são reescala
   - **criticar o Supremo** em público (a base gosta, o mercado e os ministros do Supremo não).
 - **Vaga no Supremo:** um ministro faz 75 anos durante o mandato (data fixa por ministro) e se aposenta. O presidente escolhe entre 3 nomes fictícios (técnico, aliado, conservador ou garantista, conforme o partido), cada um com bônus e risco. O **Senado sabatina** (41 votos) e pode rejeitar.
 - **Aba Governo** ganha a subaba "Supremo": os 11 ministros, ações em andamento e decisões passadas. Tudo vai para biografias e para a crônica.
+
+#### 24.2.1 Como ficou (v0.13)
+
+- **Arquivos:** números, ministros, indicáveis, risco jurídico do catálogo e o fato da derrubada em `src/game/data/supremo.ts`; regras em `src/game/supremo.ts`; sabatina em `congress.ts` (`forecastNomination`, `runNomination`, mesma regra do Senado); testes em `supremo.test.ts`. Telas: `src/ui/SupremoView.tsx` (subaba Supremo, `LegalRiskLine` nas leituras, `SupremoMini` no Painel e `RulingAnimation` depois do mês), subabas Congresso/Supremo em `GameScreen`.
+- **Ministros:** 4 garantistas, 4 moderados e 3 conservadores, com posição nos dois eixos, indicados por presidentes anteriores fictícios. Relação com o governo = 62 − 0,3 × distância ao partido do presidente (10 a 85), derivando 5% ao mês para esse alvo; indicado pelo presidente atual: 82. Aposentadoria aos 75 por data fixa (`retireAt`, mês absoluto): Celina Prates em ago/2028 (a única do 1º mandato), Eduardo Saraiva em ago/2031. Uma vaga aberta por vez.
+- **Risco jurídico:** `legalRiskOf` = risco da ficha (medidas da IA) ou `LEGAL_RISK` (24 medidas, 7 altas) ou baixo. Mostrado com o motivo e a chance de cair hoje (`forecastRuling`, distribuição exata dos 11 votos).
+- **Na mira (`supremo.watch`):** decreto assinado, MP editada ou lei sancionada com risco médio/alto, por 24 meses. MP derrubada no Congresso sai da mira.
+- **Ação:** por medida e por mês, chance 1,2% (médio) ou 4,5% (alto) × (0,5 + força do rival/100). Quem contesta (`challengerOf`): partido fora do governo com afinidade < 0,1 e relação < 55, o mais contrário. Uma ação por mês, no máximo 2 abertas; julgamento 2 a 4 meses depois; relator sorteado. Uma medida é julgada só uma vez.
+- **Voto:** derruba se −0,6 + risco (baixo −0,6, médio +0,3, alto +0,5) + 0,5 × (0,4 − afinidade) + 0,3 × (50 − relação)/50 + ruído (0,4) > 0. Exemplos com a corte inicial: posse de armas cai em ~90%; penas duras, 30% a 50%; isenção do IR, 1% a 2%.
+- **Derrubada (`advanceMonth`, passo 1d6):** desfaz gasto, receita, potencial e confiança (vezes a fração do texto desidratado); obras e dívida já aconteceram. Quem ganhava perde 70% do ganho, quem perdia sente 30% de alívio. Sai das leis, reenvio bloqueado 6 meses, rival +3. O fato `stfDerrubada` entra na frente da fila (só escolhas prontas, `choiceOnly`): acatar (corte +4, seu partido −2, confiança +1), nova proposta (`newVersionBill`: decreto/MP → lei, lei/LC → PEC, risco baixo, entra no catálogo do mandato e vai direto à comissão) ou criticar (corte −12, seu partido +6, +1 para quem ganhava, confiança −3, rival +2).
+- **Vaga:** 3 indicáveis (`nomineesOffered`): o técnico, a aliada (posição = 80% da do partido do presidente, relação 90) e o garantista (partido progressista nos costumes) ou o conservador. Sabatina no Senado com 41 votos e reforço de +0,9 em todos os partidos (−0,9 a mais contra a aliada, menos do partido do presidente). Previsão com a corte inicial: técnico ~100%; aliada ~58% (centro), ~42% (direita), ~0% (esquerda); garantista ~70% com governo de esquerda. Efeitos: técnico confiança +2; doutrina: fãs +5, adversários −4; aliada: classe média −1,5 e rival +3. Rejeitado: sai da lista, −0,8 em todos os grupos, conta como derrota. Sem sabatina no recesso.
+- **Sorteios:** o Supremo usa uma semente própria do mês (`prev.rngState`), para não mexer no resto do jogo.
+- **Save versão 11:** `GameState.supremo` (`justices`, `cases`, `rulings`, `watch`, `vacancy`, `used`); `EventOrigin.bill`; `VoteRecord.kind = 'sabatina'`. Migração cria a corte sem ações e sem medidas na mira.
+- **Retratos:** 15 personagens novos (11 ministros e 4 indicáveis); a presidente da corte usa o retrato da magistratura (109); os outros saem dos livres, com reservas compartilhados (16 e 23, só um personagem troca de rosto por vez). Sobram 41 rostos para o presidente.
+- **Simulador** (`npm run sim`, bloco "Supremo"): com um projeto a cada 2 meses, cerca de 5 a 6 medidas com risco em vigor, 1,3 a 1,6 ação e 0,4 a 0,5 derrubada por mandato (0 a 2 em todas as 90 partidas). As estratégias só de decreto quase não chegam ao Supremo. A ordem das estratégias não mudou (responde aos fatos 583 > austero 551 > equilibrado 509 > passivo 460 > populista 311).
+- **Fica para depois:** articular com o Supremo (audiências, AGU defendendo a medida), liminar suspendendo a medida antes do julgamento, ações contra leis de governos anteriores, IA nos votos dos ministros, impeachment e CPIs.
 
 ### 24.3 Save, testes e balanceamento
 

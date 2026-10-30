@@ -27,12 +27,15 @@ import { ACTION_ICON, GROUP_ICON, INDICATOR_ICON } from './icons'
 import { INDICATORS, lowerFirst, num, signed, type IndicatorMeta } from './format'
 import { Sparkline } from './Sparkline'
 import { PromisesCard, RivalCard } from './OppositionCards'
+import { LegalRiskLine, RulingAnimation, SupremoMini, SupremoView } from './SupremoView'
+import { absMonth } from '../game/memory'
+import { NOMINEE_BY_ID } from '../game/data/supremo'
 import './painel.css'
 
 type Detail = { kind: 'indicator'; key: IndicatorKey } | { kind: 'group'; id: GroupId } | null
 type Step = 1 | 2 | 3 | 4
 /** Depois de encerrar o mês: painel de votação animado e página de reação de cada lei (etapa 4B). */
-type Post = { kind: 'vote'; v: VoteRecord } | { kind: 'reaction'; bill: BillId; month: number }
+type Post = { kind: 'vote'; v: VoteRecord } | { kind: 'reaction'; bill: BillId; month: number } | { kind: 'ruling'; id: string }
 const NO_PROC: Record<ProcedureKind, BillId[]> = { hold: [], urgent: [], original: [], symbolic: [] }
 
 /** Seções do menu que ainda não existem, com a versão prevista. */
@@ -70,10 +73,12 @@ export function GameScreen({ state, onChange, onExit }: {
   const [ministry, setMinistry] = useState<MinistryChange | null>(null)
   const [post, setPost] = useState<Post[]>([])
   const [reactionView, setReactionView] = useState<BillId | null>(null)
+  const [govTab, setGovTab] = useState<'congresso' | 'supremo'>('congresso')
+  const [nominee, setNominee] = useState<string | null>(null)
   setPresidentPortrait(playerPortraitId(state))
   const plan: MonthPlan = {
     bill: bill ?? undefined, articulations, eventChoice: eventChoice ?? undefined, eventResponse: eventResponse ?? undefined, deals,
-    hold: proc.hold, urgent: proc.urgent, original: proc.original, symbolic: proc.symbolic, sanctions, ministry: ministry ?? undefined,
+    hold: proc.hold, urgent: proc.urgent, original: proc.original, symbolic: proc.symbolic, sanctions, ministry: ministry ?? undefined, nominee: nominee ?? undefined,
   }
   const onProcedure = (kind: ProcedureKind, id: BillId, on: boolean) => setProc((cur) => {
     const next = { ...cur }
@@ -132,6 +137,7 @@ export function GameScreen({ state, onChange, onExit }: {
       setProc(NO_PROC)
       setSanctions({})
       setMinistry(null)
+      setNominee(null)
       setTab('painel')
       setStep(1)
       setTurning(false)
@@ -150,6 +156,9 @@ export function GameScreen({ state, onChange, onExit }: {
         if (last && v.approved && v.kind !== 'veto' && rep?.sanctioned?.includes(v.bill) && !q.some((p) => p.kind === 'reaction' && p.bill === v.bill)) q.push({ kind: 'reaction', bill: v.bill, month: v.month })
       }
       for (const id of rep?.sanctioned ?? []) if (!q.some((p) => p.kind === 'reaction' && p.bill === id)) q.push({ kind: 'reaction', bill: id, month: rep!.month })
+      // Etapa 4C2: julgamento do Supremo no mês, com os 11 votos um a um.
+      const ruling = rep ? next.supremo.rulings.find((r) => r.at === absMonth({ term: next.term, month: rep.month })) : undefined
+      if (ruling) q.push({ kind: 'ruling', id: ruling.id })
       setPost(q)
       news.slice(0, 2).forEach((h, i) => setTimeout(() => toast(`${h.tone === 'good' ? '🟢' : h.tone === 'bad' ? '🔴' : '📰'} ${h.text}`), 300 + i * 600))
     }, 1500)
@@ -206,6 +215,11 @@ export function GameScreen({ state, onChange, onExit }: {
         const head = post[0]
         const rest = post.slice(1)
         const advance = () => setPost(rest)
+        if (head.kind === 'ruling') {
+          const r = state.supremo.rulings.find((x) => x.id === head.id)
+          if (!r) { advance(); return null }
+          return <RulingAnimation key={head.id} ruling={r} onNext={advance} nextLabel={rest.length ? 'Continuar →' : 'Fechar'} />
+        }
         if (head.kind === 'vote') {
           const nextIsReaction = rest[0]?.kind === 'reaction' && rest[0].bill === head.v.bill
           const votesLeft = rest.filter((p) => p.kind === 'vote').length
@@ -262,6 +276,16 @@ export function GameScreen({ state, onChange, onExit }: {
         {tab === 'fichas' ? (
           <FichasView state={state} />
         ) : tab === 'governo' ? (
+          <>
+          <div className="pn-subnav">
+            <button className={govTab === 'congresso' ? 'on' : ''} onClick={() => setGovTab('congresso')}>🏛️ Congresso</button>
+            <button className={govTab === 'supremo' ? 'on' : ''} onClick={() => setGovTab('supremo')}>
+              ⚖️ Supremo {(state.supremo.vacancy ? 1 : 0) + state.supremo.cases.length > 0 && <span className="pn-dot">{(state.supremo.vacancy ? 1 : 0) + state.supremo.cases.length}</span>}
+            </button>
+          </div>
+          {govTab === 'supremo' ? (
+            <SupremoView state={state} nominee={nominee} onNominee={(id) => { setNominee(id); if (id) toast(`📨 ${NOMINEE_BY_ID[id].name} vai à sabatina no Senado ao encerrar o mês.`) }} />
+          ) : (
           <CongressView
             state={state}
             bill={bill}
@@ -283,6 +307,8 @@ export function GameScreen({ state, onChange, onExit }: {
               )
             }
           />
+          )}
+          </>
         ) : (
         <div className="pn-grid">
           <div className="pn-col">
@@ -339,13 +365,14 @@ export function GameScreen({ state, onChange, onExit }: {
                     <div>
                       <h2>Tudo pronto para virar o mês?</h2>
                       <p className="pn-hint">
-                        {selected.length === 0 && !bill && !eventResponse && articulations.length === 0
+                        {selected.length === 0 && !bill && !eventResponse && articulations.length === 0 && !nominee
                           ? 'Você não tomou nenhuma decisão. O país segue sozinho este mês.'
                           : [
                               selected.length ? `Decretos: ${selected.map((id) => lowerFirst(ACTION_BY_ID[id].name)).join(' e ')}.` : '',
                               bill ? `${BILL_KIND[BILL_BY_ID[bill].instrument]}: ${lowerFirst(BILL_BY_ID[bill].name)}.` : '',
                               eventResponse ? `Resposta ao fato do mês (${BILL_KIND[BILL_BY_ID[eventResponse].instrument].toLowerCase()}): ${lowerFirst(BILL_BY_ID[eventResponse].name)}.` : '',
                               articulations.length ? `Articulação: ${articulations.map((a) => a.kind === 'presidente' ? 'conversa com o presidente da Câmara' : a.kind === 'senado' ? 'conversa com a presidente do Senado' : `${a.kind === 'conversar' ? 'conversa com' : 'emendas para'} ${PARTY_BY_ID[a.party].sigla}`).join(' e ')}.` : '',
+                              nominee ? `Supremo: indicar ${NOMINEE_BY_ID[nominee].name} (sabatina no Senado).` : '',
                               ministry ? (ministry.party ? `Ministério: ceder ${ministry.area} ao ${PARTY_BY_ID[ministry.party].sigla}.` : `Ministério: retomar ${ministry.area}.`) : '',
                               Object.values(sanctions).some((d) => d === 'vetar') ? `Vetos: ${Object.values(sanctions).filter((d) => d === 'vetar').length}.` : '',
                             ].filter(Boolean).join(' ')}
@@ -460,6 +487,7 @@ export function GameScreen({ state, onChange, onExit }: {
 
             <RivalCard state={state} />
             <PromisesCard state={state} />
+            <SupremoMini state={state} onOpen={() => { setTab('governo'); setGovTab('supremo') }} />
 
             <DemandsCard state={state} plannedDecrees={selected} plannedBill={bill} />
 
@@ -509,7 +537,7 @@ export function GameScreen({ state, onChange, onExit }: {
             <section className="pn-card">
               <h3>🔜 Ainda não está no jogo</h3>
               <p className="pn-hint">
-                Supremo, CPIs, imprensa, governadores, diplomacia, os 27 estados e a apuração da eleição chegam nas próximas versões.
+                CPIs, imprensa, governadores, diplomacia, os 27 estados e a apuração da eleição chegam nas próximas versões.
               </p>
             </section>
           </div>
@@ -739,6 +767,7 @@ function BillReading({ state, id, first, chosen, onSend }: {
         <div>⏱️ Quando vale<b>{b.instrument === 'mp' || b.instrument === 'decreto' ? 'Na hora' : 'Se aprovada'}</b></div>
       </div>
       <p className="pn-hint" style={{ margin: '2px 0 4px' }}>{INSTRUMENTS[b.instrument].rule}</p>
+      <LegalRiskLine state={state} id={id} />
       {!blocked && b.instrument !== 'decreto' && <ForecastRow state={state} id={id} />}
       <div className="up">+ {b.pros}</div>
       <div className="dn">− {b.cons}</div>

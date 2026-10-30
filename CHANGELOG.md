@@ -1,5 +1,15 @@
 # Novidades
 
+## 0.13.0
+- **O Supremo julga as medidas do governo (etapa 4C2).** Na aba Governo, uma subaba nova, **Supremo**, mostra os **11 ministros** (fictícios, com retrato): doutrina (garantista, moderado ou conservador), relação com o governo, quem indicou e quando se aposentam. Clique num ministro para ver a ficha.
+  - **Risco jurídico em todas as medidas:** baixo, médio ou alto. 24 medidas do catálogo, as mais polêmicas (posse de armas, marco temporal, licenciamento, regular as redes, tabela de frete, piso da enfermagem...), têm risco médio ou alto, com o motivo. A leitura do gabinete mostra o risco **antes de assinar**, com a chance de a medida cair se fosse julgada hoje.
+  - **Ações no Supremo:** nos 24 meses depois de entrar em vigor, uma medida com risco pode ser levada ao Supremo pelo partido de oposição mais contrário a ela. A chance cresce com o risco e com a força do rival. No máximo 2 ações abertas e um julgamento por mês; o julgamento vem 2 a 4 meses depois, e dá para acompanhar o placar provável de cada ministro.
+  - **Julgamento voto a voto:** depois do mês, os 11 votos aparecem um a um, o relator primeiro. Cada ministro vota pela doutrina contra o texto, pelo risco jurídico e pela relação com o governo. **6 votos derrubam.**
+  - **Medida derrubada:** deixa de valer (gasto, receita e confiança voltam), quem ganhava com ela sente a perda, o reenvio fica bloqueado por 6 meses e o rival ganha força. No mês seguinte vem um **fato do mês** com três caminhos: **acatar** (custo pequeno), **mandar nova proposta** (a medida volta ao Congresso com instrumento mais forte: decreto e MP viram lei, lei vira PEC) ou **criticar o Supremo** (a base gosta; o mercado e os ministros não).
+- **Vaga no Supremo:** a ministra Celina Prates faz 75 anos em agosto de 2028 e se aposenta. Você escolhe entre 3 nomes (o técnico, a sua aliada e um garantista ou conservador, conforme o seu partido), cada um com bônus e risco, e o **Senado sabatina** (41 votos), com o painel de 81 cadeiras. O Senado pode rejeitar: o nome sai da lista e a vaga continua aberta. Quem você indica tende a votar com o governo.
+- O Painel avisa quando há vaga aberta ou ação em andamento. Ministros, indicados e julgamentos entram nas fichas e na memória do país.
+- Mandatos salvos continuam normalmente (save versão 11): o Supremo entra sem ações, e as medidas que já estavam em vigor ficam fora da mira.
+
 ## 0.12.0
 - **O Senado vota (etapa 4C1).** Tudo o que a Câmara aprova agora passa também pelo Senado, com **81 senadores** dos mesmos 9 partidos. O Senado é mais de centro e um pouco mais governista que a Câmara, mas revisa com mais cuidado.
   - **Quando vota:** lei, lei complementar e MP aprovadas na Câmara vão ao Senado **no mesmo encerramento do mês**, logo depois (a resposta ao fato do mês continua podendo resolver no mesmo mês). **PEC** vai ao Senado **no mês seguinte**, em dois turnos.

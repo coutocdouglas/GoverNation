@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { isRecess } from '../game/congress'
 import { BILL_BY_ID, GDP_BILLIONS, INSTRUMENTS, type BillDef } from '../game/data/bills'
+import { LegalRiskLine } from './SupremoView'
 import { NewBadge, NewBillNotes } from './NewBill'
 import { ministerOf } from '../game/camara'
 import type { EventDef } from '../game/data/events'
@@ -270,6 +271,7 @@ function ReadingSheet({ state, ev, order, data, plannedBill, onClose, onSign, on
             </div>
           </>
         )}
+        <LegalRiskLine state={state} id={id} />
         {!now && !blocked && <ForecastRow state={state} id={id} />}
         {recess && <div className="warn">⚠️ Congresso em recesso: até a votação, vale o que acontece se ninguém agir.</div>}
         <p className="pn-hint">Se não é isso que você quis dizer, volte e reescreva: <b>nada foi assinado ainda</b>.</p>
@@ -334,6 +336,7 @@ function Reading({ state, id, first, plannedBill, onRespond, compact }: {
       <span className="pn-chips">
         {effectChips(b.effects).map((c, k) => <span key={k} className={`pn-chipfx ${c.tone}`} title={c.title}>{c.text}</span>)}
       </span>
+      {!compact && <LegalRiskLine state={state} id={id} />}
       {!now && !blocked && <ForecastRow state={state} id={id} />}
       {!compact && <><div className="up">+ {b.pros}</div><div className="dn">− {b.cons}</div></>}
       {recess && <div className="warn">⚠️ Congresso em recesso: até a votação, vale o que acontece se ninguém agir.</div>}

@@ -93,11 +93,11 @@ export function VoteAnimation({ vote, index, total, onNext, nextLabel }: {
     <div className="pn-ov pn-ov--vote" role="dialog" aria-label={`Votação: ${name}`}>
       <div className="pn-vanim">
         <div className="pn-vanim__top">
-          <span className="pn-kicker">🏛️ Plenário {senado ? 'do Senado' : 'da Câmara'} · {veto ? 'Sessão do veto' : INSTRUMENTS[b?.instrument ?? 'lei'].label}{total > 1 ? ` · votação ${index + 1} de ${total}` : ''}</span>
+          <span className="pn-kicker">🏛️ Plenário {senado ? 'do Senado' : 'da Câmara'} · {veto ? 'Sessão do veto' : vote.kind === 'sabatina' ? 'Sabatina para o Supremo' : INSTRUMENTS[b?.instrument ?? 'lei'].label}{total > 1 ? ` · votação ${index + 1} de ${total}` : ''}</span>
           {!done && <button className="pn-btn pn-btn--ghost pn-btn--small" onClick={skip}>Pular ⏭</button>}
         </div>
         <h2>{name}</h2>
-        <p className="pn-hint">{veto ? `“Sim” derruba o veto do presidente. São precisos ${vote.needed} votos.` : vote.needed ? `Precisa de ${vote.needed} votos a favor${b?.instrument === 'pec' ? ', em dois turnos' : ''}.` : 'Maioria simples dos presentes.'}</p>
+        <p className="pn-hint">{veto ? `“Sim” derruba o veto do presidente. São precisos ${vote.needed} votos.` : vote.kind === 'sabatina' ? `“Sim” aprova o indicado. São precisos ${vote.needed} votos.` : vote.needed ? `Precisa de ${vote.needed} votos a favor${b?.instrument === 'pec' ? ', em dois turnos' : ''}.` : 'Maioria simples dos presentes.'}</p>
 
         <div className="pn-vanim__board">
           <div className="pn-vanim__num y"><small>SIM</small><b>{yes}</b></div>

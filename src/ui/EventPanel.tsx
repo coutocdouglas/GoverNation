@@ -68,7 +68,7 @@ export function EventPanel({ state, choice, onChoose, response, onRespond, plann
           <p className="pn-event__ask">{kind === 'bom' ? '“Presidente, temos uma boa notícia. Como quer usar?”' : '“Presidente, precisamos de uma decisão.”'}</p>
         </div>
       </div>
-      {kind !== 'bom' && aiReady() && state.difficulty !== 'facil' ? (
+      {kind !== 'bom' && !ev.choiceOnly && aiReady() && state.difficulty !== 'facil' ? (
         <div className="pn-letpass">
           <b>Se deixar passar:</b> {ev.options[def].label.toLowerCase()} — {ev.options[def].text}
           <span className="pn-chips">
@@ -90,7 +90,7 @@ export function EventPanel({ state, choice, onChoose, response, onRespond, plann
         ))}
       </div>
       )}
-      {kind !== 'bom' && <ResponseBox key={`${state.month}-${ev.id}`} state={state} ev={ev} response={response} plannedBill={plannedBill} onRespond={onRespond} onAddBill={onAddBill} />}
+      {kind !== 'bom' && !ev.choiceOnly && <ResponseBox key={`${state.month}-${ev.id}`} state={state} ev={ev} response={response} plannedBill={plannedBill} onRespond={onRespond} onAddBill={onAddBill} />}
     </section>
   )
 }

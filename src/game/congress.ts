@@ -453,3 +453,22 @@ export function driftRelations(c: CongressState, approval: number, player: Party
   const sn = c.senate.president
   sn.relation = clamp(sn.relation + (c.parties[SENADO.president.party].relation + SENADO.relationBonus - sn.relation) * SENADO.president.drift, 0, 100)
 }
+
+/**
+ * Etapa 4C2: sabatina de um indicado ao Supremo no Senado. O indicado vira uma "ficha" com a posição dele;
+ * `lean` reforça cada partido (sabatinas costumam passar; o aliado do presidente sofre resistência).
+ */
+function nominationBoost(s: GameState, lean: Partial<Record<PartyId, number>>): Partial<Record<PartyId, number>> {
+  const boost: Partial<Record<PartyId, number>> = { ...govBoost(s) }
+  for (const p of PARTIES) boost[p.id] = (boost[p.id] ?? 0) + (lean[p.id] ?? 0)
+  return boost
+}
+
+export function forecastNomination(s: GameState, bill: BillDef, lean: Partial<Record<PartyId, number>>, needed: number): Forecast {
+  return forecastWith(s, bill, nominationBoost(s, lean), needed, 1, 'senado')
+}
+
+export function runNomination(s: GameState, bill: BillDef, lean: Partial<Record<PartyId, number>>, needed: number, rng: Rng): VoteRecord {
+  const r = runWith(s, bill, nominationBoost(s, lean), needed, 1, rng, 'senado')
+  return { month: s.month, bill: bill.id, ...r, needed, house: 'senado', kind: 'sabatina', title: bill.name }
+}

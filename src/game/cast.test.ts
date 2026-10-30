@@ -40,7 +40,7 @@ describe('elenco e retratos', () => {
 
   it('o presidente só escolhe entre retratos livres', () => {
     const taken = new Set([...CAST.map((c) => c.portrait), ...RESERVED])
-    expect(PLAYER_POOL.length).toBeGreaterThan(50)
+    expect(PLAYER_POOL.length).toBeGreaterThan(35)
     for (const id of PLAYER_POOL) expect(taken.has(id)).toBe(false)
     expect(PLAYER_POOL.some((id) => PORTRAITS[id - 1].gender === 'f')).toBe(true)
     expect(PLAYER_POOL.some((id) => PORTRAITS[id - 1].gender === 'm')).toBe(true)

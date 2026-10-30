@@ -62,6 +62,23 @@ export const CAST: CastMember[] = [
   { name: 'Clarice Siqueira', role: 'Líder da oposição (FPT)', gender: 'f', portrait: 58, alt: 107 },
   // Etapa 4C1 (data/senado.ts): presidente do Senado
   { name: 'Hermínia Valença', role: 'Presidente do Senado Federal', gender: 'f', portrait: 19, alt: 23 },
+  // Etapa 4C2 (data/supremo.ts): os 11 ministros do Supremo e os indicáveis para uma vaga.
+  // Reservas compartilhados: só um personagem troca de rosto (o que tiver o mesmo do presidente).
+  { name: 'Eduardo Saraiva', role: 'Ministro do Supremo', gender: 'm', portrait: 1, alt: 16 },
+  { name: 'Augusta Moraes Leite', role: 'Presidente do Supremo', gender: 'f', portrait: 109 },
+  { name: 'Fernando Baptista', role: 'Ministro do Supremo', gender: 'm', portrait: 6, alt: 16 },
+  { name: 'Celina Prates', role: 'Ministra do Supremo', gender: 'f', portrait: 11, alt: 23 },
+  { name: 'Joaquim Alencar', role: 'Ministro do Supremo', gender: 'm', portrait: 24, alt: 16 },
+  { name: 'Raimundo Feitosa', role: 'Ministro do Supremo', gender: 'm', portrait: 26, alt: 16 },
+  { name: 'Teresa Bonfim', role: 'Ministra do Supremo', gender: 'f', portrait: 29, alt: 23 },
+  { name: 'Henrique Lacerda', role: 'Ministro do Supremo', gender: 'm', portrait: 55, alt: 16 },
+  { name: 'Vilma Assis', role: 'Ministra do Supremo', gender: 'f', portrait: 61, alt: 23 },
+  { name: 'Otaviano Rios', role: 'Ministro do Supremo', gender: 'm', portrait: 66, alt: 16 },
+  { name: 'Bento Carvalhal', role: 'Ministro do Supremo', gender: 'm', portrait: 105, alt: 16 },
+  { name: 'Álvaro Menezes', role: 'Indicável ao Supremo (técnico)', gender: 'm', portrait: 32, alt: 16 },
+  { name: 'Lívia Assunção', role: 'Indicável ao Supremo (garantista)', gender: 'f', portrait: 48, alt: 23 },
+  { name: 'Hamilton Rocha', role: 'Indicável ao Supremo (conservador)', gender: 'm', portrait: 21, alt: 16 },
+  { name: 'Sueli Barreto', role: 'Indicável ao Supremo (aliada do presidente)', gender: 'f', portrait: 82, alt: 23 },
 ]
 
 /**
@@ -71,7 +88,6 @@ export const CAST: CastMember[] = [
 export const RESERVED: number[] = [
   22, 44, 57, 69, 87, 110, // indígenas
   67, 92, 108, // Forças Armadas
-  109, // magistratura
   64, 81, 99, // campo
   3, 94, 78, // religiosidade e tradições
 ]

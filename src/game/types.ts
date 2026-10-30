@@ -123,7 +123,7 @@ export interface MonthReport {
 }
 
 export interface GameState {
-  saveVersion: 10
+  saveVersion: 11
   /** Mês atual, de 0 (janeiro do 1º ano) a 47. Em 48 o mandato acabou. */
   month: number
   presidentName: string
@@ -169,6 +169,67 @@ export interface GameState {
   profile: { traits: string[]; habits: string[] }
   /** Etapa 5A: promessas de posse (ids de data/promises.ts). Vazio em saves anteriores à 5A. */
   promises: string[]
+  /** Etapa 4C2: o Supremo, com os 11 ministros, ações em andamento, decisões e vaga. */
+  supremo: SupremoState
+}
+
+// ---------------------------------------------------------------------------
+// Supremo (etapa 4C2)
+// ---------------------------------------------------------------------------
+
+/** Uma cadeira do Supremo: o ministro (id de data/supremo.ts) e a relação com o governo. */
+export interface JusticeSeat {
+  id: string
+  relation: number
+  /** Indicado neste jogo: nome do presidente que indicou, ano e posição (o aliado segue o partido de quem indicou). */
+  appointedBy?: string
+  year?: number
+  econ?: number
+  costumes?: number
+}
+
+/** Ação de um partido contra uma medida em vigor, esperando julgamento. Meses absolutos. */
+export interface CourtCase {
+  id: string
+  bill: BillId
+  party: PartyId
+  relator: string
+  filedAt: number
+  judgeAt: number
+}
+
+/** Julgamento concluído. */
+export interface Ruling {
+  id: string
+  bill: BillId
+  /** Nome da medida (a ficha pode sumir do catálogo). */
+  name: string
+  party: PartyId
+  relator: string
+  at: number
+  votes: { justice: string; strike: boolean }[]
+  struck: boolean
+  reason: string
+}
+
+/** Medida em vigor que ainda pode ser contestada (risco médio ou alto, dentro da janela). */
+export interface InForce {
+  bill: BillId
+  since: number
+  author: string
+  /** Texto desidratado pelo relator: fração dos efeitos que ficou. */
+  scale?: number
+}
+
+export interface SupremoState {
+  justices: JusticeSeat[]
+  cases: CourtCase[]
+  rulings: Ruling[]
+  watch: InForce[]
+  /** Vaga aberta por aposentadoria: quem saiu, desde quando e indicados rejeitados pelo Senado. */
+  vacancy: { since: number; retired: string; rejected: string[] } | null
+  /** Indicados que já foram usados (nomeados ou rejeitados). */
+  used: string[]
 }
 
 /** Pesquisa de intenção de voto do mês (soma 100). */
@@ -334,7 +395,7 @@ export interface VoteRecord {
   /** Como cada partido votou, em maioria. */
   byParty: Record<PartyId, { yes: number; no: number }>
   /** Etapa 4B: votação simbólica (sem painel) ou sessão para derrubar um veto. */
-  kind?: 'simbolica' | 'veto'
+  kind?: 'simbolica' | 'veto' | 'sabatina'
   /** Título quando não é o nome da medida (ex.: "Veto: ..."). */
   title?: string
   /** Texto desidratado pelo relator: fração dos efeitos que ficou. */
@@ -377,6 +438,8 @@ export interface EventOrigin {
   author: string
   party?: PartyId
   year: number
+  /** Etapa 4C2: medida derrubada pelo Supremo (para a nova proposta). */
+  bill?: BillId
 }
 
 /** Consequência plantada por uma lei, decreto ou herança, que brota num mês futuro. */

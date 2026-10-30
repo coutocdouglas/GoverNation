@@ -3,17 +3,17 @@
 > **Leia este arquivo primeiro.** Ele diz onde o projeto está e qual é o próximo passo.
 > Atualize-o a cada mudança: seção "Estado atual", "Próximo passo" e uma linha no "Histórico".
 
-**Última atualização:** 30/10/2026 · **Versão publicada:** v0.12.0
+**Última atualização:** 30/10/2026 · **Versão publicada:** v0.13.0
 
 ---
 
 ## Próximo passo
 
-**Etapa 4C2: Supremo julgando medidas** (v0.13). Plano aprovado em `docs/DESIGN.md`, seção 24.2: 11 ministros fictícios, risco jurídico em todas as medidas, ações de partidos de oposição, julgamento voto a voto, medida derrubada com fato do mês, vaga no Supremo com sabatina no Senado (41 votos, já dá para usar o Senado da 4C1). Retratos novos saem dos livres. Depois, 5B (27 estados e apuração). A 5C espera o vídeo do fim de mandato e da eleição. O levantamento do jogo de referência está em `docs/levantamento-video-1.md`.
+**Etapa 5B: os 27 estados e a apuração da eleição** (v0.14). Ainda sem plano detalhado: a primeira conversa deve escrever o plano no `docs/DESIGN.md` e pedir aprovação ao Douglas antes de programar (aprovação por estado no mapa, negociação por bancada estadual no Senado, eleição de 2030 com apuração estado por estado). A 5C espera o vídeo do fim de mandato e da eleição. O levantamento do jogo de referência está em `docs/levantamento-video-1.md`.
 
 Complexidade: alta. Use o **Opus**, numa conversa nova.
 
-Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdouglas/GoverNation. Leia CLAUDE.md, docs/ESTADO.md e docs/DESIGN.md. Quero fazer a etapa 4C2 (Supremo, plano na seção 24.2 do DESIGN.md)."*
+Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdouglas/GoverNation. Leia CLAUDE.md, docs/ESTADO.md e docs/DESIGN.md. Quero fazer a etapa 5B (27 estados e apuração)."*
 
 ---
 
@@ -22,7 +22,7 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 **Base técnica**
 - App de Windows (Tauri 2 + React + TypeScript). O instalador é gerado pelo GitHub Actions e o jogo se atualiza sozinho, com atualização assinada.
 - O motor do jogo (`src/game/`) fica separado das telas (`src/ui/`). Os números de balanceamento ficam em `src/game/data/`.
-- 147 testes automáticos. Saves antigos são migrados (versão atual do save: 10).
+- 161 testes automáticos. Saves antigos são migrados (versão atual do save: 11).
 
 **Jogabilidade**
 - Mandato de 48 meses (jan/2027 a dez/2030), com o mês em 4 passos: notícias, fato do mês, decisões e encerrar.
@@ -43,6 +43,7 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
   - **Votação no painel (v0.10):** cada votação aparece com os votos acendendo um a um; maioria esmagadora em lei ou MP permite votação simbólica, sem painel.
   - **Reação da sociedade (v0.10):** depois de cada lei, página com nota de popularidade (0 a 10), % a favor, reação de cada grupo, mercado, frentes, partidos, custo e prós e contras.
 - **Senado (v0.12):** 81 senadores dos 9 partidos, mais de centro. Tudo o que a Câmara aprova passa pelo Senado: lei, LC e MP no mesmo fechamento de mês; PEC no mês seguinte, em dois turnos (41 votos para LC, 49 para PEC). Rejeitado no Senado volta em 6 meses, custa aprovação e fortalece o rival. Presidente do Senado (Hermínia Valença, PSN) segura projetos se estiver de mal; conversar com ela é articulação. Janela de votação com abas Câmara e Senado, 2 lideranças por mês no Senado, painel animado de 81 cadeiras.
+- **Supremo (v0.13):** 11 ministros fictícios com doutrina e relação com o governo. Toda medida tem risco jurídico (baixo, médio, alto), mostrado antes de assinar com a chance de cair. Partidos de oposição levam ao Supremo medidas com risco nos 24 meses depois de entrarem em vigor; julgamento voto a voto (6 derrubam), com animação. Medida derrubada deixa de valer e vira fato do mês: acatar, mandar nova proposta (instrumento mais forte) ou criticar o Supremo. Vaga quando um ministro faz 75 anos (a primeira em ago/2028): 3 indicáveis e sabatina no Senado (41 votos).
 - **Posse em 3 passos (v0.11):** candidato, perfil (até 2 traços e 2 hábitos que agradam uns grupos e desagradam outros) e 5 promessas de posse com meta medida, com painel ao lado mostrando o efeito em cada grupo.
 - **Rival (v0.11):** líder da oposição fictício (Leopoldo Rezende, POL, ou Clarice Siqueira, FPT) desde o mês 1, com força de 0 a 100 e causas, postura (observa, desgaste com ataques mensais, obstrução na Câmara) e pesquisa de intenção de voto todo mês.
 - **Promessas (v0.11):** acompanhadas no Painel (no rumo, em risco, longe) e cobradas no fim (cumprida, quase, quebrada); valem 300 dos 1000 pontos da **nota final**.
@@ -50,13 +51,13 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 - **Cobranças dos grupos** com prazo, recompensa e penalidade.
 - **Memória do mundo:** leis, MPs e obras plantam consequências que brotam meses ou anos depois. Há herança do governo anterior e o tempo é absoluto, pronto para vários mandatos.
 - **Fichas:** biografia acumulada de cada personagem e memória do país.
-- **Retratos:** 110 fotos, cada uma usada por uma pessoa só. O presidente escolhe o rosto na posse (55 livres) e 16 retratos ficam reservados para Defesa, Supremo, povos indígenas, campo e tradições.
+- **Retratos:** 110 fotos, cada uma usada por uma pessoa só. O presidente escolhe o rosto na posse (41 livres) e 15 retratos ficam reservados para Defesa, povos indígenas, campo e tradições.
 
-**Telas:** Posse em 3 passos, Painel (com cara de jogo, animações, plantão de notícias, cartões de Oposição e Promessas), Governo (mesa de sanção, presidente da Câmara, Senado, pauta com a chance nas duas casas, partidos e articulação, ministérios, frentes, leis com reação) e Fichas. Nação, Economia, Diplomacia, Programas e Vida pessoal aparecem bloqueadas.
+**Telas:** Posse em 3 passos, Painel (com cara de jogo, animações, plantão de notícias, cartões de Oposição, Promessas e Supremo), Governo com subabas Congresso e Supremo (mesa de sanção, presidente da Câmara, Senado, pauta com a chance nas duas casas, partidos e articulação, ministérios, frentes, leis com reação) e Fichas. Nação, Economia, Diplomacia, Programas e Vida pessoal aparecem bloqueadas.
 
 **Onde está cada coisa**
 - `CLAUDE.md`: regras do projeto e quando abrir uma conversa nova.
-- `docs/DESIGN.md`: decisões de desenho, seções 1 a 24.
+- `docs/DESIGN.md`: decisões de desenho, seções 1 a 24 (Supremo em 24.2 e 24.2.1).
 - `docs/levantamento-video-1.md`: o que o jogo de referência tem e nós não (vídeo 1).
 - `CHANGELOG.md`: novidades de cada versão.
 - `docs/RELEASES.md`: como publicar.
@@ -70,8 +71,8 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 3. ✅ **3A** resposta em texto ao fato do mês, ministro responsável, catálogo grande de medidas (v0.6.0) · ✅ **3B** camada de IA: conselho do ministro, interpretação do texto livre, chave própria, plano B (v0.7.0) · ✅ **3C** medidas livres montadas pela IA (v0.9.0)
 4. ✅ **4A** votação com negociação por lideranças (v0.8.0) · ✅ **4B** Congresso 2.0, votação animada, voto simbólico e reação da sociedade (v0.10.0)
 5. Entre mandatos: ✅ **5A** rival, ficha do candidato e promessas de posse (v0.11.0) · ⏭️ **5B** 27 estados e apuração · **5C** governo seguinte e herança (depois do vídeo do fim de mandato)
-4C. ✅ **4C1** Senado votando (v0.12.0) · ⏭️ **4C2** Supremo julgando medidas (levantamento, itens 29 a 31)
-6. Depois: Senado com poderes próprios (sabatinas, impeachment), Supremo, imprensa e pesquisas, orçamento anual, ícones próprios
+4C. ✅ **4C1** Senado votando (v0.12.0) · ✅ **4C2** Supremo julgando medidas (v0.13.0)
+6. Depois: Senado com poderes próprios (impeachment), imprensa e pesquisas, orçamento anual, ícones próprios
 
 ## Decisões já tomadas (resumo; detalhes no DESIGN.md)
 
@@ -109,3 +110,4 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 | 30/10/2026 | v0.11.0 | Etapa 5A: posse em 3 passos, traços e hábitos, 5 promessas de posse com meta, rival com força, postura, ataques, obstrução e pesquisa mensal; nota final com promessas; save 9 |
 | 30/10/2026 | — | Decisão: 4C (Senado e Supremo) antes da 5B; plano aprovado no DESIGN.md (seção 24), dividido em 4C1 Senado e 4C2 Supremo; retratos novos saem dos livres |
 | 30/10/2026 | v0.12.0 | Etapa 4C1: Senado com 81 senadores votando depois da Câmara (lei, LC e MP no mesmo mês; PEC no seguinte, em dois turnos), presidente do Senado, rejeição com custo, negociação com 2 lideranças, abas Câmara/Senado na votação e painel de 81 cadeiras; save 10 |
+| 30/10/2026 | v0.13.0 | Etapa 4C2: Supremo com 11 ministros, risco jurídico em todas as medidas (mostrado antes de assinar), ações da oposição, julgamento voto a voto com animação, derrubada com fato do mês (acatar, nova proposta, criticar), vaga aos 75 anos com 3 indicáveis e sabatina no Senado; save 11 |

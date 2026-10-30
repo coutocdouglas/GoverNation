@@ -2,6 +2,7 @@ import { initialCongress, initialSenate } from './congress'
 import { syncCustomBills } from './custom'
 import { RIVAL } from './data/rival'
 import { createRival } from './rival'
+import { initialSupremo } from './supremo'
 import { addBio } from './memory'
 import type { GameState } from './types'
 
@@ -100,7 +101,12 @@ export function migrate(raw: unknown): GameState | null {
       if (!s.congress.senate) s.congress.senate = initialSenate(s.congress.parties, s.rngState)
       s.saveVersion = 10
     }
-    if (s.saveVersion !== 10) return null
+    if (s.saveVersion === 10) {
+      // v0.12 → v0.13 (etapa 4C2): o Supremo entra com os 11 ministros, sem ações. Medidas já em vigor ficam fora da mira.
+      if (!s.supremo) s.supremo = initialSupremo(s)
+      s.saveVersion = 11
+    }
+    if (s.saveVersion !== 11) return null
     syncCustomBills(s as GameState)
     return s as GameState
   } catch {

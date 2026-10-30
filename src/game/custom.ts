@@ -255,7 +255,7 @@ function seedRuleFor(b: BillDef) {
   return [{ event: `frutos_${b.area}`, delay: [8, 20] as [number, number], chance: b.instrument === 'decreto' ? 0.3 : 0.45 }]
 }
 
-function register(b: BillDef): void {
+export function register(b: BillDef): void {
   if (!(b.id in BILL_BY_ID)) BILLS.push(b)
   else BILLS[BILLS.findIndex((x) => x.id === b.id)] = b
   BILL_BY_ID[b.id] = b

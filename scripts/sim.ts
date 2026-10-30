@@ -84,6 +84,7 @@ if (process.argv[1]?.endsWith('sim.ts')) {
 export function senateRun(seed: number, party: 'fpt' | 'mdn' | 'pol') {
   let s = newGame('Teste', 'normal', seed, party, undefined, undefined, { promises: SIM_PROMISES })
   let camara = 0, barrado = 0, leis = 0, segurados = 0
+  const risky = new Set<string>()
   while (!s.finished) {
     const pool = BILLS.filter((b) => b.instrument !== 'decreto' && !billBlockedReason(s, b.id) && forecastVote(s, b.id).chance > 0.45)
     const bill = pool.length && s.month % 2 === 0 ? pool[(s.month * 7 + seed) % pool.length].id : undefined
@@ -93,8 +94,10 @@ export function senateRun(seed: number, party: 'fpt' | 'mdn' | 'pol') {
       if (v.house === 'senado') { if (v.approved) leis++; else barrado++ } else if (v.approved && !BILLS.every((b) => b.id !== v.bill)) camara++
     }
     segurados += s.lastReport!.headlines.filter((h) => h.text.includes('presidente do Senado, segura')).length
+    for (const w of s.supremo.watch) risky.add(w.bill)
   }
-  return { camara, barrado, leis, segurados }
+  const rulings = s.supremo.rulings
+  return { camara, barrado, leis, segurados, arriscadas: risky.size, acoes: rulings.length + s.supremo.cases.length, derrubadas: rulings.filter((r) => r.struck).length }
 }
 
 if (process.argv[1]?.endsWith('sim.ts') && !process.argv[2]) {
@@ -103,5 +106,19 @@ if (process.argv[1]?.endsWith('sim.ts') && !process.argv[2]) {
     const r = Array.from({ length: 30 }, (_, i) => senateRun(2000 + i, party))
     const sum = (k: keyof (typeof r)[number]) => r.reduce((a, x) => a + x[k], 0)
     console.log(`  ${party}  aprovados na Câmara ${(sum('camara') / 30).toFixed(1)}  barrados no Senado ${(sum('barrado') / 30).toFixed(1)}  viraram lei ${(sum('leis') / 30).toFixed(1)}  gaveta da presidente ${(sum('segurados') / 30).toFixed(1)} por mandato`)
+  }
+  console.log('\nSupremo (mesmas partidas: medidas com risco em vigor, ações e derrubadas por mandato):')
+  for (const party of ['fpt', 'mdn', 'pol'] as const) {
+    const r = Array.from({ length: 30 }, (_, i) => senateRun(2000 + i, party))
+    const avg = (k: 'arriscadas' | 'acoes' | 'derrubadas') => (r.reduce((a, x) => a + x[k], 0) / 30).toFixed(1)
+    const dist = [0, 1, 2, 3].map((n) => r.filter((x) => (n < 3 ? x.derrubadas === n : x.derrubadas >= 3)).length)
+    console.log(`  ${party}  medidas com risco ${avg('arriscadas')}  ações ${avg('acoes')}  derrubadas ${avg('derrubadas')}  (mandatos com 0/1/2/3+: ${dist.join('/')})`)
+  }
+  console.log('\nSupremo nas estratégias de decreto (30 sementes):')
+  for (const n of Object.keys(STRATEGIES)) {
+    const runs = Array.from({ length: 30 }, (_, i) => run(n, 1000 + i, false).state)
+    const struck = runs.reduce((a, s) => a + s.supremo.rulings.filter((r) => r.struck).length, 0)
+    const acoes = runs.reduce((a, s) => a + s.supremo.rulings.length, 0)
+    console.log(`  ${n.padEnd(12)} julgamentos ${(acoes / 30).toFixed(1)}  derrubadas ${(struck / 30).toFixed(1)} por mandato`)
   }
 }

@@ -23,6 +23,8 @@ export interface EventOption {
   promote?: true
   /** Fato bom: o presidente dá o crédito ao autor (aproxima o partido dele). */
   credit?: true
+  /** Etapa 4C2: resposta a uma derrubada no Supremo (o motor trata em supremo.ts). */
+  stf?: 'acatar' | 'nova' | 'criticar'
 }
 
 export interface EventDef {
@@ -43,6 +45,8 @@ export interface EventDef {
   /** Efeito que acontece de qualquer jeito, além da escolha. */
   effects?: ActionEffects
   weight: number
+  /** Etapa 4C2: só as opções prontas valem (sem resposta escrita), mesmo com a IA ligada. */
+  choiceOnly?: true
   /** Só acontece se a condição for verdadeira. */
   when?: (s: GameState) => boolean
   options: EventOption[]
@@ -211,9 +215,10 @@ export const EVENTS: EventDef[] = [
 ]
 
 import { CONSEQUENCE_EVENTS } from './consequences'
+import { STF_EVENT } from './supremo'
 
 /** Todos os fatos: os sorteáveis e os que só nascem de sementes. */
-export const ALL_EVENTS: EventDef[] = [...EVENTS, ...CONSEQUENCE_EVENTS]
+export const ALL_EVENTS: EventDef[] = [...EVENTS, ...CONSEQUENCE_EVENTS, STF_EVENT]
 
 export const EVENT_BY_ID = Object.fromEntries(ALL_EVENTS.map((e) => [e.id, e])) as Record<string, EventDef>
 

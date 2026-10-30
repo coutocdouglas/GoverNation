@@ -99,6 +99,8 @@ export interface RivalMonth {
   scandal: boolean
   defeats: number
   overrides: number
+  /** Etapa 4C2: outras causas do mês (Supremo derrubando medida, presidente atacando a corte, indicação de aliado). */
+  extra?: Cause[]
 }
 
 /** Fim do mês: força, postura, fala e pesquisa. `month` = mês da pesquisa (o do novo retrato do país). */
@@ -114,6 +116,7 @@ export function updateRival(s: GameState, m: RivalMonth, month: number, rng: Rng
   if (m.scandal) causes.push({ label: 'Escândalo no governo', value: RIVAL.scandal })
   if (m.defeats) causes.push({ label: m.defeats > 1 ? `${m.defeats} derrotas do governo na Câmara` : 'Derrota do governo na Câmara', value: RIVAL.defeat * m.defeats })
   if (m.overrides) causes.push({ label: 'Veto do presidente derrubado', value: RIVAL.vetoOverride * m.overrides })
+  causes.push(...(m.extra ?? []))
   const before = r.strength
   r.strength = round1(clamp(before + causes.reduce((a, c) => a + c.value, 0), RIVAL.min, RIVAL.max))
   r.causes = causes.map((c) => ({ ...c, value: round1(c.value) })).filter((c) => c.value !== 0)

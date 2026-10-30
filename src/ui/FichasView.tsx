@@ -15,7 +15,7 @@ export function FichasView({ state }: { state: GameState }) {
   const people = [
     { name: state.presidentName, role: `Presidente da República (${PARTY_BY_ID[state.playerParty].sigla})`, portrait: playerPortraitId(state), color: PARTY_BY_ID[state.playerParty].color },
     // Só o rival deste mandato aparece; o outro líder de oposição fica de fora.
-    ...CAST.filter((c) => !RIVALS.some((r) => r.name === c.name) || c.name === state.rival?.name).map((c) => {
+    ...CAST.filter((c) => (!RIVALS.some((r) => r.name === c.name) || c.name === state.rival?.name) && (!c.role.startsWith('Indicável') || state.bios[c.name]?.length)).map((c) => {
       const party = PARTIES.find((p) => p.leader.name === c.name) ?? (c.name === state.rival?.name ? PARTY_BY_ID[state.rival.party] : undefined)
       return { name: c.name, role: c.name === state.rival?.name ? `Líder da oposição (${PARTY_BY_ID[state.rival.party].sigla})` : c.role, portrait: castPortrait(c.name) ?? c.portrait, color: party?.color ?? '#8a97a8' }
     }),
