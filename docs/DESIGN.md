@@ -215,3 +215,22 @@ Descontos: crises não respondidas, impeachment, inflação acima de 10%.
 - **Dados de balanceamento:** arquivos JSON em `src/game/data/`.
 - **Saves:** guardados na pasta de dados do usuário no Windows, fora da pasta do programa. Atualizações não apagam saves.
 - **Atualizações:** GitHub Releases + atualizador do Tauri com assinatura digital.
+
+---
+
+## 11. Decisões de desenho (29/10/2026)
+
+Tomadas depois de estudar o tutorial do jogo de referência. Valem para as próximas versões.
+
+1. **Roteiro por blocos, integrando a cada bloco** (não só no fim). Ordem: base → medidas e Congresso → orçamento e impostos → reação do país → instituições → eleição e nota final → texto livre com IA → expansões.
+2. **Senado simplificado:** não vota leis. Sabatina indicados ao Supremo e julga ministros do tribunal. Isso reduz bastante o trabalho do Congresso.
+3. **Texto livre com IA** continua depois de um catálogo de medidas sólido (bloco 6).
+4. **Efeitos mais rápidos:** a causa deve aparecer para o jogador em cerca de 2 a 4 meses, em vez de 7 a 12. O painel de causas continua explicando o que mexeu em cada indicador.
+5. **O mês é um recurso:** algumas ações (viagem, audiência, reunião) ocupam o mês inteiro; escolher uma é abrir mão de outra.
+6. **Painel de trabalho** com assunto do mês no centro e uma "banca de jornal" com manchetes que apontam o problema. Serve também para ensinar o jogador a ler a situação.
+7. **Gasto público em áreas** (infraestrutura, saúde, educação, outras), com investimento elevando o crescimento no longo prazo.
+8. **Grupos por interesse e identidade** (por exemplo evangélicos, sindicalistas, agro, periferia, mercado, militares, universitários), com presença diferente em cada estado. Os dados por estado entram na base; o mapa vem depois.
+9. **Risco-país** como indicador.
+10. **Vários finais**, tutorial revisável nas configurações e botão de bugs e sugestões em toda tela.
+
+Fica para os blocos seguintes: gabinete, governadores, gabinete secreto, empresas, diplomacia, projetos de mandato inteiro, vida pessoal do presidente.
