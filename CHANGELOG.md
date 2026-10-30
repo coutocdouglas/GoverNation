@@ -1,5 +1,10 @@
 # Novidades
 
+## 0.7.1
+- **Outros provedores de IA:** nas configurações (🤖 IA), escolha entre Claude, **Gemini (Google)**, Groq ou OpenRouter. Cada um guarda a própria chave, só neste computador.
+- Modelos sugeridos por provedor e tarefa (no Gemini: Flash-Lite para as falas, Flash para ler o texto). Dá para digitar o nome de outro modelo se o provedor lançar um novo.
+- O gasto medido separa provedor e modelo. Quem já tinha configurado o Claude na v0.7.0 não precisa refazer nada.
+
 ## 0.7.0
 - **Inteligência artificial opcional (etapa 3B).** Botão **🤖 IA** no topo do Painel: cole sua chave da Anthropic, o jogo testa e guarda só neste computador (nunca no save nem no GitHub).
 - **Conselho do ministro:** no fato do mês, “💬 Pedir conselho” faz o ministro da área sugerir 2 ou 3 respostas, com as palavras e o jeito dele, levando em conta o partido dele, a relação com você e o estado real do país. Você aceita (vê custo e placar), edita com suas palavras ou ignora.

@@ -3,7 +3,7 @@
 > **Leia este arquivo primeiro.** Ele diz onde o projeto está e qual é o próximo passo.
 > Atualize-o a cada mudança: seção "Estado atual", "Próximo passo" e uma linha no "Histórico".
 
-**Última atualização:** 30/10/2026 · **Versão publicada:** v0.7.0
+**Última atualização:** 30/10/2026 · **Versão publicada:** v0.7.1
 
 ---
 
@@ -11,8 +11,8 @@
 
 **Testar a IA com a chave real e fixar os modelos.** A etapa 3B ficou pronta na v0.7.0, mas foi testada com uma API simulada.
 
-- Douglas: criar a chave em console.anthropic.com, colar no botão 🤖 IA e jogar alguns meses. Ver se as falas soam bem e anotar o "Gasto medido".
-- Com os números reais, decidir se Haiku/Sonnet ficam como estão. Ajustes de texto dos prompts ficam em `src/game/ai.ts`.
+- Douglas: no botão 🤖 IA, escolher o provedor (Gemini, já que há conta paga; ou Claude, Groq, OpenRouter), colar a chave e jogar alguns meses. Ver se as falas soam bem e anotar o "Gasto medido".
+- Com os números reais, decidir os modelos de cada tarefa. Se a chamada falhar no app instalado com "Sem conexão", pode ser bloqueio do navegador interno (CORS) daquele provedor: aí a correção é passar as chamadas pelo lado Windows do app (plugin http do Tauri). Ajustes de texto dos prompts ficam em `src/game/ai.ts`.
 - Depois: **etapa 4, Congresso 2.0** (veto e derrubada, relator e emendas, comissões, presidente da Câmara, frentes, pautas-bomba, ministérios cedidos). Complexidade alta: use o **Opus**, numa conversa nova.
 
 Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdouglas/GoverNation. Leia CLAUDE.md, docs/ESTADO.md e docs/DESIGN.md. Quero fazer a etapa 4."*
@@ -24,7 +24,7 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 **Base técnica**
 - App de Windows (Tauri 2 + React + TypeScript). O instalador é gerado pelo GitHub Actions e o jogo se atualiza sozinho, com atualização assinada.
 - O motor do jogo (`src/game/`) fica separado das telas (`src/ui/`). Os números de balanceamento ficam em `src/game/data/`.
-- 74 testes automáticos. Saves antigos são migrados (versão atual do save: 5).
+- 78 testes automáticos. Saves antigos são migrados (versão atual do save: 5).
 
 **Jogabilidade**
 - Mandato de 48 meses (jan/2027 a dez/2030), com o mês em 4 passos: notícias, fato do mês, decisões e encerrar.
@@ -33,7 +33,7 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 - **Medida do mês em texto livre**, lida por palavras-chave. Leva aos 7 decretos rápidos ou a um catálogo de 91 medidas em 13 áreas (decreto, MP, lei, lei complementar ou PEC) e mostra o instrumento, o custo e o placar previsto.
 - **Agir no fato do mês:** além das opções prontas, o jogador escreve a resposta; o ministro da área lê e mostra até 3 caminhos. A resposta segue o trâmite normal e não gasta a medida do mês. Decreto e MP resolvem na hora; lei e PEC, se aprovadas no mesmo mês.
 - **Ministros:** 13 áreas, cada uma com um ministro responsável, partido e estilo próprio.
-- **IA opcional (v0.7):** com chave própria, o ministro dá conselhos no estilo dele e a IA lê o texto livre, sempre escolhendo do catálogo. Sem chave ou sem internet, palavras-chave.
+- **IA opcional (v0.7):** com chave própria de Claude, Gemini, Groq ou OpenRouter, o ministro dá conselhos no estilo dele e a IA lê o texto livre, sempre escolhendo do catálogo. Sem chave ou sem internet, palavras-chave.
 - **Congresso:** 513 deputados de 9 partidos fictícios. O voto depende de ideologia, orientação do partido, relação com o governo, popularidade, aprovação e emendas.
   - Lei ordinária, lei complementar (257 votos), PEC (308 votos, em dois turnos) e MP, que vale na hora e cai se for rejeitada.
   - Recesso em janeiro e julho.
@@ -89,3 +89,4 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 | 30/10/2026 | — | Decisão: IA entra na etapa 3B; etapa 3 dividida em 3A (catálogo) e 3B (IA). Documentos atualizados |
 | 30/10/2026 | v0.6.0 | Etapa 3A: agir em texto no fato do mês, 13 áreas com ministro responsável (7 ministros novos), catálogo de 91 medidas por palavras-chave, boas notícias por área |
 | 30/10/2026 | v0.7.0 | Etapa 3B: IA opcional com chave própria, conselho do ministro no estilo dele, leitura do texto livre por IA, plano B por palavras-chave, medidor de gasto |
+| 30/10/2026 | v0.7.1 | Provedores de IA: Gemini, Groq e OpenRouter além do Claude, com chave e modelos por provedor |

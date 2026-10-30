@@ -1,19 +1,21 @@
 import { useState } from 'react'
 import {
-  getAiConfig, getAiUsage, getApiKey, maskKey, MODEL_OPTIONS, resetAiUsage, setAiConfig, setApiKey, testKey,
-  type AiConfig, type AiTask,
+  getAiConfig, getAiUsage, getApiKey, maskKey, PROVIDER_BY_ID, PROVIDERS, resetAiUsage, setAiConfig, setApiKey, testKey,
+  type AiConfig, type AiTask, type ProviderId,
 } from '../lib/ai'
 
 const TASKS: { id: AiTask; label: string; hint: string }[] = [
-  { id: 'fala', label: 'Conselho dos ministros', hint: 'Falas curtas: o modelo barato basta.' },
+  { id: 'fala', label: 'Conselho dos ministros', hint: 'Falas curtas: um modelo barato e rápido basta.' },
   { id: 'interpretar', label: 'Ler o que você escreve', hint: 'Achar a medida certa no catálogo: pede um modelo intermediário.' },
 ]
 
 /** Configurações da IA (etapa 3B): chave própria, modelos por tarefa e gasto medido. */
 export function AiSettings({ onClose }: { onClose: () => void }) {
-  const [saved, setSaved] = useState(getApiKey())
-  const [draft, setDraft] = useState('')
   const [cfg, setCfg] = useState<AiConfig>(getAiConfig())
+  const prov = PROVIDER_BY_ID[cfg.provider]
+  const [saved, setSaved] = useState(getApiKey(cfg.provider))
+  const [draft, setDraft] = useState('')
+  const pick = (id: ProviderId) => { update({ ...cfg, provider: id }); setSaved(getApiKey(id)); setDraft(''); setStatus(null) }
   const [status, setStatus] = useState<string | null>(null)
   const [testing, setTesting] = useState(false)
   const [usage, setUsage] = useState(getAiUsage())
@@ -23,13 +25,13 @@ export function AiSettings({ onClose }: { onClose: () => void }) {
     const k = draft.trim()
     if (!k) return
     setTesting(true); setStatus(null)
-    const err = await testKey(k)
+    const err = await testKey(k, cfg.provider)
     setTesting(false)
     if (err) { setStatus(`❌ ${err} A chave não foi salva.`); return }
-    setApiKey(k); setSaved(k); setDraft(''); setUsage(getAiUsage())
+    setApiKey(k, cfg.provider); setSaved(k); setDraft(''); setUsage(getAiUsage())
     setStatus('✅ Chave testada e salva neste computador.')
   }
-  const remove = () => { setApiKey(''); setSaved(''); setStatus('Chave apagada deste computador.') }
+  const remove = () => { setApiKey('', cfg.provider); setSaved(''); setStatus('Chave apagada deste computador.') }
   const models = Object.entries(usage)
 
   return (
@@ -43,11 +45,17 @@ export function AiSettings({ onClose }: { onClose: () => void }) {
           Sem chave ou sem internet, o jogo funciona igual, lendo por palavras-chave.
         </p>
 
-        <h3>Chave da API</h3>
+        <h3>Provedor</h3>
+        <select className="pn-input" value={cfg.provider} onChange={(e) => pick(e.target.value as ProviderId)}>
+          {PROVIDERS.map((p) => <option key={p.id} value={p.id}>{p.label}{getApiKey(p.id) ? ' ✔' : ''}</option>)}
+        </select>
+        <p className="muted">Cada provedor tem a sua chave. O jogo usa só o provedor escolhido aqui.</p>
+
+        <h3>Chave da API ({prov.label})</h3>
         {saved ? (
           <p>Chave salva: <code>{maskKey(saved)}</code> <button className="pn-btn pn-btn--ghost" onClick={remove}>Apagar</button></p>
         ) : (
-          <p className="muted">Nenhuma chave salva. Crie uma em console.anthropic.com (é paga por uso).</p>
+          <p className="muted">Nenhuma chave salva para este provedor. Crie uma em {prov.keyUrl}.</p>
         )}
         <div className="pn-row">
           <input
@@ -55,7 +63,7 @@ export function AiSettings({ onClose }: { onClose: () => void }) {
             type="password"
             autoComplete="off"
             spellCheck={false}
-            placeholder={saved ? 'Trocar por outra chave…' : 'Cole aqui a chave (sk-ant-…)'}
+            placeholder={saved ? 'Trocar por outra chave…' : `Cole aqui a chave (${prov.keyHint})`}
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') save() }}
@@ -64,7 +72,7 @@ export function AiSettings({ onClose }: { onClose: () => void }) {
         </div>
         {status && <p>{status}</p>}
         <p className="muted">
-          A chave fica só neste computador. Não vai para o save, para o GitHub nem para nenhum outro lugar além da própria Anthropic.
+          A chave fica só neste computador. Não vai para o save, para o GitHub nem para nenhum outro lugar além do provedor escolhido.
         </p>
 
         <h3>Uso</h3>
@@ -76,12 +84,18 @@ export function AiSettings({ onClose }: { onClose: () => void }) {
           <div key={t.id} style={{ margin: '10px 0' }}>
             <b>{t.label}</b> <span className="muted">— {t.hint}</span>
             <div>
-              <select className="pn-input" value={cfg.models[t.id]} onChange={(e) => update({ ...cfg, models: { ...cfg.models, [t.id]: e.target.value } })}>
-                {MODEL_OPTIONS.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
-              </select>
+              <input
+                className="pn-input"
+                list={`modelos-${prov.id}`}
+                value={cfg.modelsBy[prov.id][t.id]}
+                onChange={(e) => update({ ...cfg, modelsBy: { ...cfg.modelsBy, [prov.id]: { ...cfg.modelsBy[prov.id], [t.id]: e.target.value.trim() || prov.defaults[t.id] } } })}
+              />
             </div>
           </div>
         ))}
+
+        <datalist id={`modelos-${prov.id}`}>{prov.models.map((m) => <option key={m} value={m} />)}</datalist>
+        <p className="muted">Pode apagar e digitar o nome de outro modelo do provedor, se ele lançar um novo.</p>
 
         <h3>Gasto medido</h3>
         {models.length === 0 ? (
@@ -102,7 +116,7 @@ export function AiSettings({ onClose }: { onClose: () => void }) {
                 })}
               </tbody>
             </table>
-            <p className="muted">Multiplique pelos preços de cada modelo na página de preços da Anthropic para saber o custo em dólares.</p>
+            <p className="muted">Multiplique pelos preços de cada modelo na página de preços do provedor para saber o custo em dólares.</p>
             <button className="pn-btn pn-btn--ghost" onClick={() => { resetAiUsage(); setUsage({}) }}>Zerar a contagem</button>
           </>
         )}
