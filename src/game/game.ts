@@ -4,6 +4,7 @@ import { BILL_BY_ID, RESUBMIT_COOLDOWN } from './data/bills'
 import { DEMAND_BY_ID } from './data/demands'
 import { EVENT_BY_ID } from './data/events'
 import { defaultOption, drawEvent, spawnDemand } from './events'
+import { addBio, addChronicle, fillText, plantInheritance, plantSeeds, sproutSeeds } from './memory'
 import { PARTY_BY_ID } from './data/parties'
 import { DIFFICULTY, MACRO, START } from './data/balance'
 import { GROUPS } from './data/groups'
@@ -51,7 +52,7 @@ export function newGame(
   const rngState = seed ?? Math.floor(Math.random() * 2 ** 31)
   const bonus = DIFFICULTY[difficulty].approvalBonus
   const state: GameState = {
-    saveVersion: 3,
+    saveVersion: 4,
     month: 0,
     presidentName: presidentName.trim() || 'Presidente',
     difficulty,
@@ -60,6 +61,10 @@ export function newGame(
     avatarSeed: avatarSeed ?? `${presidentName}-${rngState}`,
     avatarPortrait,
     event: null,
+    eventQueue: [],
+    term: 1,
+    world: { seeds: [], chronicle: [] },
+    bios: {},
     eventLog: [],
     demands: [],
     demandLog: [],
@@ -74,6 +79,8 @@ export function newGame(
   }
   state.history.push(snapshot(state))
   const rng = new Rng(state.rngState)
+  plantInheritance(state, rng)
+  addBio(state, state.presidentName, `Toma posse como presidente da República pelo ${PARTY_BY_ID[playerParty].sigla}.`)
   state.event = drawEvent(state, rng)
   state.rngState = rng.state
   return state
@@ -188,6 +195,7 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
   for (const id of actions) {
     const def = ACTION_BY_ID[id]
     actionConfidence += applyEffects(e, impulses, def.effects, def.name, effectMultiplier(s, id))
+    if (id === 'anteciparObras') plantSeeds(s, id, 'Obras aceleradas por decreto', s.presidentName, s.playerParty, rng)
     s.cooldowns[id] = def.cooldown + 1 // +1 porque o contador cai no fim deste mês
     s.actionLog.push({ month: s.month, id })
   }
@@ -202,10 +210,12 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
       ps.relation = Math.min(100, ps.relation + CONGRESS.talkGain)
       ps.lastTalk = s.month
       taken.push(`Conversa com a bancada do ${sigla}`)
+      addBio(s, PARTY_BY_ID[a.party].leader.name, `Recebeu o presidente ${s.presidentName} para conversar.`)
     } else {
       ps.favors += CONGRESS.favorGain
       e.tempSpending.push({ label: `Emendas para o ${sigla}`, amount: CONGRESS.emendasCost, monthsLeft: CONGRESS.emendasMonths })
       taken.push(`Emendas liberadas para o ${sigla}`)
+      addBio(s, PARTY_BY_ID[a.party].leader.name, 'Negociou emendas com o governo para a bancada.')
     }
   }
 
@@ -213,7 +223,11 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
   if (plan.bill) {
     const bill = BILL_BY_ID[plan.bill]
     c.pending.push({ id: plan.bill, sentMonth: s.month })
-    if (bill.instrument === 'mp') actionConfidence += applyEffects(e, impulses, bill.effects, bill.name)
+    if (bill.instrument === 'mp') {
+      actionConfidence += applyEffects(e, impulses, bill.effects, bill.name)
+      plantSeeds(s, plan.bill, bill.name, s.presidentName, s.playerParty, rng)
+      addBio(s, s.presidentName, `Editou a medida provisória: ${bill.name}.`)
+    }
     taken.push(`${bill.instrument === 'mp' ? 'Editou a MP' : 'Enviou à Câmara'}: ${bill.name}`)
   }
 
@@ -229,7 +243,12 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
       const placar = v.needed > 0 ? `${pt(v.yes)} votos (precisava de ${pt(v.needed)})` : `${pt(v.yes)} a ${pt(v.no)}`
       if (v.approved) {
         c.laws.push(p.id)
-        if (bill.instrument !== 'mp') actionConfidence += applyEffects(e, impulses, bill.effects, bill.name)
+        if (bill.instrument !== 'mp') {
+          actionConfidence += applyEffects(e, impulses, bill.effects, bill.name)
+          plantSeeds(s, p.id, bill.name, s.presidentName, s.playerParty, rng)
+        }
+        addBio(s, s.presidentName, `Sancionou: ${bill.name} (${placar}).`)
+        addChronicle(s, `Lei aprovada: ${bill.name}, no governo ${s.presidentName} (${PARTY_BY_ID[s.playerParty].sigla})`, 'good')
         headlines.push({ text: `Câmara aprova ${lowerFirst(bill.name)}: ${placar}`, tone: 'good' })
       } else {
         c.blockedUntil[p.id] = s.month + RESUBMIT_COOLDOWN
@@ -240,6 +259,7 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
           }
         }
         for (const g of GROUPS) impulses[g.id].push({ label: 'Derrota do governo na Câmara', value: -0.8 })
+        addBio(s, s.presidentName, `Derrotado na Câmara: ${bill.name} (${placar}).`)
         headlines.push({
           text: `${bill.instrument === 'mp' ? 'MP cai' : 'Câmara rejeita'}: ${lowerFirst(bill.name)} (${placar})`,
           tone: 'bad',
@@ -248,6 +268,14 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
     }
   } else if (c.pending.length > 0) {
     headlines.push({ text: 'Congresso em recesso: votações ficam para o mês que vem', tone: 'neutral' })
+  }
+  for (const v of votes) {
+    const name = BILL_BY_ID[v.bill].name
+    for (const [pid, r] of Object.entries(v.byParty) as [PartyId, { yes: number; no: number }][]) {
+      if (r.yes + r.no === 0) continue
+      const side = r.yes >= r.no ? 'a favor' : 'contra'
+      addBio(s, PARTY_BY_ID[pid].leader.name, `Levou o ${PARTY_BY_ID[pid].sigla} a votar ${side} de “${name}” (${r.yes} sim, ${r.no} não). ${v.approved ? 'Aprovado' : 'Rejeitado'}.`)
+    }
   }
   c.votes.push(...votes)
   c.votes = c.votes.slice(-24)
@@ -259,14 +287,35 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
     if (def) {
       const idx = plan.eventChoice ?? defaultOption(def)
       const opt = def.options[idx]
-      actionConfidence += applyEffects(e, impulses, opt.effects, def.title)
+      const origin = s.event.origin
+      const title = fillText(def.title, origin)
+      if (def.effects) actionConfidence += applyEffects(e, impulses, def.effects, title)
+      actionConfidence += applyEffects(e, impulses, opt.effects, title)
       for (const [pid, dv] of Object.entries(opt.parties ?? {}) as [PartyId, number][]) {
         const ps = c.parties[pid]
         ps.relation = Math.min(100, Math.max(0, ps.relation + dv))
       }
-      headlines.push({ text: opt.outcome, tone: opt.tone })
+      let outcome = opt.outcome
+      let tone = opt.tone
+      const othersMerit = !!origin && origin.author !== s.presidentName
+      if (opt.promote && othersMerit && rng.next() < 0.35) {
+        // A oposição lembra de quem é o mérito.
+        for (const g of ['classeMedia', 'jovens', 'trabalhadores'] as GroupId[]) impulses[g].push({ label: 'Oposição desmente propaganda', value: -2.5 })
+        outcome = `Oposição desmente: “${origin!.label}” é obra de ${origin!.author}`
+        tone = 'bad'
+        addBio(s, s.presidentName, `Foi desmentido ao tomar para si o mérito de “${origin!.label}”.`)
+      }
+      if (opt.credit && origin?.party && origin.party !== s.playerParty) {
+        const ps = c.parties[origin.party]
+        ps.relation = Math.min(100, ps.relation + 6)
+      }
+      if (opt.credit && origin) addBio(s, s.presidentName, `Deu publicamente o crédito de “${origin.label}” a ${origin.author}.`)
+      headlines.push({ text: outcome, tone })
       taken.push(`Fato do mês: ${opt.label}`)
       s.eventLog.push({ id: def.id, month: s.month })
+      addBio(s, def.presenter.name, `${def.presenter.role}: levou ao presidente “${title}”. Decisão: ${lowerFirst(opt.label)}.`)
+      if (def.importance >= 3 || def.kind !== 'crise') addBio(s, s.presidentName, `${title}: ${lowerFirst(opt.label)}.`)
+      if (origin) addChronicle(s, `${title} (consequência de ${origin.label}, ${origin.author}, ${origin.year})`, tone)
       eventReport = { id: def.id, option: idx, chosen: plan.eventChoice !== undefined }
     }
     s.event = null
@@ -348,6 +397,7 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
   if (s.month >= TERM_MONTHS) s.finished = true
   else {
     spawnDemand(s, rng)
+    sproutSeeds(s)
     s.event = drawEvent(s, rng)
   }
   s.rngState = rng.state

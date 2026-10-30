@@ -12,6 +12,7 @@ import { interpretMeasure, type MeasureRef } from '../game/interpret'
 import type { ActionId, Articulation, BillId, Cause, GameState, GroupId, IndicatorKey } from '../game/types'
 import { CongressView, ForecastRow, Scoreboard } from './CongressView'
 import { DemandsCard, EventPanel } from './EventPanel'
+import { FichasView } from './FichasView'
 import { Portrait } from './Portrait'
 import { ACTION_ICON, GROUP_ICON, INDICATOR_ICON } from './icons'
 import { INDICATORS, lowerFirst, num, signed, type IndicatorMeta } from './format'
@@ -43,7 +44,7 @@ export function GameScreen({ state, onChange, onExit }: {
   const [toasts, setToasts] = useState<{ id: number; text: string }[]>([])
   const [bill, setBill] = useState<BillId | null>(null)
   const [articulations, setArticulations] = useState<Articulation[]>([])
-  const [tab, setTab] = useState<'painel' | 'governo'>('painel')
+  const [tab, setTab] = useState<'painel' | 'governo' | 'fichas'>('painel')
   const [eventChoice, setEventChoice] = useState<number | null>(null)
   const eventRef = useRef<HTMLDivElement>(null)
   const medidaRef = useRef<HTMLElement>(null)
@@ -110,6 +111,7 @@ export function GameScreen({ state, onChange, onExit }: {
           <a className={tab === 'governo' ? 'on' : ''} onClick={() => setTab('governo')}>
             🏛️ Governo {state.congress.pending.length + (bill ? 1 : 0) > 0 && <span className="pn-dot">{state.congress.pending.length + (bill ? 1 : 0)}</span>}
           </a>
+          <a className={tab === 'fichas' ? 'on' : ''} onClick={() => setTab('fichas')}>📇 Fichas</a>
           {SECTIONS.map((s) => (
             <a key={s.name} className="off" title={s.soon}>{s.icon} {s.name} <span className="pn-lock">🔒</span></a>
           ))}
@@ -156,7 +158,9 @@ export function GameScreen({ state, onChange, onExit }: {
           ))}
         </section>
 
-        {tab === 'governo' ? (
+        {tab === 'fichas' ? (
+          <FichasView state={state} />
+        ) : tab === 'governo' ? (
           <CongressView
             state={state}
             bill={bill}

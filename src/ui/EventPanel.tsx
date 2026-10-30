@@ -3,6 +3,7 @@ import { BILL_BY_ID } from '../game/data/bills'
 import { DEMAND_BY_ID } from '../game/data/demands'
 import { GROUP_BY_ID } from '../game/data/groups'
 import { defaultOption, currentEvent } from '../game/events'
+import { fillText } from '../game/memory'
 import type { ActionId, BillId, GameState } from '../game/types'
 import { Portrait } from './Portrait'
 import { effectChips } from './effects'
@@ -31,8 +32,10 @@ export function EventPanel({ state, choice, onChoose }: {
   }
   const def = defaultOption(ev)
   const p = ev.presenter
+  const origin = state.event?.origin
+  const kind = ev.kind ?? 'crise'
   return (
-    <section className="pn-card pn-event" id="fato-do-mes">
+    <section className={`pn-card pn-event ${kind === 'bom' ? 'pn-event--good' : ''}`} id="fato-do-mes">
       <h3>🔥 Fato do mês <span className="pn-badge">{choice === null ? `se você não decidir: ${ev.options[def].label.toLowerCase()}` : '✔ decidido'}</span></h3>
       <div className="pn-event__head">
         <div className="pn-event__who">
@@ -40,10 +43,17 @@ export function EventPanel({ state, choice, onChoose }: {
           <div className="pn-event__name"><b>{p.name}</b><span>{p.role}</span></div>
         </div>
         <div className="pn-event__bubble">
-          <span className="pn-tag pn-tag--red">{ev.icon} {ev.tag}</span>
-          <h2>{ev.title}</h2>
-          <p>{ev.text}</p>
-          <p className="pn-event__ask">“Presidente, precisamos de uma decisão.”</p>
+          <div className="pn-event__tags">
+            <span className={`pn-tag ${kind === 'bom' ? 'pn-tag--green' : 'pn-tag--red'}`}>{ev.icon} {ev.tag}</span>
+            <span className="pn-importance" title="Importância: quanto ignorar pode custar">
+              {Array.from({ length: 5 }, (_, i) => <i key={i} className={i < ev.importance ? 'on' : ''} />)}
+              <small>{['', 'detalhe', 'pequeno', 'relevante', 'grave', 'crise nacional'][ev.importance]}</small>
+            </span>
+          </div>
+          <h2>{fillText(ev.title, origin)}</h2>
+          <p>{fillText(ev.text, origin)}</p>
+          {origin && <p className="pn-event__origin">🌱 Consequência de <b>{origin.label}</b> · {origin.author} · {origin.year}</p>}
+          <p className="pn-event__ask">{kind === 'bom' ? '“Presidente, temos uma boa notícia. Como quer usar?”' : '“Presidente, precisamos de uma decisão.”'}</p>
         </div>
       </div>
       <div className="pn-event__options">

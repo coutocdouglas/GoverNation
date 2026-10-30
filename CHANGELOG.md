@@ -1,5 +1,14 @@
 # Novidades
 
+## 0.5.0
+- **Memória do mundo:** toda lei aprovada, MP editada e obra antecipada planta consequências que brotam meses ou anos depois como fato do mês, boas ou ruins (reforma tributária: transição confusa e depois indústria crescendo; privatização: investimento ou conta de luz mais cara; flexibilizar licenciamento: risco de tragédia). Cada consequência mostra de onde veio, quem aprovou e quando.
+- **Herança:** o primeiro mandato recebe decisões do governo anterior (uma ferrovia que fica pronta, pensões sem fonte de receita, um acordo comercial). A memória já é contada em meses absolutos, pronta para atravessar mandatos.
+- **Importância de 1 a 5** em todo fato do mês. Ignorar um detalhe não custa nada; ignorar uma crise nacional custa muito.
+- **Boas notícias:** safra recorde, petróleo, fábrica nova e frutos de leis antigas. Você escolhe entre se promover (com risco de a oposição desmentir se o mérito for de outro), dar o crédito a quem fez (aproxima o partido do autor) ou deixar passar.
+- **Fichas:** aba nova com a biografia de cada personagem, que se acumula ao longo do jogo: o que o presidente sancionou e decidiu, como cada líder orientou a bancada, o que cada ministro levou à mesa. É a base para escolher candidato pela ficha na eleição.
+- **Memória do país:** linha do tempo com leis, heranças e consequências.
+- Diretrizes de desenvolvimento em `CLAUDE.md`, incluindo quando abrir uma conversa nova.
+
 ## 0.4.1
 - **Retratos de verdade:** as 110 fotos substituem as caricaturas para o presidente, os líderes dos partidos e quem traz cada fato do mês. As caricaturas ficam só como reserva para personagens sem retrato.
 - **Elenco fixo:** cada personagem tem um retrato só dele e nenhum se repete. Os retratos foram escolhidos pelo cargo e pelo visual (jaleco para a Saúde, chapéu para a Agricultura).

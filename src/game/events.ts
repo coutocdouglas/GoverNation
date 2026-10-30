@@ -1,5 +1,5 @@
 import { DEMANDS, DEMANDS_MAX, DEMAND_CHANCE, type DemandDef } from './data/demands'
-import { EVENT_BY_ID, EVENT_CHANCE, EVENT_REPEAT, EVENTS, type EventDef } from './data/events'
+import { ALL_EVENTS, EVENT_BY_ID, EVENT_CHANCE, EVENT_REPEAT, type EventDef } from './data/events'
 import { BILL_BY_ID } from './data/bills'
 import type { Rng } from './rng'
 import type { BillId, GameState } from './types'
@@ -16,9 +16,13 @@ export function currentEvent(s: GameState): EventDef | null {
 
 /** Sorteia o fato do mês atual de s (ou nenhum). */
 export function drawEvent(s: GameState, rng: Rng): GameState['event'] {
-  if (s.month >= 48 || rng.next() >= EVENT_CHANCE) return null
+  if (s.month >= 48) return null
+  // Consequências que brotaram têm prioridade sobre o sorteio.
+  const queued = s.eventQueue.shift()
+  if (queued && EVENT_BY_ID[queued.id]) return { id: queued.id, month: s.month, origin: queued.origin }
+  if (rng.next() >= EVENT_CHANCE) return null
   const recent = new Set(s.eventLog.filter((e) => s.month - e.month < EVENT_REPEAT).map((e) => e.id))
-  const pool = EVENTS.filter((e) => !recent.has(e.id) && (!e.when || e.when(s)))
+  const pool = ALL_EVENTS.filter((e) => e.random !== false && !recent.has(e.id) && (!e.when || e.when(s)))
   const total = pool.reduce((a, e) => a + e.weight, 0)
   if (total <= 0) return null
   let r = rng.next() * total

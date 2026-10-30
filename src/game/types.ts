@@ -118,7 +118,7 @@ export interface MonthReport {
 }
 
 export interface GameState {
-  saveVersion: 3
+  saveVersion: 4
   /** Mês atual, de 0 (janeiro do 1º ano) a 47. Em 48 o mandato acabou. */
   month: number
   presidentName: string
@@ -130,8 +130,16 @@ export interface GameState {
   avatarSeed: string
   /** Retrato do presidente (1 a 110). Saves antigos não têm: o jogo sorteia um fixo. */
   avatarPortrait?: number
-  /** Fato do mês à espera de resposta. */
-  event: { id: string; month: number } | null
+  /** Fato do mês à espera de resposta (origin = o que o gerou, se for consequência). */
+  event: { id: string; month: number; origin?: EventOrigin } | null
+  /** Fatos nascidos de sementes, esperando a vez. */
+  eventQueue: { id: string; origin?: EventOrigin }[]
+  /** Mandato atual (1, 2, 3...). Os mandatos se encadeiam numa campanha contínua. */
+  term: number
+  /** Memória do mundo: consequências plantadas e crônica do país. */
+  world: { seeds: Seed[]; chronicle: { at: number; text: string; tone: 'good' | 'bad' | 'neutral' }[] }
+  /** Biografia de cada personagem (pelo nome), acumulada ao longo do jogo. */
+  bios: Record<string, { at: number; text: string }[]>
   eventLog: { id: string; month: number }[]
   /** Cobranças dos grupos em aberto. Vencem no mês `expires`. */
   demands: { id: string; since: number; expires: number }[]
@@ -229,4 +237,24 @@ export interface CongressState {
   /** Mês em que um projeto rejeitado pode ser reenviado. */
   blockedUntil: Partial<Record<BillId, number>>
   votes: VoteRecord[]
+}
+
+/** De onde veio um fato do mês: a lei, o autor e o ano. */
+export interface EventOrigin {
+  label: string
+  author: string
+  party?: PartyId
+  year: number
+}
+
+/** Consequência plantada por uma lei, decreto ou herança, que brota num mês futuro. */
+export interface Seed {
+  id: string
+  source: string
+  event: string
+  label: string
+  author: string
+  party?: PartyId
+  plantedAt: number
+  fireAt: number
 }

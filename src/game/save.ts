@@ -47,7 +47,15 @@ export function migrate(raw: unknown): GameState | null {
       s.demandLog = []
       s.saveVersion = 3
     }
-    if (s.saveVersion !== 3) return null
+    if (s.saveVersion === 3) {
+      // v0.4 → v0.5: memória do mundo e biografias começam agora (sem herança retroativa).
+      s.term = 1
+      s.eventQueue = []
+      s.world = { seeds: [], chronicle: [] }
+      s.bios = {}
+      s.saveVersion = 4
+    }
+    if (s.saveVersion !== 4) return null
     return s as GameState
   } catch {
     return null

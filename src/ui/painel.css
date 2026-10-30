@@ -247,3 +247,26 @@
 .portrait { flex: none; border-radius: 50%; object-fit: cover; border: 2.5px solid; background: #0b0f14; filter: drop-shadow(0 4px 8px #0006); display: block; }
 .pn-hero > .portrait { align-self: center; }
 .pn-event__who .portrait { animation: pn-bob 3s ease-in-out infinite; }
+
+/* ---- Memória do mundo e fichas (v0.5) ---- */
+.pn-event--good { border-color: #2ecc7155; background: linear-gradient(180deg, #2ecc710d, transparent 140px), var(--pn-panel); }
+.pn-tag--green { background: #2ecc7122; color: var(--pn-green); }
+.pn-event__tags { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.pn-importance { display: inline-flex; align-items: center; gap: 3px; }
+.pn-importance i { width: 9px; height: 9px; border-radius: 50%; background: #2a3646; display: inline-block; }
+.pn-importance i.on { background: var(--pn-gold); }
+.pn-importance small { margin-left: 6px; font-size: 11px; color: var(--pn-mut); }
+.pn-event__origin { font-size: 12.5px !important; color: var(--pn-teal); }
+.pn-ficha__head { display: flex; gap: 16px; align-items: center; margin-bottom: 10px; }
+.pn-ficha__head h2 { margin: 0; font-size: 22px; }
+.pn-bio { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; max-height: 560px; overflow-y: auto; }
+.pn-bio li { font-size: 13px; padding: 8px 10px; background: var(--pn-panel2); border-radius: 8px; border-left: 3px solid var(--pn-line); line-height: 1.4; }
+.pn-bio li.good { border-left-color: var(--pn-green); }
+.pn-bio li.bad { border-left-color: var(--pn-red); }
+.pn-bio__when { font-family: var(--pn-mono); font-size: 11px; color: var(--pn-gold); margin-right: 8px; }
+.pn-people { display: flex; flex-direction: column; gap: 4px; max-height: 420px; overflow-y: auto; }
+.pn-person { display: flex; align-items: center; gap: 10px; text-align: left; font: inherit; color: var(--pn-ink); background: transparent; border: 1px solid transparent; border-radius: 10px; padding: 6px 8px; cursor: pointer; }
+.pn-person:hover, .pn-person.on { background: var(--pn-panel2); border-color: var(--pn-line); }
+.pn-person b { display: block; font-size: 13px; }
+.pn-person small { display: block; font-size: 11.5px; color: var(--pn-mut); }
+.pn-person__n { margin-left: auto; font-family: var(--pn-mono); font-size: 11px; color: var(--pn-mut); }
