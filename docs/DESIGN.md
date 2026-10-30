@@ -201,7 +201,7 @@ Descontos: crises não respondidas, impeachment, inflação acima de 10%.
 |---|---|
 | 0.1 | Estrutura do app, atualização automática, tela inicial ✓ |
 | 0.2 | Motor de economia e grupos, turno mensal, ações por decreto, salvar e carregar ✓ |
-| 0.3 | Congresso com 513 deputados e votação |
+| 0.3 | Congresso com 513 deputados e votação ✓ |
 | 0.4 | Catálogo de medidas, crises, nota final (primeiro mandato completo jogável) |
 | 0.5 | Texto livre com IA preenchendo a estrutura de medida |
 | 0.6+ | Supremo, imprensa, estados, campanha, conquistas |
@@ -244,3 +244,19 @@ Fica para os blocos seguintes: gabinete, governadores, gabinete secreto, empresa
 3. **A medida do mês fica sempre à vista**, num quadro próprio. Hoje ela é lida por palavras-chave (`src/game/interpret.ts`) e aponta para o catálogo de decretos; na v0.5 a IA preenche a mesma estrutura.
 4. **Seções futuras aparecem bloqueadas no menu**, para o jogador entender o que vem.
 5. **Antes de governar haverá uma campanha** (criação do personagem, semanas de palanque, mapa por estado, pesquisas, montagem do ministério), como no jogo de referência. Entra depois que o governo estiver completo.
+
+---
+
+## 13. Congresso como implementado (v0.3)
+
+Ajustes em relação à seção 4:
+
+- **9 partidos fictícios** (não 8), com bancadas inspiradas na Câmara eleita em 2026: `src/game/data/parties.ts`.
+- **O jogador escolhe o partido** ao tomar posse (esquerda, centro ou direita). A relação inicial de cada partido depende da distância ideológica ao partido do presidente e do quanto ele é fisiológico.
+- **Senado não vota leis** (decisão 2 da seção 11).
+- **Regra de voto** (`src/game/congress.ts`): afinidade ideológica (peso maior), relação com o governo, orientação do partido × lealdade do deputado, popularidade da medida nos grupos, aprovação do governo, emendas recebidas e um viés a favor do status quo (mais forte em PEC). Ruído por deputado e um "humor do dia" por bancada. Pontuação perto de zero vira abstenção; cerca de 4% faltam.
+- **Calibragem:** medidas populares (isenção do IR, reforma tributária) passam com qualquer presidente; tributar dividendos não passa num Congresso inclinado à direita; reforma administrativa empaca; privatizar depende do lado do presidente. A previsão do gabinete acerta mais de 90% dos resultados claros (teste automático).
+- **Ritmo do mês:** até 2 decretos + 1 projeto para a Câmara + até 2 articulações. Projetos são votados no fim do mês de envio (MP no mês seguinte); no recesso (janeiro e julho) esperam.
+- **Articulação:** conversar sobe a relação (+7, uma vez a cada 3 meses por partido); emendas dão um bônus que cai pela metade por mês e custam ~0,03% do PIB por 3 meses. Partidos não fisiológicos não aceitam emendas.
+- **Derrota custa:** projeto rejeitado tira ~1 ponto de todos os grupos e só pode ser reenviado em 6 meses. MP derrubada desfaz o efeito e os grupos que ganharam perdem parte do ganho.
+- **Fica para depois:** ceder ministérios a partidos, emendas parlamentares ao orçamento, CPIs, federações e troca de partido.

@@ -1,15 +1,16 @@
 import { useState } from 'react'
 import { UpdateBanner } from './components/UpdateBanner'
+import { PLAYER_PARTY_CHOICES } from './game/data/parties'
 import { monthLabel, newGame } from './game/game'
 import { deleteSave, loadGame, saveGame } from './game/save'
-import type { GameState } from './game/types'
+import type { GameState, PartyId } from './game/types'
 import { EndScreen } from './ui/EndScreen'
 import { GameScreen } from './ui/GameScreen'
 
 const ROADMAP = [
   { v: '0.1', label: 'Estrutura e atualização automática', done: true },
   { v: '0.2', label: 'Economia, grupos sociais e turno mensal', done: true },
-  { v: '0.3', label: 'Congresso com 513 deputados', done: false },
+  { v: '0.3', label: 'Congresso com 513 deputados', done: true },
   { v: '0.4', label: 'Medidas, crises e nota final', done: false },
   { v: '0.5', label: 'Medidas em texto livre com IA', done: false },
 ]
@@ -45,8 +46,8 @@ export default function App() {
         <NewGame
           hasSave={!!game && !game.finished}
           onCancel={() => setScreen('home')}
-          onStart={(name, diff) => {
-            update(newGame(name, diff))
+          onStart={(name, diff, party) => {
+            update(newGame(name, diff, undefined, party))
             setScreen('game')
           }}
         />
@@ -115,10 +116,11 @@ function Home({ saved, onNew, onContinue }: { saved: GameState | null; onNew: ()
 function NewGame({ hasSave, onCancel, onStart }: {
   hasSave: boolean
   onCancel: () => void
-  onStart: (name: string, d: GameState['difficulty']) => void
+  onStart: (name: string, d: GameState['difficulty'], party: PartyId) => void
 }) {
   const [name, setName] = useState('')
   const [diff, setDiff] = useState<GameState['difficulty']>('normal')
+  const [party, setParty] = useState<PartyId>('mdn')
   return (
     <main className="home">
       <h1 className="newgame__title">Novo mandato</h1>
@@ -137,9 +139,20 @@ function NewGame({ hasSave, onCancel, onStart }: {
           ))}
         </div>
       </div>
+      <div className="field">
+        <span>Seu partido</span>
+        <div className="choices">
+          {PLAYER_PARTY_CHOICES.map((p) => (
+            <button key={p.id} className={`choice ${party === p.id ? 'choice--selected' : ''}`} onClick={() => setParty(p.id)}>
+              <strong>{p.label}</strong>
+              <small>{p.desc}</small>
+            </button>
+          ))}
+        </div>
+      </div>
       {hasSave && <p className="warning">Começar um novo mandato apaga o mandato salvo.</p>}
       <div className="home__menu">
-        <button className="btn btn--primary btn--big" onClick={() => onStart(name, diff)}>
+        <button className="btn btn--primary btn--big" onClick={() => onStart(name, diff, party)}>
           Tomar posse
           <small>1º de janeiro de 2027</small>
         </button>

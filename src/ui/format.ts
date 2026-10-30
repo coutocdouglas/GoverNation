@@ -89,3 +89,6 @@ export const INDICATORS: IndicatorMeta[] = [
       'Sobe quando o mercado desconfia ou quando os juros caem. Dólar caro ajuda o agronegócio e exportadores, mas encarece importados e pressiona a inflação.',
   },
 ]
+
+/** Minúscula só na primeira letra, preservando siglas ("IR", "PEC"). */
+export const lowerFirst = (t: string) => (/^[A-ZÀ-Ú]{2}/.test(t) ? t : t.charAt(0).toLowerCase() + t.slice(1))

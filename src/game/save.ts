@@ -1,3 +1,4 @@
+import { initialCongress } from './congress'
 import type { GameState } from './types'
 
 // O jogo instalado guarda o localStorage na pasta de dados do usuário no Windows
@@ -18,9 +19,27 @@ export function loadGame(): GameState | null {
   try {
     const raw = localStorage.getItem(KEY)
     if (!raw) return null
-    const s = JSON.parse(raw) as GameState
-    if (s.saveVersion !== 1) return null
-    return s
+    return migrate(JSON.parse(raw))
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Atualiza saves de versões antigas. Saves da v0.2 (saveVersion 1) não tinham Congresso:
+ * o presidente entra no partido de centro e a Câmara é criada do zero.
+ */
+export function migrate(raw: unknown): GameState | null {
+  try {
+    const s = raw as Omit<GameState, 'saveVersion'> & { saveVersion: number }
+    if (s.saveVersion === 1) {
+      s.playerParty = 'mdn'
+      s.congress = initialCongress('mdn', s.rngState)
+      if (s.lastReport) s.lastReport.votes = []
+      s.saveVersion = 2
+    }
+    if (s.saveVersion !== 2) return null
+    return s as GameState
   } catch {
     return null
   }

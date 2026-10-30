@@ -111,14 +111,19 @@ export interface MonthReport {
   causes: Partial<Record<IndicatorKey, Cause[]>>
   groupCauses: Record<GroupId, Cause[]>
   actionsTaken: string[]
+  /** Votações do mês na Câmara. */
+  votes: VoteRecord[]
 }
 
 export interface GameState {
-  saveVersion: 1
+  saveVersion: 2
   /** Mês atual, de 0 (janeiro do 1º ano) a 47. Em 48 o mandato acabou. */
   month: number
   presidentName: string
   difficulty: 'facil' | 'normal' | 'dificil'
+  /** Partido do presidente. */
+  playerParty: PartyId
+  congress: CongressState
   rngState: number
   economy: Economy
   groups: Record<GroupId, Group>
@@ -139,3 +144,77 @@ export type ActionId =
   | 'subirIOF'
   | 'reduzirIOF'
   | 'anteciparObras'
+
+// ---------------------------------------------------------------------------
+// Congresso (v0.3)
+// ---------------------------------------------------------------------------
+
+export type PartyId = 'pol' | 'fpt' | 'ucd' | 'psn' | 'mrb' | 'mdn' | 'pra' | 'pvs' | 'nrm'
+
+export type BillId =
+  | 'salarioMinimo'
+  | 'programaSocial'
+  | 'isencaoIR'
+  | 'taxarDividendos'
+  | 'regraFiscal'
+  | 'reformaTributaria'
+  | 'reformaAdministrativa'
+  | 'licenciamento'
+  | 'penasDuras'
+  | 'privatizar'
+
+export type Instrument = 'mp' | 'lei' | 'complementar' | 'pec'
+
+export interface Deputy {
+  party: PartyId
+  /** Posição pessoal, -100 a +100. */
+  econ: number
+  costumes: number
+  /** 0 a 1: quanto segue a orientação do partido. */
+  loyalty: number
+}
+
+export interface PartyState {
+  id: PartyId
+  /** Relação com o governo, 0 a 100. */
+  relation: number
+  /** Relação de partida, para onde a relação volta aos poucos. */
+  baseRelation: number
+  /** Efeito das emendas liberadas, que some aos poucos. */
+  favors: number
+  /** Último mês em que o presidente conversou com o partido. */
+  lastTalk: number
+}
+
+export interface PendingBill {
+  id: BillId
+  /** Mês em que foi enviado. */
+  sentMonth: number
+}
+
+export interface VoteRecord {
+  month: number
+  bill: BillId
+  yes: number
+  no: number
+  abstain: number
+  absent: number
+  /** Votos a favor necessários (ou maioria dos presentes, quando 0). */
+  needed: number
+  approved: boolean
+  /** Como cada partido votou, em maioria. */
+  byParty: Record<PartyId, { yes: number; no: number }>
+}
+
+export type Articulation = { kind: 'conversar' | 'emendas'; party: PartyId }
+
+export interface CongressState {
+  parties: Record<PartyId, PartyState>
+  deputies: Deputy[]
+  pending: PendingBill[]
+  /** Projetos aprovados (viraram lei). */
+  laws: BillId[]
+  /** Mês em que um projeto rejeitado pode ser reenviado. */
+  blockedUntil: Partial<Record<BillId, number>>
+  votes: VoteRecord[]
+}

@@ -18,6 +18,10 @@ export interface ActionEffects {
   expectations?: number
   /** Meses de pressão sobre o Banco Central. */
   bcPressure?: number
+  /** Mudança no crescimento potencial, pontos % ao ano (reformas estruturais). */
+  potential?: number
+  /** Mudança imediata na dívida, pontos % do PIB (privatizações). */
+  debt?: number
   /** Efeito direto na aprovação de cada grupo. */
   groups?: Partial<Record<GroupId, number>>
 }

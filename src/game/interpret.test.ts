@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { interpretMeasure } from './interpret'
 
-const top = (t: string) => interpretMeasure(t).matches[0]
+const top = (t: string) => interpretMeasure(t).matches[0]?.id
+const ids = (t: string) => interpretMeasure(t).matches.map((m) => m.id)
 
 describe('interpretador da medida do mês', () => {
   it('reconhece cortes de gastos', () => {
@@ -24,6 +25,15 @@ describe('interpretador da medida do mês', () => {
     expect(top('LIBERAR VERBA PARA A SAÚDE')).toBe('liberarGastos')
   })
 
+  it('reconhece projetos de lei', () => {
+    expect(top('Reajuste do salário mínimo acima da inflação')).toBe('salarioMinimo')
+    expect(top('Isentar do imposto de renda quem ganha até 5 mil')).toBe('isencaoIR')
+    expect(top('Taxar lucros e dividendos dos super-ricos')).toBe('taxarDividendos')
+    expect(top('Privatizar a estatal de energia')).toBe('privatizar')
+    expect(top('Aprovar a reforma tributária')).toBe('reformaTributaria')
+    expect(interpretMeasure('Isentar o imposto de renda').matches[0]).toEqual({ kind: 'bill', id: 'isencaoIR' })
+  })
+
   it('não inventa decisão quando nada combina', () => {
     expect(interpretMeasure('Legalizar a venda de bicicletas voadoras').matches).toEqual([])
     expect(interpretMeasure('   ').matches).toEqual([])
@@ -31,7 +41,7 @@ describe('interpretador da medida do mês', () => {
 
   it('não confunde pedaços de palavras', () => {
     // "pacote" não deve ser lido como "PAC"
-    expect(interpretMeasure('Pacote de bondades').matches).not.toContain('anteciparObras')
+    expect(ids('Pacote de bondades')).not.toContain('anteciparObras')
     expect(top('Ampliar o PAC')).toBe('anteciparObras')
   })
 })

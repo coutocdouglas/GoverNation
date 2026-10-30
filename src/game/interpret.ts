@@ -1,10 +1,11 @@
-import type { ActionId } from './types'
+import { BILLS } from './data/bills'
+import type { ActionId, BillId } from './types'
 
 /**
  * Interpretador simples da "medida do mês" (v0.3).
  *
- * Lê o texto livre do jogador e procura no catálogo de decisões por decreto
- * a que mais combina, por palavras-chave. Na v0.5 este passo será feito por IA,
+ * Lê o texto livre do jogador e procura, por palavras-chave, a decisão por decreto
+ * ou o projeto de lei que mais combina. Na v0.5 este passo será feito por IA,
  * que vai preencher a mesma estrutura de medida (ver docs/DESIGN.md, seção 5).
  */
 
@@ -19,9 +20,11 @@ const KEYWORDS: Record<ActionId, string[]> = {
   pronunciamento: ['pronunciamento', 'rede nacional', 'discurso', 'falar ao pais', 'falar com o pais', 'falar a nacao', 'televisao', 'tv', 'radio', 'comunicado'],
 }
 
+export type MeasureRef = { kind: 'decree'; id: ActionId } | { kind: 'bill'; id: BillId }
+
 export interface Interpretation {
-  /** Decisões que combinam com o texto, da mais provável para a menos provável. */
-  matches: ActionId[]
+  /** Decretos e projetos que combinam com o texto, do mais provável para o menos provável. */
+  matches: MeasureRef[]
   /** Texto normalizado que foi analisado. */
   normalized: string
 }
@@ -49,12 +52,17 @@ function contains(haystack: string, needle: string): boolean {
 export function interpretMeasure(text: string): Interpretation {
   const normalized = normalize(text)
   if (!normalized) return { matches: [], normalized }
-  const scores: { id: ActionId; score: number }[] = []
+  // Expressões mais longas são mais específicas e pesam mais.
+  const score = (words: string[]) => words.filter((w) => contains(normalized, w)).reduce((a, w) => a + w.length, 0)
+  const scores: { ref: MeasureRef; score: number }[] = []
   for (const [id, words] of Object.entries(KEYWORDS) as [ActionId, string[]][]) {
-    // Expressões mais longas são mais específicas e pesam mais.
-    const score = words.filter((w) => contains(normalized, w)).reduce((a, w) => a + w.length, 0)
-    if (score > 0) scores.push({ id, score })
+    const v = score(words)
+    if (v > 0) scores.push({ ref: { kind: 'decree', id }, score: v })
+  }
+  for (const b of BILLS) {
+    const v = score(b.keywords)
+    if (v > 0) scores.push({ ref: { kind: 'bill', id: b.id }, score: v })
   }
   scores.sort((a, b) => b.score - a.score)
-  return { matches: scores.map((s) => s.id), normalized }
+  return { matches: scores.map((s) => s.ref), normalized }
 }

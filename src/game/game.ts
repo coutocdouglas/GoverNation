@@ -1,11 +1,14 @@
-import { ACTION_BY_ID, ACTIONS_PER_MONTH, blockedReason, effectMultiplier } from './actions'
+import { ACTION_BY_ID, ACTIONS_PER_MONTH, blockedReason, effectMultiplier, type ActionEffects } from './actions'
+import { articulationBlockedReason, billBlockedReason, CONGRESS, driftRelations, initialCongress, isRecess, runVote } from './congress'
+import { BILL_BY_ID, RESUBMIT_COOLDOWN } from './data/bills'
+import { PARTY_BY_ID } from './data/parties'
 import { DIFFICULTY, MACRO, START } from './data/balance'
 import { GROUPS } from './data/groups'
 import { SHOCKS, type ShockDef } from './data/shocks'
 import { indicators, initialEconomy, runCopom, stepEconomy, type ShockInput } from './economy'
 import { initialGroups, overallApproval, stepGroup } from './groups'
 import { Rng } from './rng'
-import type { ActionId, Cause, GameState, GroupId, Headline, Impulse, MonthReport, Snapshot } from './types'
+import type { ActionId, Articulation, BillId, Cause, Economy, GameState, GroupId, Headline, Impulse, MonthReport, PartyId, Snapshot, VoteRecord } from './types'
 
 export const TERM_MONTHS = 48
 
@@ -33,15 +36,23 @@ function snapshot(s: GameState): Snapshot {
   return { month: s.month, indicators: indicators(s.economy), approval: overallApproval(s.groups), groups }
 }
 
-export function newGame(presidentName: string, difficulty: GameState['difficulty'], seed?: number): GameState {
+export function newGame(
+  presidentName: string,
+  difficulty: GameState['difficulty'],
+  seed?: number,
+  playerParty: PartyId = 'mdn',
+): GameState {
   const economy = initialEconomy()
+  const rngState = seed ?? Math.floor(Math.random() * 2 ** 31)
   const bonus = DIFFICULTY[difficulty].approvalBonus
   const state: GameState = {
-    saveVersion: 1,
+    saveVersion: 2,
     month: 0,
     presidentName: presidentName.trim() || 'Presidente',
     difficulty,
-    rngState: seed ?? Math.floor(Math.random() * 2 ** 31),
+    playerParty,
+    congress: initialCongress(playerParty, rngState),
+    rngState,
     economy,
     groups: initialGroups(indicators(economy), bonus),
     history: [],
@@ -79,12 +90,67 @@ export function validateActions(s: GameState, actions: ActionId[]): string | nul
   return null
 }
 
+/** O que o presidente faz no mês além dos decretos. */
+export interface MonthPlan {
+  /** Projeto enviado à Câmara (um por mês). */
+  bill?: BillId
+  /** Até 2 articulações com partidos. */
+  articulations?: Articulation[]
+}
+
+export function validatePlan(s: GameState, plan: MonthPlan): string | null {
+  if (plan.bill) {
+    const r = billBlockedReason(s, plan.bill)
+    if (r) return `${BILL_BY_ID[plan.bill].name}: ${r}`
+  }
+  const arts = plan.articulations ?? []
+  if (arts.length > CONGRESS.articulationsPerMonth) return `No máximo ${CONGRESS.articulationsPerMonth} articulações por mês.`
+  const seen = new Set<string>()
+  for (const a of arts) {
+    const key = `${a.kind}:${a.party}`
+    if (seen.has(key)) return 'Articulação repetida no mesmo mês.'
+    seen.add(key)
+    const r = articulationBlockedReason(s, a)
+    if (r) return `${PARTY_BY_ID[a.party].sigla}: ${r}`
+  }
+  return null
+}
+
+/** Aplica efeitos de uma ação ou lei. Devolve o choque de confiança para a economia. sign = -1 desfaz. */
+function applyEffects(
+  e: Economy,
+  impulses: Record<GroupId, Impulse[]>,
+  fx: ActionEffects,
+  label: string,
+  k = 1,
+  sign: 1 | -1 = 1,
+): number {
+  if (fx.spending) e.discretionarySpending += fx.spending * sign
+  if (fx.revenue) e.taxAdjustment += fx.revenue * sign
+  if (fx.temp && sign > 0) e.tempSpending.push({ label, amount: fx.temp.amount, monthsLeft: fx.temp.months })
+  if (fx.expectations) e.expectations += fx.expectations * sign
+  if (fx.bcPressure && sign > 0) e.bcPressureMonths = Math.max(e.bcPressureMonths, fx.bcPressure)
+  if (fx.potential) e.potential += fx.potential * sign
+  if (fx.debt) e.debt += fx.debt * sign
+  if (sign > 0) {
+    for (const [gid, v] of Object.entries(fx.groups ?? {}) as [GroupId, number][]) {
+      // Ganhos caem com a repetição; perdas não.
+      impulses[gid].push({ label, value: v > 0 ? v * k : v })
+    }
+  }
+  if (!fx.confidence) return 0
+  return sign > 0 ? fx.confidence * (fx.confidence < 0 ? 1 : k) : -fx.confidence
+}
+
+const pt = (n: number) => n.toLocaleString('pt-BR')
+const lowerFirst = (t: string) => (/^[A-ZÀ-Ú]{2}/.test(t) ? t : t.charAt(0).toLowerCase() + t.slice(1))
+
 /**
  * Encerra o mês: aplica as ações escolhidas, roda Copom, economia, choques e grupos,
  * e devolve um novo estado. O estado recebido não é alterado.
  */
-export function advanceMonth(prev: GameState, actions: ActionId[]): GameState {
-  const error = validateActions(prev, actions)
+export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPlan = {}): GameState {
+  const error = validateActions(prev, actions) ?? validatePlan(prev, plan)
   if (error) throw new Error(error)
 
   const s: GameState = structuredClone(prev)
@@ -100,21 +166,70 @@ export function advanceMonth(prev: GameState, actions: ActionId[]): GameState {
   let actionConfidence = 0
   for (const id of actions) {
     const def = ACTION_BY_ID[id]
-    const k = effectMultiplier(s, id)
-    const fx = def.effects
-    if (fx.spending) e.discretionarySpending += fx.spending
-    if (fx.revenue) e.taxAdjustment += fx.revenue
-    if (fx.temp) e.tempSpending.push({ label: def.name, amount: fx.temp.amount, monthsLeft: fx.temp.months })
-    if (fx.confidence) actionConfidence += fx.confidence * (fx.confidence < 0 ? 1 : k)
-    if (fx.expectations) e.expectations += fx.expectations
-    if (fx.bcPressure) e.bcPressureMonths = Math.max(e.bcPressureMonths, fx.bcPressure)
-    for (const [gid, v] of Object.entries(fx.groups ?? {}) as [GroupId, number][]) {
-      // Ganhos caem com a repetição; perdas não.
-      impulses[gid].push({ label: def.name, value: v > 0 ? v * k : v })
-    }
+    actionConfidence += applyEffects(e, impulses, def.effects, def.name, effectMultiplier(s, id))
     s.cooldowns[id] = def.cooldown + 1 // +1 porque o contador cai no fim deste mês
     s.actionLog.push({ month: s.month, id })
   }
+  const taken = actions.map((id) => ACTION_BY_ID[id].name)
+
+  // 1b. Articulação com partidos
+  const c = s.congress
+  for (const a of plan.articulations ?? []) {
+    const ps = c.parties[a.party]
+    const sigla = PARTY_BY_ID[a.party].sigla
+    if (a.kind === 'conversar') {
+      ps.relation = Math.min(100, ps.relation + CONGRESS.talkGain)
+      ps.lastTalk = s.month
+      taken.push(`Conversa com a bancada do ${sigla}`)
+    } else {
+      ps.favors += CONGRESS.favorGain
+      e.tempSpending.push({ label: `Emendas para o ${sigla}`, amount: CONGRESS.emendasCost, monthsLeft: CONGRESS.emendasMonths })
+      taken.push(`Emendas liberadas para o ${sigla}`)
+    }
+  }
+
+  // 1c. Projeto enviado à Câmara (medida provisória já vale)
+  if (plan.bill) {
+    const bill = BILL_BY_ID[plan.bill]
+    c.pending.push({ id: plan.bill, sentMonth: s.month })
+    if (bill.instrument === 'mp') actionConfidence += applyEffects(e, impulses, bill.effects, bill.name)
+    taken.push(`${bill.instrument === 'mp' ? 'Editou a MP' : 'Enviou à Câmara'}: ${bill.name}`)
+  }
+
+  // 1d. Votações (fora do recesso). MP é votada no mês seguinte ao envio.
+  const votes: VoteRecord[] = []
+  if (!isRecess(s.month)) {
+    for (const p of [...c.pending]) {
+      const bill = BILL_BY_ID[p.id]
+      if (bill.instrument === 'mp' && p.sentMonth === s.month) continue
+      const v = runVote(s, p.id, rng)
+      votes.push(v)
+      c.pending = c.pending.filter((x) => x.id !== p.id)
+      const placar = v.needed > 0 ? `${pt(v.yes)} votos (precisava de ${pt(v.needed)})` : `${pt(v.yes)} a ${pt(v.no)}`
+      if (v.approved) {
+        c.laws.push(p.id)
+        if (bill.instrument !== 'mp') actionConfidence += applyEffects(e, impulses, bill.effects, bill.name)
+        headlines.push({ text: `Câmara aprova ${lowerFirst(bill.name)}: ${placar}`, tone: 'good' })
+      } else {
+        c.blockedUntil[p.id] = s.month + RESUBMIT_COOLDOWN
+        if (bill.instrument === 'mp') {
+          actionConfidence += applyEffects(e, impulses, bill.effects, bill.name, 1, -1)
+          for (const [gid, val] of Object.entries(bill.effects.groups ?? {}) as [GroupId, number][]) {
+            if (val > 0) impulses[gid].push({ label: `MP derrubada: ${bill.name}`, value: -val * 0.7 })
+          }
+        }
+        for (const g of GROUPS) impulses[g.id].push({ label: 'Derrota do governo na Câmara', value: -0.8 })
+        headlines.push({
+          text: `${bill.instrument === 'mp' ? 'MP cai' : 'Câmara rejeita'}: ${lowerFirst(bill.name)} (${placar})`,
+          tone: 'bad',
+        })
+      }
+    }
+  } else if (c.pending.length > 0) {
+    headlines.push({ text: 'Congresso em recesso: votações ficam para o mês que vem', tone: 'neutral' })
+  }
+  c.votes.push(...votes)
+  c.votes = c.votes.slice(-24)
 
   // 2. Copom (antes da economia andar, com os dados do mês anterior)
   const selicCauses: Cause[] = []
@@ -145,6 +260,7 @@ export function advanceMonth(prev: GameState, actions: ActionId[]): GameState {
   const approvalAfter = overallApproval(s.groups)
 
   headlines.push(...economicHeadlines(before, after, approvalBefore, approvalAfter))
+  driftRelations(c, approvalAfter, s.playerParty)
 
   // 6. Fecha o mês
   for (const id of Object.keys(s.cooldowns)) {
@@ -158,7 +274,8 @@ export function advanceMonth(prev: GameState, actions: ActionId[]): GameState {
     headlines,
     causes,
     groupCauses,
-    actionsTaken: actions.map((id) => ACTION_BY_ID[id].name),
+    actionsTaken: taken,
+    votes,
   }
 
   s.rngState = rng.state

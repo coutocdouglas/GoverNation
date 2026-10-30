@@ -1,5 +1,15 @@
 # Novidades
 
+## 0.3.0
+- **Congresso:** Câmara com 513 deputados de 9 partidos fictícios, cada um com posição econômica e de costumes, disciplina e fisiologismo. Cada deputado vota conforme a própria ideologia, a orientação do partido, a relação com o governo, a popularidade da medida e as emendas recebidas.
+- **Escolha seu partido** ao tomar posse: esquerda, centro ou direita. O Congresso reage de forma diferente a cada um.
+- **10 projetos de lei:** salário mínimo, programa de renda (MP), isenção do IR, tributar dividendos, regra fiscal (lei complementar), reformas tributária e administrativa (PEC), licenciamento ambiental, penas mais duras e privatização.
+- A **medida do mês** agora reconhece também projetos de lei e mostra o instrumento, o custo em reais e o **placar previsto** antes de enviar.
+- **Regras de votação:** lei ordinária por maioria dos presentes (quórum de 257); lei complementar com 257 votos; PEC com 308 votos em dois turnos. Medida provisória vale na hora e cai, desfazendo o efeito, se a Câmara rejeitar. Recesso em janeiro e julho.
+- **Aba Governo:** plenário com as 513 cadeiras, pauta com previsão de placar, cartões dos partidos e articulação (conversar ou liberar emendas, até 2 por mês).
+- Resultado de cada votação na banca de jornal, com placar por partido.
+- Mandatos salvos na v0.2 continuam: o presidente entra no partido de centro e a Câmara é criada na hora.
+
 ## 0.2.1
 - Painel novo, com cara de jogo: ícones, animações, calendário virando no fim do mês, avisos e plantão de notícias no rodapé.
 - O mês agora segue 3 passos guiados: o que aconteceu (banca de jornal), suas decisões e encerrar o mês.

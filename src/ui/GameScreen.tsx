@@ -1,11 +1,15 @@
 import { useEffect, useRef, useState } from 'react'
+import { billBlockedReason, CONGRESS, isRecess } from '../game/congress'
+import { BILL_BY_ID, GDP_BILLIONS, INSTRUMENTS } from '../game/data/bills'
+import { PARTY_BY_ID } from '../game/data/parties'
 import { ACTION_BY_ID, ACTIONS, ACTIONS_PER_MONTH, blockedReason, effectMultiplier } from '../game/actions'
 import { GROUPS, GROUP_BY_ID } from '../game/data/groups'
 import { advanceMonth, isCopomMonth, monthLabel, TERM_MONTHS } from '../game/game'
 import { econPull } from '../game/groups'
-import { interpretMeasure } from '../game/interpret'
-import type { ActionId, Cause, GameState, GroupId, IndicatorKey } from '../game/types'
-import { INDICATORS, num, signed, type IndicatorMeta } from './format'
+import { interpretMeasure, type MeasureRef } from '../game/interpret'
+import type { ActionId, Articulation, BillId, Cause, GameState, GroupId, IndicatorKey } from '../game/types'
+import { CongressView, ForecastRow, Scoreboard } from './CongressView'
+import { INDICATORS, lowerFirst, num, signed, type IndicatorMeta } from './format'
 import { Sparkline } from './Sparkline'
 import './painel.css'
 
@@ -27,7 +31,6 @@ const ACTION_ICON: Record<ActionId, string> = {
 }
 /** Seções do menu que ainda não existem, com a versão prevista. */
 const SECTIONS = [
-  { icon: '🏛️', name: 'Governo', soon: 'Congresso chega na v0.3' },
   { icon: '🗺️', name: 'Nação', soon: 'Em versão futura' },
   { icon: '💹', name: 'Economia', soon: 'Orçamento e impostos em versão futura' },
   { icon: '🌎', name: 'Diplomacia', soon: 'Em versão futura' },
@@ -46,6 +49,9 @@ export function GameScreen({ state, onChange, onExit }: {
   const [step, setStep] = useState<Step>(1)
   const [turning, setTurning] = useState(false)
   const [toasts, setToasts] = useState<{ id: number; text: string }[]>([])
+  const [bill, setBill] = useState<BillId | null>(null)
+  const [articulations, setArticulations] = useState<Articulation[]>([])
+  const [tab, setTab] = useState<'painel' | 'governo'>('painel')
   const medidaRef = useRef<HTMLElement>(null)
   const history = state.history
   const now = history[history.length - 1]
@@ -70,14 +76,20 @@ export function GameScreen({ state, onChange, onExit }: {
 
   const endMonth = () => {
     setTurning(true)
-    const next = advanceMonth(state, selected)
+    const next = advanceMonth(state, selected, { bill: bill ?? undefined, articulations })
     setTimeout(() => {
       onChange(next)
       setSelected([])
+      setBill(null)
+      setArticulations([])
+      setTab('painel')
       setStep(1)
       setTurning(false)
       window.scrollTo({ top: 0, behavior: 'smooth' })
       const news = next.lastReport?.headlines ?? []
+      for (const v of next.lastReport?.votes ?? []) {
+        if (v.approved) setTimeout(confetti, 400)
+      }
       news.slice(0, 2).forEach((h, i) => setTimeout(() => toast(`${h.tone === 'good' ? '🟢' : h.tone === 'bad' ? '🔴' : '📰'} ${h.text}`), 300 + i * 600))
     }, 1500)
   }
@@ -98,7 +110,10 @@ export function GameScreen({ state, onChange, onExit }: {
           </div>
         </div>
         <nav className="pn-nav">
-          <a className="on">🏠 Painel</a>
+          <a className={tab === 'painel' ? 'on' : ''} onClick={() => setTab('painel')}>🏠 Painel</a>
+          <a className={tab === 'governo' ? 'on' : ''} onClick={() => setTab('governo')}>
+            🏛️ Governo {state.congress.pending.length + (bill ? 1 : 0) > 0 && <span className="pn-dot">{state.congress.pending.length + (bill ? 1 : 0)}</span>}
+          </a>
           {SECTIONS.map((s) => (
             <a key={s.name} className="off" title={s.soon}>{s.icon} {s.name} <span className="pn-lock">🔒</span></a>
           ))}
@@ -108,7 +123,7 @@ export function GameScreen({ state, onChange, onExit }: {
       <main className="pn-main">
         <section className="pn-hero">
           <div>
-            <div className="pn-sub">🇧🇷 Presidente da República</div>
+            <div className="pn-sub">🇧🇷 Presidente da República · {PARTY_BY_ID[state.playerParty].name} ({PARTY_BY_ID[state.playerParty].sigla})</div>
             <h1>{state.presidentName.toUpperCase()}</h1>
             <div className="pn-sub">
               Aprovação <b className={now.approval >= 50 ? 'up' : now.approval >= 35 ? 'warn' : 'dn'}>{num(now.approval, 0)}%</b>
@@ -144,13 +159,27 @@ export function GameScreen({ state, onChange, onExit }: {
           ))}
         </section>
 
+        {tab === 'governo' ? (
+          <CongressView
+            state={state}
+            bill={bill}
+            articulations={articulations}
+            onToggle={(a) =>
+              setArticulations((cur) =>
+                cur.some((x) => x.kind === a.kind && x.party === a.party)
+                  ? cur.filter((x) => !(x.kind === a.kind && x.party === a.party))
+                  : cur.length < CONGRESS.articulationsPerMonth ? [...cur, a] : cur,
+              )
+            }
+          />
+        ) : (
         <div className="pn-grid">
           <div className="pn-col">
             <section className="pn-card">
               <h3>🎯 Seu mês em 3 passos <span className="pn-badge">clique nos indicadores e grupos para ver o porquê</span></h3>
               <div className="pn-steps">
                 <StepButton n={1} cur={step} done={step > 1} icon="📰" title="O que aconteceu" sub={report ? `${report.headlines.length} notícias` : 'primeiro mês'} onClick={() => goStep(1)} />
-                <StepButton n={2} cur={step} done={selected.length > 0} icon="✍️" title="Suas decisões" sub={selected.length ? `${selected.length} de ${ACTIONS_PER_MONTH} escolhidas` : 'até 2 por mês'} onClick={() => goStep(2)} />
+                <StepButton n={2} cur={step} done={selected.length > 0} icon="✍️" title="Suas decisões" sub={[selected.length ? `${selected.length} decreto${selected.length > 1 ? 's' : ''}` : '', bill ? '1 projeto' : '', articulations.length ? `${articulations.length} articulação` : ''].filter(Boolean).join(' · ') || 'decretos, projeto, articulação'} onClick={() => goStep(2)} />
                 <StepButton n={3} cur={step} done={false} icon="⏭️" title="Encerrar o mês" sub="ver as consequências" onClick={() => goStep(3)} />
               </div>
 
@@ -163,6 +192,7 @@ export function GameScreen({ state, onChange, onExit }: {
                       <h2>{report ? 'O que mudou no mês passado' : 'Bem-vindo ao Planalto'}</h2>
                     </div>
                   </div>
+                  {report && report.votes.length > 0 && report.votes.map((v, i) => <Scoreboard key={i} v={v} />)}
                   {report ? (
                     <ul className="pn-news">
                       {report.actionsTaken.length > 0 && (
@@ -197,9 +227,14 @@ export function GameScreen({ state, onChange, onExit }: {
                     <div>
                       <h2>Tudo pronto para virar o mês?</h2>
                       <p className="pn-hint">
-                        {selected.length === 0
+                        {selected.length === 0 && !bill && articulations.length === 0
                           ? 'Você não tomou nenhuma decisão. O país segue sozinho este mês.'
-                          : `Você vai assinar: ${selected.map((id) => ACTION_BY_ID[id].name.toLowerCase()).join(' e ')}.`}
+                          : [
+                              selected.length ? `Decretos: ${selected.map((id) => lowerFirst(ACTION_BY_ID[id].name)).join(' e ')}.` : '',
+                              bill ? `${BILL_BY_ID[bill].instrument === 'mp' ? 'Medida provisória' : 'Projeto para a Câmara'}: ${lowerFirst(BILL_BY_ID[bill].name)}.` : '',
+                              articulations.length ? `Articulação: ${articulations.map((a) => `${a.kind === 'conversar' ? 'conversa com' : 'emendas para'} ${PARTY_BY_ID[a.party].sigla}`).join(' e ')}.` : '',
+                            ].filter(Boolean).join(' ')}
+                        {isRecess(state.month) && (bill || state.congress.pending.length > 0) ? ' O Congresso está em recesso: a votação fica para o mês que vem.' : ''}
                         {isCopomMonth(state.month) ? ' O Banco Central decide os juros no fim do mês.' : ''}
                       </p>
                     </div>
@@ -219,6 +254,11 @@ export function GameScreen({ state, onChange, onExit }: {
                 key={state.month}
                 state={state}
                 selected={selected}
+                bill={bill}
+                onSend={(id) => {
+                  setBill(id)
+                  toast(`📨 ${BILL_BY_ID[id].name}: ${BILL_BY_ID[id].instrument === 'mp' ? 'a MP será editada' : 'o projeto vai à Câmara'} ao encerrar o mês.`)
+                }}
                 onSign={(id) => {
                   if (selected.includes(id)) return
                   if (selected.length >= ACTIONS_PER_MONTH) {
@@ -296,14 +336,26 @@ export function GameScreen({ state, onChange, onExit }: {
             </section>
 
             <section className="pn-card">
+              <h3>🏛️ Na Câmara</h3>
+              {state.congress.pending.length === 0 && !bill ? (
+                <p className="pn-hint">Nenhum projeto do governo tramitando. Escreva uma medida que precise de lei para mandar à Câmara.</p>
+              ) : (
+                [...new Set([...(bill ? [bill] : []), ...state.congress.pending.map((p) => p.id)])].map((id) => (
+                  <ForecastRow key={id} state={state} id={id} isNew={id === bill} />
+                ))
+              )}
+              <div className="pn-row"><button className="pn-btn pn-btn--ghost" onClick={() => setTab('governo')}>Abrir a Câmara e articular →</button></div>
+            </section>
+
+            <section className="pn-card">
               <h3>🔜 Ainda não está no jogo</h3>
               <p className="pn-hint">
-                Congresso e votações, crises com escolhas, cobranças dos grupos e as outras seções do menu chegam nas
-                próximas versões. Este painel já é o formato definitivo.
+                Crises com escolhas, cobranças dos grupos, Supremo e as outras seções do menu chegam nas próximas versões.
               </p>
             </section>
           </div>
         </div>
+        )}
       </main>
 
       <footer className="pn-ticker">
@@ -388,76 +440,133 @@ function ApprovalRing({ value }: { value: number }) {
   )
 }
 
-function MeasureBox({ state, selected, onSign }: { state: GameState; selected: ActionId[]; onSign: (id: ActionId) => void }) {
+const billCost = (id: BillId) => {
+  const fx = BILL_BY_ID[id].effects
+  return ((fx.spending ?? 0) - (fx.revenue ?? 0)) / 100 * GDP_BILLIONS
+}
+
+function MeasureBox({ state, selected, bill, onSign, onSend }: {
+  state: GameState
+  selected: ActionId[]
+  bill: BillId | null
+  onSign: (id: ActionId) => void
+  onSend: (id: BillId) => void
+}) {
   const [text, setText] = useState('')
-  const [result, setResult] = useState<ActionId[] | null>(null)
-  const full = selected.length >= ACTIONS_PER_MONTH
+  const [result, setResult] = useState<MeasureRef[] | null>(null)
   const read = () => setResult(interpretMeasure(text).matches.slice(0, 2))
   return (
     <>
-      <h3>✍️ Medida do mês <span className="pn-badge">{full ? '✔ decisões do mês completas' : 'escreva com suas palavras'}</span></h3>
+      <h3>✍️ Medida do mês <span className="pn-badge">escreva com suas palavras</span></h3>
       <p className="pn-hint">
-        Diga o que quer fazer: cortar gastos, acelerar obras, mexer em imposto, cobrar juros menores, falar ao país.
-        O gabinete lê e diz como isso pode ser feito.
+        Diga o que quer fazer: reajustar o salário mínimo, isentar o imposto de renda, privatizar, cortar gastos, acelerar obras.
+        O gabinete diz se dá para fazer por decreto ou se precisa da Câmara, quanto custa e qual o placar provável.
       </p>
       <textarea
         className="pn-textarea"
         value={text}
-        disabled={full}
         onChange={(e) => { setText(e.target.value); setResult(null) }}
         onKeyDown={(e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) read() }}
-        placeholder={full ? 'Você já usou as decisões deste mês. Volte no mês que vem.' : 'Ex.: “Acelerar as obras de rodovias” ou “Cortar 10% dos gastos de custeio”'}
+        placeholder="Ex.: “Isentar do imposto de renda quem ganha até R$ 5 mil” ou “Acelerar as obras de rodovias”"
       />
       <div className="pn-row">
-        <button className="pn-btn" disabled={full || !text.trim()} onClick={read}>📋 Pedir leitura do gabinete</button>
+        <button className="pn-btn" disabled={!text.trim()} onClick={read}>📋 Pedir leitura do gabinete</button>
       </div>
       {result && (
         <div className="pn-preview">
           {result.length === 0 ? (
             <>
-              <b>🧑‍💼 O gabinete não encontrou como fazer isso por decreto.</b>
+              <b>🧑‍💼 O gabinete não encontrou como fazer isso.</b>
               <p className="pn-hint">
-                Nesta versão o governo só age por decreto, com as decisões do catálogo abaixo. Medidas que precisam
-                do Congresso chegam junto com as votações. Tente reescrever com outras palavras.
+                Por enquanto o governo conhece {ACTIONS.length} decretos e {Object.keys(BILL_BY_ID).length} projetos de lei. Tente reescrever com
+                outras palavras ou escolha no catálogo abaixo. Mais medidas chegam na v0.4.
               </p>
             </>
           ) : (
             <>
               <b>🧑‍💼 Os ministros entenderam assim:</b>
-              {result.map((id, i) => {
-                const a = ACTION_BY_ID[id]
-                const blocked = blockedReason(state, id)
-                const taken = selected.includes(id)
-                return (
-                  <div key={id} className="pn-reading">
-                    <div className="pn-reading__head">
-                      <span className="pn-action__ic">{ACTION_ICON[id]}</span>
-                      <div>
-                        <strong>{i === 0 ? a.name : `Ou talvez: ${a.name}`}</strong>
-                        <div className="pn-hint">{a.summary}</div>
-                      </div>
-                    </div>
-                    <div className="pn-pv">
-                      <div>📜 Vira<b>Decreto</b></div>
-                      <div>🗳️ No Congresso<b>Não precisa</b></div>
-                      <div>⏳ Pode repetir<b>{a.cooldown === 1 ? 'todo mês' : `a cada ${a.cooldown} meses`}</b></div>
-                    </div>
-                    <div className="up">+ {a.pros}</div>
-                    <div className="dn">− {a.cons}</div>
-                    <div className="pn-row">
-                      <button className="pn-btn" disabled={!!blocked || taken || full} onClick={() => onSign(id)}>
-                        {taken ? '✔ Já assinada' : '🖊️ Assinar'}
-                      </button>
-                      {blocked && <span className="pn-action__blk">⏳ {blocked}</span>}
-                    </div>
-                  </div>
-                )
-              })}
+              {result.map((m, i) =>
+                m.kind === 'decree' ? (
+                  <DecreeReading key={m.id} state={state} id={m.id} first={i === 0} selected={selected} onSign={onSign} />
+                ) : (
+                  <BillReading key={m.id} state={state} id={m.id} first={i === 0} chosen={bill} onSend={onSend} />
+                ),
+              )}
             </>
           )}
         </div>
       )}
     </>
+  )
+}
+
+function DecreeReading({ state, id, first, selected, onSign }: {
+  state: GameState; id: ActionId; first: boolean; selected: ActionId[]; onSign: (id: ActionId) => void
+}) {
+  const a = ACTION_BY_ID[id]
+  const blocked = blockedReason(state, id)
+  const taken = selected.includes(id)
+  const full = selected.length >= ACTIONS_PER_MONTH
+  return (
+    <div className="pn-reading">
+      <div className="pn-reading__head">
+        <span className="pn-action__ic">{ACTION_ICON[id]}</span>
+        <div>
+          <strong>{first ? a.name : `Ou talvez: ${a.name}`}</strong>
+          <div className="pn-hint">{a.summary}</div>
+        </div>
+      </div>
+      <div className="pn-pv">
+        <div>📜 Vira<b>Decreto</b></div>
+        <div>🗳️ Na Câmara<b>Não precisa</b></div>
+        <div>⏳ Pode repetir<b>{a.cooldown === 1 ? 'todo mês' : `a cada ${a.cooldown} meses`}</b></div>
+      </div>
+      <div className="up">+ {a.pros}</div>
+      <div className="dn">− {a.cons}</div>
+      <div className="pn-row">
+        <button className="pn-btn" disabled={!!blocked || taken || full} onClick={() => onSign(id)}>
+          {taken ? '✔ Já assinada' : '🖊️ Assinar decreto'}
+        </button>
+        {blocked && <span className="pn-action__blk">⏳ {blocked}</span>}
+        {!blocked && full && !taken && <span className="pn-action__blk">✋ Você já usou os {ACTIONS_PER_MONTH} decretos do mês.</span>}
+      </div>
+    </div>
+  )
+}
+
+function BillReading({ state, id, first, chosen, onSend }: {
+  state: GameState; id: BillId; first: boolean; chosen: BillId | null; onSend: (id: BillId) => void
+}) {
+  const b = BILL_BY_ID[id]
+  const blocked = billBlockedReason(state, id)
+  const cost = billCost(id)
+  const isChosen = chosen === id
+  return (
+    <div className="pn-reading">
+      <div className="pn-reading__head">
+        <span className="pn-action__ic">{b.instrument === 'pec' ? '📘' : b.instrument === 'mp' ? '⚡' : '📜'}</span>
+        <div>
+          <strong>{first ? b.name : `Ou talvez: ${b.name}`}</strong>
+          <div className="pn-hint">{b.summary}</div>
+        </div>
+      </div>
+      <div className="pn-pv">
+        <div>📜 Vira<b>{INSTRUMENTS[b.instrument].label}</b></div>
+        <div>💸 Contas públicas<b className={cost > 0 ? 'dn' : cost < 0 ? 'up' : ''}>{cost === 0 ? 'Neutro' : `${cost > 0 ? '−' : '+'}R$ ${num(Math.abs(cost), 0)} bi/ano`}</b></div>
+        <div>⏱️ Quando vale<b>{b.instrument === 'mp' ? 'Na hora' : 'Se aprovada'}</b></div>
+      </div>
+      <p className="pn-hint" style={{ margin: '2px 0 4px' }}>{INSTRUMENTS[b.instrument].rule}</p>
+      {!blocked && <ForecastRow state={state} id={id} />}
+      <div className="up">+ {b.pros}</div>
+      <div className="dn">− {b.cons}</div>
+      <div className="pn-row">
+        <button className="pn-btn" disabled={!!blocked || isChosen} onClick={() => onSend(id)}>
+          {isChosen ? '✔ Será enviado ao encerrar o mês' : b.instrument === 'mp' ? '⚡ Editar a medida provisória' : '📨 Enviar à Câmara'}
+        </button>
+        {blocked && <span className="pn-action__blk">⏳ {blocked}</span>}
+        {!blocked && chosen && !isChosen && <span className="pn-action__blk">Só um projeto por mês: isto troca “{BILL_BY_ID[chosen].name}”.</span>}
+      </div>
+    </div>
   )
 }
 
