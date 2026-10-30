@@ -38,7 +38,16 @@ export function migrate(raw: unknown): GameState | null {
       if (s.lastReport) s.lastReport.votes = []
       s.saveVersion = 2
     }
-    if (s.saveVersion !== 2) return null
+    if (s.saveVersion === 2) {
+      // v0.3 → v0.4: fato do mês e cobranças começam no próximo mês.
+      s.avatarSeed = `${s.presidentName}-${s.rngState}`
+      s.event = null
+      s.eventLog = []
+      s.demands = []
+      s.demandLog = []
+      s.saveVersion = 3
+    }
+    if (s.saveVersion !== 3) return null
     return s as GameState
   } catch {
     return null

@@ -202,7 +202,7 @@ Descontos: crises não respondidas, impeachment, inflação acima de 10%.
 | 0.1 | Estrutura do app, atualização automática, tela inicial ✓ |
 | 0.2 | Motor de economia e grupos, turno mensal, ações por decreto, salvar e carregar ✓ |
 | 0.3 | Congresso com 513 deputados e votação ✓ |
-| 0.4 | Catálogo de medidas, crises, nota final (primeiro mandato completo jogável) |
+| 0.4 | Fato do mês (crises com escolha), cobranças dos grupos, caricaturas ✓ · catálogo maior de medidas e nota final ainda pendentes |
 | 0.5 | Texto livre com IA preenchendo a estrutura de medida |
 | 0.6+ | Supremo, imprensa, estados, campanha, conquistas |
 
@@ -260,3 +260,12 @@ Ajustes em relação à seção 4:
 - **Articulação:** conversar sobe a relação (+7, uma vez a cada 3 meses por partido); emendas dão um bônus que cai pela metade por mês e custam ~0,03% do PIB por 3 meses. Partidos não fisiológicos não aceitam emendas.
 - **Derrota custa:** projeto rejeitado tira ~1 ponto de todos os grupos e só pode ser reenviado em 6 meses. MP derrubada desfaz o efeito e os grupos que ganharam perdem parte do ganho.
 - **Fica para depois:** ceder ministérios a partidos, emendas parlamentares ao orçamento, CPIs, federações e troca de partido.
+
+---
+
+## 14. Fato do mês, cobranças e personagens (v0.4)
+
+- **Fato do mês** (`src/game/data/events.ts`, `src/game/events.ts`): sorteado no começo de cada mês (80% de chance), sem repetir o mesmo fato em 18 meses. Alguns dependem do estado do país (`when`). Cada opção tem efeitos (mesma estrutura das ações), mudanças de relação com partidos e uma manchete. A opção `default` vale se o jogador não decidir e costuma ser a pior: ignorar tem custo.
+- **Cobranças** (`src/game/data/demands.ts`): até 3 abertas; chance de 35% por mês (×1,5 se algum grupo estiver abaixo de 40%); grupos menos satisfeitos cobram mais. São atendidas por decreto, MP editada ou lei aprovada dentro do prazo. Recompensa e penalidade entram como memória do grupo.
+- **Caricaturas** (`src/ui/Caricature.tsx`): desenho em SVG gerado a partir de uma semente (mesmo nome, mesmo rosto). Provisórias até haver arte própria. Todos os personagens são fictícios.
+- **Efeito no balanceamento:** estratégias que nunca respondem aos fatos do mês perdem cerca de 60 pontos de nota no simulador (a ordem entre estratégias não muda).

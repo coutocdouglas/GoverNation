@@ -162,3 +162,4 @@ h1, h2 { font-family: Georgia, 'Times New Roman', serif; margin: 0; }
 .end__table td:first-child, .end__table th:first-child { text-align: left; }
 
 .end .btn--big { align-self: flex-start; }
+.newgame__face { display: flex; align-items: center; gap: 16px; }

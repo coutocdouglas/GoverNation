@@ -93,16 +93,21 @@ export function runCopom(e: Economy, causes: Cause[]): Headline {
 
   if (delta !== 0) causes.push({ label: pressured ? 'Copom (sob pressão do governo)' : 'Decisão do Copom', value: delta })
 
+  // O motivo depende da direção da decisão, para a manchete não se contradizer.
   const why =
-    delta < 0 && inflation12(e) > ceiling
-      ? 'com a inflação começando a ceder'
+    delta < 0
+      ? inflation12(e) > ceiling
+        ? 'com a inflação começando a ceder'
+        : e.expectations > MACRO.inflationTarget + 0.5
+          ? 'apesar da inflação esperada ainda acima da meta'
+          : e.gap < -1
+            ? 'para estimular a economia fraca'
+            : 'com a inflação sob controle'
       : inflation12(e) > ceiling
-      ? 'com a inflação acima do teto da meta'
-      : e.expectations > MACRO.inflationTarget + 0.5
-        ? 'preocupado com a inflação esperada'
-        : e.gap < -1
-          ? 'para estimular a economia fraca'
-          : 'com a inflação sob controle'
+        ? 'com a inflação acima do teto da meta'
+        : e.expectations > MACRO.inflationTarget + 0.5
+          ? 'preocupado com a inflação esperada'
+          : 'para frear a economia aquecida'
 
   if (delta > 0) return { text: `Copom sobe a Selic para ${fmt(e.selic)}% ${why}`, tone: 'bad' }
   if (delta < 0) return { text: `Copom corta a Selic para ${fmt(e.selic)}% ${why}`, tone: 'good' }

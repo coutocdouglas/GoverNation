@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { billBlockedReason, CONGRESS, isRecess } from '../game/congress'
 import { BILL_BY_ID, GDP_BILLIONS, INSTRUMENTS } from '../game/data/bills'
+import { EVENT_BY_ID } from '../game/data/events'
 import { PARTY_BY_ID } from '../game/data/parties'
 import { ACTION_BY_ID, ACTIONS, ACTIONS_PER_MONTH, blockedReason, effectMultiplier } from '../game/actions'
 import { GROUPS, GROUP_BY_ID } from '../game/data/groups'
@@ -8,27 +9,17 @@ import { advanceMonth, isCopomMonth, monthLabel, TERM_MONTHS } from '../game/gam
 import { econPull } from '../game/groups'
 import { interpretMeasure, type MeasureRef } from '../game/interpret'
 import type { ActionId, Articulation, BillId, Cause, GameState, GroupId, IndicatorKey } from '../game/types'
+import { Caricature } from './Caricature'
 import { CongressView, ForecastRow, Scoreboard } from './CongressView'
+import { DemandsCard, EventPanel } from './EventPanel'
+import { ACTION_ICON, GROUP_ICON, INDICATOR_ICON } from './icons'
 import { INDICATORS, lowerFirst, num, signed, type IndicatorMeta } from './format'
 import { Sparkline } from './Sparkline'
 import './painel.css'
 
 type Detail = { kind: 'indicator'; key: IndicatorKey } | { kind: 'group'; id: GroupId } | null
-type Step = 1 | 2 | 3
+type Step = 1 | 2 | 3 | 4
 
-/** Ícones provisórios (emojis). Serão trocados por ícones próprios do jogo. */
-const INDICATOR_ICON: Record<IndicatorKey, string> = {
-  growth: '📈', inflation: '🛒', selic: '🏦', unemployment: '👷',
-  debt: '📉', primary: '💰', confidence: '🤝', fx: '💵',
-}
-const GROUP_ICON: Record<GroupId, string> = {
-  trabalhadores: '👷', baixaRenda: '🏘️', classeMedia: '🏠', empresarios: '🏢',
-  agro: '🚜', servidores: '🏛️', jovens: '🎓',
-}
-const ACTION_ICON: Record<ActionId, string> = {
-  cortarGastos: '✂️', liberarGastos: '💸', anteciparObras: '🏗️', pressionarBC: '📣',
-  subirIOF: '⬆️', reduzirIOF: '⬇️', pronunciamento: '📺',
-}
 /** Seções do menu que ainda não existem, com a versão prevista. */
 const SECTIONS = [
   { icon: '🗺️', name: 'Nação', soon: 'Em versão futura' },
@@ -52,6 +43,8 @@ export function GameScreen({ state, onChange, onExit }: {
   const [bill, setBill] = useState<BillId | null>(null)
   const [articulations, setArticulations] = useState<Articulation[]>([])
   const [tab, setTab] = useState<'painel' | 'governo'>('painel')
+  const [eventChoice, setEventChoice] = useState<number | null>(null)
+  const eventRef = useRef<HTMLDivElement>(null)
   const medidaRef = useRef<HTMLElement>(null)
   const history = state.history
   const now = history[history.length - 1]
@@ -71,17 +64,19 @@ export function GameScreen({ state, onChange, onExit }: {
 
   const goStep = (s: Step) => {
     setStep(s)
-    if (s === 2) medidaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    if (s === 2) eventRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    if (s === 3) medidaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
   }
 
   const endMonth = () => {
     setTurning(true)
-    const next = advanceMonth(state, selected, { bill: bill ?? undefined, articulations })
+    const next = advanceMonth(state, selected, { bill: bill ?? undefined, articulations, eventChoice: eventChoice ?? undefined })
     setTimeout(() => {
       onChange(next)
       setSelected([])
       setBill(null)
       setArticulations([])
+      setEventChoice(null)
       setTab('painel')
       setStep(1)
       setTurning(false)
@@ -122,6 +117,7 @@ export function GameScreen({ state, onChange, onExit }: {
 
       <main className="pn-main">
         <section className="pn-hero">
+          <Caricature seed={state.avatarSeed} color={PARTY_BY_ID[state.playerParty].color} size={92} mood={now.approval >= 50 ? 'feliz' : now.approval >= 35 ? 'neutro' : 'preocupado'} title={state.presidentName} />
           <div>
             <div className="pn-sub">🇧🇷 Presidente da República · {PARTY_BY_ID[state.playerParty].name} ({PARTY_BY_ID[state.playerParty].sigla})</div>
             <h1>{state.presidentName.toUpperCase()}</h1>
@@ -176,14 +172,15 @@ export function GameScreen({ state, onChange, onExit }: {
         <div className="pn-grid">
           <div className="pn-col">
             <section className="pn-card">
-              <h3>🎯 Seu mês em 3 passos <span className="pn-badge">clique nos indicadores e grupos para ver o porquê</span></h3>
+              <h3>🎯 Seu mês em 4 passos <span className="pn-badge">clique nos indicadores e grupos para ver o porquê</span></h3>
               <div className="pn-steps">
                 <StepButton n={1} cur={step} done={step > 1} icon="📰" title="O que aconteceu" sub={report ? `${report.headlines.length} notícias` : 'primeiro mês'} onClick={() => goStep(1)} />
-                <StepButton n={2} cur={step} done={selected.length > 0} icon="✍️" title="Suas decisões" sub={[selected.length ? `${selected.length} decreto${selected.length > 1 ? 's' : ''}` : '', bill ? '1 projeto' : '', articulations.length ? `${articulations.length} articulação` : ''].filter(Boolean).join(' · ') || 'decretos, projeto, articulação'} onClick={() => goStep(2)} />
-                <StepButton n={3} cur={step} done={false} icon="⏭️" title="Encerrar o mês" sub="ver as consequências" onClick={() => goStep(3)} />
+                <StepButton n={2} cur={step} done={eventChoice !== null || !state.event} icon="🔥" title="Fato do mês" sub={!state.event ? 'mês sem crise' : eventChoice !== null ? 'decidido' : 'aguarda você'} onClick={() => goStep(2)} />
+                <StepButton n={3} cur={step} done={selected.length > 0 || !!bill} icon="✍️" title="Suas decisões" sub={[selected.length ? `${selected.length} decreto${selected.length > 1 ? 's' : ''}` : '', bill ? '1 projeto' : '', articulations.length ? `${articulations.length} articulação` : ''].filter(Boolean).join(' · ') || 'decretos, projeto, articulação'} onClick={() => goStep(3)} />
+                <StepButton n={4} cur={step} done={false} icon="⏭️" title="Encerrar o mês" sub="ver as consequências" onClick={() => goStep(4)} />
               </div>
 
-              {step !== 3 && (
+              {step !== 4 && (
                 <div className="pn-pane" key={`p1-${state.month}`}>
                   <div className="pn-news-head">
                     <span className="pn-ill">🗞️</span>
@@ -195,9 +192,9 @@ export function GameScreen({ state, onChange, onExit }: {
                   {report && report.votes.length > 0 && report.votes.map((v, i) => <Scoreboard key={i} v={v} />)}
                   {report ? (
                     <ul className="pn-news">
-                      {report.actionsTaken.length > 0 && (
-                        <li className="neutral">🖊️ Governo: {report.actionsTaken.join(' e ').toLowerCase()}</li>
-                      )}
+                      {report.actionsTaken.map((t, i) => (
+                        <li key={`a${i}`} className="neutral">🖊️ {t}</li>
+                      ))}
                       {report.headlines.map((h, i) => (
                         <li key={i} className={h.tone} style={{ animationDelay: `${i * 90}ms` }}>
                           {h.tone === 'good' ? '🟢' : h.tone === 'bad' ? '🔴' : '📰'} {h.text}
@@ -215,12 +212,12 @@ export function GameScreen({ state, onChange, onExit }: {
                     </p>
                   )}
                   <div className="pn-row">
-                    <button className="pn-btn" onClick={() => goStep(2)}>Entendi, vamos decidir →</button>
+                    <button className="pn-btn" onClick={() => goStep(state.event ? 2 : 3)}>{state.event ? 'Ver o fato do mês →' : 'Entendi, vamos decidir →'}</button>
                   </div>
                 </div>
               )}
 
-              {step === 3 && (
+              {step === 4 && (
                 <div className="pn-pane">
                   <div className="pn-news-head">
                     <span className="pn-ill">🗓️</span>
@@ -234,6 +231,7 @@ export function GameScreen({ state, onChange, onExit }: {
                               bill ? `${BILL_BY_ID[bill].instrument === 'mp' ? 'Medida provisória' : 'Projeto para a Câmara'}: ${lowerFirst(BILL_BY_ID[bill].name)}.` : '',
                               articulations.length ? `Articulação: ${articulations.map((a) => `${a.kind === 'conversar' ? 'conversa com' : 'emendas para'} ${PARTY_BY_ID[a.party].sigla}`).join(' e ')}.` : '',
                             ].filter(Boolean).join(' ')}
+                        {state.event && eventChoice === null ? ' ⚠️ Você não respondeu o fato do mês: vale a opção padrão.' : ''}
                         {isRecess(state.month) && (bill || state.congress.pending.length > 0) ? ' O Congresso está em recesso: a votação fica para o mês que vem.' : ''}
                         {isCopomMonth(state.month) ? ' O Banco Central decide os juros no fim do mês.' : ''}
                       </p>
@@ -243,11 +241,15 @@ export function GameScreen({ state, onChange, onExit }: {
                     <button className="pn-btn pn-btn--big" onClick={endMonth} disabled={turning}>
                       ⏭️ Encerrar {monthLabel(state.month).split(' de ')[0].toLowerCase()}
                     </button>
-                    <button className="pn-btn pn-btn--ghost" onClick={() => goStep(2)}>Voltar às decisões</button>
+                    <button className="pn-btn pn-btn--ghost" onClick={() => goStep(3)}>Voltar às decisões</button>
                   </div>
                 </div>
               )}
             </section>
+
+            <div ref={eventRef}>
+              <EventPanel state={state} choice={eventChoice} onChoose={(i) => { setEventChoice(i); if (i !== null) toast(`🔥 Decisão anotada: ${currentEventLabel(state, i)}`) }} />
+            </div>
 
             <section className="pn-card pn-card--gold" ref={medidaRef}>
               <MeasureBox
@@ -300,7 +302,7 @@ export function GameScreen({ state, onChange, onExit }: {
                 })}
               </div>
               <div className="pn-row">
-                <button className="pn-btn" onClick={() => goStep(3)}>Pronto, ir para o encerramento →</button>
+                <button className="pn-btn" onClick={() => goStep(4)}>Pronto, ir para o encerramento →</button>
               </div>
             </section>
           </div>
@@ -311,6 +313,8 @@ export function GameScreen({ state, onChange, onExit }: {
               <ApprovalRing value={now.approval} />
               <p className="pn-hint">É a média dos grupos abaixo, pesada pelo tamanho de cada um.</p>
             </section>
+
+            <DemandsCard state={state} plannedDecrees={selected} plannedBill={bill} />
 
             <section className="pn-card">
               <h3>👥 Grupos sociais</h3>
@@ -350,7 +354,7 @@ export function GameScreen({ state, onChange, onExit }: {
             <section className="pn-card">
               <h3>🔜 Ainda não está no jogo</h3>
               <p className="pn-hint">
-                Crises com escolhas, cobranças dos grupos, Supremo e as outras seções do menu chegam nas próximas versões.
+                Supremo, CPIs, imprensa, governadores, diplomacia e a campanha eleitoral chegam nas próximas versões.
               </p>
             </section>
           </div>
@@ -381,6 +385,11 @@ export function GameScreen({ state, onChange, onExit }: {
       {detail && <DetailPanel state={state} detail={detail} onClose={() => setDetail(null)} />}
     </div>
   )
+}
+
+function currentEventLabel(s: GameState, i: number) {
+  const ev = s.event ? EVENT_BY_ID[s.event.id] : null
+  return ev ? ev.options[i].label : ''
 }
 
 const tone = (v: number) => (v >= 50 ? 'var(--pn-green)' : v >= 35 ? 'var(--pn-gold)' : 'var(--pn-red)')

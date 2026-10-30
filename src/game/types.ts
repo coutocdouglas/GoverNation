@@ -113,10 +113,12 @@ export interface MonthReport {
   actionsTaken: string[]
   /** Votações do mês na Câmara. */
   votes: VoteRecord[]
+  /** Fato do mês resolvido e a opção escolhida. */
+  event?: { id: string; option: number; chosen: boolean }
 }
 
 export interface GameState {
-  saveVersion: 2
+  saveVersion: 3
   /** Mês atual, de 0 (janeiro do 1º ano) a 47. Em 48 o mandato acabou. */
   month: number
   presidentName: string
@@ -124,6 +126,14 @@ export interface GameState {
   /** Partido do presidente. */
   playerParty: PartyId
   congress: CongressState
+  /** Semente da caricatura do presidente. */
+  avatarSeed: string
+  /** Fato do mês à espera de resposta. */
+  event: { id: string; month: number } | null
+  eventLog: { id: string; month: number }[]
+  /** Cobranças dos grupos em aberto. Vencem no mês `expires`. */
+  demands: { id: string; since: number; expires: number }[]
+  demandLog: { id: string; month: number }[]
   rngState: number
   economy: Economy
   groups: Record<GroupId, Group>

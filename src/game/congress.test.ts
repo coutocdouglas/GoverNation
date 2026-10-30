@@ -134,7 +134,8 @@ describe('saves antigos', () => {
     delete s.playerParty
     s.saveVersion = 1
     const m = migrate(JSON.parse(JSON.stringify(s)))!
-    expect(m.saveVersion).toBe(2)
+    expect(m.saveVersion).toBe(3)
+    expect(m.demands).toEqual([])
     expect(m.playerParty).toBe('mdn')
     expect(m.congress.deputies).toHaveLength(TOTAL_SEATS)
     expect(() => advanceMonth(m, [], { bill: 'isencaoIR' })).not.toThrow()

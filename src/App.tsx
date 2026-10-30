@@ -4,14 +4,17 @@ import { PLAYER_PARTY_CHOICES } from './game/data/parties'
 import { monthLabel, newGame } from './game/game'
 import { deleteSave, loadGame, saveGame } from './game/save'
 import type { GameState, PartyId } from './game/types'
+import { Caricature } from './ui/Caricature'
 import { EndScreen } from './ui/EndScreen'
+import { PARTY_BY_ID } from './game/data/parties'
 import { GameScreen } from './ui/GameScreen'
 
 const ROADMAP = [
   { v: '0.1', label: 'Estrutura e atualização automática', done: true },
   { v: '0.2', label: 'Economia, grupos sociais e turno mensal', done: true },
   { v: '0.3', label: 'Congresso com 513 deputados', done: true },
-  { v: '0.4', label: 'Medidas, crises e nota final', done: false },
+  { v: '0.4', label: 'Fato do mês, cobranças e personagens', done: true },
+  { v: '0.4.x', label: 'Mais medidas e nota final', done: false },
   { v: '0.5', label: 'Medidas em texto livre com IA', done: false },
 ]
 
@@ -46,8 +49,8 @@ export default function App() {
         <NewGame
           hasSave={!!game && !game.finished}
           onCancel={() => setScreen('home')}
-          onStart={(name, diff, party) => {
-            update(newGame(name, diff, undefined, party))
+          onStart={(name, diff, party, face) => {
+            update(newGame(name, diff, undefined, party, face))
             setScreen('game')
           }}
         />
@@ -116,14 +119,19 @@ function Home({ saved, onNew, onContinue }: { saved: GameState | null; onNew: ()
 function NewGame({ hasSave, onCancel, onStart }: {
   hasSave: boolean
   onCancel: () => void
-  onStart: (name: string, d: GameState['difficulty'], party: PartyId) => void
+  onStart: (name: string, d: GameState['difficulty'], party: PartyId, face: string) => void
 }) {
   const [name, setName] = useState('')
   const [diff, setDiff] = useState<GameState['difficulty']>('normal')
   const [party, setParty] = useState<PartyId>('mdn')
+  const [face, setFace] = useState(() => String(Math.floor(Math.random() * 1e6)))
   return (
     <main className="home">
       <h1 className="newgame__title">Novo mandato</h1>
+      <div className="newgame__face">
+        <Caricature seed={face} color={PARTY_BY_ID[party].color} size={110} mood="feliz" title="Seu rosto" />
+        <button className="btn" onClick={() => setFace(String(Math.floor(Math.random() * 1e6)))}>🎲 Outro rosto</button>
+      </div>
       <label className="field">
         <span>Nome do presidente</span>
         <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Como você quer ser chamado" maxLength={40} autoFocus />
@@ -152,7 +160,7 @@ function NewGame({ hasSave, onCancel, onStart }: {
       </div>
       {hasSave && <p className="warning">Começar um novo mandato apaga o mandato salvo.</p>}
       <div className="home__menu">
-        <button className="btn btn--primary btn--big" onClick={() => onStart(name, diff, party)}>
+        <button className="btn btn--primary btn--big" onClick={() => onStart(name, diff, party, face)}>
           Tomar posse
           <small>1º de janeiro de 2027</small>
         </button>

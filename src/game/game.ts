@@ -1,6 +1,9 @@
 import { ACTION_BY_ID, ACTIONS_PER_MONTH, blockedReason, effectMultiplier, type ActionEffects } from './actions'
 import { articulationBlockedReason, billBlockedReason, CONGRESS, driftRelations, initialCongress, isRecess, runVote } from './congress'
 import { BILL_BY_ID, RESUBMIT_COOLDOWN } from './data/bills'
+import { DEMAND_BY_ID } from './data/demands'
+import { EVENT_BY_ID } from './data/events'
+import { defaultOption, drawEvent, spawnDemand } from './events'
 import { PARTY_BY_ID } from './data/parties'
 import { DIFFICULTY, MACRO, START } from './data/balance'
 import { GROUPS } from './data/groups'
@@ -41,17 +44,23 @@ export function newGame(
   difficulty: GameState['difficulty'],
   seed?: number,
   playerParty: PartyId = 'mdn',
+  avatarSeed?: string,
 ): GameState {
   const economy = initialEconomy()
   const rngState = seed ?? Math.floor(Math.random() * 2 ** 31)
   const bonus = DIFFICULTY[difficulty].approvalBonus
   const state: GameState = {
-    saveVersion: 2,
+    saveVersion: 3,
     month: 0,
     presidentName: presidentName.trim() || 'Presidente',
     difficulty,
     playerParty,
     congress: initialCongress(playerParty, rngState),
+    avatarSeed: avatarSeed ?? `${presidentName}-${rngState}`,
+    event: null,
+    eventLog: [],
+    demands: [],
+    demandLog: [],
     rngState,
     economy,
     groups: initialGroups(indicators(economy), bonus),
@@ -62,6 +71,9 @@ export function newGame(
     finished: false,
   }
   state.history.push(snapshot(state))
+  const rng = new Rng(state.rngState)
+  state.event = drawEvent(state, rng)
+  state.rngState = rng.state
   return state
 }
 
@@ -96,12 +108,19 @@ export interface MonthPlan {
   bill?: BillId
   /** Até 2 articulações com partidos. */
   articulations?: Articulation[]
+  /** Opção escolhida no fato do mês (sem escolha = opção padrão). */
+  eventChoice?: number
 }
 
 export function validatePlan(s: GameState, plan: MonthPlan): string | null {
   if (plan.bill) {
     const r = billBlockedReason(s, plan.bill)
     if (r) return `${BILL_BY_ID[plan.bill].name}: ${r}`
+  }
+  if (plan.eventChoice !== undefined) {
+    const ev = s.event ? EVENT_BY_ID[s.event.id] : null
+    if (!ev) return 'Não há fato do mês para responder.'
+    if (!Number.isInteger(plan.eventChoice) || plan.eventChoice < 0 || plan.eventChoice >= ev.options.length) return 'Opção inválida no fato do mês.'
   }
   const arts = plan.articulations ?? []
   if (arts.length > CONGRESS.articulationsPerMonth) return `No máximo ${CONGRESS.articulationsPerMonth} articulações por mês.`
@@ -231,6 +250,48 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
   c.votes.push(...votes)
   c.votes = c.votes.slice(-24)
 
+  // 1e. Fato do mês
+  let eventReport: MonthReport['event']
+  if (s.event) {
+    const def = EVENT_BY_ID[s.event.id]
+    if (def) {
+      const idx = plan.eventChoice ?? defaultOption(def)
+      const opt = def.options[idx]
+      actionConfidence += applyEffects(e, impulses, opt.effects, def.title)
+      for (const [pid, dv] of Object.entries(opt.parties ?? {}) as [PartyId, number][]) {
+        const ps = c.parties[pid]
+        ps.relation = Math.min(100, Math.max(0, ps.relation + dv))
+      }
+      headlines.push({ text: opt.outcome, tone: opt.tone })
+      taken.push(`Fato do mês: ${opt.label}`)
+      s.eventLog.push({ id: def.id, month: s.month })
+      eventReport = { id: def.id, option: idx, chosen: plan.eventChoice !== undefined }
+    }
+    s.event = null
+  }
+
+  // 1f. Cobranças: atendidas por decreto, MP editada ou lei aprovada neste mês; as outras podem vencer.
+  const done = new Set<string>([
+    ...actions,
+    ...(plan.bill && BILL_BY_ID[plan.bill].instrument === 'mp' ? [plan.bill] : []),
+    ...votes.filter((v) => v.approved).map((v) => v.bill),
+  ])
+  s.demands = s.demands.filter((d) => {
+    const def = DEMAND_BY_ID[d.id]
+    if (!def) return false
+    if (def.satisfiedBy.some((x) => done.has(x))) {
+      impulses[def.group].push({ label: `Cobrança atendida: ${lowerFirst(def.title)}`, value: def.reward })
+      headlines.push({ text: `Cobrança atendida: ${lowerFirst(def.title)}`, tone: 'good' })
+      return false
+    }
+    if (s.month >= d.expires) {
+      impulses[def.group].push({ label: `Cobrança ignorada: ${lowerFirst(def.title)}`, value: -def.penalty })
+      headlines.push({ text: `Prazo vence e governo ignora: ${lowerFirst(def.title)}`, tone: 'bad' })
+      return false
+    }
+    return true
+  })
+
   // 2. Copom (antes da economia andar, com os dados do mês anterior)
   const selicCauses: Cause[] = []
   if (isCopomMonth(s.month)) headlines.push(runCopom(e, selicCauses))
@@ -276,13 +337,18 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
     groupCauses,
     actionsTaken: taken,
     votes,
+    event: eventReport,
   }
 
-  s.rngState = rng.state
   s.month += 1
   s.lastReport = report
   s.history.push(snapshot(s))
   if (s.month >= TERM_MONTHS) s.finished = true
+  else {
+    spawnDemand(s, rng)
+    s.event = drawEvent(s, rng)
+  }
+  s.rngState = rng.state
   return s
 }
 

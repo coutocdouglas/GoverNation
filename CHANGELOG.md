@@ -1,5 +1,14 @@
 # Novidades
 
+## 0.4.0
+- **Fato do mês** em painel próprio: 14 situações (dengue, greve de caminhoneiros, enchentes, escândalo, centrão pedindo ministério, queimadas, preço da comida, apagão, conflito no campo...). Algumas só aparecem quando a economia piora. Cada uma tem de 2 a 4 escolhas com efeitos visíveis antes de decidir; se você não escolher, vale a opção padrão, que costuma sair cara.
+- **Cobranças dos grupos** com prazo: até 3 ao mesmo tempo. Cumprir com o decreto ou a lei certa rende aprovação; deixar vencer custa. Grupos insatisfeitos cobram mais.
+- **Caricaturas provisórias** para todos os personagens: o presidente (escolha o rosto na posse), os líderes dos 9 partidos e quem traz cada fato do mês. A expressão muda com a situação. Serão trocadas por arte própria.
+- O mês agora tem 4 passos: notícias, fato do mês, decisões e encerrar.
+- A lista do que o governo fez aparece item por item na banca de jornal.
+- Correção: a manchete do Copom não se contradiz mais ("corta a Selic... preocupado com a inflação").
+- Mandatos salvos na v0.3 continuam; o fato do mês e as cobranças começam no mês seguinte.
+
 ## 0.3.0
 - **Congresso:** Câmara com 513 deputados de 9 partidos fictícios, cada um com posição econômica e de costumes, disciplina e fisiologismo. Cada deputado vota conforme a própria ideologia, a orientação do partido, a relação com o governo, a popularidade da medida e as emendas recebidas.
 - **Escolha seu partido** ao tomar posse: esquerda, centro ou direita. O Congresso reage de forma diferente a cada um.
