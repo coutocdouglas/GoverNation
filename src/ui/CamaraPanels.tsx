@@ -1,12 +1,10 @@
-import { useState } from 'react'
-import { frentesOfDeputies, ministerOf, ministryBlockedReason, ministryOfParty, type MinistryChange } from '../game/camara'
+import { frentesOfDeputies } from '../game/camara'
 import { articulationBlockedReason, CONGRESS, forecastOverride } from '../game/congress'
 import { SENADO, SENATE_SEATS } from '../game/data/senado'
 import { PARTIES } from '../game/data/parties'
 import { BILL_BY_ID, GDP_BILLIONS } from '../game/data/bills'
-import { BOMB_BY_ID, CAMARA, FRENTES, NOMINEES } from '../game/data/camara'
+import { BOMB_BY_ID, CAMARA, FRENTES } from '../game/data/camara'
 import { GROUP_BY_ID } from '../game/data/groups'
-import { MINISTERS, type AreaId } from '../game/data/ministers'
 import { PARTY_BY_ID } from '../game/data/parties'
 import { monthLabel, vetoedBill } from '../game/game'
 import type { Articulation, GameState, SanctionItem } from '../game/types'
@@ -55,8 +53,8 @@ export function SpeakerCard({ state, articulations, onToggle }: {
 }
 
 /** Senado Federal (etapa 4C1): bancadas, presidente da casa e o que espera votação lá. */
-export function SenateCard({ state, articulations, onToggle, onNegotiate }: {
-  state: GameState; articulations: Articulation[]; onToggle: (a: Articulation) => void; onNegotiate?: (id: string) => void
+export function SenateCard({ state, articulations, onToggle, onNegotiate, hidePending }: {
+  state: GameState; articulations: Articulation[]; onToggle: (a: Articulation) => void; onNegotiate?: (id: string) => void; hidePending?: boolean
 }) {
   const sn = state.congress.senate.president
   const party = PARTY_BY_ID[SENADO.president.party]
@@ -96,7 +94,7 @@ export function SenateCard({ state, articulations, onToggle, onNegotiate }: {
           {blocked && <small className="pn-hint" style={{ marginLeft: 8 }}>{blocked}</small>}
         </div>
       </div>
-      {pending.length > 0 && (
+      {pending.length > 0 && !hidePending && (
         <div style={{ marginTop: 10 }}>
           <b>Esperando o Senado</b>
           {pending.map((p) => (
@@ -168,61 +166,6 @@ function SanctionRow({ state, it, decision, onSanction }: {
   )
 }
 
-/** Ministérios: quem ocupa cada pasta e a opção de ceder a um partido (etapa 4B). */
-export function MinistriesCard({ state, change, onChange }: {
-  state: GameState; change: MinistryChange | null; onChange: (c: MinistryChange | null) => void
-}) {
-  const [open, setOpen] = useState<AreaId | null>(null)
-  const ceded = Object.values(state.cabinet ?? {}).filter(Boolean).length
-  return (
-    <section className="pn-card">
-      <h3>🏢 Ministérios <span className="pn-badge">{ceded} de {CAMARA.ministry.maxCeded} pastas cedidas · uma troca por mês</span></h3>
-      <p className="pn-hint">
-        Ceder uma pasta traz o partido para a base: a relação sobe {CAMARA.ministry.relationGain} e a bancada vota mais com o governo enquanto tiver o cargo.
-        O seu partido não gosta de dividir espaço ({CAMARA.ministry.ownPartyHit}), quem perde a pasta reclama, e o risco de escândalo sobe. Demitir depois custa {CAMARA.ministry.dismissHit} de relação.
-      </p>
-      <div className="pn-ministries">
-        {MINISTERS.map((base) => {
-          const m = ministerOf(state, base.area)
-          const seat = state.cabinet?.[base.area]
-          const pending = change?.area === base.area ? change : null
-          const locked = (CAMARA.ministry.locked as readonly AreaId[]).includes(base.area)
-          return (
-            <div key={base.area} className={`pn-minister ${seat ? 'ceded' : ''} ${pending ? 'pending' : ''}`}>
-              <Portrait name={m.name} feminine={m.feminine} color={m.color} size={40} title={m.name} />
-              <div className="pn-minister__txt">
-                <small>{base.icon} {base.areaName}</small>
-                <b>{m.name}</b>
-                <small style={{ color: PARTY_BY_ID[m.party].color }}>{PARTY_BY_ID[m.party].sigla}{seat ? ' · cedida' : ''}</small>
-              </div>
-              {pending ? (
-                <button className="pn-btn pn-btn--small" onClick={() => onChange(null)}>✔ {pending.party ? `ceder ao ${PARTY_BY_ID[pending.party].sigla}` : 'retomar'} · desfazer</button>
-              ) : seat ? (
-                <button className="pn-btn pn-btn--ghost pn-btn--small" disabled={!!change} title={change ? 'Uma troca por mês.' : ''} onClick={() => onChange({ area: base.area, party: null })}>Retomar</button>
-              ) : !locked ? (
-                <button className="pn-btn pn-btn--ghost pn-btn--small" disabled={!!change} title={change ? 'Uma troca por mês.' : ''} onClick={() => setOpen(open === base.area ? null : base.area)}>Ceder…</button>
-              ) : <small className="pn-hint" style={{ margin: 0 }}>🔒 do presidente</small>}
-              {open === base.area && !change && (
-                <div className="pn-minister__pick">
-                  {NOMINEES.map((n) => {
-                    const r = ministryBlockedReason(state, { area: base.area, party: n.party })
-                    const p = PARTY_BY_ID[n.party]
-                    return (
-                      <button key={n.party} disabled={!!r} title={r ?? n.style} onClick={() => { onChange({ area: base.area, party: n.party }); setOpen(null) }}>
-                        <Portrait name={n.name} feminine={n.feminine} color={p.color} size={28} title={n.name} />
-                        <span><b style={{ color: p.color }}>{p.sigla}</b> {n.name}<small>{r ?? `${p.seats} deputados · relação ${Math.round(state.congress.parties[n.party].relation)}${ministryOfParty(state, n.party) ? '' : ''}`}</small></span>
-                      </button>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
-          )
-        })}
-      </div>
-    </section>
-  )
-}
 
 /** Frentes parlamentares: quem são e quantos deputados reúnem. */
 export function FrentesCard({ state }: { state: GameState }) {

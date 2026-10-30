@@ -535,3 +535,14 @@
 .pn-ruling__vote.y, .pn-ruling__vote.n { opacity: 1; animation: pn-pop .35s ease; }
 .pn-ruling__vote.y b { color: #2fd07a; }
 .pn-ruling__vote.n b { color: #ff5a5f; }
+/* Etapa 4C3: aba Ministérios */
+.pn-ministries--full { grid-template-columns: repeat(2, 1fr); }
+.pn-minister--full { grid-template-columns: 48px 1fr auto; align-items: start; }
+.pn-minister--full.worn { border-color: #ff6b6b88; }
+.pn-minister__act { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
+.pn-minister__stats { grid-column: 1 / -1; display: grid; gap: 4px; font-size: 12.5px; color: var(--pn-mut); }
+.pn-minister__stats b { color: var(--pn-ink); }
+.pn-minister__stats b.up { color: #2fd07a; } .pn-minister__stats b.dn { color: #ff6b6b; } .pn-minister__stats b.warn { color: #f5c542; }
+.pn-minister__stats small.dn { color: #ff6b6b; }
+.pn-hint.warn { color: #f5c542; } .pn-hint.dn { color: #ff6b6b; }
+@media (max-width: 760px) { .pn-ministries--full { grid-template-columns: 1fr; } }

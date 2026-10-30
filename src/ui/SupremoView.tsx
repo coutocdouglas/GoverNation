@@ -4,8 +4,8 @@ import { PARTY_BY_ID } from '../game/data/parties'
 import { DOCTRINE_HINT, DOCTRINE_LABEL, NOMINEE_BY_ID, SUPREMO } from '../game/data/supremo'
 import { absMonth, yearOf } from '../game/memory'
 import {
-  fileChanceOf, forecastRuling, forecastSabatina, justiceInfo, legalReasonOf, legalRiskOf, nominationBlockedReason, nomineePosition,
-  nomineesOffered, RISK_LABEL, voteReasons,
+  ccjApplies, ccjForecast, consultaOf, consultBlockedReason, fileChanceOf, forecastRuling, forecastSabatina, isCleared, justiceInfo, legalReasonIn,
+  legalRiskIn, liminarChanceOf, nominationBlockedReason, nomineePosition, nomineesOffered, RISK_LABEL, voteReasons,
 } from '../game/supremo'
 import type { BillId, GameState, JusticeSeat, Ruling } from '../game/types'
 import { Portrait } from './Portrait'
@@ -20,21 +20,51 @@ const pct = (p: number) => `${Math.round(p * 100)}%`
 /** Cor de um voto provável: verde mantém, vermelho derruba. */
 const voteColor = (p: number) => (p >= 0.65 ? 'var(--pn-red)' : p >= 0.35 ? 'var(--pn-gold)' : 'var(--pn-green)')
 
-/** Linha do risco jurídico na leitura do gabinete, com a chance de cair se for ao Supremo hoje. */
-export function LegalRiskLine({ state, id }: { state: GameState; id: BillId }) {
-  const risk = legalRiskOf(id)
+/**
+ * Linha do risco jurídico na leitura do gabinete, com a chance de cair se for ao Supremo hoje.
+ * Etapa 4C3: chance de ação e de liminar, previsão da CCJ, consulta ao Supremo (com o botão, se `onConsult` vier).
+ */
+export function LegalRiskLine({ state, id, consult, onConsult }: { state: GameState; id: BillId; consult?: boolean; onConsult?: (id: BillId | null) => void }) {
   if (!BILL_BY_ID[id]) return null
+  const b = BILL_BY_ID[id]
+  const risk = legalRiskIn(state, id)
   const f = risk === 'baixo' ? null : forecastRuling(state, id)
+  const q = consultaOf(state, id)
+  const cleared = isCleared(state, id)
+  const file = risk === 'baixo' ? 0 : SUPREMO.fileChance[risk] * (SUPREMO.fileBase + state.rival.strength / 100)
+  const ccj = ccjApplies(state, id) ? ccjForecast(state, id) : null
+  const blocked = onConsult ? consultBlockedReason(state, id) : null
   return (
     <div className="pn-legal">
       ⚖️ Risco jurídico: <b className={RISK_CLS[risk]}>{RISK_LABEL[risk].toLowerCase()}</b>
       {risk === 'baixo' ? <span className="pn-hint" style={{ margin: 0 }}> · dificilmente alguém leva ao Supremo.</span> : (
         <>
-          {BILL_BY_ID[id].custom && ' (pesa na confiança do mercado)'}
+          {b.custom && ' (pesa na confiança do mercado)'}
           <div className="pn-hint" style={{ margin: '2px 0 0' }}>
-            {legalReasonOf(id)} A oposição pode contestar nos {SUPREMO.window} meses depois de entrar em vigor.
-            Se fosse julgada hoje: <b className={f!.chance >= 0.5 ? 'dn' : f!.chance >= 0.2 ? 'warn' : 'up'}>{pct(f!.chance)} de chance de cair</b> ({num(f!.expected, 1)} de 11 votos para derrubar; precisa de {SUPREMO.majority}).
+            {legalReasonIn(state, id)} Se fosse julgada hoje: <b className={f!.chance >= 0.5 ? 'dn' : f!.chance >= 0.2 ? 'warn' : 'up'}>{pct(f!.chance)} de chance de cair</b> ({num(f!.expected, 1)} de 11 votos para derrubar; precisa de {SUPREMO.majority}).
           </div>
+          <div className="pn-hint" style={{ margin: '2px 0 0' }}>
+            {cleared
+              ? <>✅ <b className="up">Chancelada pelo Supremo</b>: imune a ações até {when(q!.until!)}.</>
+              : risk === 'alto'
+                ? <>🚨 <b className="dn">O Supremo deve ser provocado</b>: cerca de {pct(file)} de chance de ação por mês em vigor, e {pct(liminarChanceOf(state, id))} de o relator suspender na hora (liminar).</>
+                : <>Em vigor, cerca de {pct(file)} de chance de ação por mês, nos {SUPREMO.window} meses seguintes; {pct(liminarChanceOf(state, id))} de liminar se houver ação.</>}
+          </div>
+          {ccj && !cleared && (
+            <div className="pn-hint" style={{ margin: '2px 0 0' }}>
+              🏛️ Passa antes pela CCJ ({PARTY_BY_ID[ccj.chair].sigla}): aprova <b className="up">{pct(ccj.aprova)}</b> · aprova com emenda de adequação <b className="warn">{pct(ccj.adequa)}</b> (texto 15% mais fraco, risco cai para médio) · barra <b className="dn">{pct(ccj.barra)}</b> (volta em 6 meses).
+            </div>
+          )}
+          {q && q.result === 'reprovada' && <div className="pn-hint dn" style={{ margin: '2px 0 0' }}>❌ O Supremo respondeu à sua consulta: como está, a medida seria inconstitucional.</div>}
+          {q && !q.result && <div className="pn-hint" style={{ margin: '2px 0 0' }}>⏳ Esperando o parecer do Supremo (sai em {when(q.readyAt)}).</div>}
+          {onConsult && !cleared && !(q && !q.result) && (
+            <div className="pn-row" style={{ marginTop: 4 }}>
+              <button className={`pn-btn pn-btn--small ${consult ? '' : 'pn-btn--ghost'}`} disabled={!!blocked && !consult} title={blocked ?? ''} onClick={() => onConsult(consult ? null : id)}>
+                {consult ? '✔ Parecer pedido ao encerrar o mês (desfazer)' : '📨 Pedir parecer ao Supremo'}
+              </button>
+              <small className="pn-hint" style={{ margin: 0 }}>{blocked && !consult ? blocked : `Espera ${SUPREMO.consulta.months} meses e não gasta a medida do mês. Chancelada, fica imune a ações por ${SUPREMO.consulta.immunity} meses; reprovada, você sabe antes e a corte esfria (${SUPREMO.consulta.reprovadaHit}).`}</small>
+            </div>
+          )}
         </>
       )}
     </div>
@@ -44,14 +74,19 @@ export function LegalRiskLine({ state, id }: { state: GameState; id: BillId }) {
 /** Painel: lembrete curto do Supremo (vaga aberta ou ações em andamento). */
 export function SupremoMini({ state, onOpen }: { state: GameState; onOpen: () => void }) {
   const sup = state.supremo
-  if (!sup.vacancy && sup.cases.length === 0) return null
+  const open = sup.consultas.filter((q) => !q.result)
+  if (!sup.vacancy && sup.cases.length === 0 && open.length === 0) return null
   return (
     <section className="pn-card pn-card--gold">
       <h3>⚖️ Supremo</h3>
       {sup.vacancy && <p className="pn-hint" style={{ margin: '4px 0' }}>🪑 Vaga aberta com a aposentadoria de {justiceInfo({ id: sup.vacancy.retired }).name}: indique um nome.</p>}
       {sup.cases.map((c) => (
-        <p key={c.id} className="pn-hint" style={{ margin: '4px 0' }}>📂 {PARTY_BY_ID[c.party].sigla} contra “{BILL_BY_ID[c.bill]?.name}” · julgamento em {when(c.judgeAt)} · <b>{pct(forecastRuling(state, c.bill).chance)}</b> de cair</p>
+        <p key={c.id} className="pn-hint" style={{ margin: '4px 0' }}>
+          {c.suspended ? (c.kind === 'projeto' ? '🔒' : '⛔') : '📂'} {PARTY_BY_ID[c.party].sigla} contra {c.kind === 'projeto' ? 'o projeto ' : ''}“{BILL_BY_ID[c.bill]?.name}”
+          {c.suspended ? <b className="dn">{c.kind === 'projeto' ? ' · votação travada' : ' · suspensa por liminar'}</b> : ''} · julgamento em {when(c.judgeAt)} · <b>{pct(forecastRuling(state, c.bill, c.risk).chance)}</b> de cair
+        </p>
       ))}
+      {open.map((q) => <p key={q.bill} className="pn-hint" style={{ margin: '4px 0' }}>📨 Consulta sobre “{q.name}”: parecer em {when(q.readyAt)}</p>)}
       <div className="pn-row"><button className="pn-btn" onClick={onOpen}>Abrir o Supremo →</button></div>
     </section>
   )
@@ -70,8 +105,8 @@ export function SupremoView({ state, nominee, onNominee }: { state: GameState; n
       <section className="pn-card">
         <h3>⚖️ Supremo Tribunal <span className="pn-badge">{sup.justices.length} ministros · {SUPREMO.majority} votos derrubam uma medida</span></h3>
         <p className="pn-hint">
-          Partidos de oposição podem levar ao Supremo as medidas com risco jurídico médio ou alto, nos {SUPREMO.window} meses depois de entrarem em vigor.
-          Cada ministro vota pela doutrina dele contra o texto, pelo risco jurídico e pela relação com o governo. Clique num ministro para ver a ficha.
+          Partidos de oposição podem levar ao Supremo as medidas com risco jurídico médio ou alto, nos {SUPREMO.window} meses depois de entrarem em vigor, e até projetos ainda no Congresso.
+          O relator sorteado pode dar <b>liminar</b> na hora (a medida para de valer até o plenário). Cada ministro vota pela doutrina dele contra o texto, pelo risco jurídico e pela relação com o governo. Clique num ministro para ver a ficha.
         </p>
         <div className="pn-court">
           {seats.map((j) => {
@@ -112,31 +147,47 @@ export function SupremoView({ state, nominee, onNominee }: { state: GameState; n
       {sup.vacancy && <VacancyCard state={state} nominee={nominee} onNominee={onNominee} />}
 
       <section className="pn-card pn-card--gold">
-        <h3>📂 Ações em andamento <span className="pn-badge">no máximo {SUPREMO.maxOpen} ao mesmo tempo · um julgamento por mês</span></h3>
+        <h3>📂 Ações e liminares <span className="pn-badge">no máximo {SUPREMO.maxOpen} ao mesmo tempo · um julgamento por mês</span></h3>
         {sup.cases.length === 0 ? <p className="pn-hint">Nenhuma ação contra o governo no Supremo.</p> : sup.cases.map((c) => {
-          const f = forecastRuling(state, c.bill)
+          const risk = c.risk ?? legalRiskIn(state, c.bill)
+          const f = forecastRuling(state, c.bill, risk)
           const b = BILL_BY_ID[c.bill]
           const rel = justiceInfo({ id: c.relator })
           return (
             <div key={c.id} className="pn-reading">
-              <b>{b?.name}</b>
+              <b>{c.kind === 'projeto' ? 'Projeto: ' : ''}{b?.name}</b>
+              {c.suspended && <span className="pn-chip-mini" style={{ marginLeft: 6 }}>{c.kind === 'projeto' ? '🔒 votação travada pelo relator' : '⛔ suspensa por liminar'}</span>}
+              {c.appealed && <span className="pn-chip-mini" style={{ marginLeft: 6 }}>📑 governo recorreu</span>}
               <p className="pn-hint" style={{ margin: '2px 0' }}>
                 Ação do {PARTY_BY_ID[c.party].sigla} desde {when(c.filedAt)} · relator: {rel.name} · julgamento previsto para {when(c.judgeAt)}.
-                {' '}Risco jurídico <b className={RISK_CLS[legalRiskOf(c.bill)]}>{RISK_LABEL[legalRiskOf(c.bill)].toLowerCase()}</b>: {legalReasonOf(c.bill)}
+                {' '}Risco jurídico <b className={RISK_CLS[risk]}>{RISK_LABEL[risk].toLowerCase()}</b>: {c.reason ?? legalReasonIn(state, c.bill)}
+                {c.kind === 'projeto' ? ' Se cair, o projeto é arquivado e só volta em 6 meses.' : c.suspended ? ' Enquanto isso, o dinheiro e o efeito da medida ficam parados; se o plenário mantiver, voltam.' : ''}
               </p>
-              <CourtDots state={state} id={c.bill} />
+              <CourtDots state={state} id={c.bill} risk={risk} />
               <p className="pn-hint" style={{ margin: '2px 0' }}>Se fosse julgada hoje: <b className={f.chance >= 0.5 ? 'dn' : 'up'}>{pct(f.chance)} de chance de cair</b> ({num(f.expected, 1)} votos esperados para derrubar). A relação dos ministros com o governo muda a conta.</p>
             </div>
           )
         })}
       </section>
 
+      {sup.consultas.length > 0 && (
+        <section className="pn-card">
+          <h3>📨 Consultas do governo <span className="pn-badge">uma aberta por vez · {SUPREMO.consulta.months} meses de espera</span></h3>
+          {[...sup.consultas].reverse().map((q) => (
+            <p key={`${q.bill}-${q.askedAt}`} className="pn-hint" style={{ margin: '4px 0' }}>
+              {q.result === 'chancelada' ? '✅' : q.result === 'reprovada' ? '❌' : '⏳'} <b>{q.name}</b> · pedida em {when(q.askedAt)} ·{' '}
+              {q.result === 'chancelada' ? <>chancelada: imune a ações até {when(q.until!)}</> : q.result === 'reprovada' ? 'reprovada: seria inconstitucional como está' : `parecer em ${when(q.readyAt)}`}
+            </p>
+          ))}
+        </section>
+      )}
+
       {watched.length > 0 && (
         <section className="pn-card">
           <h3>🎯 Medidas na mira <span className="pn-badge">em vigor, com risco jurídico</span></h3>
           {watched.map((w) => (
             <p key={w.bill} className="pn-hint" style={{ margin: '4px 0' }}>
-              <b className={RISK_CLS[legalRiskOf(w.bill)]}>●</b> {BILL_BY_ID[w.bill]?.name} · risco {RISK_LABEL[legalRiskOf(w.bill)].toLowerCase()} · pode ser contestada até {when(w.since + SUPREMO.window)} · {pct(fileChanceOf(state, w.bill))} de chance de ação por mês · {pct(forecastRuling(state, w.bill).chance)} de cair hoje
+              <b className={RISK_CLS[legalRiskIn(state, w.bill)]}>●</b> {BILL_BY_ID[w.bill]?.name} · risco {RISK_LABEL[legalRiskIn(state, w.bill)].toLowerCase()} · pode ser contestada até {when(w.since + SUPREMO.window)} · {pct(fileChanceOf(state, w.bill))} de chance de ação por mês · {pct(forecastRuling(state, w.bill).chance)} de cair hoje
             </p>
           ))}
         </section>
@@ -151,15 +202,15 @@ export function SupremoView({ state, nominee, onNominee }: { state: GameState; n
 }
 
 /** Os 11 ministros como bolinhas: a cor é o voto provável (vermelho derruba, verde mantém). */
-function CourtDots({ state, id }: { state: GameState; id: BillId }) {
-  const f = forecastRuling(state, id)
+function CourtDots({ state, id, risk }: { state: GameState; id: BillId; risk?: 'baixo' | 'medio' | 'alto' }) {
+  const f = forecastRuling(state, id, risk)
   const b = BILL_BY_ID[id]
   return (
     <div className="pn-courtdots">
       {f.votes.map((v) => {
         const seat = state.supremo.justices.find((j) => j.id === v.justice) as JusticeSeat
         const info = justiceInfo(seat)
-        const why = b ? voteReasons(seat, b).map((c) => `${c.label} ${c.value >= 0 ? '+' : ''}${num(c.value, 2)}`).join(' · ') : ''
+        const why = b ? voteReasons(seat, b, risk ?? legalRiskIn(state, id)).map((c) => `${c.label} ${c.value >= 0 ? '+' : ''}${num(c.value, 2)}`).join(' · ') : ''
         return <span key={v.justice} style={{ background: voteColor(v.p) }} title={`${info.name} (${DOCTRINE_LABEL[info.doctrine]}): ${pct(v.p)} de votar para derrubar. ${why}`} />
       })}
     </div>
@@ -170,7 +221,7 @@ function RulingRow({ r }: { r: Ruling }) {
   const yes = r.votes.filter((v) => v.strike).length
   return (
     <div className="pn-reading">
-      <b>{r.struck ? '❌ Derrubada' : '✅ Mantida'}: {r.name}</b>
+      <b>{r.project ? (r.struck ? '❌ Projeto arquivado' : '✅ Projeto liberado') : r.struck ? '❌ Derrubada' : '✅ Mantida'}: {r.name}</b>
       <p className="pn-hint" style={{ margin: '2px 0' }}>{when(r.at)} · ação do {PARTY_BY_ID[r.party].sigla} · relator {justiceInfo({ id: r.relator }).name} · {yes} a {r.votes.length - yes} para derrubar · {r.reason}</p>
       <div className="pn-courtdots">
         {r.votes.map((v) => <span key={v.justice} style={{ background: v.strike ? 'var(--pn-red)' : 'var(--pn-green)' }} title={`${justiceInfo({ id: v.justice }).name}: ${v.strike ? 'derrubar' : 'manter'}`} />)}
@@ -274,8 +325,10 @@ export function RulingAnimation({ ruling, onNext, nextLabel }: { ruling: Ruling;
         </div>
         {done ? (
           <div className="pn-vanim__end">
-            <span className={`pn-vanim__stamp ${ruling.struck ? 'ko' : 'ok'}`}>{ruling.struck ? 'MEDIDA DERRUBADA' : 'MEDIDA MANTIDA'}</span>
-            <p className="pn-hint">{ruling.struck ? 'A medida deixa de valer. No mês que vem, você decide como reagir.' : 'O governo vence: a medida continua valendo.'}</p>
+            <span className={`pn-vanim__stamp ${ruling.struck ? 'ko' : 'ok'}`}>{ruling.project ? (ruling.struck ? 'PROJETO ARQUIVADO' : 'PROJETO LIBERADO') : ruling.struck ? 'MEDIDA DERRUBADA' : 'MEDIDA MANTIDA'}</span>
+            <p className="pn-hint">{ruling.project
+              ? (ruling.struck ? 'O projeto sai do Congresso e só pode voltar em 6 meses.' : 'O governo vence: o projeto segue no Congresso.')
+              : ruling.struck ? 'A medida deixa de valer. No mês que vem, você decide como reagir.' : 'O governo vence: a medida continua valendo.'}</p>
             <button className="pn-btn pn-btn--big" onClick={onNext} autoFocus>{nextLabel}</button>
           </div>
         ) : <p className="pn-hint pn-vanim__live">⏳ Votação em andamento…</p>}

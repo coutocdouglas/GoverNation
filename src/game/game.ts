@@ -8,7 +8,7 @@ import { EVENT_BY_ID } from './data/events'
 import { defaultOption, drawEvent, spawnDemand } from './events'
 import { absMonth, addBio, addChronicle, fillText, plantInheritance, plantSeeds, sproutSeeds } from './memory'
 import { amendmentFor, coreEffects, committeeOf, jabutiBill, ministerOf, ministryBlockedReason, type MinistryChange } from './camara'
-import { BOMBS, CAMARA, NOMINEE_BY_PARTY } from './data/camara'
+import { BOMBS, CAMARA, CCJ, NOMINEE_BY_PARTY } from './data/camara'
 import { PARTIES, PARTY_BY_ID } from './data/parties'
 import { DIFFICULTY, MACRO, START } from './data/balance'
 import { GROUPS } from './data/groups'
@@ -24,7 +24,8 @@ import { Rng } from './rng'
 import { DEALS } from './data/deals'
 import { dealBlockedReason, emendasAmount, flagshipOf } from './deals'
 import { syncCustomBills } from './custom'
-import { applyStfChoice, appointJustice, dropInForce, initialSupremo, nominationBill, nominationBlockedReason, nominationLean, noteInForce, rejectNominee, stepSupremo, struckImpulses, struckOrigin, undoEffects } from './supremo'
+import { applyStfChoice, appointJustice, askConsulta, ccjApplies, ccjRoll, consultBlockedReason, dropInForce, initialSupremo, isFrozen, nominationBill, nominationBlockedReason, nominationLean, noteInForce, rejectNominee, stepSupremo, struckImpulses, struckOrigin, undoEffects } from './supremo'
+import { initialMinistries, resetMinistry, stepMinistries, type MinistryMonth } from './ministerios'
 import { NOMINEE_BY_ID, SUPREMO } from './data/supremo'
 
 import type { ActionId, Deal, Articulation, BillId, Cause, Economy, GameState, GroupId, Headline, Impulse, MonthReport, PartyId, PendingBill, SanctionItem, Snapshot, VetoItem, VoteRecord } from './types'
@@ -72,7 +73,7 @@ export function newGame(
   const rngState = seed ?? Math.floor(Math.random() * 2 ** 31)
   const bonus = DIFFICULTY[difficulty].approvalBonus
   const state: GameState = {
-    saveVersion: 11,
+    saveVersion: 12,
     month: 0,
     presidentName: presidentName.trim() || 'Presidente',
     difficulty,
@@ -104,8 +105,10 @@ export function newGame(
     promises,
     // Preenchido logo abaixo (a relação dos ministros depende do partido do presidente).
     supremo: undefined as unknown as GameState['supremo'],
+    ministries: undefined as unknown as GameState['ministries'],
   }
   state.supremo = initialSupremo(state)
+  state.ministries = initialMinistries(state)
   syncCustomBills(state)
   for (const b of promiseSideBoosts(promises, playerParty)) {
     const g = state.groups[b.group]
@@ -184,6 +187,8 @@ export interface MonthPlan {
   ministry?: MinistryChange
   /** Etapa 4C2: indicado para a vaga no Supremo (id de data/supremo.ts). O Senado sabatina no fim do mês. */
   nominee?: string
+  /** Etapa 4C3: pedir ao Supremo um parecer sobre a medida antes de enviá-la (não gasta a medida do mês). */
+  consult?: BillId
 }
 
 /** Ficha do que foi aprovado e espera sanção ou veto (pauta-bomba inteira ou o jabuti enxertado). */
@@ -284,6 +289,11 @@ export function validatePlan(s: GameState, plan: MonthPlan): string | null {
   if (plan.nominee !== undefined) {
     const r = nominationBlockedReason(s, plan.nominee)
     if (r) return `Supremo: ${r}`
+  }
+  if (plan.consult !== undefined) {
+    if (plan.consult === plan.bill || plan.consult === plan.eventResponse) return 'Consultar o Supremo ou enviar a medida: não as duas coisas no mesmo mês.'
+    const r = consultBlockedReason(s, plan.consult)
+    if (r) return `Consulta ao Supremo: ${r}`
   }
   if (plan.ministry) {
     const r = ministryBlockedReason(s, plan.ministry)
@@ -399,6 +409,18 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
   if (plan.ministry) {
     const { area, party } = plan.ministry
     const before = ministerOf(s, area)
+    const swapped = s.cabinet[area]
+    if (party && swapped) {
+      // Etapa 4C3: reforma ministerial direta, de um partido para outro.
+      const old = PARTY_BY_ID[swapped.party]
+      const ops = c.parties[swapped.party]
+      ops.relation = Math.max(0, ops.relation + CAMARA.ministry.dismissHit)
+      ops.baseRelation = Math.max(5, ops.baseRelation - CAMARA.ministry.baseGain)
+      delete s.cabinet[area]
+      addBio(s, before.name, `Foi demitido pelo presidente ${s.presidentName} numa reforma ministerial.`)
+      headlines.push({ text: `Reforma ministerial: ${before.name} (${old.sigla}) sai do governo`, tone: 'neutral' })
+    }
+    resetMinistry(s, area)
     if (party) {
       const p = PARTY_BY_ID[party]
       const nominee = NOMINEE_BY_PARTY[party]!
@@ -509,6 +531,12 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
     }
   }
 
+  // Sorteios do Supremo e da CCJ com uma semente própria do mês, para não mexer no resto do jogo.
+  const court = new Rng((prev.rngState ^ 0x5717) + absMonth(s) * 7919)
+  /** Etapa 4C3: o que aconteceu com cada pasta no mês (desgaste dos ministros). */
+  const mm: MinistryMonth = { enacted: [], struck: [], liminar: [], barred: [] }
+  for (const id of submitted) if (actsNow(id)) mm.enacted.push(BILL_BY_ID[id].area)
+
   // 1d. Câmara 2.0 (etapa 4B): vetos, sanções, comissões, gaveta do presidente da Câmara, votações e pautas-bomba.
   const votes: VoteRecord[] = []
   const sanctioned: BillId[] = []
@@ -526,8 +554,9 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
     const senado = house === 'senado'
     c.blockedUntil[p.id] = s.month + RESUBMIT_COOLDOWN
     if (bill.instrument === 'mp') {
-      dropInForce(s, p.id)
-      actionConfidence += applyEffects(e, impulses, bill.effects, bill.name, 1, -1)
+      // Suspensa por liminar: o dinheiro e a confiança já tinham sido desfeitos.
+      const suspended = dropInForce(s, p.id)
+      actionConfidence += applyEffects(e, impulses, suspended ? { ...bill.effects, spending: undefined, revenue: undefined, potential: undefined, confidence: undefined } : bill.effects, bill.name, 1, -1)
       for (const [gid, val] of Object.entries(bill.effects.groups ?? {}) as [GroupId, number][]) {
         if (val > 0) impulses[gid].push({ label: `MP derrubada: ${bill.name}`, value: -val * 0.7 })
       }
@@ -550,10 +579,15 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
     c.laws.push(p.id)
     sanctioned.push(p.id)
     enacted.push(p.id)
+    mm.enacted.push(bill.area)
     if (bill.instrument !== 'mp') {
-      actionConfidence += applyEffects(e, impulses, coreEffects(bill, am), bill.name)
+      // Etapa 4C3: emenda de adequação da CCJ enfraquece o texto.
+      const k = p.ccj === 'adequado' ? SUPREMO.ccj.adequaScale : 1
+      const fx = coreEffects(bill, am)
+      actionConfidence += applyEffects(e, impulses, k === 1 ? fx : coreEffects({ ...bill, effects: fx }, { relator: s.playerParty, kind: 'desidrata', shift: 0, scale: k }), bill.name)
       plantSeeds(s, p.id, bill.name, s.presidentName, s.playerParty, rng)
-      noteInForce(s, p.id, s.presidentName, am?.scale)
+      const scale = (am?.scale ?? 1) * k
+      noteInForce(s, p.id, s.presidentName, scale !== 1 ? scale : undefined)
     }
     if (am?.kind === 'jabuti' && am.extra) {
       c.toSanction.push({ id: `jab-${p.id}-${absMonth(s)}`, kind: 'jabuti', bill: p.id, month: s.month, party: am.relator, amendment: am, vote: p.camara ? { yes: p.camara.yes, no: p.camara.no } : undefined })
@@ -629,6 +663,30 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
         headlines.push({ text: `Governo segura “${bill.name}” na pauta e adia a votação`, tone: 'neutral' })
         continue
       }
+      if (isFrozen(s, p.id)) {
+        headlines.push({ text: `“${bill.name}” segue travado pelo Supremo e não vai a voto`, tone: 'neutral' })
+        continue
+      }
+      // Etapa 4C3: projeto de risco alto passa pelo filtro da CCJ.
+      if (ccjApplies(s, p.id, p)) {
+        const r = ccjRoll(s, p.id, court)
+        const chair = PARTY_BY_ID[CCJ.chair]
+        if (r === 'barrado') {
+          c.pending = c.pending.filter((x) => x !== p)
+          c.blockedUntil[p.id] = s.month + RESUBMIT_COOLDOWN
+          mm.barred.push(bill.area)
+          headlines.push({ text: `CCJ, presidida pelo ${chair.sigla}, barra “${bill.name}” como inconstitucional. O projeto só volta em ${RESUBMIT_COOLDOWN} meses`, tone: 'bad' })
+          addBio(s, chair.leader.name, `O ${chair.sigla} barrou na CCJ “${bill.name}”, do governo ${s.presidentName}, como inconstitucional.`)
+          addBio(s, s.presidentName, `Teve “${bill.name}” barrado na CCJ como inconstitucional.`)
+          continue
+        }
+        p.ccj = r
+        if (r === 'adequado') {
+          s.supremo.adjusted[p.id] = 'medio'
+          headlines.push({ text: `CCJ aprova “${bill.name}” com emenda de adequação: o texto fica mais fraco, mas mais seguro no Supremo`, tone: 'neutral' })
+          addBio(s, chair.leader.name, `O ${chair.sigla} aprovou na CCJ “${bill.name}” com emenda de adequação.`)
+        } else headlines.push({ text: `CCJ considera “${bill.name}” constitucional e libera o projeto`, tone: 'neutral' })
+      }
       if (p.stage === 'comissao') {
         const com = committeeOf(bill)
         const chair = PARTY_BY_ID[com.chair]
@@ -678,7 +736,7 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
           headlines.push({ text: `Relator do ${PARTY_BY_ID[am.relator].sigla} desidrata “${bill.name}”: o texto aprovado é mais fraco que o original`, tone: 'neutral' })
         }
         const pec = bill.instrument === 'pec'
-        c.senate.pending.push({ id: p.id, sentMonth: s.month, amendment: p.amendment, original: p.original, deals: p.senateDeals, camara: { yes: v.yes, no: v.no, symbolic: symbolic || undefined, month: s.month } })
+        c.senate.pending.push({ id: p.id, sentMonth: s.month, amendment: p.amendment, original: p.original, deals: p.senateDeals, camara: { yes: v.yes, no: v.no, symbolic: symbolic || undefined, month: s.month }, ccj: p.ccj })
         addBio(s, s.presidentName, `Aprovou na Câmara: ${bill.name} (${placar}).`)
         headlines.push({ text: `Câmara aprova ${lowerFirst(bill.name)}: ${placar}. ${pec ? 'A PEC vai ao Senado no mês que vem' : 'Segue para o Senado'}`, tone: 'good' })
       } else reject(p, 'camara', placar)
@@ -694,6 +752,10 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
       if (bill.instrument === 'pec' && p.sentMonth === s.month) continue
       if (held.has(p.id) && bill.instrument !== 'mp') {
         headlines.push({ text: `Governo segura “${bill.name}” na pauta do Senado e adia a votação`, tone: 'neutral' })
+        continue
+      }
+      if (isFrozen(s, p.id)) {
+        headlines.push({ text: `“${bill.name}” segue travado pelo Supremo e não vai a voto no Senado`, tone: 'neutral' })
         continue
       }
       if (presidentFree && bill.instrument !== 'mp' && (p.holds ?? 0) < SENADO.president.maxHold) {
@@ -789,9 +851,7 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
   }
   c.scandal *= DEALS.scandalDecay
 
-  // 1d6. Supremo (etapa 4C2): sabatina do indicado, aposentadorias, julgamento e novas ações.
-  // Sorteios com uma semente própria do mês, para não mexer no resto do jogo.
-  const court = new Rng((prev.rngState ^ 0x5717) + absMonth(s) * 7919)
+  // 1d6. Supremo (etapas 4C2 e 4C3): sabatina, aposentadorias, consultas, julgamento, novas ações e liminares.
   const rivalExtra: Cause[] = []
   if (plan.nominee) {
     const n = NOMINEE_BY_ID[plan.nominee]
@@ -806,15 +866,44 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
       rejectNominee(s, n, headlines, impulses)
     }
   }
-  const struck = stepSupremo(s, court, headlines)
+  const court2 = stepSupremo(s, court, headlines)
+  const { struck, suspended, restored, archived } = court2
   if (struck) {
     const bill = BILL_BY_ID[struck.bill]
-    actionConfidence += applyEffects(e, impulses, undoEffects(bill, struck.scale), bill.name, 1, -1)
+    // Suspensa por liminar: o dinheiro já tinha parado; só os grupos sentem agora.
+    if (!struck.wasSuspended) actionConfidence += applyEffects(e, impulses, undoEffects(bill, struck.scale), bill.name, 1, -1)
     for (const x of struckImpulses(bill, struck.scale)) impulses[x.group].push({ label: x.label, value: x.value })
     c.laws = c.laws.filter((id) => id !== struck.bill)
     c.blockedUntil[struck.bill] = s.month + RESUBMIT_COOLDOWN
     rivalExtra.push({ label: 'Supremo derruba medida do governo', value: SUPREMO.rivalGain })
     s.eventQueue.unshift({ id: 'stfDerrubada', origin: struckOrigin(s, struck) })
+    mm.struck.push(bill.area)
+  }
+  if (suspended) {
+    // Etapa 4C3: liminar. O dinheiro e a confiança param até o plenário; vem um fato do mês.
+    const bill = BILL_BY_ID[suspended.bill]
+    actionConfidence += applyEffects(e, impulses, undoEffects(bill, suspended.scale), `Liminar: ${bill.name}`, 1, -1)
+    rivalExtra.push({ label: 'Liminar suspende medida do governo', value: SUPREMO.rivalGain / 2 })
+    s.eventQueue = s.eventQueue.filter((x) => !(x.id === 'stfLiminar' && x.origin?.bill === suspended.bill))
+    s.eventQueue.unshift({ id: 'stfLiminar', origin: struckOrigin(s, suspended) })
+    mm.liminar.push(bill.area)
+  }
+  if (restored) {
+    const bill = BILL_BY_ID[restored.bill]
+    actionConfidence += applyEffects(e, impulses, undoEffects(bill, restored.scale), bill.name)
+    // O fato da liminar perde o sentido se ainda não foi respondido.
+    s.eventQueue = s.eventQueue.filter((x) => !(x.id === 'stfLiminar' && x.origin?.bill === restored.bill))
+  }
+  if (archived) {
+    c.pending = c.pending.filter((x) => x.id !== archived)
+    c.senate.pending = c.senate.pending.filter((x) => x.id !== archived)
+    c.blockedUntil[archived] = s.month + RESUBMIT_COOLDOWN
+    rivalExtra.push({ label: 'Supremo barra projeto do governo', value: SUPREMO.rivalGain / 2 })
+    mm.barred.push(BILL_BY_ID[archived].area)
+  }
+  if (plan.consult) {
+    askConsulta(s, plan.consult)
+    taken.push(`Pediu parecer ao Supremo: ${BILL_BY_ID[plan.consult].name}`)
   }
 
   // 1e. Fato do mês
@@ -841,6 +930,7 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
           s.eventLog.push({ id: def.id, month: s.month })
           if (origin) addChronicle(s, `${title} (consequência de ${origin.label}, ${origin.author}, ${origin.year}): resolvido com ${lowerFirst(name)}`, 'good')
           eventReport = { id: def.id, option: -1, chosen: true, response: resp, resolved: true }
+          if (!def.choiceOnly && def.kind !== 'bom') mm.event = { area: def.area, kind: 'resolvido' }
           s.event = null
         } else {
           // A lei ficou parada (recesso) ou caiu: o problema segue e vale o que acontece se ninguém age.
@@ -855,6 +945,7 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
           addBio(s, minister.name, `${minister.role}: viu a resposta a “${title}” travar no Congresso.`)
           s.eventLog.push({ id: def.id, month: s.month })
           eventReport = { id: def.id, option: idx, chosen: true, response: resp, resolved: false }
+          if (!def.choiceOnly && def.kind !== 'bom') mm.event = { area: def.area, kind: 'falhou' }
           s.event = null
         }
       }
@@ -895,6 +986,7 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
       if (def.importance >= 3 || def.kind !== 'crise') addBio(s, s.presidentName, `${title}: ${lowerFirst(opt.label)}.`)
       if (origin) addChronicle(s, `${title} (consequência de ${origin.label}, ${origin.author}, ${origin.year})`, tone)
       eventReport = { id: def.id, option: idx, chosen: plan.eventChoice !== undefined }
+      if (!def.choiceOnly && def.kind !== 'bom') mm.event = { area: def.area, kind: plan.eventChoice !== undefined && !opt.default ? 'escolha' : 'ignorado' }
     }
     s.event = null
   }
@@ -921,6 +1013,9 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
     }
     return true
   })
+
+  // 1g. Etapa 4C3: desgaste dos ministros.
+  stepMinistries(s, mm, impulses, headlines)
 
   // 2. Copom (antes da economia andar, com os dados do mês anterior)
   const selicCauses: Cause[] = []

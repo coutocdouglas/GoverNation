@@ -187,9 +187,10 @@ export function ministryBlockedReason(s: GameState, ch: MinistryChange): string 
   if ((CAMARA.ministry.locked as readonly AreaId[]).includes(ch.area)) return 'Fazenda e articulação política ficam com gente do presidente.'
   if (ch.party === s.playerParty) return 'É o seu partido: a pasta já responde a você.'
   if (!NOMINEE_BY_PARTY[ch.party]) return `${PARTY_BY_ID[ch.party].sigla} não indica nomes para o governo.`
-  if (seat) return `A pasta já está com o ${PARTY_BY_ID[seat.party].sigla}. Retome antes de ceder de novo.`
+  // Etapa 4C3: reforma ministerial direta, de um partido para outro.
+  if (seat?.party === ch.party) return `A pasta já está com o ${PARTY_BY_ID[seat.party].sigla}.`
   if (ministryOfParty(s, ch.party)) return `O ${PARTY_BY_ID[ch.party].sigla} já tem um ministério.`
   if (MINISTER_BY_AREA[ch.area].party === ch.party) return `O ministro atual já é do ${PARTY_BY_ID[ch.party].sigla}.`
-  if (Object.values(s.cabinet ?? {}).filter(Boolean).length >= CAMARA.ministry.maxCeded) return `No máximo ${CAMARA.ministry.maxCeded} pastas cedidas.`
+  if (!seat && Object.values(s.cabinet ?? {}).filter(Boolean).length >= CAMARA.ministry.maxCeded) return `No máximo ${CAMARA.ministry.maxCeded} pastas cedidas.`
   return null
 }

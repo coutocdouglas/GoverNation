@@ -57,7 +57,7 @@ export type Matter = keyof typeof MATTERS
 
 const INSTRUMENT_LIST: Instrument[] = ['decreto', 'mp', 'lei', 'complementar', 'pec']
 /** Força de cada instrumento. MP e lei têm a mesma força, mas MP não serve para matéria penal. */
-const RANK: Record<Instrument, number> = { decreto: 0, mp: 1, lei: 1, complementar: 2, pec: 3 }
+export const RANK: Record<Instrument, number> = { decreto: 0, mp: 1, lei: 1, complementar: 2, pec: 3 }
 const AREA_IDS = Object.keys(MINISTER_BY_AREA) as AreaId[]
 const GROUP_IDS = GROUPS.map((g) => g.id)
 
@@ -243,7 +243,7 @@ export function buildCustomBill(s: GameState, draft: CustomDraft, request: strin
     cons: `${text(draft.contras, 200) || 'Efeitos incertos: é uma medida nova.'}${risk}`.trim(),
     effects,
     keywords,
-    custom: { createdAt: at, term: s.term, legalRisk, request: request.slice(0, 300) },
+    custom: { createdAt: at, term: s.term, legalRisk, request: request.slice(0, 300), matters: matters.length ? matters : undefined },
   }
   return { ok: true, bill, notes: [...new Set(notes)] }
 }

@@ -3,19 +3,19 @@
 > **Leia este arquivo primeiro.** Ele diz onde o projeto está e qual é o próximo passo.
 > Atualize-o a cada mudança: seção "Estado atual", "Próximo passo" e uma linha no "Histórico".
 
-**Última atualização:** 30/10/2026 · **Versão publicada:** v0.13.0
+**Última atualização:** 30/10/2026 · **Versão publicada:** v0.14.0
 
 ---
 
 ## Próximo passo
 
-**Etapa 4C3: o Supremo no caminho das medidas e as abas do Governo** (v0.14). Plano aprovado em `docs/DESIGN.md`, seção 26: risco jurídico calculado por regra do instrumento, ação quase certa para risco alto, **liminar**, **travar votação durante a tramitação**, filtro da CCJ, **consulta ao Supremo** e as quatro abas **Câmara · Senado · Supremo · Ministérios** (com desgaste, meta por pasta e reforma ministerial). Depois: **4D** Congresso ao vivo (v0.15, seção 25.1), **4E** janelas (v0.16), **4F** mês mais vivo (v0.17) e só então a 5B.
+**Etapa 4D: Congresso ao vivo** (v0.15). Plano aprovado em `docs/DESIGN.md`, seção 25.1. Inclui o botão "Pautar agora" (que aparece bloqueado, com o motivo, quando o Supremo trava um projeto). Depois: **4E** janelas (v0.16), **4F** mês mais vivo (v0.17) e só então a 5B.
 
-**Pendência do Douglas (para a 4D, não para a 4C3):** mandar mais retratos (sugestão: +30).
+**Pendência do Douglas (para a 4D):** mandar mais retratos (sugestão: +30).
 
-Complexidade: **alta**. Use o **Opus** nas regras do Supremo; a página de Ministérios e as abas podem ser feitas no Sonnet, numa conversa à parte.
+Complexidade: **alta**. Use o **Opus** no desenho do Congresso ao vivo; as telas podem ir para o Sonnet numa conversa à parte.
 
-Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdouglas/GoverNation. Leia CLAUDE.md, docs/ESTADO.md e docs/DESIGN.md. Quero fazer a etapa 4C3 (Supremo no caminho das medidas e abas, plano na seção 26 do DESIGN.md)."*
+Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdouglas/GoverNation. Leia CLAUDE.md, docs/ESTADO.md e docs/DESIGN.md. Quero fazer a etapa 4D (Congresso ao vivo, plano na seção 25.1 do DESIGN.md)."*
 
 ---
 
@@ -24,7 +24,7 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 **Base técnica**
 - App de Windows (Tauri 2 + React + TypeScript). O instalador é gerado pelo GitHub Actions e o jogo se atualiza sozinho, com atualização assinada.
 - O motor do jogo (`src/game/`) fica separado das telas (`src/ui/`). Os números de balanceamento ficam em `src/game/data/`.
-- 161 testes automáticos. Saves antigos são migrados (versão atual do save: 11).
+- 179 testes automáticos. Saves antigos são migrados (versão atual do save: 12).
 
 **Jogabilidade**
 - Mandato de 48 meses (jan/2027 a dez/2030), com o mês em 4 passos: notícias, fato do mês, decisões e encerrar.
@@ -46,6 +46,8 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
   - **Reação da sociedade (v0.10):** depois de cada lei, página com nota de popularidade (0 a 10), % a favor, reação de cada grupo, mercado, frentes, partidos, custo e prós e contras.
 - **Senado (v0.12):** 81 senadores dos 9 partidos, mais de centro. Tudo o que a Câmara aprova passa pelo Senado: lei, LC e MP no mesmo fechamento de mês; PEC no mês seguinte, em dois turnos (41 votos para LC, 49 para PEC). Rejeitado no Senado volta em 6 meses, custa aprovação e fortalece o rival. Presidente do Senado (Hermínia Valença, PSN) segura projetos se estiver de mal; conversar com ela é articulação. Janela de votação com abas Câmara e Senado, 2 lideranças por mês no Senado, painel animado de 81 cadeiras.
 - **Supremo (v0.13):** 11 ministros fictícios com doutrina e relação com o governo. Toda medida tem risco jurídico (baixo, médio, alto), mostrado antes de assinar com a chance de cair. Partidos de oposição levam ao Supremo medidas com risco nos 24 meses depois de entrarem em vigor; julgamento voto a voto (6 derrubam), com animação. Medida derrubada deixa de valer e vira fato do mês: acatar, mandar nova proposta (instrumento mais forte) ou criticar o Supremo. Vaga quando um ministro faz 75 anos (a primeira em ago/2028): 3 indicáveis e sabatina no Senado (41 votos).
+- **Supremo no caminho das medidas (v0.14):** risco jurídico também pela regra do instrumento (decreto não cria imposto, despesa grande precisa de lei, MP não trata de pena, vício de forma): 31 medidas do catálogo com risco. Risco alto vai ao Supremo quase sempre (cerca de 30% ao mês) e é julgado em 1 a 2 meses. **Liminar** do relator suspende a medida na hora (dinheiro parado até o plenário) e vira fato do mês: esperar, recuar, recorrer ou criticar. A oposição pode **travar um projeto** ainda no Congresso (risco alto, PEC em direito fundamental, jabuti); derrubado, é arquivado por 6 meses. **CCJ** filtra projetos de risco alto (aprova, adequa ou barra), com a previsão antes de enviar. **Consulta ao Supremo**: 2 meses de espera; chancelada fica imune por 24 meses.
+- **Ministérios (v0.14):** 13 ministros com desgaste de 0 a 100 e meta por pasta (no rumo, em risco, longe); desgastado (70+) custa aprovação no grupo da pasta; reforma ministerial (trocar o ministro zera o desgaste; troca direta de um partido para outro).
 - **Posse em 3 passos (v0.11):** candidato, perfil (até 2 traços e 2 hábitos que agradam uns grupos e desagradam outros) e 5 promessas de posse com meta medida, com painel ao lado mostrando o efeito em cada grupo.
 - **Rival (v0.11):** líder da oposição fictício (Leopoldo Rezende, POL, ou Clarice Siqueira, FPT) desde o mês 1, com força de 0 a 100 e causas, postura (observa, desgaste com ataques mensais, obstrução na Câmara) e pesquisa de intenção de voto todo mês.
 - **Promessas (v0.11):** acompanhadas no Painel (no rumo, em risco, longe) e cobradas no fim (cumprida, quase, quebrada); valem 300 dos 1000 pontos da **nota final**.
@@ -55,11 +57,11 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 - **Fichas:** biografia acumulada de cada personagem e memória do país.
 - **Retratos:** 110 fotos, cada uma usada por uma pessoa só. O presidente escolhe o rosto na posse (41 livres) e 15 retratos ficam reservados para Defesa, povos indígenas, campo e tradições.
 
-**Telas:** Posse em 3 passos, Painel (com cara de jogo, animações, plantão de notícias, cartões de Oposição, Promessas e Supremo), Governo com subabas Congresso e Supremo (mesa de sanção, presidente da Câmara, Senado, pauta com a chance nas duas casas, partidos e articulação, ministérios, frentes, leis com reação) e Fichas. Nação, Economia, Diplomacia, Programas e Vida pessoal aparecem bloqueadas.
+**Telas:** Posse em 3 passos, Painel (com cara de jogo, animações, plantão de notícias, cartões de Oposição, Promessas e Supremo), Governo com quatro abas: **Câmara** (mesa de sanção, presidente da Câmara, pauta com a chance nas duas casas, partidos e articulação, frentes, leis com reação), **Senado** (casa, presidente, pauta e votações), **Supremo** (ministros, ações, liminares, projetos travados, consultas, decisões, vaga) e **Ministérios** (desgaste, meta e reforma), e Fichas. Nação, Economia, Diplomacia, Programas e Vida pessoal aparecem bloqueadas.
 
 **Onde está cada coisa**
 - `CLAUDE.md`: regras do projeto e quando abrir uma conversa nova.
-- `docs/DESIGN.md`: decisões de desenho, seções 1 a 26 (Supremo em 24.2 e 24.2.1; plano da 4C3 na seção 26; plano das etapas 4D a 4F na seção 25).
+- `docs/DESIGN.md`: decisões de desenho, seções 1 a 26 (Supremo em 24.2, 24.2.1 e 26; como ficou a 4C3 em 26.8; plano das etapas 4D a 4F na seção 25).
 - `docs/levantamento-video-1.md`: o que o jogo de referência tem e nós não (vídeo 1).
 - `CHANGELOG.md`: novidades de cada versão.
 - `docs/RELEASES.md`: como publicar.
@@ -74,7 +76,7 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 4. ✅ **4A** votação com negociação por lideranças (v0.8.0) · ✅ **4B** Congresso 2.0, votação animada, voto simbólico e reação da sociedade (v0.10.0)
 5. Entre mandatos: ✅ **5A** rival, ficha do candidato e promessas de posse (v0.11.0) · **5B** 27 estados e apuração (depois da 4F) · **5C** governo seguinte e herança (depois do vídeo do fim de mandato)
 4C. ✅ **4C1** Senado votando (v0.12.0) · ✅ **4C2** Supremo julgando medidas (v0.13.0)
-4C3–4F. ⏭️ **4C3** Supremo no caminho das medidas e abas (v0.14) · **4D** Congresso ao vivo (v0.15) · **4E** janelas (v0.16) · **4F** mês mais vivo (v0.17)
+4C3–4F. ✅ **4C3** Supremo no caminho das medidas e abas (v0.14.0) · ⏭️ **4D** Congresso ao vivo (v0.15) · **4E** janelas (v0.16) · **4F** mês mais vivo (v0.17)
 6. Depois: Senado com poderes próprios (impeachment), imprensa e pesquisas, orçamento anual, ícones próprios
 
 ## Decisões já tomadas (resumo; detalhes no DESIGN.md)
@@ -116,3 +118,4 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 | 30/10/2026 | v0.13.0 | Etapa 4C2: Supremo com 11 ministros, risco jurídico em todas as medidas (mostrado antes de assinar), ações da oposição, julgamento voto a voto com animação, derrubada com fato do mês (acatar, nova proposta, criticar), vaga aos 75 anos com 3 indicáveis e sabatina no Senado; save 11 |
 | 30/10/2026 | — | Plano das etapas 4D (Congresso ao vivo), 4E (janelas) e 4F (mês mais vivo) aprovado e escrito no DESIGN.md (seção 25); a 5B passa para depois da 4F |
 | 30/10/2026 | — | Decisão: nova etapa 4C3 (Supremo no caminho das medidas, liminar, travar votação, consulta, abas Câmara/Senado/Supremo/Ministérios) antes da 4D; plano no DESIGN.md (seção 26); versões das etapas seguintes renumeradas (4D v0.15, 4E v0.16, 4F v0.17) |
+| 30/10/2026 | v0.14.0 | Etapa 4C3: risco jurídico pela regra do instrumento (31 medidas), ação quase certa para risco alto, liminar com fato do mês (esperar, recuar, recorrer, criticar), projeto travado no Supremo, filtro da CCJ, consulta ao Supremo; abas Câmara · Senado · Supremo · Ministérios, com desgaste, meta por pasta e reforma ministerial; save 12 |

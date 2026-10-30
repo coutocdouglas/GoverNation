@@ -4,9 +4,9 @@ import { BILL_BY_ID, GDP_BILLIONS, INSTRUMENTS } from '../game/data/bills'
 import { PARTIES, PARTY_BY_ID } from '../game/data/parties'
 import { monthLabel } from '../game/game'
 import type { Articulation, BillId, Deal, GameState, PartyId, VoteRecord } from '../game/types'
-import type { MinistryChange } from '../game/camara'
 import type { MonthPlan } from '../game/game'
-import { FrentesCard, MinistriesCard, SanctionCard, SenateCard, SpeakerCard } from './CamaraPanels'
+import { FrentesCard, SanctionCard, SpeakerCard } from './CamaraPanels'
+import { ccjApplies, isFrozen } from '../game/supremo'
 import { Portrait } from './Portrait'
 import { num } from './format'
 
@@ -41,7 +41,7 @@ function useHemicycle() {
   }, [])
 }
 
-export function CongressView({ state, articulations, onToggle, bill, extraBill, deals, onNegotiate, plan, sanctions, onSanction, ministry, onMinistry, onReaction }: {
+export function CongressView({ state, articulations, onToggle, bill, extraBill, deals, onNegotiate, plan, sanctions, onSanction, onReaction }: {
   state: GameState
   articulations: Articulation[]
   onToggle: (a: Articulation) => void
@@ -52,8 +52,6 @@ export function CongressView({ state, articulations, onToggle, bill, extraBill, 
   plan?: MonthPlan
   sanctions?: Record<string, 'sancionar' | 'vetar'>
   onSanction?: (id: string, d: 'sancionar' | 'vetar') => void
-  ministry?: MinistryChange | null
-  onMinistry?: (c: MinistryChange | null) => void
   onReaction?: (id: BillId) => void
 }) {
   const seats = useHemicycle()
@@ -91,8 +89,6 @@ export function CongressView({ state, articulations, onToggle, bill, extraBill, 
       {onSanction && <SanctionCard state={state} sanctions={sanctions ?? {}} onSanction={onSanction} />}
 
       <SpeakerCard state={state} articulations={articulations} onToggle={onToggle} />
-
-      <SenateCard state={state} articulations={articulations} onToggle={onToggle} onNegotiate={onNegotiate} />
 
       {watching.length > 0 && (
         <section className="pn-card pn-card--gold">
@@ -147,8 +143,6 @@ export function CongressView({ state, articulations, onToggle, bill, extraBill, 
           })}
         </div>
       </section>
-
-      {onMinistry && <MinistriesCard state={state} change={ministry ?? null} onChange={onMinistry} />}
 
       <FrentesCard state={state} />
 
@@ -208,6 +202,9 @@ export function ForecastRow({ state, id, isNew, deals, plan }: { state: GameStat
     has('hold') ? '⏸ fica na pauta' : '',
     has('symbolic') ? '🔨 simbólica' : '',
     pb?.holds ? `🗄️ ${pb.holds}× na gaveta` : '',
+    isFrozen(state, id) ? '🔒 travado pelo Supremo' : '',
+    pb && ccjApplies(state, id, pb) ? '⚖️ passa pela CCJ' : '',
+    (pb ?? inSenate)?.ccj === 'adequado' ? '⚖️ adequado na CCJ' : '',
   ].filter(Boolean)
   const tone = f.chance > 0.6 ? 'up' : f.chance > 0.35 ? 'warn' : 'dn'
   const target = f.needed || Math.ceil((f.yes + f.no) / 2) + 1

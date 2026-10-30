@@ -2,35 +2,91 @@
 import { BILL_BY_ID, INSTRUMENTS, RESUBMIT_COOLDOWN, type BillDef, type LegalRisk } from './data/bills'
 import { SEED_RULES } from './data/consequences'
 import { PARTIES, PARTY_BY_ID } from './data/parties'
-import { DOCTRINE_PARTIES, JUSTICE_BY_ID, JUSTICES, LEGAL_RISK, NOMINEE_BY_ID, NOMINEES, SUPREMO, type Doctrine, type NomineeDef } from './data/supremo'
+import { CATALOG_MATTERS, DOCTRINE_PARTIES, JUSTICE_BY_ID, JUSTICES, LEGAL_RISK, NO_MP_MATTERS, NOMINEE_BY_ID, NOMINEES, RULE_EXEMPT, SUPREMO, type Doctrine, type MatterId, type NomineeDef } from './data/supremo'
+import { CCJ } from './data/camara'
 import { SENADO } from './data/senado'
 import { amendmentFor } from './camara'
 import { forecastNomination, isRecess, type Forecast } from './congress'
-import { register } from './custom'
+import { MATTERS, RANK, register } from './custom'
 import { affinity, clamp } from './ideology'
 import { absMonth, addBio, addChronicle, yearOf } from './memory'
 import type { Rng } from './rng'
-import type { BillId, Cause, CourtCase, EventOrigin, GameState, GroupId, Headline, Impulse, Instrument, JusticeSeat, PartyId, Ruling, SupremoState } from './types'
+import type { BillId, Cause, Consulta, CourtCase, EventOrigin, GameState, GroupId, Headline, Impulse, Instrument, JusticeSeat, PartyId, PendingBill, Ruling, SupremoState } from './types'
 
 const lowerFirst = (t: string) => (/^[A-ZÀ-Ú]{2}/.test(t) ? t : t.charAt(0).toLowerCase() + t.slice(1))
 
 // ─── Risco jurídico ───────────────────────────────────────────────────────────
 
-/** Risco jurídico de qualquer medida: o da ficha (medidas criadas pela IA), o da lista do catálogo, ou baixo. */
-export function legalRiskOf(id: BillId): LegalRisk {
-  const b = BILL_BY_ID[id]
-  if (!b) return 'baixo'
-  return b.custom?.legalRisk ?? LEGAL_RISK[id]?.risk ?? 'baixo'
+const RISK_RANK: Record<LegalRisk, number> = { baixo: 0, medio: 1, alto: 2 }
+const maxRisk = (a: LegalRisk, b: LegalRisk): LegalRisk => (RISK_RANK[b] > RISK_RANK[a] ? b : a)
+
+export interface RiskRead {
+  risk: LegalRisk
+  reason: string
+  /** De onde veio: a lista das polêmicas, a regra do instrumento ou a ficha da IA. */
+  source: 'lista' | 'regra' | 'ficha' | 'nenhum'
 }
 
-/** Por que a medida pode cair no Supremo (texto para o parecer). */
-export function legalReasonOf(id: BillId): string {
+/** Matérias de uma medida: as da ficha (medidas da IA) ou as do catálogo. */
+export function mattersOf(b: BillDef): MatterId[] {
+  return ((b.custom?.matters ?? CATALOG_MATTERS[b.id] ?? []) as MatterId[]).filter((m) => m in MATTERS)
+}
+
+/**
+ * Etapa 4C3: risco jurídico pela regra do instrumento, calculado com o que o jogo sabe da medida.
+ * Decreto não cria imposto nem despesa permanente grande; MP não trata de pena nem de direito fundamental;
+ * instrumento mais fraco que o exigido pela matéria é vício de forma.
+ */
+export function ruleRiskOf(b: BillDef): RiskRead | null {
+  if (RULE_EXEMPT.includes(b.id)) return null
+  const e = b.effects
+  const found: RiskRead[] = []
+  const add = (risk: LegalRisk, reason: string) => found.push({ risk, reason, source: 'regra' })
+  if (b.instrument === 'decreto') {
+    if ((e.revenue ?? 0) > 0) add('alto', 'Decreto não pode criar nem aumentar imposto: só lei pode.')
+    else if ((e.revenue ?? 0) < -SUPREMO.decreeRenuncia) add('medio', 'Abre mão de receita por decreto, sem lei e sem dizer de onde vem a compensação.')
+    const sp = e.spending ?? 0
+    if (sp > 2 * SUPREMO.decreeSpending) add('alto', 'Despesa nova permanente desse tamanho precisa de lei.')
+    else if (sp > SUPREMO.decreeSpending) add('medio', 'Despesa nova permanente precisa de lei; por decreto, pode cair.')
+  }
+  const matters = mattersOf(b)
+  if (b.instrument === 'mp') {
+    const bad = matters.find((m) => NO_MP_MATTERS.includes(m))
+    if (bad) add('alto', `Medida provisória não pode tratar de matéria que ${MATTERS[bad].label}.`)
+  }
+  for (const m of matters) {
+    const min = MATTERS[m].min as Instrument
+    if (RANK[b.instrument] < RANK[min]) add('alto', `Vício de forma: a medida ${MATTERS[m].label} e exige ${INSTRUMENTS[min].label.toLowerCase()}.`)
+  }
+  return found.reduce<RiskRead | null>((best, r) => (!best || RISK_RANK[r.risk] > RISK_RANK[best.risk] ? r : best), null)
+}
+
+/** Leitura completa do risco: o maior entre a lista, a regra do instrumento e a ficha (empate: lista, depois regra). */
+export function legalReadOf(id: BillId): RiskRead {
   const b = BILL_BY_ID[id]
-  if (LEGAL_RISK[id]) return LEGAL_RISK[id].reason
-  const risk = legalRiskOf(id)
-  if (b?.custom && risk !== 'baixo') return 'O próprio gabinete apontou risco de contestação ao redigir a medida.'
-  if (risk === 'baixo') return 'Sem problema jurídico conhecido: dificilmente alguém leva ao Supremo.'
-  return 'Pode ser contestada na Justiça.'
+  if (!b) return { risk: 'baixo', reason: 'Sem problema jurídico conhecido: dificilmente alguém leva ao Supremo.', source: 'nenhum' }
+  const options: RiskRead[] = []
+  if (LEGAL_RISK[id]) options.push({ risk: LEGAL_RISK[id].risk, reason: LEGAL_RISK[id].reason, source: 'lista' })
+  const rule = ruleRiskOf(b)
+  if (rule) options.push(rule)
+  if (b.custom && b.custom.legalRisk !== 'baixo') options.push({ risk: b.custom.legalRisk, reason: 'O próprio gabinete apontou risco de contestação ao redigir a medida.', source: 'ficha' })
+  const best = options.reduce<RiskRead | null>((a, r) => (!a || RISK_RANK[r.risk] > RISK_RANK[a.risk] ? r : a), null)
+  return best ?? { risk: 'baixo', reason: 'Sem problema jurídico conhecido: dificilmente alguém leva ao Supremo.', source: 'nenhum' }
+}
+
+/** Risco jurídico de qualquer medida (sem o ajuste da CCJ). */
+export const legalRiskOf = (id: BillId): LegalRisk => legalReadOf(id).risk
+
+/** Por que a medida pode cair no Supremo (texto para o parecer). */
+export const legalReasonOf = (id: BillId): string => legalReadOf(id).reason
+
+/** Risco neste jogo: a CCJ pode ter rebaixado com uma emenda de adequação. */
+export function legalRiskIn(s: Pick<GameState, 'supremo'>, id: BillId): LegalRisk {
+  return s.supremo?.adjusted?.[id] ?? legalRiskOf(id)
+}
+
+export function legalReasonIn(s: Pick<GameState, 'supremo'>, id: BillId): string {
+  return s.supremo?.adjusted?.[id] ? `A CCJ aprovou uma emenda de adequação e o risco caiu. ${legalReasonOf(id)}` : legalReasonOf(id)
 }
 
 export const RISK_LABEL: Record<LegalRisk, string> = { baixo: 'Baixo', medio: 'Médio', alto: 'Alto' }
@@ -77,7 +133,7 @@ export function relationTarget(s: Pick<GameState, 'playerParty' | 'presidentName
 export function initialSupremo(s: Pick<GameState, 'playerParty' | 'presidentName'>): SupremoState {
   const justices: JusticeSeat[] = JUSTICES.map((j) => ({ id: j.id, relation: 0 }))
   for (const seat of justices) seat.relation = Math.round(relationTarget(s, seat))
-  return { justices, cases: [], rulings: [], watch: [], vacancy: null, used: [] }
+  return { justices, cases: [], rulings: [], watch: [], vacancy: null, used: [], consultas: [], adjusted: {} }
 }
 
 // ─── Voto de cada ministro ────────────────────────────────────────────────────
@@ -90,27 +146,27 @@ function phi(x: number): number {
 }
 
 /** Pontuação do ministro, sem o ruído: acima de zero tende a derrubar. */
-export function strikeScore(seat: JusticeSeat, bill: BillDef): number {
+export function strikeScore(seat: JusticeSeat, bill: BillDef, risk: LegalRisk = legalRiskOf(bill.id)): number {
   const info = justiceInfo(seat)
   const aff = affinity(info.econ, info.costumes, bill)
   return SUPREMO.base +
-    SUPREMO.riskWeight[legalRiskOf(bill.id)] +
+    SUPREMO.riskWeight[risk] +
     SUPREMO.wDisagree * (SUPREMO.disagreePivot - aff) +
     SUPREMO.wRelation * (50 - seat.relation) / 50
 }
 
 /** Por que o ministro tende a votar assim (para a tela). */
-export function voteReasons(seat: JusticeSeat, bill: BillDef): Cause[] {
+export function voteReasons(seat: JusticeSeat, bill: BillDef, risk: LegalRisk = legalRiskOf(bill.id)): Cause[] {
   const info = justiceInfo(seat)
   const aff = affinity(info.econ, info.costumes, bill)
   return [
-    { label: `Risco jurídico ${RISK_LABEL[legalRiskOf(bill.id)].toLowerCase()}`, value: SUPREMO.base + SUPREMO.riskWeight[legalRiskOf(bill.id)] },
+    { label: `Risco jurídico ${RISK_LABEL[risk].toLowerCase()}`, value: SUPREMO.base + SUPREMO.riskWeight[risk] },
     { label: aff >= SUPREMO.disagreePivot ? 'Concorda com o conteúdo' : 'Discorda do conteúdo', value: SUPREMO.wDisagree * (SUPREMO.disagreePivot - aff) },
     { label: 'Relação com o governo', value: SUPREMO.wRelation * (50 - seat.relation) / 50 },
   ]
 }
 
-export const strikeProb = (seat: JusticeSeat, bill: BillDef) => phi(strikeScore(seat, bill) / SUPREMO.noise)
+export const strikeProb = (seat: JusticeSeat, bill: BillDef, risk?: LegalRisk) => phi(strikeScore(seat, bill, risk) / SUPREMO.noise)
 
 export interface RulingForecast {
   votes: { justice: string; p: number }[]
@@ -121,9 +177,9 @@ export interface RulingForecast {
 }
 
 /** Placar provável se a medida fosse julgada hoje, sem sorteio. */
-export function forecastRuling(s: GameState, id: BillId): RulingForecast {
+export function forecastRuling(s: GameState, id: BillId, risk: LegalRisk = legalRiskIn(s, id)): RulingForecast {
   const bill = BILL_BY_ID[id]
-  const votes = s.supremo.justices.map((j) => ({ justice: j.id, p: bill ? strikeProb(j, bill) : 0 }))
+  const votes = s.supremo.justices.map((j) => ({ justice: j.id, p: bill ? strikeProb(j, bill, risk) : 0 }))
   // Distribuição exata do número de votos para derrubar (soma de sorteios independentes).
   let dist = [1]
   for (const v of votes) {
@@ -139,17 +195,28 @@ export function forecastRuling(s: GameState, id: BillId): RulingForecast {
 
 /** Uma medida entrou em vigor: se tem risco, fica na mira por alguns meses. */
 export function noteInForce(s: GameState, id: BillId, author: string, scale?: number): void {
-  if (legalRiskOf(id) === 'baixo') return
+  if (legalRiskIn(s, id) === 'baixo') return
   const sup = s.supremo
   sup.watch = sup.watch.filter((w) => w.bill !== id)
   sup.watch.push({ bill: id, since: absMonth(s), author, scale: scale !== undefined && scale !== 1 ? scale : undefined })
 }
 
-/** A medida deixou de valer (MP derrubada no Congresso): sai da mira e as ações perdem o objeto. */
-export function dropInForce(s: GameState, id: BillId): void {
+/** A medida deixou de valer (MP derrubada no Congresso): sai da mira e as ações perdem o objeto. Devolve se estava suspensa por liminar. */
+export function dropInForce(s: GameState, id: BillId): boolean {
+  const was = isSuspended(s, id)
   s.supremo.watch = s.supremo.watch.filter((w) => w.bill !== id)
   s.supremo.cases = s.supremo.cases.filter((c) => c.bill !== id)
+  return was
 }
+
+/** Medida em vigor suspensa por liminar (efeitos parados até o plenário). */
+export const isSuspended = (s: Pick<GameState, 'supremo'>, id: BillId) => s.supremo.cases.some((c) => c.bill === id && c.suspended && c.kind !== 'projeto')
+
+/** Projeto com a tramitação travada pelo Supremo (não vai a voto até o plenário julgar). */
+export const isFrozen = (s: Pick<GameState, 'supremo'>, id: BillId) => s.supremo.cases.some((c) => c.bill === id && c.suspended && c.kind === 'projeto')
+
+/** Ação aberta contra a medida ou o projeto, se houver. */
+export const caseOf = (s: Pick<GameState, 'supremo'>, id: BillId) => s.supremo.cases.find((c) => c.bill === id)
 
 /** Quem leva a medida ao Supremo: o partido de oposição mais contrário a ela, ou ninguém. */
 export function challengerOf(s: GameState, id: BillId): PartyId | null {
@@ -170,7 +237,108 @@ export function challengerOf(s: GameState, id: BillId): PartyId | null {
 
 /** Chance de a medida ser contestada neste mês. */
 export function fileChanceOf(s: GameState, id: BillId): number {
-  return SUPREMO.fileChance[legalRiskOf(id)] * (SUPREMO.fileBase + (s.rival?.strength ?? 35) / 100)
+  if (isCleared(s, id)) return 0
+  return SUPREMO.fileChance[legalRiskIn(s, id)] * rivalFactor(s)
+}
+
+const rivalFactor = (s: GameState) => SUPREMO.fileBase + (s.rival?.strength ?? 35) / 100
+
+/** Chance de o relator sorteado dar liminar (média entre os ministros, para a leitura antes de assinar). */
+export function liminarChanceOf(s: GameState, id: BillId): number {
+  const bill = BILL_BY_ID[id]
+  const risk = legalRiskIn(s, id)
+  if (!bill || !s.supremo.justices.length) return 0
+  const avg = s.supremo.justices.reduce((a, j) => a + strikeProb(j, bill, risk), 0) / s.supremo.justices.length
+  return SUPREMO.liminarFactor[risk] * avg
+}
+
+// ─── Projetos no Congresso que podem ser contestados (etapa 4C3) ───────────────
+
+export interface ProjectChallenge { key: 'alto' | 'fundamental' | 'jabuti'; reason: string; risk: LegalRisk }
+
+/** Por que a oposição pode levar um projeto ao Supremo antes da votação, ou null. */
+export function projectChallengeOf(s: GameState, p: Pick<PendingBill, 'id' | 'amendment' | 'original'>): ProjectChallenge | null {
+  const b = BILL_BY_ID[p.id]
+  if (!b || b.instrument === 'mp' || b.instrument === 'decreto' || isCleared(s, p.id)) return null
+  const risk = legalRiskIn(s, p.id)
+  if (risk === 'alto') return { key: 'alto', reason: legalReasonIn(s, p.id), risk }
+  if (b.instrument === 'pec' && mattersOf(b).includes('direito_fundamental')) return { key: 'fundamental', reason: 'PEC que mexe em direito fundamental, protegido como cláusula pétrea.', risk: maxRisk(risk, 'medio') }
+  if (!p.original && p.amendment?.kind === 'jabuti') return { key: 'jabuti', reason: 'Jabuti: trecho enxertado sem relação com o projeto (contrabando legislativo).', risk: maxRisk(risk, 'medio') }
+  return null
+}
+
+// ─── Consulta ao Supremo (etapa 4C3) ──────────────────────────────────────────
+
+/** Consulta aberta (sem resposta), se houver. */
+export const openConsulta = (s: Pick<GameState, 'supremo'>): Consulta | undefined => s.supremo.consultas?.find((c) => !c.result)
+
+/** Última consulta sobre a medida. */
+export const consultaOf = (s: Pick<GameState, 'supremo'>, id: BillId): Consulta | undefined =>
+  [...(s.supremo.consultas ?? [])].reverse().find((c) => c.bill === id)
+
+/** A medida foi chancelada pelo Supremo e está imune a ações. */
+export function isCleared(s: Pick<GameState, 'supremo' | 'month' | 'term'>, id: BillId): boolean {
+  const c = consultaOf(s, id)
+  return !!c && c.result === 'chancelada' && (c.until ?? 0) > absMonth(s)
+}
+
+/** Motivo pelo qual não dá para consultar o Supremo sobre esta medida agora, ou null. */
+export function consultBlockedReason(s: GameState, id: BillId): string | null {
+  const b = BILL_BY_ID[id]
+  if (!b) return 'Medida desconhecida.'
+  const c = s.congress
+  if (c.laws.includes(id) || c.pending.some((p) => p.id === id) || c.senate.pending.some((p) => p.id === id)) return 'A consulta é antes de enviar a medida.'
+  if (legalRiskIn(s, id) === 'baixo') return 'Sem risco jurídico: não há o que perguntar ao Supremo.'
+  const open = openConsulta(s)
+  if (open) return open.bill === id ? 'Você já pediu o parecer desta medida.' : `Já há uma consulta aberta (${open.name}). Uma por vez.`
+  if (isCleared(s, id)) return 'O Supremo já chancelou esta medida.'
+  if (!s.supremo.justices.length) return 'O Supremo não tem ministros.'
+  return null
+}
+
+/** O governo pede o parecer: a medida espera alguns meses e a corte fica de olho. */
+export function askConsulta(s: GameState, id: BillId): void {
+  const now = absMonth(s)
+  const b = BILL_BY_ID[id]
+  s.supremo.consultas.push({ bill: id, name: b.name, askedAt: now, readyAt: now + SUPREMO.consulta.months })
+  if (s.supremo.consultas.length > 12) s.supremo.consultas.splice(0, s.supremo.consultas.length - 12)
+  for (const j of s.supremo.justices) j.relation = clamp(j.relation + SUPREMO.consulta.askHit, 0, 100)
+  addBio(s, s.presidentName, `Pediu ao Supremo um parecer sobre “${b.name}” antes de enviá-la.`)
+}
+
+// ─── CCJ (etapa 4C3) ──────────────────────────────────────────────────────────
+
+export interface CcjForecast { aprova: number; adequa: number; barra: number; chair: PartyId }
+
+/** Projeto que passa pelo filtro da CCJ: risco alto, ainda na comissão, sem urgência e sem ter passado antes. */
+export function ccjApplies(s: GameState, id: BillId, p?: Pick<PendingBill, 'stage' | 'urgent' | 'ccj'>): boolean {
+  const b = BILL_BY_ID[id]
+  if (!b || !['lei', 'complementar', 'pec'].includes(b.instrument)) return false
+  if (p && (p.stage !== 'comissao' || p.urgent || p.ccj)) return false
+  return legalRiskIn(s, id) === 'alto' && !isCleared(s, id)
+}
+
+function ccjScore(s: GameState, id: BillId): number {
+  const k = SUPREMO.ccj
+  const chair = PARTY_BY_ID[CCJ.chair]
+  const aff = affinity(chair.econ, chair.costumes, BILL_BY_ID[id])
+  const rel = CCJ.chair === s.playerParty ? 80 : s.congress.parties[CCJ.chair].relation
+  return k.base + k.wAffinity * (aff - k.pivot) + k.wRelation * (rel - 50)
+}
+
+/** Chance de a CCJ aprovar, aprovar com emenda de adequação ou barrar como inconstitucional. */
+export function ccjForecast(s: GameState, id: BillId): CcjForecast {
+  const k = SUPREMO.ccj
+  const x = ccjScore(s, id)
+  const aprova = 1 - phi((k.approveAbove - x) / k.noise)
+  const barra = phi((k.barBelow - x) / k.noise)
+  return { aprova, barra, adequa: Math.max(0, 1 - aprova - barra), chair: CCJ.chair }
+}
+
+export function ccjRoll(s: GameState, id: BillId, rng: Rng): 'aprovado' | 'adequado' | 'barrado' {
+  const f = ccjForecast(s, id)
+  const r = rng.next()
+  return r < f.aprova ? 'aprovado' : r < f.aprova + f.adequa ? 'adequado' : 'barrado'
 }
 
 // ─── O mês do Supremo ─────────────────────────────────────────────────────────
@@ -180,15 +348,44 @@ export interface Struck {
   author: string
   scale?: number
   ruling: Ruling
+  /** Estava suspensa por liminar (os efeitos em dinheiro já tinham sido desfeitos). */
+  wasSuspended?: boolean
+}
+
+/** O que o Supremo fez no mês e o motor precisa aplicar na economia e nos grupos. */
+export interface SupremoMonth {
+  /** Medida derrubada pelo plenário. */
+  struck: Struck | null
+  /** Etapa 4C3: liminar suspendeu uma medida em vigor (os efeitos em dinheiro param). */
+  suspended: { bill: BillId; author: string; scale?: number } | null
+  /** Etapa 4C3: o plenário manteve uma medida suspensa por liminar (os efeitos voltam). */
+  restored: { bill: BillId; scale?: number } | null
+  /** Etapa 4C3: projeto derrubado ainda no Congresso (arquivado). */
+  archived: BillId | null
+}
+
+const gaussOf = (rng: Rng) => () => {
+  const u = Math.max(1e-9, rng.next())
+  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * rng.next())
+}
+const placarOf = (r: Ruling) => {
+  const yes = r.votes.filter((v) => v.strike).length
+  return `${Math.max(yes, r.votes.length - yes)} a ${Math.min(yes, r.votes.length - yes)}`
+}
+const minister = (id: string) => {
+  const r = justiceInfo({ id })
+  return `${r.feminine ? 'ministra' : 'ministro'} ${r.name}`
 }
 
 /**
- * Aposentadorias, deriva das relações, julgamento do mês (no máximo um) e novas ações.
- * Devolve a medida derrubada (se houver) para o motor desfazer os efeitos.
+ * Aposentadorias, deriva das relações, consultas, julgamento do mês (no máximo um), novas ações e liminares.
+ * Devolve o que o motor precisa aplicar (derrubada, suspensão, retorno ou projeto arquivado).
  */
-export function stepSupremo(s: GameState, rng: Rng, headlines: Headline[]): Struck | null {
+export function stepSupremo(s: GameState, rng: Rng, headlines: Headline[]): SupremoMonth {
   const sup = s.supremo
   const now = absMonth(s)
+  const c = s.congress
+  const out: SupremoMonth = { struck: null, suspended: null, restored: null, archived: null }
 
   // 1. Aposentadoria aos 75 anos (uma vaga aberta por vez: quem faz 75 com outra vaga aberta espera).
   if (!sup.vacancy) {
@@ -198,7 +395,7 @@ export function stepSupremo(s: GameState, rng: Rng, headlines: Headline[]): Stru
       sup.justices = sup.justices.filter((j) => j !== leaving)
       sup.vacancy = { since: now, retired: leaving.id, rejected: [] }
       // Ação que estava com ele vai para outro relator.
-      for (const c of sup.cases.filter((x) => x.relator === leaving.id)) c.relator = sup.justices[Math.floor(rng.next() * sup.justices.length)].id
+      for (const x of sup.cases.filter((y) => y.relator === leaving.id)) x.relator = sup.justices[Math.floor(rng.next() * sup.justices.length)].id
       headlines.push({ text: `${info.feminine ? 'Ministra' : 'Ministro'} ${info.name} faz 75 anos e se aposenta: a vaga no Supremo é sua, presidente`, tone: 'neutral' })
       addBio(s, info.name, `Aposentou-se do Supremo aos 75 anos, depois de ${yearOf(now) - info.year} anos na corte.`)
       addChronicle(s, `${info.feminine ? 'Ministra' : 'Ministro'} ${info.name} se aposenta; abre-se uma vaga no Supremo no governo ${s.presidentName}`, 'neutral')
@@ -208,73 +405,151 @@ export function stepSupremo(s: GameState, rng: Rng, headlines: Headline[]): Stru
   // 2. A relação de cada ministro com o governo volta aos poucos para o natural.
   for (const j of sup.justices) j.relation = clamp(j.relation + (relationTarget(s, j) - j.relation) * SUPREMO.relationDrift, 0, 100)
 
-  // 3. Medidas em vigor: saem da mira depois da janela ou se deixaram de valer.
-  sup.watch = sup.watch.filter((w) => now - w.since < SUPREMO.window && s.congress.laws.includes(w.bill))
+  // 3. Medidas em vigor: saem da mira depois da janela ou se deixaram de valer (as suspensas seguem até o julgamento).
+  sup.watch = sup.watch.filter((w) => (now - w.since < SUPREMO.window || isSuspended(s, w.bill)) && c.laws.includes(w.bill))
 
-  // 4. Julgamento (no máximo um por mês): a ação mais antiga que venceu o prazo.
-  let struck: Struck | null = null
-  const due = sup.cases.filter((c) => c.judgeAt <= now).sort((a, b) => a.judgeAt - b.judgeAt)[0]
+  // 3b. Etapa 4C3: consultas que venceram o prazo. O parecer sai pela própria previsão do plenário.
+  for (const q of sup.consultas.filter((x) => !x.result && x.readyAt <= now)) {
+    if (!BILL_BY_ID[q.bill] || !sup.justices.length) { q.result = 'reprovada'; continue }
+    const chance = forecastRuling(s, q.bill).chance
+    if (rng.next() < chance) {
+      q.result = 'reprovada'
+      for (const j of sup.justices) j.relation = clamp(j.relation + SUPREMO.consulta.reprovadaHit, 0, 100)
+      headlines.push({ text: `Supremo responde à consulta do governo: “${q.name}” seria inconstitucional como está`, tone: 'bad' })
+      addBio(s, s.presidentName, `Recebeu parecer contrário do Supremo sobre “${q.name}”.`)
+    } else {
+      q.result = 'chancelada'
+      q.until = now + SUPREMO.consulta.immunity
+      headlines.push({ text: `Supremo chancela “${q.name}”: a medida fica protegida de ações por ${SUPREMO.consulta.immunity} meses`, tone: 'good' })
+      addBio(s, s.presidentName, `Teve “${q.name}” chancelada pelo Supremo antes de enviá-la.`)
+    }
+  }
+
+  // 4. Julgamento (no máximo um por mês): o recurso do governo primeiro, depois a ação mais antiga que venceu o prazo.
+  const due = sup.cases.filter((x) => x.judgeAt <= now).sort((a, b) => (a.appealed === b.appealed ? a.judgeAt - b.judgeAt : a.appealed ? -1 : 1))[0]
   if (due) {
-    sup.cases = sup.cases.filter((c) => c !== due)
+    sup.cases = sup.cases.filter((x) => x !== due)
     const bill = BILL_BY_ID[due.bill]
-    if (bill && s.congress.laws.includes(due.bill)) {
+    const party = PARTY_BY_ID[due.party]
+    const relator = justiceInfo({ id: due.relator })
+    const inForce = c.laws.includes(due.bill)
+    const inCongress = c.pending.some((p) => p.id === due.bill) || c.senate.pending.some((p) => p.id === due.bill)
+    if (bill && !inForce && inCongress && due.kind === 'projeto') {
+      // Projeto ainda no Congresso: se cair, é arquivado.
       const ruling = judge(s, due, bill, rng)
-      sup.rulings.push(ruling)
-      if (sup.rulings.length > 40) sup.rulings.splice(0, sup.rulings.length - 40)
+      ruling.project = true
+      pushRuling(sup, ruling)
+      const placar = placarOf(ruling)
+      if (ruling.struck) {
+        out.archived = due.bill
+        headlines.push({ text: `Supremo barra ${lowerFirst(bill.name)} ainda no Congresso (${placar}), a pedido do ${party.sigla}. O projeto é arquivado`, tone: 'bad' })
+        addBio(s, s.presidentName, `Teve um projeto barrado no Supremo antes da votação: ${bill.name} (${placar}).`)
+        addBio(s, relator.name, `Relatou a ação do ${party.sigla} contra o projeto “${bill.name}”: arquivado (${placar}).`)
+        addBio(s, party.leader.name, `Levou ao Supremo o projeto “${bill.name}” e conseguiu barrá-lo (${placar}).`)
+        addChronicle(s, `Supremo barra no Congresso ${lowerFirst(bill.name)}, do governo ${s.presidentName}`, 'bad')
+      } else {
+        headlines.push({ text: `Supremo libera ${lowerFirst(bill.name)} (${placar}): o projeto ${due.suspended ? 'volta a tramitar' : 'segue no Congresso'}`, tone: 'good' })
+        addBio(s, relator.name, `Relatou a ação do ${party.sigla} contra o projeto “${bill.name}”: liberado (${placar}).`)
+        addBio(s, party.leader.name, `Perdeu no Supremo a ação contra o projeto “${bill.name}” (${placar}).`)
+      }
+    } else if (bill && inForce) {
+      const ruling = judge(s, due, bill, rng)
+      pushRuling(sup, ruling)
       const w = sup.watch.find((x) => x.bill === due.bill)
       sup.watch = sup.watch.filter((x) => x.bill !== due.bill)
-      const yes = ruling.votes.filter((v) => v.strike).length
-      const placar = `${Math.max(yes, ruling.votes.length - yes)} a ${Math.min(yes, ruling.votes.length - yes)}`
-      const party = PARTY_BY_ID[due.party]
-      const relator = justiceInfo({ id: due.relator })
+      const placar = placarOf(ruling)
       if (ruling.struck) {
         headlines.push({ text: `Supremo derruba ${lowerFirst(bill.name)} por ${placar}, a pedido do ${party.sigla}. A medida deixa de valer`, tone: 'bad' })
         addBio(s, s.presidentName, `Teve uma medida derrubada no Supremo: ${bill.name} (${placar}).`)
         addBio(s, relator.name, `Relatou no Supremo a ação do ${party.sigla} contra “${bill.name}”: a medida caiu (${placar}).`)
         addBio(s, party.leader.name, `Levou o ${party.sigla} ao Supremo contra “${bill.name}” e venceu (${placar}).`)
         addChronicle(s, `Supremo derruba ${lowerFirst(bill.name)} (${placar}), do governo ${s.presidentName}`, 'bad')
-        struck = { bill: due.bill, author: w?.author ?? s.presidentName, scale: w?.scale, ruling }
+        out.struck = { bill: due.bill, author: w?.author ?? s.presidentName, scale: w?.scale, ruling, wasSuspended: due.suspended && due.kind !== 'projeto' }
       } else {
-        headlines.push({ text: `Supremo mantém ${lowerFirst(bill.name)} por ${placar}: o ${party.sigla} perde a ação`, tone: 'good' })
+        const back = due.suspended && due.kind !== 'projeto'
+        headlines.push({ text: `Supremo mantém ${lowerFirst(bill.name)} por ${placar}: o ${party.sigla} perde a ação${back ? ' e a medida volta a valer' : ''}`, tone: 'good' })
         addBio(s, s.presidentName, `Viu o Supremo manter ${lowerFirst(bill.name)} (${placar}).`)
         addBio(s, relator.name, `Relatou no Supremo a ação do ${party.sigla} contra “${bill.name}”: a medida foi mantida (${placar}).`)
         addBio(s, party.leader.name, `Perdeu no Supremo a ação contra “${bill.name}” (${placar}).`)
         addChronicle(s, `Supremo mantém ${lowerFirst(bill.name)} (${placar}), do governo ${s.presidentName}`, 'good')
+        if (back) out.restored = { bill: due.bill, scale: w?.scale }
       }
     }
   }
 
-  // 5. Novas ações: partidos de oposição contestam medidas com risco (uma por mês, no máximo 2 abertas).
+  // 5. Novas ações contra medidas em vigor (uma por mês). Etapa 4C3: o relator pode dar liminar na hora.
   if (sup.cases.length < SUPREMO.maxOpen && sup.justices.length) {
     for (const w of [...sup.watch].sort((a, b) => a.since - b.since)) {
-      if (sup.cases.some((c) => c.bill === w.bill) || sup.rulings.some((r) => r.bill === w.bill)) continue
+      if (sup.cases.some((x) => x.bill === w.bill) || sup.rulings.some((r) => r.bill === w.bill)) continue
       if (rng.next() >= fileChanceOf(s, w.bill)) continue
       const party = challengerOf(s, w.bill)
       if (!party) continue
-      const [lo, hi] = SUPREMO.judgeDelay
-      const relator = sup.justices[Math.floor(rng.next() * sup.justices.length)]
-      const c: CourtCase = { id: `stf-${w.bill}-${now}`, bill: w.bill, party, relator: relator.id, filedAt: now, judgeAt: now + lo + Math.floor(rng.next() * (hi - lo + 1)) }
-      sup.cases.push(c)
       const bill = BILL_BY_ID[w.bill]
-      const rel = justiceInfo(relator)
-      headlines.push({ text: `${PARTY_BY_ID[party].sigla} vai ao Supremo contra ${lowerFirst(bill.name)}; relator: ${rel.feminine ? 'ministra' : 'ministro'} ${rel.name}`, tone: 'bad' })
-      addBio(s, PARTY_BY_ID[party].leader.name, `Levou ao Supremo uma ação do ${PARTY_BY_ID[party].sigla} contra “${bill.name}”.`)
-      addBio(s, rel.name, `Sorteado relator da ação do ${PARTY_BY_ID[party].sigla} contra “${bill.name}”.`)
+      const risk = legalRiskIn(s, w.bill)
+      const relator = sup.justices[Math.floor(rng.next() * sup.justices.length)]
+      const liminar = rng.next() < SUPREMO.liminarFactor[risk] * strikeProb(relator, bill, risk)
+      const [lo, hi] = liminar ? SUPREMO.liminarJudgeDelay : risk === 'alto' ? SUPREMO.judgeDelayHigh : SUPREMO.judgeDelay
+      const x: CourtCase = { id: `stf-${w.bill}-${now}`, bill: w.bill, party, relator: relator.id, filedAt: now, judgeAt: now + lo + Math.floor(rng.next() * (hi - lo + 1)), reason: legalReasonIn(s, w.bill), risk }
+      if (liminar) x.suspended = true
+      sup.cases.push(x)
+      const sigla = PARTY_BY_ID[party].sigla
+      headlines.push({ text: `${sigla} vai ao Supremo contra ${lowerFirst(bill.name)}; relator: ${minister(relator.id)}`, tone: 'bad' })
+      addBio(s, PARTY_BY_ID[party].leader.name, `Levou ao Supremo uma ação do ${sigla} contra “${bill.name}”.`)
+      addBio(s, justiceInfo(relator).name, `Sorteado relator da ação do ${sigla} contra “${bill.name}”.`)
+      if (liminar) {
+        headlines.push({ text: `Liminar: ${minister(relator.id)} suspende ${lowerFirst(bill.name)} até o plenário julgar`, tone: 'bad' })
+        addBio(s, justiceInfo(relator).name, `Deu liminar suspendendo “${bill.name}”, do governo ${s.presidentName}.`)
+        addBio(s, s.presidentName, `Teve “${bill.name}” suspensa por liminar no Supremo.`)
+        addChronicle(s, `Liminar no Supremo suspende ${lowerFirst(bill.name)}, do governo ${s.presidentName}`, 'bad')
+        out.suspended = { bill: w.bill, author: w.author, scale: w.scale }
+      }
       break
     }
   }
-  return struck
+
+  // 6. Etapa 4C3: ação contra projeto ainda no Congresso (uma por mês). O relator pode travar a tramitação.
+  if (sup.cases.length < SUPREMO.maxOpen && sup.justices.length) {
+    for (const p of [...c.pending, ...c.senate.pending]) {
+      if (sup.cases.some((x) => x.bill === p.id) || sup.rulings.some((r) => r.bill === p.id)) continue
+      const ch = projectChallengeOf(s, p)
+      if (!ch) continue
+      if (rng.next() >= SUPREMO.projectFileChance[ch.key] * rivalFactor(s)) continue
+      const party = challengerOf(s, p.id)
+      if (!party) continue
+      const bill = BILL_BY_ID[p.id]
+      const relator = sup.justices[Math.floor(rng.next() * sup.justices.length)]
+      const freeze = rng.next() < SUPREMO.freezeFactor * strikeProb(relator, bill, ch.risk)
+      const [lo, hi] = SUPREMO.projectJudgeDelay
+      const x: CourtCase = { id: `stf-p-${p.id}-${now}`, bill: p.id, party, relator: relator.id, filedAt: now, judgeAt: now + lo + Math.floor(rng.next() * (hi - lo + 1)), kind: 'projeto', reason: ch.reason, risk: ch.risk }
+      if (freeze) x.suspended = true
+      sup.cases.push(x)
+      const sigla = PARTY_BY_ID[party].sigla
+      headlines.push({
+        text: freeze
+          ? `${sigla} leva ao Supremo o projeto ${lowerFirst(bill.name)} e ${minister(relator.id)} trava a votação até o plenário julgar`
+          : `${sigla} leva ao Supremo o projeto ${lowerFirst(bill.name)}; ${minister(relator.id)} deixa a votação seguir`,
+        tone: 'bad',
+      })
+      addBio(s, PARTY_BY_ID[party].leader.name, `Levou ao Supremo o projeto “${bill.name}” antes da votação.`)
+      if (freeze) addBio(s, justiceInfo(relator).name, `Travou no Supremo a tramitação de “${bill.name}”, do governo ${s.presidentName}.`)
+      break
+    }
+  }
+  return out
+}
+
+function pushRuling(sup: SupremoState, r: Ruling) {
+  sup.rulings.push(r)
+  if (sup.rulings.length > 40) sup.rulings.splice(0, sup.rulings.length - 40)
 }
 
 /** Os votos, um a um: o relator primeiro, depois do mais novo ao mais antigo na corte. */
 function judge(s: GameState, c: CourtCase, bill: BillDef, rng: Rng): Ruling {
   const sup = s.supremo
+  const risk = c.risk ?? legalRiskIn(s, c.bill)
   const order = [...sup.justices].sort((a, b) => (a.id === c.relator ? -1 : b.id === c.relator ? 1 : justiceInfo(b).year - justiceInfo(a).year))
-  const gauss = () => {
-    const u = Math.max(1e-9, rng.next())
-    return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * rng.next())
-  }
-  const votes = order.map((j) => ({ justice: j.id, strike: strikeScore(j, bill) + gauss() * SUPREMO.noise > 0 }))
+  const gauss = gaussOf(rng)
+  const votes = order.map((j) => ({ justice: j.id, strike: strikeScore(j, bill, risk) + gauss() * SUPREMO.noise > 0 }))
   const yes = votes.filter((v) => v.strike).length
   for (const v of votes) {
     const info = justiceInfo({ id: v.justice })
@@ -282,7 +557,7 @@ function judge(s: GameState, c: CourtCase, bill: BillDef, rng: Rng): Ruling {
   }
   return {
     id: c.id, bill: c.bill, name: bill.name, party: c.party, relator: c.relator, at: absMonth(s),
-    votes, struck: yes >= SUPREMO.majority, reason: legalReasonOf(c.bill),
+    votes, struck: yes >= SUPREMO.majority, reason: c.reason ?? legalReasonIn(s, c.bill),
   }
 }
 
@@ -305,8 +580,8 @@ export function struckImpulses(bill: BillDef, scale = 1): { group: GroupId; valu
   return out
 }
 
-/** Origem do fato do mês da derrubada. */
-export function struckOrigin(s: GameState, st: Struck): EventOrigin {
+/** Origem do fato do mês da derrubada (ou da liminar). */
+export function struckOrigin(s: GameState, st: Pick<Struck, 'bill' | 'author'>): EventOrigin {
   return { label: BILL_BY_ID[st.bill].name, author: st.author, party: s.playerParty, year: yearOf(absMonth(s)), bill: st.bill }
 }
 
@@ -328,7 +603,7 @@ export function newVersionBill(s: GameState, id: BillId): BillDef {
     instrument,
     keywords: [],
     cons: `${b.cons} Reenviada depois de derrubada no Supremo.`,
-    custom: { createdAt: at, term: s.term, legalRisk: 'baixo', request: 'Nova versão depois da decisão do Supremo' },
+    custom: { createdAt: at, term: s.term, legalRisk: 'baixo', request: 'Nova versão depois da decisão do Supremo', matters: mattersOf(b).length ? mattersOf(b) : undefined },
   }
 }
 
@@ -337,7 +612,7 @@ export function newVersionBill(s: GameState, id: BillId): BillDef {
  * Devolve causas extras para a força do rival.
  */
 export function applyStfChoice(
-  s: GameState, kind: 'acatar' | 'nova' | 'criticar', origin: EventOrigin | undefined,
+  s: GameState, kind: 'acatar' | 'nova' | 'criticar' | 'esperar' | 'recuar' | 'recorrer', origin: EventOrigin | undefined,
   impulses: Record<GroupId, Impulse[]>, _headlines: Headline[], taken: string[],
 ): Cause[] {
   const sup = s.supremo
@@ -345,6 +620,34 @@ export function applyStfChoice(
   const own = c.parties[s.playerParty]
   const bump = (d: number) => { for (const j of sup.justices) j.relation = clamp(j.relation + d, 0, 100) }
   const name = origin?.label ?? 'a medida'
+  // Etapa 4C3: respostas à liminar.
+  if (kind === 'esperar') {
+    addBio(s, s.presidentName, `Decidiu esperar o plenário do Supremo sobre “${name}”.`)
+    return []
+  }
+  if (kind === 'recorrer') {
+    const x = origin?.bill ? sup.cases.find((y) => y.bill === origin.bill && y.suspended) : undefined
+    if (x) { x.judgeAt = Math.min(x.judgeAt, absMonth(s) + 1); x.appealed = true }
+    bump(SUPREMO.recorrer.ministers)
+    taken.push(`Recorreu ao plenário do Supremo: ${name}`)
+    addBio(s, s.presidentName, `Recorreu da liminar contra “${name}” e pediu julgamento imediato.`)
+    return []
+  }
+  if (kind === 'recuar') {
+    const id = origin?.bill
+    if (!id || !c.laws.includes(id) || !isSuspended(s, id)) return []
+    const bill = BILL_BY_ID[id]
+    const w = sup.watch.find((x) => x.bill === id)
+    c.laws = c.laws.filter((x) => x !== id)
+    sup.cases = sup.cases.filter((x) => x.bill !== id)
+    sup.watch = sup.watch.filter((x) => x.bill !== id)
+    for (const x of struckImpulses(bill, w?.scale)) impulses[x.group].push({ label: x.label.replace('Supremo derruba', 'Governo revoga'), value: x.value })
+    bump(SUPREMO.recuar.ministers)
+    taken.push(`Revogou a medida suspensa pelo Supremo: ${name}`)
+    addBio(s, s.presidentName, `Recuou e revogou “${name}”, suspensa por liminar no Supremo.`)
+    addChronicle(s, `Governo ${s.presidentName} revoga ${lowerFirst(name)} depois de liminar no Supremo`, 'neutral')
+    return []
+  }
   if (kind === 'acatar') {
     bump(SUPREMO.acatar.ministers)
     own.relation = clamp(own.relation + SUPREMO.acatar.ownParty, 0, 100)

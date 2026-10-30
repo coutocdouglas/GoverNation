@@ -92,7 +92,8 @@ describe('resposta escrita ao fato do mês', () => {
     let checked = 0
     for (let seed = 1; seed < 12; seed++) {
       const r = advanceMonth(withEvent(feb(seed), 'dengue'), [], { eventResponse: 'pisoEnfermagem' })
-      const approved = r.lastReport!.votes.find((v) => v.bill === 'pisoEnfermagem')!.approved
+      // Etapa 4C3: risco alto passa pela CCJ, que pode barrar antes do plenário (aí não há votação).
+      const approved = r.lastReport!.votes.find((v) => v.bill === 'pisoEnfermagem' && v.house === 'senado')?.approved ?? false
       expect(r.lastReport!.event!.resolved).toBe(approved)
       checked++
     }
@@ -112,7 +113,7 @@ describe('resposta escrita ao fato do mês', () => {
     const s = advanceMonth(newGame('T', 'normal', 5), [])
     const old = { ...structuredClone(s), saveVersion: 4 } as unknown
     const m = migrate(old)!
-    expect(m.saveVersion).toBe(11)
+    expect(m.saveVersion).toBe(12)
     expect(m.month).toBe(s.month)
     expect(() => advanceMonth(m, [])).not.toThrow()
     expect(BILL_BY_ID.hospitaisCampanha.instrument).toBe('decreto')

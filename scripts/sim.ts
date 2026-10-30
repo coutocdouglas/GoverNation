@@ -6,6 +6,7 @@ import { BILLS } from '../src/game/data/bills'
 import { EVENT_BY_ID } from '../src/game/data/events'
 import { responseBlockedReason, type MonthPlan } from '../src/game/game'
 import { billBlockedReason, forecastVote } from '../src/game/congress'
+import { legalRiskOf } from '../src/game/supremo'
 import type { ActionId, GameState } from '../src/game/types'
 
 /** Responde ao fato do mês com o decreto mais barato da área (etapa 3A). */
@@ -120,5 +121,36 @@ if (process.argv[1]?.endsWith('sim.ts') && !process.argv[2]) {
     const struck = runs.reduce((a, s) => a + s.supremo.rulings.filter((r) => r.struck).length, 0)
     const acoes = runs.reduce((a, s) => a + s.supremo.rulings.length, 0)
     console.log(`  ${n.padEnd(12)} julgamentos ${(acoes / 30).toFixed(1)}  derrubadas ${(struck / 30).toFixed(1)} por mandato`)
+  }
+}
+
+/** Etapa 4C3: quem usa medidas arriscadas. A cada 2 meses manda uma medida com risco jurídico (decreto, MP ou projeto). */
+export function riskyRun(seed: number, party: 'fpt' | 'mdn' | 'pol') {
+  let s = newGame('Teste', 'normal', seed, party, undefined, undefined, { promises: SIM_PROMISES })
+  const n = { liminares: 0, ccjBarra: 0, ccjAdequa: 0, contestados: 0, travados: 0, arquivados: 0 }
+  while (!s.finished) {
+    const pool = BILLS.filter((b) => legalRiskOf(b.id) !== 'baixo' && !billBlockedReason(s, b.id) && (b.instrument === 'decreto' || forecastVote(s, b.id).chance > 0.4))
+    const bill = pool.length && s.month % 2 === 0 ? pool[(s.month * 7 + seed) % pool.length].id : undefined
+    s = advanceMonth(s, STRATEGIES.equilibrado(s), bill ? { bill } : {})
+    for (const h of s.lastReport!.headlines) {
+      if (h.text.startsWith('Liminar:')) n.liminares++
+      if (/^CCJ, presidida/.test(h.text)) n.ccjBarra++
+      if (/^CCJ aprova .* emenda de adequação/.test(h.text)) n.ccjAdequa++
+      if (/leva ao Supremo o projeto/.test(h.text)) n.contestados++
+      if (/trava a votação até o plenário/.test(h.text)) n.travados++
+      if (/ainda no Congresso .* arquivado/.test(h.text)) n.arquivados++
+    }
+  }
+  const r = s.supremo.rulings
+  return { ...n, julgamentos: r.length, derrubadas: r.filter((x) => x.struck).length, score: finalScore(s).total }
+}
+
+if (process.argv[1]?.endsWith('sim.ts') && !process.argv[2]) {
+  console.log('\nSupremo com medidas arriscadas (uma a cada 2 meses, 30 sementes por partido; etapa 4C3):')
+  for (const party of ['fpt', 'mdn', 'pol'] as const) {
+    const r = Array.from({ length: 30 }, (_, i) => riskyRun(3000 + i, party))
+    const avg = (k: keyof (typeof r)[number]) => (r.reduce((a, x) => a + x[k], 0) / 30).toFixed(1)
+    const dist = [0, 1, 2, 3, 4].map((k) => r.filter((x) => (k < 4 ? x.julgamentos === k : x.julgamentos >= 4)).length)
+    console.log(`  ${party}  julgamentos ${avg('julgamentos')} (0/1/2/3/4+: ${dist.join('/')})  derrubadas ${avg('derrubadas')}  liminares ${avg('liminares')}  CCJ barra ${avg('ccjBarra')} adequa ${avg('ccjAdequa')}  projetos contestados ${avg('contestados')} travados ${avg('travados')} arquivados ${avg('arquivados')}`)
   }
 }

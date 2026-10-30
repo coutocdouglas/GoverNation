@@ -23,8 +23,8 @@ export interface EventOption {
   promote?: true
   /** Fato bom: o presidente dá o crédito ao autor (aproxima o partido dele). */
   credit?: true
-  /** Etapa 4C2: resposta a uma derrubada no Supremo (o motor trata em supremo.ts). */
-  stf?: 'acatar' | 'nova' | 'criticar'
+  /** Etapas 4C2 e 4C3: resposta a uma derrubada ou a uma liminar no Supremo (o motor trata em supremo.ts). */
+  stf?: 'acatar' | 'nova' | 'criticar' | 'esperar' | 'recuar' | 'recorrer'
 }
 
 export interface EventDef {
@@ -215,10 +215,10 @@ export const EVENTS: EventDef[] = [
 ]
 
 import { CONSEQUENCE_EVENTS } from './consequences'
-import { STF_EVENT } from './supremo'
+import { STF_EVENT, STF_LIMINAR_EVENT } from './supremo'
 
 /** Todos os fatos: os sorteáveis e os que só nascem de sementes. */
-export const ALL_EVENTS: EventDef[] = [...EVENTS, ...CONSEQUENCE_EVENTS, STF_EVENT]
+export const ALL_EVENTS: EventDef[] = [...EVENTS, ...CONSEQUENCE_EVENTS, STF_EVENT, STF_LIMINAR_EVENT]
 
 export const EVENT_BY_ID = Object.fromEntries(ALL_EVENTS.map((e) => [e.id, e])) as Record<string, EventDef>
 

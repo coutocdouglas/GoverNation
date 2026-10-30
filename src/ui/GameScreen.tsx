@@ -28,8 +28,10 @@ import { INDICATORS, lowerFirst, num, signed, type IndicatorMeta } from './forma
 import { Sparkline } from './Sparkline'
 import { PromisesCard, RivalCard } from './OppositionCards'
 import { LegalRiskLine, RulingAnimation, SupremoMini, SupremoView } from './SupremoView'
+import { MinistriosView, SenadoView } from './GovTabs'
+import { ministriesInTrouble } from '../game/ministerios'
 import { absMonth } from '../game/memory'
-import { NOMINEE_BY_ID } from '../game/data/supremo'
+import { NOMINEE_BY_ID, SUPREMO } from '../game/data/supremo'
 import './painel.css'
 
 type Detail = { kind: 'indicator'; key: IndicatorKey } | { kind: 'group'; id: GroupId } | null
@@ -73,12 +75,13 @@ export function GameScreen({ state, onChange, onExit }: {
   const [ministry, setMinistry] = useState<MinistryChange | null>(null)
   const [post, setPost] = useState<Post[]>([])
   const [reactionView, setReactionView] = useState<BillId | null>(null)
-  const [govTab, setGovTab] = useState<'congresso' | 'supremo'>('congresso')
+  const [govTab, setGovTab] = useState<'camara' | 'senado' | 'supremo' | 'ministerios'>('camara')
   const [nominee, setNominee] = useState<string | null>(null)
+  const [consult, setConsult] = useState<BillId | null>(null)
   setPresidentPortrait(playerPortraitId(state))
   const plan: MonthPlan = {
     bill: bill ?? undefined, articulations, eventChoice: eventChoice ?? undefined, eventResponse: eventResponse ?? undefined, deals,
-    hold: proc.hold, urgent: proc.urgent, original: proc.original, symbolic: proc.symbolic, sanctions, ministry: ministry ?? undefined, nominee: nominee ?? undefined,
+    hold: proc.hold, urgent: proc.urgent, original: proc.original, symbolic: proc.symbolic, sanctions, ministry: ministry ?? undefined, nominee: nominee ?? undefined, consult: consult ?? undefined,
   }
   const onProcedure = (kind: ProcedureKind, id: BillId, on: boolean) => setProc((cur) => {
     const next = { ...cur }
@@ -96,6 +99,12 @@ export function GameScreen({ state, onChange, onExit }: {
     setDeals((ds) => ds.filter((d) => d.bill !== old))
     setProc((cur) => Object.fromEntries(Object.entries(cur).map(([k, ids]) => [k, ids.filter((x) => x !== old)])) as Record<ProcedureKind, BillId[]>)
   }
+  const toggleArticulation = (a: Articulation) =>
+    setArticulations((cur) =>
+      cur.some((x) => x.kind === a.kind && x.party === a.party)
+        ? cur.filter((x) => !(x.kind === a.kind && x.party === a.party))
+        : cur.length < CONGRESS.articulationsPerMonth ? [...cur, a] : cur,
+    )
   const eventRef = useRef<HTMLDivElement>(null)
   const medidaRef = useRef<HTMLElement>(null)
   const history = state.history
@@ -138,6 +147,7 @@ export function GameScreen({ state, onChange, onExit }: {
       setSanctions({})
       setMinistry(null)
       setNominee(null)
+      setConsult(null)
       setTab('painel')
       setStep(1)
       setTurning(false)
@@ -278,13 +288,25 @@ export function GameScreen({ state, onChange, onExit }: {
         ) : tab === 'governo' ? (
           <>
           <div className="pn-subnav">
-            <button className={govTab === 'congresso' ? 'on' : ''} onClick={() => setGovTab('congresso')}>🏛️ Congresso</button>
+            <button className={govTab === 'camara' ? 'on' : ''} onClick={() => setGovTab('camara')}>
+              🏛️ Câmara {state.congress.toSanction.length > 0 && <span className="pn-dot">{state.congress.toSanction.length}</span>}
+            </button>
+            <button className={govTab === 'senado' ? 'on' : ''} onClick={() => setGovTab('senado')}>
+              🏛️ Senado {state.congress.senate.pending.length > 0 && <span className="pn-dot">{state.congress.senate.pending.length}</span>}
+            </button>
             <button className={govTab === 'supremo' ? 'on' : ''} onClick={() => setGovTab('supremo')}>
               ⚖️ Supremo {(state.supremo.vacancy ? 1 : 0) + state.supremo.cases.length > 0 && <span className="pn-dot">{(state.supremo.vacancy ? 1 : 0) + state.supremo.cases.length}</span>}
+            </button>
+            <button className={govTab === 'ministerios' ? 'on' : ''} onClick={() => setGovTab('ministerios')}>
+              🏢 Ministérios {ministriesInTrouble(state).length > 0 && <span className="pn-dot">{ministriesInTrouble(state).length}</span>}
             </button>
           </div>
           {govTab === 'supremo' ? (
             <SupremoView state={state} nominee={nominee} onNominee={(id) => { setNominee(id); if (id) toast(`📨 ${NOMINEE_BY_ID[id].name} vai à sabatina no Senado ao encerrar o mês.`) }} />
+          ) : govTab === 'senado' ? (
+            <SenadoView state={state} articulations={articulations} onToggle={toggleArticulation} onNegotiate={setVoteSheet} deals={deals} plan={plan} />
+          ) : govTab === 'ministerios' ? (
+            <MinistriosView state={state} change={ministry} onChange={setMinistry} />
           ) : (
           <CongressView
             state={state}
@@ -295,17 +317,9 @@ export function GameScreen({ state, onChange, onExit }: {
             plan={plan}
             sanctions={sanctions}
             onSanction={(id, d) => setSanctions((cur) => ({ ...cur, [id]: d }))}
-            ministry={ministry}
-            onMinistry={setMinistry}
             onReaction={setReactionView}
             articulations={articulations}
-            onToggle={(a) =>
-              setArticulations((cur) =>
-                cur.some((x) => x.kind === a.kind && x.party === a.party)
-                  ? cur.filter((x) => !(x.kind === a.kind && x.party === a.party))
-                  : cur.length < CONGRESS.articulationsPerMonth ? [...cur, a] : cur,
-              )
-            }
+            onToggle={toggleArticulation}
           />
           )}
           </>
@@ -365,7 +379,7 @@ export function GameScreen({ state, onChange, onExit }: {
                     <div>
                       <h2>Tudo pronto para virar o mês?</h2>
                       <p className="pn-hint">
-                        {selected.length === 0 && !bill && !eventResponse && articulations.length === 0 && !nominee
+                        {selected.length === 0 && !bill && !eventResponse && articulations.length === 0 && !nominee && !consult && !ministry
                           ? 'Você não tomou nenhuma decisão. O país segue sozinho este mês.'
                           : [
                               selected.length ? `Decretos: ${selected.map((id) => lowerFirst(ACTION_BY_ID[id].name)).join(' e ')}.` : '',
@@ -373,7 +387,8 @@ export function GameScreen({ state, onChange, onExit }: {
                               eventResponse ? `Resposta ao fato do mês (${BILL_KIND[BILL_BY_ID[eventResponse].instrument].toLowerCase()}): ${lowerFirst(BILL_BY_ID[eventResponse].name)}.` : '',
                               articulations.length ? `Articulação: ${articulations.map((a) => a.kind === 'presidente' ? 'conversa com o presidente da Câmara' : a.kind === 'senado' ? 'conversa com a presidente do Senado' : `${a.kind === 'conversar' ? 'conversa com' : 'emendas para'} ${PARTY_BY_ID[a.party].sigla}`).join(' e ')}.` : '',
                               nominee ? `Supremo: indicar ${NOMINEE_BY_ID[nominee].name} (sabatina no Senado).` : '',
-                              ministry ? (ministry.party ? `Ministério: ceder ${ministry.area} ao ${PARTY_BY_ID[ministry.party].sigla}.` : `Ministério: retomar ${ministry.area}.`) : '',
+                              ministry ? (ministry.party ? `Ministério: ${state.cabinet[ministry.area] ? 'trocar' : 'ceder'} ${ministry.area} ${state.cabinet[ministry.area] ? 'pelo' : 'ao'} ${PARTY_BY_ID[ministry.party].sigla}.` : `Ministério: retomar ${ministry.area}.`) : '',
+                              consult ? `Supremo: pedir parecer sobre ${lowerFirst(BILL_BY_ID[consult].name)}.` : '',
                               Object.values(sanctions).some((d) => d === 'vetar') ? `Vetos: ${Object.values(sanctions).filter((d) => d === 'vetar').length}.` : '',
                             ].filter(Boolean).join(' ')}
                         {state.event && eventChoice === null && eventResponse === null ? ' ⚠️ Você não respondeu o fato do mês: vale a opção padrão.' : ''}
@@ -415,7 +430,7 @@ export function GameScreen({ state, onChange, onExit }: {
             </div>
 
             <section className="pn-card pn-card--gold" ref={medidaRef}>
-              <MeasureBox
+              <MeasureBox consult={consult} setConsult={(id) => { setConsult(id); if (id) toast(`📨 O Supremo recebe o pedido de parecer ao encerrar o mês. A resposta sai em ${SUPREMO.consulta.months} meses.`) }}
                 key={state.month}
                 state={state}
                 selected={selected}
@@ -639,8 +654,10 @@ const billCost = (id: BillId) => {
   return ((fx.spending ?? 0) - (fx.revenue ?? 0)) / 100 * GDP_BILLIONS
 }
 
-function MeasureBox({ state, selected, bill, onSign, onSend, onAddBill }: {
+function MeasureBox({ state, selected, bill, onSign, onSend, onAddBill, consult, setConsult }: {
   state: GameState
+  consult: BillId | null
+  setConsult: (id: BillId | null) => void
   onAddBill: (b: BillDef) => BillId
   selected: ActionId[]
   bill: BillId | null
@@ -698,7 +715,7 @@ function MeasureBox({ state, selected, bill, onSign, onSend, onAddBill }: {
                   <DecreeReading key={m.id} state={state} id={m.id} first={i === 0} selected={selected} onSign={onSign} />
                 ) : (
                   <div key={m.id}>
-                    <BillReading state={state} id={m.id} first={i === 0} chosen={bill} onSend={onSend} />
+                    <BillReading state={state} id={m.id} first={i === 0} chosen={bill} onSend={onSend} consult={consult} onConsult={setConsult} />
                     {BILL_BY_ID[m.id].custom && <NewBillNotes id={m.id} notes={result.notes} />}
                   </div>
                 ),
@@ -745,8 +762,8 @@ function DecreeReading({ state, id, first, selected, onSign }: {
   )
 }
 
-function BillReading({ state, id, first, chosen, onSend }: {
-  state: GameState; id: BillId; first: boolean; chosen: BillId | null; onSend: (id: BillId) => void
+function BillReading({ state, id, first, chosen, onSend, consult, onConsult }: {
+  state: GameState; id: BillId; first: boolean; chosen: BillId | null; onSend: (id: BillId) => void; consult?: BillId | null; onConsult?: (id: BillId | null) => void
 }) {
   const b = BILL_BY_ID[id]
   const blocked = billBlockedReason(state, id)
@@ -767,12 +784,12 @@ function BillReading({ state, id, first, chosen, onSend }: {
         <div>⏱️ Quando vale<b>{b.instrument === 'mp' || b.instrument === 'decreto' ? 'Na hora' : 'Se aprovada'}</b></div>
       </div>
       <p className="pn-hint" style={{ margin: '2px 0 4px' }}>{INSTRUMENTS[b.instrument].rule}</p>
-      <LegalRiskLine state={state} id={id} />
+      <LegalRiskLine state={state} id={id} consult={consult === id} onConsult={onConsult} />
       {!blocked && b.instrument !== 'decreto' && <ForecastRow state={state} id={id} />}
       <div className="up">+ {b.pros}</div>
       <div className="dn">− {b.cons}</div>
       <div className="pn-row">
-        <button className="pn-btn" disabled={!!blocked || isChosen} onClick={() => onSend(id)}>
+        <button className="pn-btn" disabled={!!blocked || isChosen || consult === id} title={consult === id ? 'Você pediu parecer ao Supremo sobre esta medida: ela espera a resposta.' : ''} onClick={() => onSend(id)}>
           {isChosen ? '✔ Será feito ao encerrar o mês' : b.instrument === 'decreto' ? '🖊️ Assinar o decreto' : b.instrument === 'mp' ? '⚡ Editar a medida provisória' : '📨 Enviar à Câmara'}
         </button>
         {blocked && <span className="pn-action__blk">⏳ {blocked}</span>}

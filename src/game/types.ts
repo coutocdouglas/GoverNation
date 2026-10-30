@@ -123,7 +123,7 @@ export interface MonthReport {
 }
 
 export interface GameState {
-  saveVersion: 11
+  saveVersion: 12
   /** Mês atual, de 0 (janeiro do 1º ano) a 47. Em 48 o mandato acabou. */
   month: number
   presidentName: string
@@ -171,6 +171,18 @@ export interface GameState {
   promises: string[]
   /** Etapa 4C2: o Supremo, com os 11 ministros, ações em andamento, decisões e vaga. */
   supremo: SupremoState
+  /** Etapa 4C3: desgaste de cada ministro (0 a 100) e desde quando está no cargo (mês absoluto). */
+  ministries: Record<AreaId, MinistrySeat>
+}
+
+/** Etapa 4C3: situação de um ministério. */
+export interface MinistrySeat {
+  /** Desgaste do ministro, 0 a 100. A partir de 70, ele está desgastado e custa aprovação. */
+  wear: number
+  /** Mês absoluto em que o ministro atual assumiu. */
+  since: number
+  /** O que mexeu no desgaste no último mês. */
+  causes?: Cause[]
 }
 
 // ---------------------------------------------------------------------------
@@ -196,6 +208,27 @@ export interface CourtCase {
   relator: string
   filedAt: number
   judgeAt: number
+  /** Etapa 4C3: ação contra um projeto ainda no Congresso (sem isso, contra uma medida em vigor). */
+  kind?: 'projeto'
+  /** Etapa 4C3: liminar do relator. Medida em vigor: suspensa até o plenário. Projeto: tramitação travada. */
+  suspended?: boolean
+  /** Etapa 4C3: o governo recorreu da liminar (o plenário julga no mês seguinte). */
+  appealed?: boolean
+  /** Por que a oposição contestou (texto para a tela). */
+  reason?: string
+  /** Risco usado no julgamento (projeto contestado por jabuti ou cláusula pétrea julga como médio, no mínimo). */
+  risk?: 'baixo' | 'medio' | 'alto'
+}
+
+/** Etapa 4C3: consulta do governo ao Supremo antes de enviar uma medida. Meses absolutos. */
+export interface Consulta {
+  bill: BillId
+  name: string
+  askedAt: number
+  readyAt: number
+  result?: 'chancelada' | 'reprovada'
+  /** Chancelada: imune a ações até este mês. */
+  until?: number
 }
 
 /** Julgamento concluído. */
@@ -210,6 +243,8 @@ export interface Ruling {
   votes: { justice: string; strike: boolean }[]
   struck: boolean
   reason: string
+  /** Etapa 4C3: julgamento de um projeto ainda no Congresso (derrubado = arquivado). */
+  project?: boolean
 }
 
 /** Medida em vigor que ainda pode ser contestada (risco médio ou alto, dentro da janela). */
@@ -230,6 +265,10 @@ export interface SupremoState {
   vacancy: { since: number; retired: string; rejected: string[] } | null
   /** Indicados que já foram usados (nomeados ou rejeitados). */
   used: string[]
+  /** Etapa 4C3: consultas do governo (a aberta e as últimas respondidas). */
+  consultas: Consulta[]
+  /** Etapa 4C3: risco jurídico rebaixado pela CCJ (emenda de adequação). */
+  adjusted: Partial<Record<BillId, 'baixo' | 'medio' | 'alto'>>
 }
 
 /** Pesquisa de intenção de voto do mês (soma 100). */
@@ -314,6 +353,8 @@ export interface PendingBill {
   senateDeals?: { party: PartyId; kind: DealKind }[]
   /** Etapa 4C1 (só no Senado): como a Câmara aprovou o texto. */
   camara?: { yes: number; no: number; symbolic?: boolean; month: number }
+  /** Etapa 4C3: passou pela CCJ (aprovado como veio ou com emenda de adequação, que enfraquece os efeitos). */
+  ccj?: 'aprovado' | 'adequado'
 }
 
 /** Etapa 4C1: o Senado. Os partidos são os mesmos da Câmara (a relação com o governo é a mesma, mais um bônus). */
@@ -438,7 +479,7 @@ export interface EventOrigin {
   author: string
   party?: PartyId
   year: number
-  /** Etapa 4C2: medida derrubada pelo Supremo (para a nova proposta). */
+  /** Etapa 4C2: medida derrubada (ou suspensa, 4C3) pelo Supremo. */
   bill?: BillId
 }
 

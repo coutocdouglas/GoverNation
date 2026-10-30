@@ -408,6 +408,12 @@ export function billBlockedReason(s: GameState, id: BillId): string | null {
   if (c.laws.includes(id)) return BILL_BY_ID[id]?.instrument === 'decreto' ? 'Já está em vigor.' : 'Já é lei.'
   if (c.pending.some((p) => p.id === id)) return 'Já está tramitando na Câmara.'
   if (c.senate.pending.some((p) => p.id === id)) return 'Já passou na Câmara e está no Senado.'
+  // Etapa 4C3: medida esperando o parecer do Supremo.
+  const q = s.supremo?.consultas?.find((x) => x.bill === id && !x.result)
+  if (q) {
+    const left = Math.max(1, q.readyAt - (s.term - 1) * 48 - s.month)
+    return `Esperando o parecer do Supremo (sai em ${left} ${left === 1 ? 'mês' : 'meses'}).`
+  }
   const until = c.blockedUntil[id]
   if (until !== undefined && s.month < until) {
     const left = until - s.month

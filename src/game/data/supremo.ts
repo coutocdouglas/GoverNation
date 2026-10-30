@@ -109,7 +109,45 @@ export const LEGAL_RISK: Record<BillId, { risk: Exclude<LegalRisk, 'baixo'>; rea
   reformaAdministrativa: { risk: 'medio', reason: 'Mexer na estabilidade de quem já é servidor fere direito adquirido.' },
   fimEscala6x1: { risk: 'medio', reason: 'Empresas alegam quebra da livre iniciativa e falta de transição.' },
   taxarApostas: { risk: 'medio', reason: 'Limite à propaganda das apostas esbarra na liberdade comercial.' },
+  // Etapa 4C3: mais polêmicas que costumam acabar no Supremo.
+  saneamentoMarco: { risk: 'medio', reason: 'Municípios alegam que o saneamento é deles: a lei invadiria a autonomia local.' },
+  reformaPolitica: { risk: 'medio', reason: 'Cláusula de barreira e fim de coligações costumam ser contestados por partidos pequenos.' },
+  cortarIsencoes: { risk: 'medio', reason: 'Setores alegam quebra de contrato e falta de prazo para se adaptar.' },
+  regraFiscal: { risk: 'medio', reason: 'Travar o gasto pode furar os pisos de saúde e educação da Constituição.' },
 }
+
+/**
+ * Etapa 4C3: matérias de cada medida do catálogo (as mesmas da ficha das medidas livres, em custom.ts).
+ * Servem à regra do instrumento: matéria que exige lei não cabe em decreto, e MP não trata de pena nem de direito fundamental.
+ */
+export type MatterId = 'constituicao' | 'direito_fundamental' | 'lei_complementar' | 'tributo_novo' | 'penal' | 'estrutura_estado' | 'despesa_nova'
+export const CATALOG_MATTERS: Partial<Record<BillId, MatterId[]>> = {
+  penasDuras: ['penal'],
+  armas: ['penal'],
+  presidios: ['estrutura_estado'],
+  agenciaCiber: ['estrutura_estado'],
+  privatizar: ['estrutura_estado'],
+  fundoSoberano: ['estrutura_estado'],
+  taxarDividendos: ['tributo_novo'],
+  reformaRenda: ['tributo_novo'],
+  taxarApostas: ['tributo_novo'],
+  regraFiscal: ['lei_complementar'],
+  simplesNacional: ['lei_complementar'],
+  reformaTributaria: ['constituicao'],
+  reformaPolitica: ['constituicao'],
+  saudeMinima: ['constituicao'],
+  reformaPrevidencia: ['constituicao', 'direito_fundamental'],
+  reformaAdministrativa: ['constituicao', 'direito_fundamental'],
+  fimEscala6x1: ['constituicao', 'direito_fundamental'],
+  marcoTemporal: ['direito_fundamental'],
+  regularRedes: ['direito_fundamental'],
+}
+
+/** Matérias que a MP não pode tratar. */
+export const NO_MP_MATTERS: MatterId[] = ['penal', 'direito_fundamental', 'constituicao']
+
+/** Medidas que o Executivo pode mexer por decreto mesmo mudando receita (impostos regulatórios, como tarifa de importação). */
+export const RULE_EXEMPT: BillId[] = ['abrirComercio']
 
 export const SUPREMO = {
   seats: 11,
@@ -118,16 +156,39 @@ export const SUPREMO = {
 
   /** Ação contra a medida: só nos primeiros meses depois de entrar em vigor. */
   window: 24,
-  /** Chance por mês de um partido de oposição contestar cada medida em vigor, conforme o risco. */
-  fileChance: { baixo: 0, medio: 0.012, alto: 0.045 } as Record<LegalRisk, number>,
+  /** Chance por mês de um partido de oposição contestar cada medida em vigor, conforme o risco (4C3: alto é quase certo). */
+  fileChance: { baixo: 0, medio: 0.03, alto: 0.35 } as Record<LegalRisk, number>,
   /** A chance cresce com a força do rival: × (fileBase + força/100). */
   fileBase: 0.5,
   /** Quem contesta: partido contra a medida (afinidade abaixo disto) e de relação ruim com o governo. */
   fileAffinity: 0.1,
   fileRelation: 55,
-  /** Ações abertas ao mesmo tempo e meses até o julgamento. */
-  maxOpen: 2,
+  /** Ações abertas ao mesmo tempo e meses até o julgamento (4C3: risco alto é julgado em 1 a 2 meses). */
+  maxOpen: 3,
   judgeDelay: [2, 4] as [number, number],
+  judgeDelayHigh: [1, 2] as [number, number],
+
+  // ─── Etapa 4C3 ───
+  /** Regra do instrumento: decreto com despesa nova permanente acima disto (% do PIB) é risco médio; acima do dobro, alto. */
+  decreeSpending: 0.05,
+  /** Decreto que abre mão de receita acima disto (% do PIB): risco médio. */
+  decreeRenuncia: 0.03,
+  /** Liminar: chance de o relator suspender a medida na hora = fator × chance de ele votar para derrubar. */
+  liminarFactor: { baixo: 0, medio: 0.35, alto: 0.8 } as Record<LegalRisk, number>,
+  /** Com liminar, o plenário demora mais (o recurso do governo antecipa para o mês seguinte). */
+  liminarJudgeDelay: [3, 5] as [number, number],
+  /** Respostas à liminar (fato do mês). */
+  recuar: { ministers: 2 },
+  recorrer: { ministers: -3 },
+  /** Ação contra projeto ainda no Congresso: chance por mês conforme o motivo (× força do rival, como as outras). */
+  projectFileChance: { alto: 0.4, fundamental: 0.3, jabuti: 0.12 },
+  /** O relator trava a tramitação com esta fração da chance de ele votar para derrubar. */
+  freezeFactor: 0.8,
+  projectJudgeDelay: [1, 3] as [number, number],
+  /** Consulta ao Supremo: meses de espera, relação perdida ao pedir ("a corte fica de olho") e ao ser reprovada, imunidade. */
+  consulta: { months: 2, askHit: -1, reprovadaHit: -3, immunity: 24 },
+  /** CCJ: projeto de risco alto passa pelo filtro. Nota = base + afinidade + relação + ruído; acima de approveAbove aprova, abaixo de barBelow barra. */
+  ccj: { base: 0.15, wAffinity: 1.2, pivot: 0.4, wRelation: 0.02, noise: 0.5, approveAbove: 0.4, barBelow: -0.45, adequaScale: 0.85 },
 
   /** Voto de cada ministro: derruba se base + risco + discordância + relação + ruído > 0. */
   base: -0.6,
@@ -190,5 +251,19 @@ export const STF_EVENT: EventDef = {
     { icon: '🤝', label: 'Acatar a decisão', text: 'Respeitar o Supremo e virar a página. Custo pequeno: a base reclama um pouco.', effects: { confidence: 1 }, outcome: 'Governo acata a decisão do Supremo e diz que vai respeitar a Constituição', tone: 'neutral', default: true, stf: 'acatar' },
     { icon: '📘', label: 'Mandar nova proposta', text: 'Reenviar a medida ao Congresso com instrumento mais forte (decreto e MP viram lei; lei vira emenda constitucional).', effects: {}, outcome: 'Governo reenvia a medida ao Congresso com instrumento mais forte', tone: 'neutral', stf: 'nova' },
     { icon: '📢', label: 'Criticar o Supremo', text: 'Ir para o ataque em público. A base gosta; o mercado e os ministros da corte, não.', effects: { confidence: -3 }, outcome: 'Presidente ataca o Supremo em público e mercado reage mal', tone: 'bad', stf: 'criticar' },
+  ],
+}
+
+/** Etapa 4C3: fato do mês depois de uma liminar que suspende uma medida em vigor. Só escolhas prontas. */
+export const STF_LIMINAR_EVENT: EventDef = {
+  id: 'stfLiminar', area: 'politica', tag: 'Supremo · liminar', icon: '⚖️', weight: 0, importance: 4, kind: 'consequencia', random: false, choiceOnly: true,
+  title: 'Liminar suspende {lei}',
+  text: 'O relator da ação suspendeu a medida até o plenário julgar. Enquanto isso, ela não vale: o dinheiro e o efeito ficam parados. O gabinete quer saber o que fazer.',
+  presenter: { name: 'Ricardo Falcão', role: 'Ministro da Justiça e Segurança', feminine: false, color: '#334a8a' },
+  options: [
+    { icon: '⏳', label: 'Esperar o plenário', text: 'Não mexer e deixar o plenário decidir, sem pressa. Se mantiver, a medida volta a valer.', effects: {}, outcome: 'Governo diz que vai aguardar o plenário do Supremo', tone: 'neutral', default: true, stf: 'esperar' },
+    { icon: '↩️', label: 'Recuar', text: 'Revogar a medida. Sem custo político com a corte, mas quem ganhava com ela perde.', effects: {}, outcome: 'Governo recua e revoga a medida suspensa pelo Supremo', tone: 'neutral', stf: 'recuar' },
+    { icon: '📑', label: 'Recorrer', text: 'Pedir ao plenário que julgue já, no mês que vem. A corte não gosta da pressa (−3 de relação).', effects: {}, outcome: 'Governo recorre e pede julgamento imediato no plenário do Supremo', tone: 'neutral', stf: 'recorrer' },
+    { icon: '📢', label: 'Criticar o Supremo', text: 'Atacar a liminar em público. A base gosta; o mercado e os ministros da corte, não.', effects: { confidence: -3 }, outcome: 'Presidente ataca a liminar do Supremo em público e mercado reage mal', tone: 'bad', stf: 'criticar' },
   ],
 }

@@ -38,6 +38,8 @@ export interface CustomInfo {
   legalRisk: LegalRisk
   /** O que o presidente escreveu, cortado. */
   request: string
+  /** Etapa 4C3: matérias que a ficha declarou (instrumento mínimo e regra do risco jurídico). */
+  matters?: string[]
 }
 
 export const INSTRUMENTS: Record<Instrument, { label: string; rule: string }> = {

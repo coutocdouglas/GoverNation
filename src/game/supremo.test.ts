@@ -51,7 +51,7 @@ describe('Supremo (etapa 4C2)', () => {
     for (const id of Object.keys(LEGAL_RISK)) expect(BILL_BY_ID[id], id).toBeDefined()
     const risky = BILLS.filter((b) => legalRiskOf(b.id) !== 'baixo')
     expect(risky.length).toBeGreaterThanOrEqual(18)
-    expect(risky.length).toBeLessThanOrEqual(30)
+    expect(risky.length).toBeLessThanOrEqual(36)
     expect(legalRiskOf('salarioMinimo')).toBe('baixo')
     expect(legalRiskOf('armas')).toBe('alto')
   })
@@ -206,7 +206,7 @@ describe('Supremo (etapa 4C2)', () => {
     delete raw.supremo
     raw.saveVersion = 10
     const m = migrate(raw)!
-    expect(m.saveVersion).toBe(11)
+    expect(m.saveVersion).toBe(12)
     expect(m.supremo.justices).toHaveLength(11)
     expect(m.supremo.cases).toEqual([])
     expect(m.supremo.watch).toEqual([])

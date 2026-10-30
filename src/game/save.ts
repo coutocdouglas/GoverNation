@@ -3,6 +3,7 @@ import { syncCustomBills } from './custom'
 import { RIVAL } from './data/rival'
 import { createRival } from './rival'
 import { initialSupremo } from './supremo'
+import { initialMinistries } from './ministerios'
 import { addBio } from './memory'
 import type { GameState } from './types'
 
@@ -106,7 +107,14 @@ export function migrate(raw: unknown): GameState | null {
       if (!s.supremo) s.supremo = initialSupremo(s)
       s.saveVersion = 11
     }
-    if (s.saveVersion !== 11) return null
+    if (s.saveVersion === 11) {
+      // v0.13 → v0.14 (etapa 4C3): sem liminares nem consultas; desgaste dos ministros tirado das derrubadas no Supremo.
+      s.supremo.consultas ??= []
+      s.supremo.adjusted ??= {}
+      if (!s.ministries) s.ministries = initialMinistries(s)
+      s.saveVersion = 12
+    }
+    if (s.saveVersion !== 12) return null
     syncCustomBills(s as GameState)
     return s as GameState
   } catch {
