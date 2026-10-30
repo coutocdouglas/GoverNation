@@ -1,5 +1,18 @@
 # Novidades
 
+## 0.8.0
+- **Votação com negociação (etapa 4A):** ao mandar algo para a Câmara (lei, lei complementar, PEC ou MP), abre a janela da votação: placar previsto se a sessão fosse agora, piso de votos, quantos faltam e o plenário com um quadrado por deputado (sim, não, abstenção, ausente).
+- **Lideranças:** cada partido mostra a orientação (sim, não, liberado), quantos votam sim hoje e por quê. Você pode **ouvir até 3 lideranças por mês**. Cada uma cobra conforme o alinhamento com o texto e o perfil da bancada:
+  - **já está com você** (nada a comprar) ou **não vende** (partido ideológico contra o texto);
+  - **emendas** (custa dinheiro e um pouco de risco de escândalo);
+  - **pautar o projeto-bandeira dele** em até 3 meses (sem custo agora; se não cumprir, a relação despenca);
+  - **cargos no segundo escalão** (sem custo em dinheiro, mas risco de escândalo alto e o seu partido não gosta).
+- Cada proposta mostra votos da bancada antes → depois, confiabilidade (chance de a bancada entregar), custo e risco de escândalo. Bancadas podem não entregar tudo no dia da votação, e isso vira notícia.
+- **Risco de escândalo** acumula com cargos e emendas; um escândalo derruba a aprovação de todos os grupos e entra na memória do país.
+- Na aba Governo, “🤝 Negociar votos” reabre a janela para qualquer projeto na pauta.
+- **Com a IA ligada (fora do modo fácil):** somem as opções prontas do fato do mês (fica só o aviso do que acontece se deixar passar) e o catálogo de decretos; tudo se faz escrevendo. No modo fácil ou sem IA, continuam como antes.
+- Mandatos salvos continuam normalmente (save versão 6).
+
 ## 0.7.3
 - **Gemini:** o modelo que vinha escolhido para ler as ordens (`gemini-3.8-flash`) não existia e falhava sempre. Agora as duas tarefas usam `gemini-3.5-flash-lite`, que funciona; quem tinha o nome antigo salvo é corrigido sozinho.
 - **Falhas com motivo:** a tabela “Gasto medido” mostra, em vermelho, o motivo da última falha de cada modelo (ex.: “Modelo não encontrado”, “chave recusada”, “sem conexão”).

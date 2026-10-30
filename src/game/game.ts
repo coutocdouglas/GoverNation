@@ -13,7 +13,9 @@ import { SHOCKS, type ShockDef } from './data/shocks'
 import { indicators, initialEconomy, runCopom, stepEconomy, type ShockInput } from './economy'
 import { initialGroups, overallApproval, stepGroup } from './groups'
 import { Rng } from './rng'
-import type { ActionId, Articulation, BillId, Cause, Economy, GameState, GroupId, Headline, Impulse, MonthReport, PartyId, Snapshot, VoteRecord } from './types'
+import { DEALS } from './data/deals'
+import { dealBlockedReason, flagshipOf } from './deals'
+import type { ActionId, Deal, Articulation, BillId, Cause, Economy, GameState, GroupId, Headline, Impulse, MonthReport, PartyId, Snapshot, VoteRecord } from './types'
 
 export const TERM_MONTHS = 48
 
@@ -53,7 +55,7 @@ export function newGame(
   const rngState = seed ?? Math.floor(Math.random() * 2 ** 31)
   const bonus = DIFFICULTY[difficulty].approvalBonus
   const state: GameState = {
-    saveVersion: 5,
+    saveVersion: 6,
     month: 0,
     presidentName: presidentName.trim() || 'Presidente',
     difficulty,
@@ -125,6 +127,8 @@ export interface MonthPlan {
    * Segue o trâmite normal e não gasta a medida do mês. Substitui as opções prontas.
    */
   eventResponse?: BillId
+  /** Acordos com partidos para votações deste mês (etapa 4). */
+  deals?: Deal[]
 }
 
 /** Motivo pelo qual a medida não serve de resposta ao fato do mês atual, ou null. */
@@ -153,6 +157,14 @@ export function validatePlan(s: GameState, plan: MonthPlan): string | null {
     const ev = s.event ? EVENT_BY_ID[s.event.id] : null
     if (!ev) return 'Não há fato do mês para responder.'
     if (!Number.isInteger(plan.eventChoice) || plan.eventChoice < 0 || plan.eventChoice >= ev.options.length) return 'Opção inválida no fato do mês.'
+  }
+  const deals = plan.deals ?? []
+  if (deals.length > DEALS.listenPerMonth) return `No máximo ${DEALS.listenPerMonth} acordos por mês.`
+  const planBills = [plan.bill, plan.eventResponse].filter((x): x is BillId => !!x)
+  for (const d of deals) {
+    if (deals.filter((x) => x.party === d.party && x.bill === d.bill).length > 1) return 'Acordo repetido.'
+    const r = dealBlockedReason(s, d, planBills, deals.filter((x) => x.bill === d.bill && x !== d))
+    if (r) return `${PARTY_BY_ID[d.party].sigla}: ${r}`
   }
   const arts = plan.articulations ?? []
   if (arts.length > CONGRESS.articulationsPerMonth) return `No máximo ${CONGRESS.articulationsPerMonth} articulações por mês.`
@@ -266,14 +278,45 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
     if (minister) addBio(s, minister.name, `${minister.role}: ficou responsável por “${bill.name}”.`)
   }
 
+  // 1c2. Acordos com partidos: o preço é pago agora; o voto vem na votação.
+  for (const d of plan.deals ?? []) {
+    const pb = c.pending.find((x) => x.id === d.bill)
+    if (!pb) continue
+    pb.deals = [...(pb.deals ?? []), { party: d.party, kind: d.kind }]
+    const party = PARTY_BY_ID[d.party]
+    const name = BILL_BY_ID[d.bill].name
+    c.scandal = Math.min(100, c.scandal + DEALS.scandal[d.kind])
+    if (d.kind === 'emendas') {
+      e.tempSpending.push({ label: `Emendas para o ${party.sigla}`, amount: DEALS.emendasPerSeat * party.seats, monthsLeft: DEALS.emendasMonths })
+      taken.push(`Emendas para o ${party.sigla} em troca de votos em “${name}”`)
+      addBio(s, party.leader.name, `Fechou acordo de emendas com o governo para votar “${name}”.`)
+    } else if (d.kind === 'cargos') {
+      const own = c.parties[s.playerParty]
+      own.relation = Math.max(0, own.relation + DEALS.ownPartyCargos)
+      taken.push(`Cargos para o ${party.sigla} em troca de votos em “${name}”`)
+      addBio(s, party.leader.name, `Indicou nomes para o segundo escalão em troca de votos em “${name}”.`)
+    } else {
+      const flag = flagshipOf(s, d.party, d.bill)
+      if (flag) {
+        c.promises.push({ party: d.party, bill: flag, made: s.month, due: s.month + DEALS.promiseMonths })
+        taken.push(`Prometeu ao ${party.sigla} pautar “${BILL_BY_ID[flag].name}”`)
+        addBio(s, party.leader.name, `Arrancou do presidente a promessa de pautar “${BILL_BY_ID[flag].name}”.`)
+      }
+    }
+  }
+
   // 1d. Votações (fora do recesso). MP é votada no mês seguinte ao envio.
   const votes: VoteRecord[] = []
   if (!isRecess(s.month)) {
     for (const p of [...c.pending]) {
       const bill = BILL_BY_ID[p.id]
       if (bill.instrument === 'mp' && p.sentMonth === s.month) continue
-      const v = runVote(s, p.id, rng)
+      const { broken, ...v } = runVote(s, p.id, rng)
       votes.push(v)
+      for (const pid of broken) {
+        headlines.push({ text: `${PARTY_BY_ID[pid].sigla} não entrega todos os votos prometidos em “${bill.name}”`, tone: 'bad' })
+        addBio(s, PARTY_BY_ID[pid].leader.name, `Prometeu votos em “${bill.name}” e não entregou tudo.`)
+      }
       c.pending = c.pending.filter((x) => x.id !== p.id)
       const placar = v.needed > 0 ? `${pt(v.yes)} votos (precisava de ${pt(v.needed)})` : `${pt(v.yes)} a ${pt(v.no)}`
       if (v.approved) {
@@ -314,6 +357,30 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
   }
   c.votes.push(...votes)
   c.votes = c.votes.slice(-24)
+
+  // 1d2. Promessas a partidos e risco de escândalo.
+  for (const pr of [...c.promises]) {
+    const party = PARTY_BY_ID[pr.party]
+    const kept = c.laws.includes(pr.bill) || c.pending.some((x) => x.id === pr.bill) || votes.some((v) => v.bill === pr.bill)
+    if (kept) {
+      c.parties[pr.party].relation = Math.min(100, c.parties[pr.party].relation + DEALS.promiseKept)
+      c.promises = c.promises.filter((x) => x !== pr)
+      addBio(s, party.leader.name, `Viu o governo cumprir a promessa de pautar “${BILL_BY_ID[pr.bill].name}”.`)
+    } else if (s.month >= pr.due) {
+      c.parties[pr.party].relation = Math.max(0, c.parties[pr.party].relation + DEALS.promiseBroken)
+      c.promises = c.promises.filter((x) => x !== pr)
+      headlines.push({ text: `${party.sigla} acusa o governo de não cumprir acordo: “${BILL_BY_ID[pr.bill].name}” não foi pautado`, tone: 'bad' })
+      addBio(s, party.leader.name, `Rompeu com o governo depois de uma promessa não cumprida (“${BILL_BY_ID[pr.bill].name}”).`)
+    }
+  }
+  if (c.scandal > 0 && rng.next() < c.scandal / DEALS.scandalOdds) {
+    for (const g of GROUPS) impulses[g.id].push({ label: 'Escândalo de indicações políticas', value: DEALS.scandalHit })
+    headlines.push({ text: 'Escândalo: indicados políticos em estatais viram alvo de investigação', tone: 'bad' })
+    addChronicle(s, `Escândalo de indicações no governo ${s.presidentName} (${PARTY_BY_ID[s.playerParty].sigla})`, 'bad')
+    addBio(s, s.presidentName, 'Enfrentou um escândalo de indicações políticas.')
+    c.scandal *= DEALS.scandalAfter
+  }
+  c.scandal *= DEALS.scandalDecay
 
   // 1e. Fato do mês
   let eventReport: MonthReport['event']

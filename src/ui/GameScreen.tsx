@@ -11,8 +11,9 @@ import { econPull } from '../game/groups'
 import type { MeasureRef } from '../game/interpret'
 import { readText } from '../lib/aiActions'
 import { AiSettings } from './AiSettings'
+import { VoteSheet } from './VoteSheet'
 import { aiReady } from '../lib/ai'
-import type { ActionId, Articulation, BillId, Cause, GameState, GroupId, IndicatorKey } from '../game/types'
+import type { ActionId, Articulation, BillId, Cause, Deal, GameState, GroupId, IndicatorKey, PartyId } from '../game/types'
 import { CongressView, ForecastRow, Scoreboard } from './CongressView'
 import { DemandsCard, EventPanel } from './EventPanel'
 import { FichasView } from './FichasView'
@@ -51,6 +52,12 @@ export function GameScreen({ state, onChange, onExit }: {
   const [eventChoice, setEventChoice] = useState<number | null>(null)
   const [eventResponse, setEventResponse] = useState<BillId | null>(null)
   const [showAi, setShowAi] = useState(false)
+  const [deals, setDeals] = useState<Deal[]>([])
+  const [listened, setListened] = useState<PartyId[]>([])
+  const [voteSheet, setVoteSheet] = useState<BillId | null>(null)
+  const goesToVote = (id: BillId) => BILL_BY_ID[id].instrument !== 'decreto'
+  /** Troca um projeto do mês: acordos do projeto antigo caem. */
+  const dropDeals = (old: BillId | null) => { if (old) setDeals((ds) => ds.filter((d) => d.bill !== old)) }
   const eventRef = useRef<HTMLDivElement>(null)
   const medidaRef = useRef<HTMLElement>(null)
   const history = state.history
@@ -77,7 +84,7 @@ export function GameScreen({ state, onChange, onExit }: {
 
   const endMonth = () => {
     setTurning(true)
-    const next = advanceMonth(state, selected, { bill: bill ?? undefined, articulations, eventChoice: eventChoice ?? undefined, eventResponse: eventResponse ?? undefined })
+    const next = advanceMonth(state, selected, { bill: bill ?? undefined, articulations, eventChoice: eventChoice ?? undefined, eventResponse: eventResponse ?? undefined, deals })
     setTimeout(() => {
       onChange(next)
       setSelected([])
@@ -85,6 +92,9 @@ export function GameScreen({ state, onChange, onExit }: {
       setArticulations([])
       setEventChoice(null)
       setEventResponse(null)
+      setDeals([])
+      setListened([])
+      setVoteSheet(null)
       setTab('painel')
       setStep(1)
       setTurning(false)
@@ -125,6 +135,20 @@ export function GameScreen({ state, onChange, onExit }: {
         </nav>
       </header>
       {showAi && <AiSettings onClose={() => setShowAi(false)} />}
+      {voteSheet && (
+        <VoteSheet
+          state={state}
+          bill={voteSheet}
+          deals={deals}
+          listened={listened}
+          onListen={(p) => setListened((l) => (l.includes(p) ? l : [...l, p]))}
+          onDeal={(d, add) => {
+            setDeals((ds) => (add ? [...ds.filter((x) => !(x.bill === d.bill && x.party === d.party)), d] : ds.filter((x) => !(x.bill === d.bill && x.party === d.party))))
+            if (add) toast(`🤝 Acordo com o ${PARTY_BY_ID[d.party].sigla}: vale ao encerrar o mês.`)
+          }}
+          onClose={() => setVoteSheet(null)}
+        />
+      )}
 
       <main className="pn-main">
         <section className="pn-hero">
@@ -172,6 +196,9 @@ export function GameScreen({ state, onChange, onExit }: {
           <CongressView
             state={state}
             bill={bill}
+            extraBill={eventResponse && goesToVote(eventResponse) ? eventResponse : null}
+            deals={deals}
+            onNegotiate={setVoteSheet}
             articulations={articulations}
             onToggle={(a) =>
               setArticulations((cur) =>
@@ -269,7 +296,9 @@ export function GameScreen({ state, onChange, onExit }: {
                 response={eventResponse}
                 plannedBill={bill}
                 onRespond={(id) => {
+                  if (eventResponse && eventResponse !== id) dropDeals(eventResponse)
                   setEventResponse(id)
+                  if (id && goesToVote(id)) setVoteSheet(id)
                   if (id) {
                     setEventChoice(null)
                     if (bill === id) setBill(null)
@@ -286,7 +315,9 @@ export function GameScreen({ state, onChange, onExit }: {
                 selected={selected}
                 bill={bill}
                 onSend={(id) => {
+                  if (bill && bill !== id) dropDeals(bill)
                   setBill(id)
+                  if (goesToVote(id)) setVoteSheet(id)
                   const ins = BILL_BY_ID[id].instrument
                   toast(`📨 ${BILL_BY_ID[id].name}: ${ins === 'decreto' ? 'o decreto será assinado' : ins === 'mp' ? 'a MP será editada' : 'o projeto vai à Câmara'} ao encerrar o mês.`)
                 }}
@@ -303,6 +334,7 @@ export function GameScreen({ state, onChange, onExit }: {
               />
             </section>
 
+            {!aiReady() || state.difficulty === 'facil' ? (
             <section className="pn-card">
               <h3>🗂️ Catálogo de decisões por decreto <span className="pn-badge">{selected.length}/{ACTIONS_PER_MONTH} escolhidas</span></h3>
               <p className="pn-hint">Não precisam do Congresso. Clique para escolher ou desfazer.</p>
@@ -334,6 +366,9 @@ export function GameScreen({ state, onChange, onExit }: {
                 <button className="pn-btn" onClick={() => goStep(4)}>Pronto, ir para o encerramento →</button>
               </div>
             </section>
+            ) : (
+              <div className="pn-row"><button className="pn-btn" onClick={() => goStep(4)}>Pronto, ir para o encerramento →</button></div>
+            )}
           </div>
 
           <div className="pn-col">

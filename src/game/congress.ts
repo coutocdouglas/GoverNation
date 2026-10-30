@@ -2,8 +2,9 @@ import { BILL_BY_ID, type BillDef } from './data/bills'
 import { GROUP_BY_ID } from './data/groups'
 import { PARTIES, PARTY_BY_ID } from './data/parties'
 import { Rng } from './rng'
+import { DEALS } from './data/deals'
 import type {
-  Articulation, BillId, CongressState, Deputy, GameState, GroupId, PartyId, PartyState, VoteRecord,
+  Articulation, BillId, CongressState, DealKind, Deputy, GameState, GroupId, PartyId, PartyState, VoteRecord,
 } from './types'
 
 /**
@@ -83,7 +84,7 @@ export function initialCongress(player: PartyId, seed: number): CongressState {
     const r = Math.round(startingRelation(p.id, player))
     parties[p.id] = { id: p.id, relation: r, baseRelation: r, favors: 0, lastTalk: -99 }
   }
-  return { parties, deputies, pending: [], laws: [], blockedUntil: {}, votes: [] }
+  return { parties, deputies, pending: [], laws: [], blockedUntil: {}, votes: [], promises: [], scandal: 0 }
 }
 
 /** Quanto o projeto agrada a população: média dos efeitos nos grupos, pesada pelo tamanho. */
@@ -94,9 +95,9 @@ export function billPopularity(bill: BillDef): number {
 }
 
 /** Orientação do partido: +1 vota a favor, -1 contra. */
-function partyOrientation(ps: PartyState, bill: BillDef, approval: number, pop: number): number {
+function partyOrientation(ps: PartyState, bill: BillDef, approval: number, pop: number, boost = 0): number {
   const p = PARTY_BY_ID[ps.id]
-  const score =
+  const score = boost +
     pop * CONGRESS.wPopularity * 0.8 +
     affinity(p.econ, p.costumes, bill) * CONGRESS.wAffinity +
     ((ps.relation - 50) / 50) * CONGRESS.wRelation * (0.6 + p.fisiologismo) +
@@ -107,10 +108,11 @@ function partyOrientation(ps: PartyState, bill: BillDef, approval: number, pop: 
 }
 
 /** Pontuação de um deputado, sem o ruído. Acima de zero tende ao sim. */
-function deputyScore(d: Deputy, c: CongressState, bill: BillDef, approval: number, orientation: number, pop: number): number {
+function deputyScore(d: Deputy, c: CongressState, bill: BillDef, approval: number, orientation: number, pop: number, boost = 0): number {
   const ps = c.parties[d.party]
   const p = PARTY_BY_ID[d.party]
   return (
+    boost * DEALS.deputyShare +
     affinity(d.econ, d.costumes, bill) * CONGRESS.wAffinity * (1 - d.loyalty * 0.5) +
     ((ps.relation - 50) / 50) * CONGRESS.wRelation * (0.5 + p.fisiologismo * 0.5) +
     orientation * d.loyalty * CONGRESS.wOrientation +
@@ -142,22 +144,46 @@ export interface Forecast {
   /** Chance de aprovar, 0 a 1. */
   chance: number
   label: 'Fácil' | 'Provável' | 'Disputada' | 'Difícil' | 'Quase impossível'
-  byParty: { party: PartyId; yes: number; seats: number }[]
+  byParty: { party: PartyId; yes: number; no: number; seats: number; orientation: number }[]
 }
 
+export type DealList = { party: PartyId; kind: DealKind }[]
+
+/** Confiabilidade de um acordo (0 a 1): chance de a bancada entregar o que prometeu. */
+export function dealReliability(party: PartyId, kind: DealKind): number {
+  const p = PARTY_BY_ID[party]
+  const r = DEALS.reliability[kind]
+  return Math.max(0.2, Math.min(0.97, r.base + p.discipline * r.discipline))
+}
+
+/** Reforço que os acordos dão a cada partido, numa votação. `broken` = acordos que falharam no dia. */
+function boosts(deals: DealList, broken?: Set<PartyId>): Partial<Record<PartyId, number>> {
+  const out: Partial<Record<PartyId, number>> = {}
+  for (const d of deals) {
+    const k = broken ? (broken.has(d.party) ? DEALS.brokenShare : 1) : dealReliability(d.party, d.kind) + (1 - dealReliability(d.party, d.kind)) * DEALS.brokenShare
+    out[d.party] = (out[d.party] ?? 0) + DEALS.boost[d.kind] * k
+  }
+  return out
+}
+
+/** Acordos já fechados para um projeto que está na Câmara. */
+export const dealsOf = (s: GameState, id: BillId): DealList => s.congress.pending.find((p) => p.id === id)?.deals ?? []
+
 /** Previsão do placar com os números de hoje, sem sorteio. É o que o gabinete mostra antes de enviar. */
-export function forecastVote(s: GameState, billId: BillId): Forecast {
+export function forecastVote(s: GameState, billId: BillId, extraDeals: DealList = []): Forecast {
   const bill = BILL_BY_ID[billId]
   const c = s.congress
   const approval = s.history[s.history.length - 1].approval
   const pop = billPopularity(bill)
+  const boost = boosts([...dealsOf(s, billId), ...extraDeals])
   const orient = {} as Record<PartyId, number>
-  for (const p of PARTIES) orient[p.id] = partyOrientation(c.parties[p.id], bill, approval, pop)
+  for (const p of PARTIES) orient[p.id] = partyOrientation(c.parties[p.id], bill, approval, pop, boost[p.id])
   let yes = 0, no = 0, abstain = 0, variance = 0
   const byParty = new Map<PartyId, number>()
+  const noByParty = new Map<PartyId, number>()
   const present = 1 - CONGRESS.absentRate
   for (const d of c.deputies) {
-    const m = deputyScore(d, c, bill, approval, orient[d.party], pop)
+    const m = deputyScore(d, c, bill, approval, orient[d.party], pop, boost[d.party])
     const pYes = 1 - phi((CONGRESS.abstainBand - m) / CONGRESS.noise)
     const pNo = phi((-CONGRESS.abstainBand - m) / CONGRESS.noise)
     yes += pYes * present
@@ -165,6 +191,7 @@ export function forecastVote(s: GameState, billId: BillId): Forecast {
     abstain += (1 - pYes - pNo) * present
     variance += pYes * present * (1 - pYes * present)
     byParty.set(d.party, (byParty.get(d.party) ?? 0) + pYes * present)
+    noByParty.set(d.party, (noByParty.get(d.party) ?? 0) + pNo * present)
   }
   const needed = neededVotes(bill)
   const sd = Math.sqrt(variance) + 6 // folga para o ruído de partidos inteiros
@@ -176,16 +203,20 @@ export function forecastVote(s: GameState, billId: BillId): Forecast {
   const label = chance > 0.85 ? 'Fácil' : chance > 0.6 ? 'Provável' : chance > 0.35 ? 'Disputada' : chance > 0.1 ? 'Difícil' : 'Quase impossível'
   return {
     yes: Math.round(yes), no: Math.round(no), abstain: Math.round(abstain), needed, chance, label,
-    byParty: PARTIES.map((p) => ({ party: p.id, yes: Math.round(byParty.get(p.id) ?? 0), seats: p.seats })),
+    byParty: PARTIES.map((p) => ({ party: p.id, yes: Math.round(byParty.get(p.id) ?? 0), no: Math.round(noByParty.get(p.id) ?? 0), seats: p.seats, orientation: orient[p.id] })),
   }
 }
 
 /** Vota um projeto na Câmara, com sorteio. Não altera o estado. */
-export function runVote(s: GameState, billId: BillId, rng: Rng): VoteRecord {
+export function runVote(s: GameState, billId: BillId, rng: Rng): VoteRecord & { broken: PartyId[] } {
   const bill = BILL_BY_ID[billId]
   const c = s.congress
   const approval = s.history[s.history.length - 1].approval
   const pop = billPopularity(bill)
+  // Cada acordo pode falhar no dia: a bancada não entrega tudo o que prometeu.
+  const deals = dealsOf(s, billId)
+  const broken = new Set(deals.filter((d) => rng.next() > dealReliability(d.party, d.kind)).map((d) => d.party))
+  const boost = boosts(deals, broken)
   const gauss = () => {
     const u = Math.max(1e-9, rng.next())
     return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * rng.next())
@@ -196,13 +227,13 @@ export function runVote(s: GameState, billId: BillId, rng: Rng): VoteRecord {
     const orient = {} as Record<PartyId, number>
     for (const p of PARTIES) {
       partyMood[p.id] = gauss() * 0.06
-      orient[p.id] = partyOrientation(c.parties[p.id], bill, approval, pop)
+      orient[p.id] = partyOrientation(c.parties[p.id], bill, approval, pop, boost[p.id])
     }
     let yes = 0, no = 0, abstain = 0, absent = 0
     const byParty = Object.fromEntries(PARTIES.map((p) => [p.id, { yes: 0, no: 0 }])) as VoteRecord['byParty']
     for (const d of c.deputies) {
       if (rng.next() < CONGRESS.absentRate) { absent++; continue }
-      const score = deputyScore(d, c, bill, approval, orient[d.party], pop) + partyMood[d.party] + gauss() * CONGRESS.noise
+      const score = deputyScore(d, c, bill, approval, orient[d.party], pop, boost[d.party]) + partyMood[d.party] + gauss() * CONGRESS.noise
       if (score > CONGRESS.abstainBand) { yes++; byParty[d.party].yes++ }
       else if (score < -CONGRESS.abstainBand) { no++; byParty[d.party].no++ }
       else abstain++
@@ -218,7 +249,7 @@ export function runVote(s: GameState, billId: BillId, rng: Rng): VoteRecord {
     const second = turn() // segundo turno
     if (second.yes < needed) { approved = false; r = second }
   }
-  return { month: s.month, bill: billId, ...r, needed, approved }
+  return { month: s.month, bill: billId, ...r, needed, approved, broken: [...broken] }
 }
 
 export function isRecess(month: number): boolean {

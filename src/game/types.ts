@@ -119,7 +119,7 @@ export interface MonthReport {
 }
 
 export interface GameState {
-  saveVersion: 5
+  saveVersion: 6
   /** Mês atual, de 0 (janeiro do 1º ano) a 47. Em 48 o mandato acabou. */
   month: number
   presidentName: string
@@ -202,6 +202,26 @@ export interface PendingBill {
   id: BillId
   /** Mês em que foi enviado. */
   sentMonth: number
+  /** Acordos fechados com partidos para esta votação (etapa 4). */
+  deals?: { party: PartyId; kind: DealKind }[]
+}
+
+/** Preço que um partido cobra pelo voto (etapa 4). */
+export type DealKind = 'emendas' | 'pauta' | 'cargos'
+
+/** Acordo fechado no mês: o partido vota com o governo neste projeto em troca do preço. */
+export interface Deal {
+  party: PartyId
+  kind: DealKind
+  bill: BillId
+}
+
+/** Promessa de pautar o projeto-bandeira de um partido até o mês `due`. */
+export interface Promise_ {
+  party: PartyId
+  bill: BillId
+  made: number
+  due: number
 }
 
 export interface VoteRecord {
@@ -229,6 +249,10 @@ export interface CongressState {
   /** Mês em que um projeto rejeitado pode ser reenviado. */
   blockedUntil: Partial<Record<BillId, number>>
   votes: VoteRecord[]
+  /** Promessas feitas a partidos em troca de votos (etapa 4). */
+  promises: Promise_[]
+  /** Risco de escândalo acumulado por cargos e emendas, 0 a 100. */
+  scandal: number
 }
 
 /** De onde veio um fato do mês: a lei, o autor e o ano. */

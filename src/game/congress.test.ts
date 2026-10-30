@@ -134,7 +134,7 @@ describe('saves antigos', () => {
     delete s.playerParty
     s.saveVersion = 1
     const m = migrate(JSON.parse(JSON.stringify(s)))!
-    expect(m.saveVersion).toBe(5)
+    expect(m.saveVersion).toBe(6)
     expect(m.world.seeds).toEqual([])
     expect(m.demands).toEqual([])
     expect(m.playerParty).toBe('mdn')

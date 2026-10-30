@@ -59,7 +59,13 @@ export function migrate(raw: unknown): GameState | null {
       // v0.5 → v0.6: catálogo por área e resposta ao fato do mês. Nada a converter no estado.
       s.saveVersion = 5
     }
-    if (s.saveVersion !== 5) return null
+    if (s.saveVersion === 5) {
+      // v0.7 → v0.8: negociação de votos (promessas e risco de escândalo).
+      s.congress.promises = []
+      s.congress.scandal = 0
+      s.saveVersion = 6
+    }
+    if (s.saveVersion !== 6) return null
     return s as GameState
   } catch {
     return null

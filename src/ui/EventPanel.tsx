@@ -10,6 +10,7 @@ import { effectChips } from './effects'
 import { GROUP_ICON } from './icons'
 import { ResponseBox } from './ResponseBox'
 import { MINISTER_BY_AREA } from '../game/data/ministers'
+import { aiReady } from '../lib/ai'
 
 /** Painel do fato do mês: quem traz o problema, o que aconteceu e as escolhas. */
 export function EventPanel({ state, choice, onChoose, response, onRespond, plannedBill }: {
@@ -62,6 +63,14 @@ export function EventPanel({ state, choice, onChoose, response, onRespond, plann
           <p className="pn-event__ask">{kind === 'bom' ? '“Presidente, temos uma boa notícia. Como quer usar?”' : '“Presidente, precisamos de uma decisão.”'}</p>
         </div>
       </div>
+      {kind !== 'bom' && aiReady() && state.difficulty !== 'facil' ? (
+        <div className="pn-letpass">
+          <b>Se deixar passar:</b> {ev.options[def].label.toLowerCase()} — {ev.options[def].text}
+          <span className="pn-chips">
+            {effectChips(ev.options[def].effects, ev.options[def].parties).map((c, k) => <span key={k} className={`pn-chipfx ${c.tone}`} title={c.title}>{c.text}</span>)}
+          </span>
+        </div>
+      ) : (
       <div className="pn-event__options">
         {ev.options.map((o, i) => (
           <button key={i} className={`pn-option ${choice === i ? 'sel' : ''} ${o.default ? 'is-default' : ''}`} disabled={!!response} onClick={() => onChoose(choice === i ? null : i)}>
@@ -75,6 +84,7 @@ export function EventPanel({ state, choice, onChoose, response, onRespond, plann
           </button>
         ))}
       </div>
+      )}
       {kind !== 'bom' && <ResponseBox key={`${state.month}-${ev.id}`} state={state} ev={ev} response={response} plannedBill={plannedBill} onRespond={onRespond} />}
     </section>
   )

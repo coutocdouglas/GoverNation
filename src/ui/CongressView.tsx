@@ -3,7 +3,7 @@ import { articulationBlockedReason, CONGRESS, forecastVote, isRecess } from '../
 import { BILL_BY_ID, GDP_BILLIONS, INSTRUMENTS } from '../game/data/bills'
 import { PARTIES, PARTY_BY_ID } from '../game/data/parties'
 import { monthLabel } from '../game/game'
-import type { Articulation, BillId, GameState, PartyId, VoteRecord } from '../game/types'
+import type { Articulation, BillId, Deal, GameState, PartyId, VoteRecord } from '../game/types'
 import { Portrait } from './Portrait'
 import { num } from './format'
 
@@ -38,16 +38,19 @@ function useHemicycle() {
   }, [])
 }
 
-export function CongressView({ state, articulations, onToggle, bill }: {
+export function CongressView({ state, articulations, onToggle, bill, extraBill, deals, onNegotiate }: {
   state: GameState
   articulations: Articulation[]
   onToggle: (a: Articulation) => void
   bill: BillId | null
+  extraBill?: BillId | null
+  deals?: Deal[]
+  onNegotiate?: (id: BillId) => void
 }) {
   const seats = useHemicycle()
   const c = state.congress
   const left = CONGRESS.articulationsPerMonth - articulations.length
-  const watching: BillId[] = [...new Set([...(bill ? [bill] : []), ...c.pending.map((p) => p.id)])]
+  const watching: BillId[] = [...new Set([...(bill ? [bill] : []), ...(extraBill ? [extraBill] : []), ...c.pending.map((p) => p.id)])].filter((id) => BILL_BY_ID[id].instrument !== 'decreto')
   const order = [...PARTIES].sort((a, b) => c.parties[b.id].relation - c.parties[a.id].relation)
   const allies = PARTIES.filter((p) => c.parties[p.id].relation >= 50).reduce((a, p) => a + p.seats, 0)
 
@@ -79,7 +82,12 @@ export function CongressView({ state, articulations, onToggle, bill }: {
       {watching.length > 0 && (
         <section className="pn-card pn-card--gold">
           <h3>🗳️ Na pauta <span className="pn-badge">placar previsto hoje</span></h3>
-          {watching.map((id) => <ForecastRow key={id} state={state} id={id} isNew={id === bill && !c.pending.some((p) => p.id === id)} />)}
+          {watching.map((id) => (
+            <div key={id}>
+              <ForecastRow state={state} id={id} isNew={(id === bill || id === extraBill) && !c.pending.some((p) => p.id === id)} deals={deals?.filter((d) => d.bill === id)} />
+              {onNegotiate && <div className="pn-row"><button className="pn-btn pn-btn--ghost" onClick={() => onNegotiate(id)}>🤝 Negociar votos com as lideranças</button></div>}
+            </div>
+          ))}
           <p className="pn-hint" style={{ marginTop: 10 }}>
             O placar muda com a sua aprovação e com a articulação. Emendas valem mais no mês da votação: o efeito cai pela metade a cada mês.
           </p>
@@ -161,8 +169,8 @@ function Axis({ econ, costumes }: { econ: number; costumes: number }) {
   )
 }
 
-export function ForecastRow({ state, id, isNew }: { state: GameState; id: BillId; isNew?: boolean }) {
-  const f = forecastVote(state, id)
+export function ForecastRow({ state, id, isNew, deals }: { state: GameState; id: BillId; isNew?: boolean; deals?: Deal[] }) {
+  const f = forecastVote(state, id, deals ?? [])
   const b = BILL_BY_ID[id]
   const tone = f.chance > 0.6 ? 'up' : f.chance > 0.35 ? 'warn' : 'dn'
   const target = f.needed || Math.ceil((f.yes + f.no) / 2) + 1
