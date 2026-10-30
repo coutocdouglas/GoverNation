@@ -36,6 +36,14 @@ export const CAST: CastMember[] = [
   { name: 'Lúcia Vasconcelos', role: 'Ministra do Trabalho', gender: 'f', portrait: 31 },
   { name: 'Marta Quintela', role: 'Secretária do Tesouro', gender: 'f', portrait: 5 },
   { name: 'Wagner Teles', role: 'Diretor de Segurança Digital', gender: 'm', portrait: 33 },
+  // Ministros novos da etapa 3A (data/ministers.ts)
+  { name: 'Augusto Prado', role: 'Ministro da Fazenda', gender: 'm', portrait: 12 },
+  { name: 'Helena Bastos', role: 'Ministra da Educação', gender: 'f', portrait: 2 },
+  { name: 'Ricardo Falcão', role: 'Ministro da Justiça e Segurança', gender: 'm', portrait: 14 },
+  { name: 'Joana Ribeiro', role: 'Ministra do Desenvolvimento Social', gender: 'f', portrait: 10 },
+  { name: 'Márcio Antunes', role: 'Ministro das Cidades', gender: 'm', portrait: 18 },
+  { name: 'Beatriz Okada', role: 'Ministra da Ciência e Tecnologia', gender: 'f', portrait: 17 },
+  { name: 'Paulo Henrique Duarte', role: 'Ministro das Relações Institucionais', gender: 'm', portrait: 4 },
 ]
 
 /**

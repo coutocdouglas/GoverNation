@@ -1,6 +1,7 @@
 import { ACTION_BY_ID, ACTIONS_PER_MONTH, blockedReason, effectMultiplier, type ActionEffects } from './actions'
 import { articulationBlockedReason, billBlockedReason, CONGRESS, driftRelations, initialCongress, isRecess, runVote } from './congress'
-import { BILL_BY_ID, RESUBMIT_COOLDOWN } from './data/bills'
+import { actsNow, BILL_BY_ID, RESUBMIT_COOLDOWN } from './data/bills'
+import { MINISTER_BY_AREA } from './data/ministers'
 import { DEMAND_BY_ID } from './data/demands'
 import { EVENT_BY_ID } from './data/events'
 import { defaultOption, drawEvent, spawnDemand } from './events'
@@ -52,7 +53,7 @@ export function newGame(
   const rngState = seed ?? Math.floor(Math.random() * 2 ** 31)
   const bonus = DIFFICULTY[difficulty].approvalBonus
   const state: GameState = {
-    saveVersion: 4,
+    saveVersion: 5,
     month: 0,
     presidentName: presidentName.trim() || 'Presidente',
     difficulty,
@@ -119,12 +120,34 @@ export interface MonthPlan {
   articulations?: Articulation[]
   /** Opção escolhida no fato do mês (sem escolha = opção padrão). */
   eventChoice?: number
+  /**
+   * Resposta escrita ao fato do mês (etapa 3A): uma medida do catálogo da mesma área.
+   * Segue o trâmite normal e não gasta a medida do mês. Substitui as opções prontas.
+   */
+  eventResponse?: BillId
+}
+
+/** Motivo pelo qual a medida não serve de resposta ao fato do mês atual, ou null. */
+export function responseBlockedReason(s: GameState, id: BillId): string | null {
+  const ev = s.event ? EVENT_BY_ID[s.event.id] : null
+  if (!ev) return 'Não há fato do mês para responder.'
+  if (ev.kind === 'bom') return 'Boa notícia não pede resposta: escolha como usar.'
+  const bill = BILL_BY_ID[id]
+  if (!bill) return 'Medida desconhecida.'
+  if (bill.area !== ev.area) return `${MINISTER_BY_AREA[ev.area].name} responde por ${MINISTER_BY_AREA[ev.area].areaName.toLowerCase()}: esta medida é de outra área.`
+  return billBlockedReason(s, id)
 }
 
 export function validatePlan(s: GameState, plan: MonthPlan): string | null {
   if (plan.bill) {
     const r = billBlockedReason(s, plan.bill)
     if (r) return `${BILL_BY_ID[plan.bill].name}: ${r}`
+  }
+  if (plan.eventResponse !== undefined) {
+    if (plan.eventChoice !== undefined) return 'Escolha uma opção pronta ou escreva uma resposta, não as duas.'
+    if (plan.eventResponse === plan.bill) return 'A resposta ao fato do mês não pode ser a mesma medida do mês.'
+    const r = responseBlockedReason(s, plan.eventResponse)
+    if (r) return `Resposta ao fato do mês: ${r}`
   }
   if (plan.eventChoice !== undefined) {
     const ev = s.event ? EVENT_BY_ID[s.event.id] : null
@@ -219,16 +242,28 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
     }
   }
 
-  // 1c. Projeto enviado à Câmara (medida provisória já vale)
-  if (plan.bill) {
-    const bill = BILL_BY_ID[plan.bill]
-    c.pending.push({ id: plan.bill, sentMonth: s.month })
-    if (bill.instrument === 'mp') {
+  // 1c. Medida do mês e resposta ao fato do mês. Decreto e MP valem na hora; o resto vai à Câmara.
+  const submitted: BillId[] = [plan.bill, plan.eventResponse].filter((x): x is BillId => !!x)
+  for (const id of submitted) {
+    const bill = BILL_BY_ID[id]
+    const minister = MINISTER_BY_AREA[bill.area]
+    if (bill.instrument === 'decreto') {
       actionConfidence += applyEffects(e, impulses, bill.effects, bill.name)
-      plantSeeds(s, plan.bill, bill.name, s.presidentName, s.playerParty, rng)
-      addBio(s, s.presidentName, `Editou a medida provisória: ${bill.name}.`)
+      c.laws.push(id)
+      plantSeeds(s, id, bill.name, s.presidentName, s.playerParty, rng)
+      addBio(s, s.presidentName, `Assinou o decreto: ${bill.name}.`)
+      addChronicle(s, `Decreto: ${bill.name}, no governo ${s.presidentName} (${PARTY_BY_ID[s.playerParty].sigla})`, 'neutral')
+      if (id !== plan.eventResponse) taken.push(`Assinou o decreto: ${bill.name}`)
+    } else {
+      c.pending.push({ id, sentMonth: s.month })
+      if (bill.instrument === 'mp') {
+        actionConfidence += applyEffects(e, impulses, bill.effects, bill.name)
+        plantSeeds(s, id, bill.name, s.presidentName, s.playerParty, rng)
+        addBio(s, s.presidentName, `Editou a medida provisória: ${bill.name}.`)
+      }
+      if (id !== plan.eventResponse) taken.push(`${bill.instrument === 'mp' ? 'Editou a MP' : 'Enviou à Câmara'}: ${bill.name}`)
     }
-    taken.push(`${bill.instrument === 'mp' ? 'Editou a MP' : 'Enviou à Câmara'}: ${bill.name}`)
+    if (minister) addBio(s, minister.name, `${minister.role}: ficou responsável por “${bill.name}”.`)
   }
 
   // 1d. Votações (fora do recesso). MP é votada no mês seguinte ao envio.
@@ -285,11 +320,48 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
   if (s.event) {
     const def = EVENT_BY_ID[s.event.id]
     if (def) {
-      const idx = plan.eventChoice ?? defaultOption(def)
-      const opt = def.options[idx]
       const origin = s.event.origin
       const title = fillText(def.title, origin)
       if (def.effects) actionConfidence += applyEffects(e, impulses, def.effects, title)
+      const resp = plan.eventResponse
+      // A resposta escrita resolve o fato se já vale neste mês (decreto, MP ou lei aprovada agora).
+      const resolved = !!resp && (actsNow(resp) || votes.some((v) => v.bill === resp && v.approved))
+      const idx = resp ? defaultOption(def) : plan.eventChoice ?? defaultOption(def)
+      const opt = def.options[idx]
+      const minister = MINISTER_BY_AREA[def.area]
+      if (resp) {
+        const name = BILL_BY_ID[resp].name
+        if (resolved) {
+          headlines.push({ text: `${title}: governo responde com ${lowerFirst(name)}`, tone: 'good' })
+          taken.push(`Respondeu ao fato do mês: ${name}`)
+          addBio(s, s.presidentName, `${title}: respondeu com ${lowerFirst(name)}.`)
+          addBio(s, minister.name, `${minister.role}: conduziu a resposta a “${title}” (${lowerFirst(name)}).`)
+          s.eventLog.push({ id: def.id, month: s.month })
+          if (origin) addChronicle(s, `${title} (consequência de ${origin.label}, ${origin.author}, ${origin.year}): resolvido com ${lowerFirst(name)}`, 'good')
+          eventReport = { id: def.id, option: -1, chosen: true, response: resp, resolved: true }
+          s.event = null
+        } else {
+          // A lei ficou parada (recesso) ou caiu: o problema segue e vale o que acontece se ninguém age.
+          const pending = c.pending.some((p) => p.id === resp)
+          headlines.push({ text: `${title}: ${lowerFirst(name)} ${pending ? 'fica parada na Câmara' : 'é barrada na Câmara'} e o problema continua`, tone: 'bad' })
+          taken.push(`Respondeu ao fato do mês: ${name} (${pending ? 'aguardando a Câmara' : 'rejeitada'})`)
+          actionConfidence += applyEffects(e, impulses, opt.effects, title)
+          headlines.push({ text: opt.outcome, tone: opt.tone })
+          addBio(s, minister.name, `${minister.role}: viu a resposta a “${title}” travar na Câmara.`)
+          s.eventLog.push({ id: def.id, month: s.month })
+          eventReport = { id: def.id, option: idx, chosen: true, response: resp, resolved: false }
+          s.event = null
+        }
+      }
+    }
+  }
+  if (s.event) {
+    const def = EVENT_BY_ID[s.event.id]
+    if (def) {
+      const origin = s.event.origin
+      const title = fillText(def.title, origin)
+      const idx = plan.eventChoice ?? defaultOption(def)
+      const opt = def.options[idx]
       actionConfidence += applyEffects(e, impulses, opt.effects, title)
       for (const [pid, dv] of Object.entries(opt.parties ?? {}) as [PartyId, number][]) {
         const ps = c.parties[pid]
@@ -324,7 +396,7 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
   // 1f. Cobranças: atendidas por decreto, MP editada ou lei aprovada neste mês; as outras podem vencer.
   const done = new Set<string>([
     ...actions,
-    ...(plan.bill && BILL_BY_ID[plan.bill].instrument === 'mp' ? [plan.bill] : []),
+    ...submitted.filter(actsNow),
     ...votes.filter((v) => v.approved).map((v) => v.bill),
   ])
   s.demands = s.demands.filter((d) => {

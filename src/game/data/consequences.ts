@@ -1,4 +1,6 @@
 import type { EventDef, EventOption } from './events'
+import { CATALOG } from './measures'
+import { MINISTERS, presenterOf, type AreaId } from './ministers'
 
 /**
  * Memória do mundo: o que cada lei, decreto ou decisão pode provocar no futuro.
@@ -42,6 +44,21 @@ export const SEED_RULES: Record<string, SeedRule[]> = {
   herancaObra: [{ event: 'obraInaugurada', delay: [5, 12], chance: 1 }],
   herancaPensoes: [{ event: 'romboPrevidencia', delay: [16, 28], chance: 1 }],
   herancaAcordo: [{ event: 'acordoComercial', delay: [14, 26], chance: 1 }],
+  // Catálogo da etapa 3A: sementes específicas (as outras medidas usam a regra padrão abaixo).
+  reformaPrevidencia: [{ event: 'grauInvestimento', delay: [12, 24], chance: 0.5 }, { event: 'frutos_trabalho', delay: [14, 26], chance: 0.3 }],
+  desonerarFolha: [{ event: 'romboPrevidencia', delay: [12, 24], chance: 0.5 }],
+  presidios: [{ event: 'frutos_seguranca', delay: [12, 24], chance: 0.5 }],
+  agrotoxicos: [{ event: 'barragem', delay: [12, 30], chance: 0.2 }],
+}
+
+/**
+ * Regra padrão do catálogo: toda medida pode render, meses depois, um fato bom na sua área
+ * ("resultados de {lei} aparecem"). Leis têm mais chance que decretos.
+ */
+for (const m of CATALOG) {
+  if (SEED_RULES[m.id]) continue
+  const chance = m.instrument === 'decreto' ? 0.3 : 0.45
+  SEED_RULES[m.id] = [{ event: `frutos_${m.area}`, delay: [8, 20], chance }]
 }
 
 /** Heranças que o primeiro mandato recebe do governo anterior (fictício). */
@@ -61,13 +78,33 @@ export const GOOD_OPTIONS: EventOption[] = [
   { icon: '🙈', label: 'Deixar passar', text: 'Ninguém fica sabendo direito.', effects: {}, outcome: 'Boa notícia passa quase despercebida', tone: 'neutral', default: true },
 ]
 
-const good = (o: Partial<EventDef> & Pick<EventDef, 'id' | 'icon' | 'title' | 'text' | 'presenter' | 'importance'>): EventDef => ({
+const good = (o: Partial<EventDef> & Pick<EventDef, 'id' | 'icon' | 'title' | 'text' | 'presenter' | 'importance' | 'area'>): EventDef => ({
   tag: 'Boa notícia', weight: 0, random: false, kind: 'bom', options: GOOD_OPTIONS, ...o,
 })
 
+/** Texto do fato bom de cada área quando uma medida do catálogo dá resultado. */
+const FRUTOS: Record<AreaId, { icon: string; title: string; text: string }> = {
+  economia: { icon: '📊', title: 'Efeito de {lei} aparece nas contas', text: 'Economistas apontam {lei}, de {ano}, como um dos motivos da melhora.' },
+  saude: { icon: '🩺', title: 'Indicadores de saúde melhoram depois de {lei}', text: 'Menos mortes evitáveis e filas menores. O estudo cita {lei} ({autor}, {ano}).' },
+  educacao: { icon: '📚', title: 'Avaliação nacional mostra avanço com {lei}', text: 'As notas dos alunos sobem pela primeira vez em anos.' },
+  seguranca: { icon: '🛡️', title: 'Homicídios caem depois de {lei}', text: 'O anuário da segurança atribui parte da queda a {lei}.' },
+  trabalho: { icon: '📈', title: 'Emprego com carteira cresce depois de {lei}', text: 'O mercado de trabalho reage e {autor} é lembrado.' },
+  social: { icon: '🍽️', title: 'Pobreza extrema recua com {lei}', text: 'Pesquisa mostra milhões de pessoas saindo da miséria.' },
+  agro: { icon: '🚜', title: 'Campo colhe os resultados de {lei}', text: 'Produtores elogiam a medida de {ano} e a produção cresce.' },
+  ambiente: { icon: '🌿', title: 'Desmatamento e emissões caem com {lei}', text: 'Satélites confirmam e a imprensa estrangeira repercute.' },
+  energia: { icon: '🔋', title: 'Energia mais segura graças a {lei}', text: 'Reservatórios e linhas novas afastam o risco de apagão.' },
+  transportes: { icon: '🛣️', title: 'Frete mais barato depois de {lei}', text: 'Exportadores comemoram a queda no custo de escoar a produção.' },
+  cidades: { icon: '🏠', title: 'Bairros transformados por {lei}', text: 'Reportagem mostra famílias com casa, água e esgoto.' },
+  ciencia: { icon: '🧪', title: 'País sobe em ranking de inovação com {lei}', text: 'Pesquisadores e empresas citam {lei} como virada.' },
+  politica: { icon: '🗳️', title: 'Confiança nas instituições sobe com {lei}', text: 'Pesquisa mostra brasileiros menos desconfiados do governo.' },
+}
+
 export const CONSEQUENCE_EVENTS: EventDef[] = [
+  ...MINISTERS.map((m) =>
+    good({ id: `frutos_${m.area}`, area: m.area, importance: 2, tag: `Boa notícia · ${m.areaName.toLowerCase()}`, presenter: presenterOf(m.area), ...FRUTOS[m.area] }),
+  ),
   {
-    id: 'transicaoTributaria', tag: 'Consequência · impostos', icon: '🧾', weight: 0, random: false, kind: 'consequencia', importance: 3,
+    id: 'transicaoTributaria', area: 'economia', tag: 'Consequência · impostos', icon: '🧾', weight: 0, random: false, kind: 'consequencia', importance: 3,
     title: 'Transição de {lei} confunde empresas',
     text: 'Sistemas novos, regras duplicadas e notas fiscais travadas. Associações pedem adiar o cronograma aprovado em {ano}.',
     presenter: { name: 'Marta Quintela', role: 'Secretária do Tesouro', feminine: true, color: '#1e5bd8' },
@@ -78,19 +115,19 @@ export const CONSEQUENCE_EVENTS: EventDef[] = [
     ],
   },
   good({
-    id: 'tributariaFrutos', icon: '📈', importance: 3, tag: 'Boa notícia · economia',
+    id: 'tributariaFrutos', area: 'economia', icon: '📈', importance: 3, tag: 'Boa notícia · economia',
     title: 'Indústria cresce graças a {lei}',
     text: 'Com menos impostos em cascata, a produção industrial tem o melhor ano em uma década. A reforma foi aprovada em {ano} por {autor}.',
     presenter: { name: 'Marta Quintela', role: 'Secretária do Tesouro', feminine: true, color: '#1e5bd8' },
   }),
   good({
-    id: 'investimentoEnergia', icon: '⚡', importance: 2, tag: 'Boa notícia · energia',
+    id: 'investimentoEnergia', area: 'energia', icon: '⚡', importance: 2, tag: 'Boa notícia · energia',
     title: 'Nova dona da estatal anuncia R$ 40 bi em investimentos',
     text: 'A empresa privatizada em {ano} por {autor} vai ampliar usinas e linhas de transmissão.',
     presenter: { name: 'Rui Damasceno', role: 'Ministro de Minas e Energia', feminine: false, color: '#2bb3a3' },
   }),
   {
-    id: 'tarifaLuz', tag: 'Consequência · energia', icon: '💡', weight: 0, random: false, kind: 'consequencia', importance: 3,
+    id: 'tarifaLuz', area: 'energia', tag: 'Consequência · energia', icon: '💡', weight: 0, random: false, kind: 'consequencia', importance: 3,
     title: 'Conta de luz sobe 18% após {lei}',
     text: 'A empresa privatizada em {ano} repassou custos. Consumidores e prefeitos reclamam.',
     presenter: { name: 'Rui Damasceno', role: 'Ministro de Minas e Energia', feminine: false, color: '#2bb3a3' },
@@ -101,7 +138,7 @@ export const CONSEQUENCE_EVENTS: EventDef[] = [
     ],
   },
   {
-    id: 'romboPrevidencia', tag: 'Consequência · contas públicas', icon: '👴', weight: 0, random: false, kind: 'consequencia', importance: 4,
+    id: 'romboPrevidencia', area: 'economia', tag: 'Consequência · contas públicas', icon: '👴', weight: 0, random: false, kind: 'consequencia', importance: 4,
     title: 'Rombo da Previdência cresce por causa de {lei}',
     text: 'Os reajustes acima da inflação aprovados em {ano} por {autor} aumentaram o gasto com benefícios mais que o previsto.',
     presenter: { name: 'Marta Quintela', role: 'Secretária do Tesouro', feminine: true, color: '#1e5bd8' },
@@ -112,20 +149,20 @@ export const CONSEQUENCE_EVENTS: EventDef[] = [
     ],
   },
   good({
-    id: 'quedaPobreza', icon: '📉', importance: 3, tag: 'Boa notícia · social',
+    id: 'quedaPobreza', area: 'social', icon: '📉', importance: 3, tag: 'Boa notícia · social',
     title: 'Pobreza cai ao menor nível da série',
     text: 'O IBGE atribui parte da queda a {lei}, aprovada em {ano} por {autor}.',
     presenter: { name: 'Lúcia Vasconcelos', role: 'Ministra do Trabalho', feminine: true, color: '#d62d2d' },
   }),
   good({
-    id: 'grauInvestimento', icon: '🏆', importance: 4, tag: 'Boa notícia · mercado',
+    id: 'grauInvestimento', area: 'economia', icon: '🏆', importance: 4, tag: 'Boa notícia · mercado',
     title: 'Agência devolve ao país o grau de investimento',
     text: 'A nota sobe citando {lei}, aprovada em {ano}. O dólar cai e os juros longos recuam.',
     presenter: { name: 'Marta Quintela', role: 'Secretária do Tesouro', feminine: true, color: '#1e5bd8' },
     effects: { confidence: 6 },
   }),
   {
-    id: 'universidadesSemVerba', tag: 'Consequência · educação', icon: '🎓', weight: 0, random: false, kind: 'consequencia', importance: 2,
+    id: 'universidadesSemVerba', area: 'educacao', tag: 'Consequência · educação', icon: '🎓', weight: 0, random: false, kind: 'consequencia', importance: 2,
     title: 'Universidades cortam bolsas por causa de {lei}',
     text: 'Os limites de gasto aprovados em {ano} chegaram às federais. Reitores falam em fechar laboratórios.',
     presenter: { name: 'Iara Couto', role: 'Líder do sindicato docente', feminine: true, color: '#d62d2d' },
@@ -135,7 +172,7 @@ export const CONSEQUENCE_EVENTS: EventDef[] = [
     ],
   },
   {
-    id: 'barragem', tag: 'Consequência · tragédia ambiental', icon: '🌊', weight: 0, random: false, kind: 'consequencia', importance: 5,
+    id: 'barragem', area: 'ambiente', tag: 'Consequência · tragédia ambiental', icon: '🌊', weight: 0, random: false, kind: 'consequencia', importance: 5,
     title: 'Barragem licenciada pela regra nova se rompe',
     text: 'A obra recebeu licença rápida graças a {lei}, aprovada em {ano} por {autor}. Há mortos e uma cidade coberta de lama.',
     presenter: { name: 'Glória Matos', role: 'Ministra do Meio Ambiente', feminine: true, color: '#4f7a2a' },
@@ -146,13 +183,13 @@ export const CONSEQUENCE_EVENTS: EventDef[] = [
     ],
   },
   good({
-    id: 'servicoDigital', icon: '📱', importance: 2, tag: 'Boa notícia · serviços',
+    id: 'servicoDigital', area: 'ciencia', icon: '📱', importance: 2, tag: 'Boa notícia · serviços',
     title: 'Serviço público digital vira referência',
     text: 'Carreiras reorganizadas por {lei} ({ano}) cortaram filas: 90% dos serviços agora são pelo celular.',
     presenter: { name: 'Wagner Teles', role: 'Diretor de Segurança Digital', feminine: false, color: '#8b6fd6' },
   }),
   {
-    id: 'estadosSemArrecadacao', tag: 'Consequência · federação', icon: '🏛️', weight: 0, random: false, kind: 'consequencia', importance: 2,
+    id: 'estadosSemArrecadacao', area: 'economia', tag: 'Consequência · federação', icon: '🏛️', weight: 0, random: false, kind: 'consequencia', importance: 2,
     title: 'Governadores cobram compensação por {lei}',
     text: 'A isenção aprovada em {ano} reduziu os repasses aos estados. Governadores ameaçam atrasar salários.',
     presenter: { name: 'Heitor Valadares', role: 'Governador do Sul', feminine: false, color: '#1e5bd8' },
@@ -162,7 +199,7 @@ export const CONSEQUENCE_EVENTS: EventDef[] = [
     ],
   },
   {
-    id: 'empresasMudamSede', tag: 'Consequência · investimento', icon: '✈️', weight: 0, random: false, kind: 'consequencia', importance: 2,
+    id: 'empresasMudamSede', area: 'economia', tag: 'Consequência · investimento', icon: '✈️', weight: 0, random: false, kind: 'consequencia', importance: 2,
     title: 'Grandes empresas mudam sede para o exterior',
     text: 'Três grupos citam {lei} ({ano}) ao transferir a holding para fora.',
     presenter: { name: 'Marta Quintela', role: 'Secretária do Tesouro', feminine: true, color: '#1e5bd8' },
@@ -172,7 +209,7 @@ export const CONSEQUENCE_EVENTS: EventDef[] = [
     ],
   },
   {
-    id: 'rebeliao', tag: 'Consequência · presídios', icon: '🔒', weight: 0, random: false, kind: 'consequencia', importance: 3,
+    id: 'rebeliao', area: 'seguranca', tag: 'Consequência · presídios', icon: '🔒', weight: 0, random: false, kind: 'consequencia', importance: 3,
     title: 'Rebelião em presídio superlotado',
     text: 'Com penas mais longas por {lei} ({ano}), as cadeias estão com o dobro da capacidade.',
     presenter: { name: 'Vera Toledo', role: 'Chefe da Controladoria', feminine: true, color: '#8b6fd6' },
@@ -182,20 +219,20 @@ export const CONSEQUENCE_EVENTS: EventDef[] = [
     ],
   },
   good({
-    id: 'obraInaugurada', icon: '🚆', importance: 2, tag: 'Boa notícia · obra pronta',
+    id: 'obraInaugurada', area: 'transportes', icon: '🚆', importance: 2, tag: 'Boa notícia · obra pronta',
     title: 'Obra fica pronta: {lei}',
     text: 'Iniciada por {autor} em {ano}, a obra entra em operação e gera empregos na região.',
     presenter: { name: 'Neusa Galvão', role: 'Ministra dos Transportes', feminine: true, color: '#e98a15' },
   }),
   good({
-    id: 'acordoComercial', icon: '🌏', importance: 3, tag: 'Boa notícia · comércio',
+    id: 'acordoComercial', area: 'agro', icon: '🌏', importance: 3, tag: 'Boa notícia · comércio',
     title: 'Entra em vigor: {lei}',
     text: 'Negociado por {autor} em {ano}, o acordo derruba tarifas e abre mercado para a carne e a soja.',
     presenter: { name: 'Severino Cunha', role: 'Ministro da Agricultura', feminine: false, color: '#c9a227' },
     effects: { confidence: 2 },
   }),
   // Boas notícias que não dependem de ninguém: o presidente pode surfar nelas.
-  good({ id: 'safraRecorde', random: true, weight: 1, icon: '🌽', importance: 2, tag: 'Boa notícia · campo', title: 'Safra recorde de grãos', text: 'Chuva no tempo certo e preços altos lá fora. O campo vive um ano histórico.', presenter: { name: 'Severino Cunha', role: 'Ministro da Agricultura', feminine: false, color: '#c9a227' } }),
-  good({ id: 'petroleo', random: true, weight: 1, icon: '🛢️', importance: 3, tag: 'Boa notícia · energia', title: 'Descoberta de petróleo na Margem Equatorial', text: 'Uma reserva gigante foi confirmada. Estados do Norte já fazem contas dos royalties.', presenter: { name: 'Rui Damasceno', role: 'Ministro de Minas e Energia', feminine: false, color: '#2bb3a3' } }),
-  good({ id: 'investimentoEstrangeiro', random: true, weight: 1, icon: '🏭', importance: 2, tag: 'Boa notícia · indústria', title: 'Montadora anuncia fábrica de carros elétricos', text: 'Investimento de R$ 15 bilhões e 8 mil empregos no interior.', presenter: { name: 'Marta Quintela', role: 'Secretária do Tesouro', feminine: true, color: '#1e5bd8' } }),
+  good({ id: 'safraRecorde', area: 'agro', random: true, weight: 1, icon: '🌽', importance: 2, tag: 'Boa notícia · campo', title: 'Safra recorde de grãos', text: 'Chuva no tempo certo e preços altos lá fora. O campo vive um ano histórico.', presenter: { name: 'Severino Cunha', role: 'Ministro da Agricultura', feminine: false, color: '#c9a227' } }),
+  good({ id: 'petroleo', area: 'energia', random: true, weight: 1, icon: '🛢️', importance: 3, tag: 'Boa notícia · energia', title: 'Descoberta de petróleo na Margem Equatorial', text: 'Uma reserva gigante foi confirmada. Estados do Norte já fazem contas dos royalties.', presenter: { name: 'Rui Damasceno', role: 'Ministro de Minas e Energia', feminine: false, color: '#2bb3a3' } }),
+  good({ id: 'investimentoEstrangeiro', area: 'economia', random: true, weight: 1, icon: '🏭', importance: 2, tag: 'Boa notícia · indústria', title: 'Montadora anuncia fábrica de carros elétricos', text: 'Investimento de R$ 15 bilhões e 8 mil empregos no interior.', presenter: { name: 'Marta Quintela', role: 'Secretária do Tesouro', feminine: true, color: '#1e5bd8' } }),
 ]

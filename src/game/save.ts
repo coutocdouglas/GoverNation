@@ -55,7 +55,11 @@ export function migrate(raw: unknown): GameState | null {
       s.bios = {}
       s.saveVersion = 4
     }
-    if (s.saveVersion !== 4) return null
+    if (s.saveVersion === 4) {
+      // v0.5 → v0.6: catálogo por área e resposta ao fato do mês. Nada a converter no estado.
+      s.saveVersion = 5
+    }
+    if (s.saveVersion !== 5) return null
     return s as GameState
   } catch {
     return null

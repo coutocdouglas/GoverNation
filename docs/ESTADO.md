@@ -3,31 +3,23 @@
 > **Leia este arquivo primeiro.** Ele diz onde o projeto está e qual é o próximo passo.
 > Atualize-o a cada mudança: seção "Estado atual", "Próximo passo" e uma linha no "Histórico".
 
-**Última atualização:** 30/10/2026 · **Versão publicada:** v0.5.0
+**Última atualização:** 30/10/2026 · **Versão publicada:** v0.6.0
 
 ---
 
 ## Próximo passo
 
-**Etapa 3A: resposta em texto ao fato do mês, ministro responsável e catálogo grande de medidas (por palavras-chave).**
+**Etapa 3B: camada de IA.** Decidido em 30/10 (DESIGN.md, seção 17). A base dela, a etapa 3A, ficou pronta na v0.6.0.
 
-- O fato do mês ganha um campo "agir" em texto livre (o mesmo interpretador da medida do mês).
-- A resposta aceita vira decreto, projeto de lei, MP ou PEC e segue o trâmite normal. **Não gasta a medida do mês**: é a resolução do problema, num espaço à parte.
-- O catálogo de medidas cresce de 17 para cerca de 80, organizado por área (saúde, educação, segurança, energia, agro, transportes, trabalho, ambiente...), cada uma com palavras-chave, efeitos e sementes de consequência.
-- Cada fato do mês passa a ter uma área e um ministro responsável (ministros novos entram no elenco com retrato livre ou reservado).
-- Esta etapa fica **sem IA** de propósito: é a base e o plano B da 3B.
-
-**Etapa 3B (logo depois): camada de IA.** Decidido em 30/10 (DESIGN.md, seção 17).
-
-- Botão **"pedir leitura do ministro"**: o ministro sugere 2 ou 3 respostas em texto, no estilo dele, a partir da ficha, do partido, da relação com o presidente e do estado real do país. O jogador aceita, edita ou ignora.
-- A IA também interpreta o texto livre do jogador e devolve a estrutura de medida; o motor valida e calcula. A IA nunca define números sozinha.
+- Botão **"pedir leitura do ministro"** com IA: o ministro sugere 2 ou 3 respostas em texto, no estilo dele, a partir da ficha, do partido, da relação com o presidente e do estado real do país. O jogador aceita, edita ou ignora.
+- A IA também interpreta o texto livre do jogador e devolve uma medida do catálogo (ou a mesma estrutura `BillDef`); o motor valida e calcula. A IA nunca define números sozinha.
 - Chave de API própria, digitada nas configurações e guardada só no computador. Nunca no repositório (é público), no save ou nos logs.
-- Modo híbrido: sem chave, sem internet ou com resposta inválida, o jogo usa as palavras-chave.
+- Modo híbrido: sem chave, sem internet ou com resposta inválida, o jogo usa as palavras-chave da 3A (`interpretResponse` e `interpretMeasure`).
 - Modelos por tarefa (barato para falas, intermediário para interpretar), com custo medido antes de fixar.
 
-Complexidade: alta. Use o Opus para desenhar (principalmente a 3B) e o Sonnet para escrever o catálogo e as telas.
+Complexidade: alta. Use o **Opus** para desenhar a 3B (segurança da chave, formato das respostas, plano B). O Sonnet pode fazer a tela de configurações depois.
 
-Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdouglas/GoverNation. Leia CLAUDE.md, docs/ESTADO.md e docs/DESIGN.md. Quero fazer a etapa 3A."*
+Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdouglas/GoverNation. Leia CLAUDE.md, docs/ESTADO.md e docs/DESIGN.md. Quero fazer a etapa 3B."*
 
 ---
 
@@ -36,13 +28,15 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 **Base técnica**
 - App de Windows (Tauri 2 + React + TypeScript). O instalador é gerado pelo GitHub Actions e o jogo se atualiza sozinho, com atualização assinada.
 - O motor do jogo (`src/game/`) fica separado das telas (`src/ui/`). Os números de balanceamento ficam em `src/game/data/`.
-- 53 testes automáticos. Saves antigos são migrados (versão atual do save: 4).
+- 64 testes automáticos. Saves antigos são migrados (versão atual do save: 5).
 
 **Jogabilidade**
 - Mandato de 48 meses (jan/2027 a dez/2030), com o mês em 4 passos: notícias, fato do mês, decisões e encerrar.
 - **Economia** com causa e efeito: PIB, inflação, Selic (Banco Central independente, 8 reuniões do Copom por ano), desemprego, dívida, contas públicas, confiança do mercado, dólar e choques externos.
 - **7 grupos sociais** com memória: ganhos são esquecidos em cerca de 9 meses e perdas em cerca de 2 anos.
-- **Medida do mês em texto livre**, lida por palavras-chave. Leva a 7 decretos ou a 10 projetos de lei e mostra o instrumento, o custo e o placar previsto.
+- **Medida do mês em texto livre**, lida por palavras-chave. Leva aos 7 decretos rápidos ou a um catálogo de 91 medidas em 13 áreas (decreto, MP, lei, lei complementar ou PEC) e mostra o instrumento, o custo e o placar previsto.
+- **Agir no fato do mês:** além das opções prontas, o jogador escreve a resposta; o ministro da área lê e mostra até 3 caminhos. A resposta segue o trâmite normal e não gasta a medida do mês. Decreto e MP resolvem na hora; lei e PEC, se aprovadas no mesmo mês.
+- **Ministros:** 13 áreas, cada uma com um ministro responsável (7 novos na v0.6).
 - **Congresso:** 513 deputados de 9 partidos fictícios. O voto depende de ideologia, orientação do partido, relação com o governo, popularidade, aprovação e emendas.
   - Lei ordinária, lei complementar (257 votos), PEC (308 votos, em dois turnos) e MP, que vale na hora e cai se for rejeitada.
   - Recesso em janeiro e julho.
@@ -52,13 +46,13 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 - **Cobranças dos grupos** com prazo, recompensa e penalidade.
 - **Memória do mundo:** leis, MPs e obras plantam consequências que brotam meses ou anos depois. Há herança do governo anterior e o tempo é absoluto, pronto para vários mandatos.
 - **Fichas:** biografia acumulada de cada personagem e memória do país.
-- **Retratos:** 110 fotos, cada uma usada por uma pessoa só. O presidente escolhe o rosto na posse e 16 retratos ficam reservados para Defesa, Supremo, povos indígenas, campo e tradições.
+- **Retratos:** 110 fotos, cada uma usada por uma pessoa só. O presidente escolhe o rosto na posse (65 livres) e 16 retratos ficam reservados para Defesa, Supremo, povos indígenas, campo e tradições.
 
 **Telas:** Painel (com cara de jogo, animações e plantão de notícias), Governo (plenário, pauta, partidos e articulação) e Fichas. Nação, Economia, Diplomacia, Programas e Vida pessoal aparecem bloqueadas.
 
 **Onde está cada coisa**
 - `CLAUDE.md`: regras do projeto e quando abrir uma conversa nova.
-- `docs/DESIGN.md`: decisões de desenho, seções 1 a 16.
+- `docs/DESIGN.md`: decisões de desenho, seções 1 a 18.
 - `CHANGELOG.md`: novidades de cada versão.
 - `docs/RELEASES.md`: como publicar.
 
@@ -68,7 +62,7 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 
 1. ✅ Retratos e elenco fixo (v0.4.1)
 2. ✅ Memória do mundo, consequências, importância, fatos bons e herdados, biografias (v0.5.0)
-3. ⏭️ **3A** resposta em texto ao fato do mês, ministro responsável, catálogo grande de medidas (palavras-chave) · **3B** camada de IA: leitura do ministro, interpretação do texto livre, chave própria, plano B
+3. ✅ **3A** resposta em texto ao fato do mês, ministro responsável, catálogo grande de medidas (v0.6.0) · ⏭️ **3B** camada de IA: leitura do ministro, interpretação do texto livre, chave própria, plano B
 4. Congresso 2.0: veto e derrubada, relator e emendas ao texto, comissões, presidente da Câmara, frentes temáticas, pautas-bomba, ministérios cedidos
 5. Entre mandatos (campanha contínua): painel de eleição com escolha de candidato pela ficha, governo seguinte simulado se o jogador perder, herança
 6. Depois: Senado com poderes próprios (sabatinas, impeachment), Supremo, imprensa e pesquisas, orçamento anual, ícones próprios
@@ -96,3 +90,4 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 | 29/10/2026 | v0.5.0 | Memória do mundo, consequências, importância 1–5, boas notícias, herança, biografias e Fichas; CLAUDE.md |
 | 29/10/2026 | — | Criado este arquivo de estado (docs/ESTADO.md) |
 | 30/10/2026 | — | Decisão: IA entra na etapa 3B; etapa 3 dividida em 3A (catálogo) e 3B (IA). Documentos atualizados |
+| 30/10/2026 | v0.6.0 | Etapa 3A: agir em texto no fato do mês, 13 áreas com ministro responsável (7 ministros novos), catálogo de 91 medidas por palavras-chave, boas notícias por área |

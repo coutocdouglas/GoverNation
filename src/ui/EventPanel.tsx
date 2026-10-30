@@ -8,12 +8,17 @@ import type { ActionId, BillId, GameState } from '../game/types'
 import { Portrait } from './Portrait'
 import { effectChips } from './effects'
 import { GROUP_ICON } from './icons'
+import { ResponseBox } from './ResponseBox'
+import { MINISTER_BY_AREA } from '../game/data/ministers'
 
 /** Painel do fato do mês: quem traz o problema, o que aconteceu e as escolhas. */
-export function EventPanel({ state, choice, onChoose }: {
+export function EventPanel({ state, choice, onChoose, response, onRespond, plannedBill }: {
   state: GameState
   choice: number | null
   onChoose: (i: number | null) => void
+  response: BillId | null
+  onRespond: (id: BillId | null) => void
+  plannedBill: BillId | null
 }) {
   const ev = currentEvent(state)
   if (!ev) {
@@ -36,7 +41,7 @@ export function EventPanel({ state, choice, onChoose }: {
   const kind = ev.kind ?? 'crise'
   return (
     <section className={`pn-card pn-event ${kind === 'bom' ? 'pn-event--good' : ''}`} id="fato-do-mes">
-      <h3>🔥 Fato do mês <span className="pn-badge">{choice === null ? `se você não decidir: ${ev.options[def].label.toLowerCase()}` : '✔ decidido'}</span></h3>
+      <h3>🔥 Fato do mês <span className="pn-badge">{response ? '✔ resposta escrita' : choice === null ? `se você não decidir: ${ev.options[def].label.toLowerCase()}` : '✔ decidido'}</span></h3>
       <div className="pn-event__head">
         <div className="pn-event__who">
           <Portrait name={p.name} feminine={p.feminine} color={p.color} size={96} title={p.name} />
@@ -51,6 +56,7 @@ export function EventPanel({ state, choice, onChoose }: {
             </span>
           </div>
           <h2>{fillText(ev.title, origin)}</h2>
+          {MINISTER_BY_AREA[ev.area].name !== p.name && <p className="pn-hint" style={{ margin: '0 0 4px' }}>{MINISTER_BY_AREA[ev.area].icon} Área: {MINISTER_BY_AREA[ev.area].areaName} · responsável: <b>{MINISTER_BY_AREA[ev.area].name}</b></p>}
           <p>{fillText(ev.text, origin)}</p>
           {origin && <p className="pn-event__origin">🌱 Consequência de <b>{origin.label}</b> · {origin.author} · {origin.year}</p>}
           <p className="pn-event__ask">{kind === 'bom' ? '“Presidente, temos uma boa notícia. Como quer usar?”' : '“Presidente, precisamos de uma decisão.”'}</p>
@@ -58,7 +64,7 @@ export function EventPanel({ state, choice, onChoose }: {
       </div>
       <div className="pn-event__options">
         {ev.options.map((o, i) => (
-          <button key={i} className={`pn-option ${choice === i ? 'sel' : ''} ${o.default ? 'is-default' : ''}`} onClick={() => onChoose(choice === i ? null : i)}>
+          <button key={i} className={`pn-option ${choice === i ? 'sel' : ''} ${o.default ? 'is-default' : ''}`} disabled={!!response} onClick={() => onChoose(choice === i ? null : i)}>
             <span className="pn-option__ic">{choice === i ? '✅' : o.icon}</span>
             <b>{o.label}</b>
             <small>{o.text}</small>
@@ -69,6 +75,7 @@ export function EventPanel({ state, choice, onChoose }: {
           </button>
         ))}
       </div>
+      {kind !== 'bom' && <ResponseBox key={`${state.month}-${ev.id}`} state={state} ev={ev} response={response} plannedBill={plannedBill} onRespond={onRespond} />}
     </section>
   )
 }

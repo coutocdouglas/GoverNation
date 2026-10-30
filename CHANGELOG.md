@@ -1,5 +1,14 @@
 # Novidades
 
+## 0.6.0
+- **Agir com suas palavras no fato do mês:** além das opções prontas, você escreve o que quer fazer. O ministro da área lê o texto e mostra até 3 caminhos, com instrumento, custo, quando resolve e o placar provável. A resposta vira decreto, MP, lei ou PEC e segue o trâmite normal, **sem gastar a medida do mês**.
+- Decreto e MP resolvem o problema na hora. Lei e PEC resolvem se a Câmara aprovar no mesmo mês; em recesso ou se for rejeitada, o problema segue e vale o que aconteceria se ninguém agisse.
+- **Ministro responsável:** todo fato do mês tem uma área (13 no total) e um ministro que responde por ela. Entram 7 ministros novos, com retrato próprio: Fazenda, Educação, Justiça e Segurança, Desenvolvimento Social, Cidades, Ciência e Tecnologia e Relações Institucionais.
+- **Catálogo grande:** o governo passa a conhecer 98 medidas (91 no catálogo por área, mais os 7 decretos rápidos), em vez de 17: saúde, educação, segurança, trabalho, social, agro, meio ambiente, energia, transportes, cidades, ciência e política. Cada uma tem palavras-chave, efeitos e consequências. A medida do mês também usa o catálogo novo, inclusive os decretos.
+- Medidas do catálogo podem render, meses depois, uma boa notícia na sua área (“homicídios caem depois de...”), que entra na memória do país.
+- Tudo funciona sem internet, por palavras-chave. A leitura por IA chega na etapa 3B, usando o mesmo catálogo.
+- Mandatos salvos na v0.5 continuam normalmente.
+
 ## 0.5.0
 - **Memória do mundo:** toda lei aprovada, MP editada e obra antecipada planta consequências que brotam meses ou anos depois como fato do mês, boas ou ruins (reforma tributária: transição confusa e depois indústria crescendo; privatização: investimento ou conta de luz mais cara; flexibilizar licenciamento: risco de tragédia). Cada consequência mostra de onde veio, quem aprovou e quando.
 - **Herança:** o primeiro mandato recebe decisões do governo anterior (uma ferrovia que fica pronta, pensões sem fonte de receita, um acordo comercial). A memória já é contada em meses absolutos, pronta para atravessar mandatos.

@@ -114,11 +114,12 @@ export interface MonthReport {
   /** Votações do mês na Câmara. */
   votes: VoteRecord[]
   /** Fato do mês resolvido e a opção escolhida. */
-  event?: { id: string; option: number; chosen: boolean }
+  /** option = -1 quando a resposta escrita resolveu o fato. */
+  event?: { id: string; option: number; chosen: boolean; response?: BillId; resolved?: boolean }
 }
 
 export interface GameState {
-  saveVersion: 4
+  saveVersion: 5
   /** Mês atual, de 0 (janeiro do 1º ano) a 47. Em 48 o mandato acabou. */
   month: number
   presidentName: string
@@ -171,19 +172,10 @@ export type ActionId =
 
 export type PartyId = 'pol' | 'fpt' | 'ucd' | 'psn' | 'mrb' | 'mdn' | 'pra' | 'pvs' | 'nrm'
 
-export type BillId =
-  | 'salarioMinimo'
-  | 'programaSocial'
-  | 'isencaoIR'
-  | 'taxarDividendos'
-  | 'regraFiscal'
-  | 'reformaTributaria'
-  | 'reformaAdministrativa'
-  | 'licenciamento'
-  | 'penasDuras'
-  | 'privatizar'
+/** Id de uma medida do catálogo (data/bills.ts e data/measures.ts). */
+export type BillId = string
 
-export type Instrument = 'mp' | 'lei' | 'complementar' | 'pec'
+export type Instrument = 'decreto' | 'mp' | 'lei' | 'complementar' | 'pec'
 
 export interface Deputy {
   party: PartyId

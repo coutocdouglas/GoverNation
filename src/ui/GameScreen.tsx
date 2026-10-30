@@ -46,6 +46,7 @@ export function GameScreen({ state, onChange, onExit }: {
   const [articulations, setArticulations] = useState<Articulation[]>([])
   const [tab, setTab] = useState<'painel' | 'governo' | 'fichas'>('painel')
   const [eventChoice, setEventChoice] = useState<number | null>(null)
+  const [eventResponse, setEventResponse] = useState<BillId | null>(null)
   const eventRef = useRef<HTMLDivElement>(null)
   const medidaRef = useRef<HTMLElement>(null)
   const history = state.history
@@ -72,13 +73,14 @@ export function GameScreen({ state, onChange, onExit }: {
 
   const endMonth = () => {
     setTurning(true)
-    const next = advanceMonth(state, selected, { bill: bill ?? undefined, articulations, eventChoice: eventChoice ?? undefined })
+    const next = advanceMonth(state, selected, { bill: bill ?? undefined, articulations, eventChoice: eventChoice ?? undefined, eventResponse: eventResponse ?? undefined })
     setTimeout(() => {
       onChange(next)
       setSelected([])
       setBill(null)
       setArticulations([])
       setEventChoice(null)
+      setEventResponse(null)
       setTab('painel')
       setStep(1)
       setTurning(false)
@@ -180,7 +182,7 @@ export function GameScreen({ state, onChange, onExit }: {
               <h3>🎯 Seu mês em 4 passos <span className="pn-badge">clique nos indicadores e grupos para ver o porquê</span></h3>
               <div className="pn-steps">
                 <StepButton n={1} cur={step} done={step > 1} icon="📰" title="O que aconteceu" sub={report ? `${report.headlines.length} notícias` : 'primeiro mês'} onClick={() => goStep(1)} />
-                <StepButton n={2} cur={step} done={eventChoice !== null || !state.event} icon="🔥" title="Fato do mês" sub={!state.event ? 'mês sem crise' : eventChoice !== null ? 'decidido' : 'aguarda você'} onClick={() => goStep(2)} />
+                <StepButton n={2} cur={step} done={eventChoice !== null || eventResponse !== null || !state.event} icon="🔥" title="Fato do mês" sub={!state.event ? 'mês sem crise' : eventChoice !== null || eventResponse !== null ? 'decidido' : 'aguarda você'} onClick={() => goStep(2)} />
                 <StepButton n={3} cur={step} done={selected.length > 0 || !!bill} icon="✍️" title="Suas decisões" sub={[selected.length ? `${selected.length} decreto${selected.length > 1 ? 's' : ''}` : '', bill ? '1 projeto' : '', articulations.length ? `${articulations.length} articulação` : ''].filter(Boolean).join(' · ') || 'decretos, projeto, articulação'} onClick={() => goStep(3)} />
                 <StepButton n={4} cur={step} done={false} icon="⏭️" title="Encerrar o mês" sub="ver as consequências" onClick={() => goStep(4)} />
               </div>
@@ -229,15 +231,16 @@ export function GameScreen({ state, onChange, onExit }: {
                     <div>
                       <h2>Tudo pronto para virar o mês?</h2>
                       <p className="pn-hint">
-                        {selected.length === 0 && !bill && articulations.length === 0
+                        {selected.length === 0 && !bill && !eventResponse && articulations.length === 0
                           ? 'Você não tomou nenhuma decisão. O país segue sozinho este mês.'
                           : [
                               selected.length ? `Decretos: ${selected.map((id) => lowerFirst(ACTION_BY_ID[id].name)).join(' e ')}.` : '',
-                              bill ? `${BILL_BY_ID[bill].instrument === 'mp' ? 'Medida provisória' : 'Projeto para a Câmara'}: ${lowerFirst(BILL_BY_ID[bill].name)}.` : '',
+                              bill ? `${BILL_KIND[BILL_BY_ID[bill].instrument]}: ${lowerFirst(BILL_BY_ID[bill].name)}.` : '',
+                              eventResponse ? `Resposta ao fato do mês (${BILL_KIND[BILL_BY_ID[eventResponse].instrument].toLowerCase()}): ${lowerFirst(BILL_BY_ID[eventResponse].name)}.` : '',
                               articulations.length ? `Articulação: ${articulations.map((a) => `${a.kind === 'conversar' ? 'conversa com' : 'emendas para'} ${PARTY_BY_ID[a.party].sigla}`).join(' e ')}.` : '',
                             ].filter(Boolean).join(' ')}
-                        {state.event && eventChoice === null ? ' ⚠️ Você não respondeu o fato do mês: vale a opção padrão.' : ''}
-                        {isRecess(state.month) && (bill || state.congress.pending.length > 0) ? ' O Congresso está em recesso: a votação fica para o mês que vem.' : ''}
+                        {state.event && eventChoice === null && eventResponse === null ? ' ⚠️ Você não respondeu o fato do mês: vale a opção padrão.' : ''}
+                        {isRecess(state.month) && (bill || eventResponse || state.congress.pending.length > 0) ? ' O Congresso está em recesso: a votação fica para o mês que vem.' : ''}
                         {isCopomMonth(state.month) ? ' O Banco Central decide os juros no fim do mês.' : ''}
                       </p>
                     </div>
@@ -253,7 +256,21 @@ export function GameScreen({ state, onChange, onExit }: {
             </section>
 
             <div ref={eventRef}>
-              <EventPanel state={state} choice={eventChoice} onChoose={(i) => { setEventChoice(i); if (i !== null) toast(`🔥 Decisão anotada: ${currentEventLabel(state, i)}`) }} />
+              <EventPanel
+                state={state}
+                choice={eventChoice}
+                onChoose={(i) => { setEventChoice(i); if (i !== null) toast(`🔥 Decisão anotada: ${currentEventLabel(state, i)}`) }}
+                response={eventResponse}
+                plannedBill={bill}
+                onRespond={(id) => {
+                  setEventResponse(id)
+                  if (id) {
+                    setEventChoice(null)
+                    if (bill === id) setBill(null)
+                    toast(`✍️ Resposta anotada: ${BILL_BY_ID[id].name}`)
+                  }
+                }}
+              />
             </div>
 
             <section className="pn-card pn-card--gold" ref={medidaRef}>
@@ -264,7 +281,8 @@ export function GameScreen({ state, onChange, onExit }: {
                 bill={bill}
                 onSend={(id) => {
                   setBill(id)
-                  toast(`📨 ${BILL_BY_ID[id].name}: ${BILL_BY_ID[id].instrument === 'mp' ? 'a MP será editada' : 'o projeto vai à Câmara'} ao encerrar o mês.`)
+                  const ins = BILL_BY_ID[id].instrument
+                  toast(`📨 ${BILL_BY_ID[id].name}: ${ins === 'decreto' ? 'o decreto será assinado' : ins === 'mp' ? 'a MP será editada' : 'o projeto vai à Câmara'} ao encerrar o mês.`)
                 }}
                 onSign={(id) => {
                   if (selected.includes(id)) return
@@ -392,6 +410,8 @@ export function GameScreen({ state, onChange, onExit }: {
   )
 }
 
+const BILL_KIND = { decreto: 'Decreto', mp: 'Medida provisória', lei: 'Projeto para a Câmara', complementar: 'Projeto para a Câmara', pec: 'Emenda constitucional' } as const
+
 function currentEventLabel(s: GameState, i: number) {
   const ev = s.event ? EVENT_BY_ID[s.event.id] : null
   return ev ? ev.options[i].label : ''
@@ -492,8 +512,8 @@ function MeasureBox({ state, selected, bill, onSign, onSend }: {
             <>
               <b>🧑‍💼 O gabinete não encontrou como fazer isso.</b>
               <p className="pn-hint">
-                Por enquanto o governo conhece {ACTIONS.length} decretos e {Object.keys(BILL_BY_ID).length} projetos de lei. Tente reescrever com
-                outras palavras ou escolha no catálogo abaixo. Mais medidas chegam na v0.4.
+                Por enquanto o governo conhece {ACTIONS.length + Object.keys(BILL_BY_ID).length} medidas, em 13 áreas. Tente reescrever com
+                outras palavras ou escolha no catálogo abaixo. Para responder ao fato do mês, use o campo “agir” no próprio fato.
               </p>
             </>
           ) : (
@@ -558,7 +578,7 @@ function BillReading({ state, id, first, chosen, onSend }: {
   return (
     <div className="pn-reading">
       <div className="pn-reading__head">
-        <span className="pn-action__ic">{b.instrument === 'pec' ? '📘' : b.instrument === 'mp' ? '⚡' : '📜'}</span>
+        <span className="pn-action__ic">{b.instrument === 'pec' ? '📘' : b.instrument === 'mp' ? '⚡' : b.instrument === 'decreto' ? '🖊️' : '📜'}</span>
         <div>
           <strong>{first ? b.name : `Ou talvez: ${b.name}`}</strong>
           <div className="pn-hint">{b.summary}</div>
@@ -567,18 +587,18 @@ function BillReading({ state, id, first, chosen, onSend }: {
       <div className="pn-pv">
         <div>📜 Vira<b>{INSTRUMENTS[b.instrument].label}</b></div>
         <div>💸 Contas públicas<b className={cost > 0 ? 'dn' : cost < 0 ? 'up' : ''}>{cost === 0 ? 'Neutro' : `${cost > 0 ? '−' : '+'}R$ ${num(Math.abs(cost), 0)} bi/ano`}</b></div>
-        <div>⏱️ Quando vale<b>{b.instrument === 'mp' ? 'Na hora' : 'Se aprovada'}</b></div>
+        <div>⏱️ Quando vale<b>{b.instrument === 'mp' || b.instrument === 'decreto' ? 'Na hora' : 'Se aprovada'}</b></div>
       </div>
       <p className="pn-hint" style={{ margin: '2px 0 4px' }}>{INSTRUMENTS[b.instrument].rule}</p>
-      {!blocked && <ForecastRow state={state} id={id} />}
+      {!blocked && b.instrument !== 'decreto' && <ForecastRow state={state} id={id} />}
       <div className="up">+ {b.pros}</div>
       <div className="dn">− {b.cons}</div>
       <div className="pn-row">
         <button className="pn-btn" disabled={!!blocked || isChosen} onClick={() => onSend(id)}>
-          {isChosen ? '✔ Será enviado ao encerrar o mês' : b.instrument === 'mp' ? '⚡ Editar a medida provisória' : '📨 Enviar à Câmara'}
+          {isChosen ? '✔ Será feito ao encerrar o mês' : b.instrument === 'decreto' ? '🖊️ Assinar o decreto' : b.instrument === 'mp' ? '⚡ Editar a medida provisória' : '📨 Enviar à Câmara'}
         </button>
         {blocked && <span className="pn-action__blk">⏳ {blocked}</span>}
-        {!blocked && chosen && !isChosen && <span className="pn-action__blk">Só um projeto por mês: isto troca “{BILL_BY_ID[chosen].name}”.</span>}
+        {!blocked && chosen && !isChosen && <span className="pn-action__blk">Só uma medida do mês: isto troca “{BILL_BY_ID[chosen].name}”.</span>}
       </div>
     </div>
   )

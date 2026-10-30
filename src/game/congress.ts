@@ -228,7 +228,7 @@ export function isRecess(month: number): boolean {
 /** Motivo pelo qual o projeto não pode ser enviado agora, ou null. */
 export function billBlockedReason(s: GameState, id: BillId): string | null {
   const c = s.congress
-  if (c.laws.includes(id)) return 'Já é lei.'
+  if (c.laws.includes(id)) return BILL_BY_ID[id]?.instrument === 'decreto' ? 'Já está em vigor.' : 'Já é lei.'
   if (c.pending.some((p) => p.id === id)) return 'Já está tramitando na Câmara.'
   const until = c.blockedUntil[id]
   if (until !== undefined && s.month < until) {

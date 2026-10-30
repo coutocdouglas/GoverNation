@@ -1,4 +1,5 @@
-import { BILLS } from './data/bills'
+import { BILL_BY_ID, BILLS } from './data/bills'
+import type { AreaId } from './data/ministers'
 import type { ActionId, BillId } from './types'
 
 /**
@@ -66,3 +67,16 @@ export function interpretMeasure(text: string): Interpretation {
   scores.sort((a, b) => b.score - a.score)
   return { matches: scores.map((s) => s.ref), normalized }
 }
+
+/**
+ * Leitura da resposta ao fato do mês (etapa 3A): só medidas da área do fato contam.
+ * Devolve as medidas da área que combinam com o texto, da mais provável para a menos.
+ */
+export function interpretResponse(text: string, area: AreaId): BillId[] {
+  return interpretMeasure(text)
+    .matches.filter((m): m is { kind: 'bill'; id: BillId } => m.kind === 'bill' && BILL_BY_ID[m.id].area === area)
+    .map((m) => m.id)
+}
+
+/** Medidas que o governo conhece numa área (para o catálogo do ministro). */
+export const measuresOfArea = (area: AreaId) => BILLS.filter((b) => b.area === area)
