@@ -28,7 +28,7 @@ export function ReactionSheet({ state, bill, month, onClose, nextLabel = 'Fechar
     <aside className="detail pn-sheet-back" onClick={onClose}>
       <div className="pn-sheet pn-sheet--wide pn-react" onClick={(e) => e.stopPropagation()}>
         <button className="detail__close" onClick={onClose}>×</button>
-        <div className="pn-kicker">📣 Reação da sociedade · {r.instrument}{v ? ` · ${monthLabel(v.month)}` : ''}</div>
+        <div className="pn-kicker">📣 Reação da sociedade · {r.instrument}{v ? ` · ${monthLabel(r.senate?.month ?? v.month)}` : ''}</div>
         <h2>{b.name} <NewBadge id={b.id} /></h2>
 
         <div className="pn-react__hero">
@@ -44,7 +44,7 @@ export function ReactionSheet({ state, bill, month, onClose, nextLabel = 'Fechar
         </div>
 
         <div className="pn-sheet__grid pn-sheet__grid--4">
-          <div><span>Placar</span><b>{v ? (v.kind === 'simbolica' ? 'Simbólica' : `${v.yes} × ${v.no}`) : 'Sanção'}</b><small>{v?.kind === 'simbolica' ? 'aprovada sem painel' : v ? `${v.abstain} abstenções` : 'sem votação no mês'}</small></div>
+          <div><span>{r.senate ? 'Placar na Câmara' : 'Placar'}</span><b>{v ? (v.kind === 'simbolica' ? 'Simbólica' : `${v.yes} × ${v.no}`) : 'Sanção'}</b><small>{r.senate ? `Senado: ${r.senate.kind === 'simbolica' ? 'simbólica' : `${r.senate.yes} × ${r.senate.no}`}` : v?.kind === 'simbolica' ? 'aprovada sem painel' : v ? `${v.abstain} abstenções` : 'sem votação no mês'}</small></div>
           <div><span>Custo por ano</span><b className={r.cost > 0 ? 'dn' : r.cost < 0 ? 'up' : ''}>{Math.abs(r.cost) < 0.5 ? 'quase nada' : `${r.cost > 0 ? '' : '+'}R$ ${num(Math.abs(r.cost), 0)} bi`}</b><small>{r.cost > 0.5 ? 'sai das contas públicas' : r.cost < -0.5 ? 'entra no caixa' : 'impacto fiscal pequeno'}</small></div>
           <div><span>Mercado</span><b className={r.market.tone === 'good' ? 'up' : r.market.tone === 'bad' ? 'dn' : ''}>{r.market.confidence ? `${signed(r.market.confidence, 0)} confiança` : 'neutro'}</b><small>{r.market.text}</small></div>
           <div><span>Origem</span><b style={{ fontSize: 14 }}>{r.origin}</b><small>{r.timing}</small></div>

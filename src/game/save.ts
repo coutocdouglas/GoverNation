@@ -1,4 +1,4 @@
-import { initialCongress } from './congress'
+import { initialCongress, initialSenate } from './congress'
 import { syncCustomBills } from './custom'
 import { RIVAL } from './data/rival'
 import { createRival } from './rival'
@@ -94,7 +94,13 @@ export function migrate(raw: unknown): GameState | null {
       addBio(s as GameState, s.rival.name, `Assume a liderança da oposição contra o governo ${s.presidentName}.`)
       s.saveVersion = 9
     }
-    if (s.saveVersion !== 9) return null
+    if (s.saveVersion === 9) {
+      // v0.11 → v0.12 (etapa 4C1): o Senado passa a votar. Leis já aprovadas valem como aprovadas nas duas casas;
+      // projetos na Câmara seguem para o Senado quando passarem.
+      if (!s.congress.senate) s.congress.senate = initialSenate(s.congress.parties, s.rngState)
+      s.saveVersion = 10
+    }
+    if (s.saveVersion !== 10) return null
     syncCustomBills(s as GameState)
     return s as GameState
   } catch {

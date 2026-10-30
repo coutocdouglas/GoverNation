@@ -91,7 +91,7 @@ export function ResponseBox({ state, ev, response, plannedBill, onRespond, onAdd
       <div className="pn-respond" id="agir">
         <div className="pn-preview">
           <b>✅ Ordem dada: {BILL_BY_ID[response].name}</b>
-          <p className="pn-hint">{m.name} cuida disso ao encerrar o mês. {BILL_BY_ID[response].instrument === 'decreto' || BILL_BY_ID[response].instrument === 'mp' ? 'Vale na hora e resolve o problema.' : 'Resolve o problema se a Câmara aprovar ainda este mês.'}</p>
+          <p className="pn-hint">{m.name} cuida disso ao encerrar o mês. {BILL_BY_ID[response].instrument === 'decreto' || BILL_BY_ID[response].instrument === 'mp' ? 'Vale na hora e resolve o problema.' : 'Resolve o problema se a Câmara e o Senado aprovarem ainda este mês (PEC leva mais tempo).'}</p>
           <button className="pn-btn pn-btn--ghost" onClick={() => onRespond(null)}>Desfazer</button>
         </div>
       </div>
@@ -245,7 +245,7 @@ function ReadingSheet({ state, ev, order, data, plannedBill, onClose, onSign, on
         <div className="pn-sheet__grid">
           <div><span>Vira</span><b>{ICON[b.instrument]} {INSTRUMENTS[b.instrument].label}</b><small>{INSTRUMENTS[b.instrument].rule}</small></div>
           <div><span>Impacto fiscal</span><b className={fiscal > 0.5 ? 'dn' : cost.yearly < -0.5 ? 'up' : ''}>{costText(cost)}</b><small>{fiscal > 0.5 ? 'pesa no resultado das contas' : cost.yearly < -0.5 ? 'melhora as contas' : 'não mexe nas contas'}</small></div>
-          <div><span>Resolve o fato</span><b>{now ? 'Na hora' : recess ? 'Só depois do recesso' : 'Se a Câmara aprovar'}</b><small>{now ? 'vale ao encerrar o mês' : 'vai para a pauta'}</small></div>
+          <div><span>Resolve o fato</span><b>{now ? 'Na hora' : recess ? 'Só depois do recesso' : 'Se o Congresso aprovar'}</b><small>{now ? 'vale ao encerrar o mês' : 'vai para a pauta'}</small></div>
         </div>
 
         <div className="pn-label">O que muda no país</div>
@@ -328,7 +328,7 @@ function Reading({ state, id, first, plannedBill, onRespond, compact }: {
       <div className="pn-pv">
         <div>📜 Vira<b>{INSTRUMENTS[b.instrument].label}</b></div>
         <div>💸 Custo<b className={cost.yearly + cost.once > 0.5 ? 'dn' : cost.yearly < -0.5 ? 'up' : ''}>{costText(cost)}</b></div>
-        <div>⏱️ Resolve<b>{now ? 'Na hora' : recess ? 'Só depois do recesso' : 'Se a Câmara aprovar'}</b></div>
+        <div>⏱️ Resolve<b>{now ? 'Na hora' : recess ? 'Só depois do recesso' : 'Se o Congresso aprovar'}</b></div>
       </div>
       {!compact && <p className="pn-hint" style={{ margin: '2px 0 4px' }}>{INSTRUMENTS[b.instrument].rule}</p>}
       <span className="pn-chips">

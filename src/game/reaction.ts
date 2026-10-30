@@ -37,6 +37,8 @@ export interface LawReaction {
   /** R$ bi por ano (positivo = custa; negativo = arrecada). */
   cost: number
   vote?: VoteRecord
+  /** Etapa 4C1: placar do Senado. */
+  senate?: VoteRecord
   frentes: FrenteView[]
   instrument: string
   /** Fração dos efeitos que sobrou, se o relator desidratou o texto. */
@@ -50,7 +52,10 @@ export interface LawReaction {
 export function lawReaction(s: GameState, id: BillId, month?: number): LawReaction | null {
   const bill = BILL_BY_ID[id]
   if (!bill) return null
-  const vote = [...s.congress.votes].reverse().find((v) => v.bill === id && v.kind !== 'veto' && (month === undefined || v.month === month))
+  // Etapa 4C1: a reação usa o placar da Câmara (PEC pode ter passado nela num mês antes) e mostra o do Senado ao lado.
+  const votes = [...s.congress.votes].reverse().filter((v) => v.bill === id && v.kind !== 'veto')
+  const senate = votes.find((v) => v.house === 'senado' && (month === undefined || v.month === month))
+  const vote = votes.find((v) => v.house !== 'senado' && (month === undefined || v.month <= month) && (!senate || v.month <= senate.month))
   // Texto desidratado pelo relator: a reação é ao que foi aprovado, não ao projeto original.
   const fx = coreEffects(bill, vote?.scale ? { relator: 'mdn', kind: 'desidrata', shift: 0, scale: vote.scale } : undefined)
   const pop = billPopularity({ ...bill, effects: fx })
@@ -73,7 +78,7 @@ export function lawReaction(s: GameState, id: BillId, month?: number): LawReacti
   return {
     bill, score, support, verdict: verdictOf(score), groups,
     market: { ...marketText(conf, cost), confidence: conf },
-    cost, vote, frentes: frenteSummary(s, bill).filter((f) => Math.abs(f.stance) >= 0.15),
+    cost, vote, senate, frentes: frenteSummary(s, bill).filter((f) => Math.abs(f.stance) >= 0.15),
     instrument: INSTRUMENTS[bill.instrument].label,
     dehydrated: vote?.scale,
     origin: bomb ? 'Pauta da própria Câmara, sancionada pelo presidente' : bill.custom ? 'Medida criada pelo governo' : 'Projeto do governo',

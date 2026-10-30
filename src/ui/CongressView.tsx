@@ -1,12 +1,12 @@
 import { useMemo } from 'react'
-import { articulationBlockedReason, CONGRESS, forecastVote, isRecess } from '../game/congress'
+import { articulationBlockedReason, CONGRESS, forecastSenate, forecastVote, houseSeats, isRecess, senatePending } from '../game/congress'
 import { BILL_BY_ID, GDP_BILLIONS, INSTRUMENTS } from '../game/data/bills'
 import { PARTIES, PARTY_BY_ID } from '../game/data/parties'
 import { monthLabel } from '../game/game'
 import type { Articulation, BillId, Deal, GameState, PartyId, VoteRecord } from '../game/types'
 import type { MinistryChange } from '../game/camara'
 import type { MonthPlan } from '../game/game'
-import { FrentesCard, MinistriesCard, SanctionCard, SpeakerCard } from './CamaraPanels'
+import { FrentesCard, MinistriesCard, SanctionCard, SenateCard, SpeakerCard } from './CamaraPanels'
 import { Portrait } from './Portrait'
 import { num } from './format'
 
@@ -59,7 +59,7 @@ export function CongressView({ state, articulations, onToggle, bill, extraBill, 
   const seats = useHemicycle()
   const c = state.congress
   const left = CONGRESS.articulationsPerMonth - articulations.length
-  const watching: BillId[] = [...new Set([...(bill ? [bill] : []), ...(extraBill ? [extraBill] : []), ...c.pending.map((p) => p.id)])].filter((id) => BILL_BY_ID[id].instrument !== 'decreto')
+  const watching: BillId[] = [...new Set([...(bill ? [bill] : []), ...(extraBill ? [extraBill] : []), ...c.pending.map((p) => p.id), ...c.senate.pending.map((p) => p.id)])].filter((id) => BILL_BY_ID[id].instrument !== 'decreto')
   const order = [...PARTIES].sort((a, b) => c.parties[b.id].relation - c.parties[a.id].relation)
   const allies = PARTIES.filter((p) => c.parties[p.id].relation >= 50).reduce((a, p) => a + p.seats, 0)
 
@@ -92,12 +92,14 @@ export function CongressView({ state, articulations, onToggle, bill, extraBill, 
 
       <SpeakerCard state={state} articulations={articulations} onToggle={onToggle} />
 
+      <SenateCard state={state} articulations={articulations} onToggle={onToggle} onNegotiate={onNegotiate} />
+
       {watching.length > 0 && (
         <section className="pn-card pn-card--gold">
           <h3>🗳️ Na pauta <span className="pn-badge">placar previsto hoje</span></h3>
           {watching.map((id) => (
             <div key={id}>
-              <ForecastRow state={state} id={id} isNew={(id === bill || id === extraBill) && !c.pending.some((p) => p.id === id)} deals={deals?.filter((d) => d.bill === id)} plan={plan} />
+              <ForecastRow state={state} id={id} isNew={(id === bill || id === extraBill) && !c.pending.some((p) => p.id === id) && !senatePending(state, id)} deals={deals?.filter((d) => d.bill === id)} plan={plan} />
               {onNegotiate && <div className="pn-row"><button className="pn-btn pn-btn--ghost" onClick={() => onNegotiate(id)}>🤝 Negociar votos com as lideranças</button></div>}
             </div>
           ))}
@@ -193,10 +195,14 @@ function Axis({ econ, costumes }: { econ: number; costumes: number }) {
 
 export function ForecastRow({ state, id, isNew, deals, plan }: { state: GameState; id: BillId; isNew?: boolean; deals?: Deal[]; plan?: MonthPlan }) {
   const has = (k: 'hold' | 'urgent' | 'original' | 'symbolic') => (plan?.[k] ?? []).includes(id)
-  const f = forecastVote(state, id, deals ?? [], { original: has('original') || undefined })
+  const inSenate = senatePending(state, id)
+  const f = inSenate ? forecastSenate(state, id, (deals ?? []).filter((d) => d.house === 'senado')) : forecastVote(state, id, (deals ?? []).filter((d) => d.house !== 'senado'), { original: has('original') || undefined })
+  const fs = inSenate ? f : forecastSenate(state, id, (deals ?? []).filter((d) => d.house === 'senado'), { original: has('original') || undefined })
   const b = BILL_BY_ID[id]
   const pb = state.congress.pending.find((p) => p.id === id)
   const tags = [
+    inSenate ? '🏛️ no Senado' : '',
+    inSenate?.holds ? `🗄️ ${inSenate.holds}× na gaveta do Senado` : '',
     pb?.stage === 'comissao' ? '📂 na comissão' : '',
     pb?.urgent || has('urgent') ? '⚡ urgência' : '',
     has('hold') ? '⏸ fica na pauta' : '',
@@ -211,19 +217,20 @@ export function ForecastRow({ state, id, isNew, deals, plan }: { state: GameStat
         <b>{b.name}</b>
         <span className="pn-badge" style={{ marginLeft: 8 }}>{INSTRUMENTS[b.instrument].label}{isNew ? ' · enviado ao encerrar o mês' : ''}</span>
         {tags.map((t) => <span key={t} className="pn-chip-mini">{t}</span>)}
-        <span className={`pn-forecast__label ${tone}`}>{f.label} · {Math.round(f.chance * 100)}%</span>
+        <span className={`pn-forecast__label ${tone}`}>{inSenate ? 'Senado: ' : 'Câmara: '}{f.label} · {Math.round(f.chance * 100)}%</span>
       </div>
-      <VoteBar yes={f.yes} no={f.no} target={target} needLabel={f.needed ? `precisa ${f.needed}` : 'maioria'} />
+      <VoteBar yes={f.yes} no={f.no} target={target} needLabel={f.needed ? `precisa ${f.needed}` : 'maioria'} total={inSenate ? 81 : 513} />
+      {!inSenate && <p className="pn-hint" style={{ margin: '2px 0 0' }}>Depois, no Senado: {fs.label.toLowerCase()} ({Math.round(fs.chance * 100)}%, {fs.yes} a {fs.no} de 81).</p>}
     </div>
   )
 }
 
-export function VoteBar({ yes, no, target, needLabel }: { yes: number; no: number; target: number; needLabel: string }) {
+export function VoteBar({ yes, no, target, needLabel, total = 513 }: { yes: number; no: number; target: number; needLabel: string; total?: number }) {
   return (
     <div className="pn-votebar">
-      <span className="yes" style={{ width: `${(yes / 513) * 100}%` }} />
-      <span className="no" style={{ width: `${(no / 513) * 100}%` }} />
-      <span className="mark" style={{ left: `${(target / 513) * 100}%` }}><em>{needLabel}</em></span>
+      <span className="yes" style={{ width: `${(yes / total) * 100}%` }} />
+      <span className="no" style={{ width: `${(no / total) * 100}%` }} />
+      <span className="mark" style={{ left: `${(target / total) * 100}%` }}><em>{needLabel}</em></span>
       <span className="nums"><b className="up">{yes} sim</b> · <b className="dn">{no} não</b></span>
     </div>
   )
@@ -238,9 +245,9 @@ export function Scoreboard({ v, compact }: { v: VoteRecord; compact?: boolean })
       <div className="pn-score__head">
         <span className="pn-score__stamp">{veto ? (v.approved ? '❌ VETO DERRUBADO' : '✅ VETO MANTIDO') : v.approved ? (v.kind === 'simbolica' ? '✅ APROVADO (SIMBÓLICA)' : '✅ APROVADO') : '❌ REJEITADO'}</span>
         <b>{v.title ?? b?.name ?? v.bill}</b>
-        <span className="pn-hint" style={{ margin: 0 }}>{monthLabel(v.month)} · {veto ? 'Sessão do veto' : INSTRUMENTS[b.instrument].label}</span>
+        <span className="pn-hint" style={{ margin: 0 }}>{monthLabel(v.month)} · {v.house === 'senado' ? 'Senado · ' : 'Câmara · '}{veto ? 'Sessão do veto' : INSTRUMENTS[b.instrument].label}</span>
       </div>
-      <VoteBar yes={v.yes} no={v.no} target={v.needed || Math.ceil((v.yes + v.no) / 2) + 1} needLabel={v.needed ? `precisa ${v.needed}` : 'maioria'} />
+      <VoteBar yes={v.yes} no={v.no} target={v.needed || Math.ceil((v.yes + v.no) / 2) + 1} needLabel={v.needed ? `precisa ${v.needed}` : 'maioria'} total={houseSeats(v.house ?? 'camara')} />
       {!compact && v.kind !== 'simbolica' && (
         <div className="pn-score__parties">
           {parties.map((p) => {

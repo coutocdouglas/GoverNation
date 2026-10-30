@@ -332,6 +332,9 @@
 .pn-vote__score i { font-style: normal; color: var(--pn-muted, #8a96a8); font-size: 22px; }
 .pn-vote__score small { color: var(--pn-muted, #8a96a8); }
 .pn-plenary { display: grid; grid-template-columns: repeat(43, 1fr); gap: 2px; margin: 10px 0 6px; }
+.pn-plenary--senado { grid-template-columns: repeat(27, 1fr); gap: 3px; max-width: 520px; }
+.pn-housetabs { margin: 4px 0 12px; }
+.pn-housetabs button { padding: 9px 8px; font-size: 13px; }
 .pn-plenary i, .pn-legend2 i { display: block; aspect-ratio: 1; border-radius: 2px; background: #2a3442; }
 .pn-plenary i.y, .pn-legend2 i.y { background: #2fd07a; }
 .pn-plenary i.n, .pn-legend2 i.n { background: #e5484d; }
@@ -439,6 +442,7 @@
 .pn-vanim__bar .mark { position: absolute; top: -7px; bottom: -7px; border-left: 2px dashed var(--pn-gold); }
 .pn-vanim__bar .mark em { position: absolute; top: -19px; transform: translateX(-50%); font-style: normal; font-size: 10.5px; color: var(--pn-gold); white-space: nowrap; }
 .pn-vanim__grid { display: grid; grid-template-columns: repeat(57, 1fr); gap: 2px; padding: 10px; background: #05080c; border-radius: 10px; border: 1px solid #1d2836; }
+.pn-vanim__grid--senado { grid-template-columns: repeat(27, 1fr); gap: 5px; max-width: 640px; margin: 0 auto; }
 .pn-vanim__grid i { aspect-ratio: 1; border-radius: 50%; background: #18212d; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--pc) 45%, transparent); transition: background .25s, box-shadow .25s; }
 .pn-vanim__grid i.y { background: #2fd07a; box-shadow: 0 0 6px #2fd07a99; animation: pn-pop .35s ease; }
 .pn-vanim__grid i.n { background: #ff5a5f; box-shadow: 0 0 6px #ff5a5f99; animation: pn-pop .35s ease; }
@@ -503,3 +507,7 @@
 .pn-promises li { display: flex; flex-direction: column; gap: 3px; }
 .pn-ficha__traits { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
 .pn-ficha__traits span { font-size: 12px; border: 1px solid var(--pn-line); border-radius: 999px; padding: 2px 8px; }
+
+/* Etapa 4C1: Senado */
+.pn-senate__seats { display: grid; grid-template-columns: repeat(27, 1fr); gap: 3px; max-width: 420px; margin: 6px 0 8px; }
+.pn-senate__seats i { display: block; aspect-ratio: 1; border-radius: 50%; }

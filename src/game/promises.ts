@@ -28,7 +28,11 @@ export function promiseValue(s: GameState, p: PromiseDef): number {
   const last = h[h.length - 1]
   const m = p.metric
   const c = s.congress
-  const passed = c.votes.filter((v) => v.approved && v.kind !== 'veto' && !BOMB_IDS.has(v.bill))
+  // Etapa 4C1: só conta o que virou lei. A aprovação na Câmara vale se não houve (nem espera) voto no Senado,
+  // como nos saves anteriores ao Senado; senão, vale o voto do Senado.
+  const senateLater = (bill: string, month: number) => c.votes.some((x) => x.house === 'senado' && x.bill === bill && x.month >= month)
+  const passed = c.votes.filter((v) => v.approved && v.kind !== 'veto' && !BOMB_IDS.has(v.bill) &&
+    (v.house === 'senado' || (!c.senate.pending.some((p) => p.id === v.bill) && !senateLater(v.bill, v.month))))
   switch (m.type) {
     case 'indicador': return last.indicators[m.key]
     case 'crescimentoMedio': return h.reduce((a, x) => a + x.indicators.growth, 0) / h.length

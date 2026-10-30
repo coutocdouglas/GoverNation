@@ -123,7 +123,7 @@ export interface MonthReport {
 }
 
 export interface GameState {
-  saveVersion: 9
+  saveVersion: 10
   /** Mês atual, de 0 (janeiro do 1º ano) a 47. Em 48 o mandato acabou. */
   month: number
   presidentName: string
@@ -247,8 +247,21 @@ export interface PendingBill {
   original?: boolean
   /** Regime de urgência: pula a comissão e a gaveta do presidente da Câmara. */
   urgent?: boolean
-  /** Meses que ficou parado na gaveta (comissão ou presidente da Câmara). */
+  /** Meses que ficou parado na gaveta (comissão ou presidente da Câmara; no Senado, a presidente do Senado). */
   holds?: number
+  /** Etapa 4C1: acordos fechados com lideranças do Senado enquanto o projeto ainda está na Câmara. */
+  senateDeals?: { party: PartyId; kind: DealKind }[]
+  /** Etapa 4C1 (só no Senado): como a Câmara aprovou o texto. */
+  camara?: { yes: number; no: number; symbolic?: boolean; month: number }
+}
+
+/** Etapa 4C1: o Senado. Os partidos são os mesmos da Câmara (a relação com o governo é a mesma, mais um bônus). */
+export interface SenateState {
+  senators: Deputy[]
+  /** Relação com a presidente do Senado (0 a 100) e última conversa. */
+  president: { relation: number; lastTalk: number }
+  /** Projetos aprovados na Câmara que esperam o Senado. `sentMonth` = mês em que chegaram. */
+  pending: PendingBill[]
 }
 
 /** Parecer do relator: o texto que vai a voto (etapa 4B). */
@@ -296,6 +309,8 @@ export interface Deal {
   party: PartyId
   kind: DealKind
   bill: BillId
+  /** Etapa 4C1: acordo com a liderança no Senado (sem isso, é na Câmara). */
+  house?: 'senado'
 }
 
 /** Promessa de pautar o projeto-bandeira de um partido até o mês `due`. */
@@ -324,10 +339,12 @@ export interface VoteRecord {
   title?: string
   /** Texto desidratado pelo relator: fração dos efeitos que ficou. */
   scale?: number
+  /** Etapa 4C1: votação no Senado (sem isso, é na Câmara). */
+  house?: 'senado'
 }
 
-/** 'presidente' = conversar com o presidente da Câmara (party é o partido dele). */
-export type Articulation = { kind: 'conversar' | 'emendas' | 'presidente'; party: PartyId }
+/** 'presidente' = conversar com o presidente da Câmara; 'senado' = com a presidente do Senado (party é o partido de quem preside). */
+export type Articulation = { kind: 'conversar' | 'emendas' | 'presidente' | 'senado'; party: PartyId }
 
 export interface CongressState {
   parties: Record<PartyId, PartyState>
@@ -350,6 +367,8 @@ export interface CongressState {
   vetoes: VetoItem[]
   /** Pautas-bomba já levadas ao plenário (para não repetir logo). */
   bombLog: { id: BillId; month: number }[]
+  /** Etapa 4C1: o Senado. */
+  senate: SenateState
 }
 
 /** De onde veio um fato do mês: a lei, o autor e o ano. */

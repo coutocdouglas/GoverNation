@@ -500,6 +500,21 @@ Saves antigos sem promessas: a parte das promessas sai e as outras são reescala
 - **Animação:** o painel de votação ganha a versão do Senado (81 cadeiras). Votação simbólica vale nas duas casas.
 - **Fica para a 5B:** negociação por bancada estadual (3 senadores por estado, cada estado pedindo uma coisa), que precisa dos 27 estados.
 
+#### 24.1.1 Como ficou (v0.12)
+
+- **Arquivos:** números em `src/game/data/senado.ts` (`SENATE_SEATS`, `SENADO`); a regra de voto de `congress.ts` virou de duas casas (`House = 'camara' | 'senado'`, pesos por casa, `forecastSenate`, `runSenateVote`, `senateDealsOf`, `senatePending`, `seatsIn`); o caminho do projeto está em `advanceMonth` (passos 1d3 e 1d3b, com `reject` e `enact`); testes em `senado.test.ts`. Telas: abas em `VoteSheet.tsx`, `SenateCard` em `CamaraPanels.tsx`, `VoteAnimation` e `Scoreboard` com 81 cadeiras.
+- **Bancadas (81):** POL 16, FPT 11, UCD 13, PSN 11, MRB 5, MDN 13, PRA 7, PVS 3, NRM 2. Senadores variam menos em torno do partido (desvio 11, deputados 14). A relação de cada partido é a da Câmara (mais um bônus de 2).
+- **Pesos:** afinidade 0,85, relação 0,36, orientação 0,45, popularidade 0,07, aprovação 0,22, status quo 0,16, viés governista 0,04, ruído 0,16, ausência 5%. A Câmara ganhou `lean: 0`. Frentes parlamentares só na Câmara.
+- **Estado:** `CongressState.senate` (`senators`, `president`, `pending`). Projeto aprovado na Câmara sai de `pending` e entra em `senate.pending` com o parecer do relator (o texto não muda no Senado), `camara` (placar) e os acordos de Senado fechados antes (`PendingBill.senateDeals`). `Deal.house` e `VoteRecord.house = 'senado'`; `Articulation.kind = 'senado'`.
+- **Ordem no fim do mês:** plenário da Câmara → Senado (projetos que chegaram agora e os que esperavam). PEC que chegou neste mês espera. A presidente do Senado (relação < 35) segura 1 projeto por mês, no máximo 2 vezes o mesmo, nunca MP. "Deixar na pauta" vale também no Senado (não para MP). Urgência e texto original não valem mais depois da Câmara.
+- **Vira lei só depois do Senado:** efeitos, sementes, jabuti (vai à sanção), crônica e reação da sociedade. A resposta ao fato do mês resolve se virou lei no mês (`enacted`); cobranças idem.
+- **Rejeição no Senado:** `blockedUntil` de 6 meses, −0,8 em todos os grupos ("Derrota do governo no Senado"), MP desfeita, conta como derrota para o rival, manchete e crônica.
+- **Negociação:** 2 lideranças por mês no Senado (`SENADO.listenPerMonth`), validadas à parte das 3 da Câmara. Emendas por senador = 0,0035% do PIB/ano (cerca de 6× o deputado); cargos a partir de 8 senadores.
+- **Promessas de contagem** contam só o que virou lei (`promiseValue`); o histórico de votações guardado subiu de 24 para 48.
+- **Save versão 10:** migração cria o Senado com a semente do save; nada mais muda.
+- **Simulador** (`npm run sim`, novo bloco "Senado"): com um projeto a cada 2 meses, o Senado barra cerca de 4% (esquerda), 1% (centro) e 13% (direita) do que a Câmara aprova; a direita perde mais porque o Senado, mais de centro, segura as pautas mais liberais (privatização, regra fiscal). A ordem das estratégias não mudou (responde aos fatos 583 > austero 551 > equilibrado 509 > passivo 460 > populista 311).
+- **Fica para depois:** sessão de vetos com o Senado (hoje só a Câmara vota), IA nas falas das lideranças do Senado, negociação por bancada estadual (5B), sabatinas e impeachment (etapa 6), Supremo (4C2).
+
 ### 24.2 Supremo (4C2)
 
 - **11 ministros fictícios**, cada um com doutrina (garantista, moderado ou conservador, mais uma inclinação econômica), relação com o governo e quem o indicou (presidentes anteriores fictícios). Personagens no `CAST`, com retrato.

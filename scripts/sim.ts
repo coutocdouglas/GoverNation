@@ -5,6 +5,7 @@ import { advanceMonth, newGame, finalScore, shortMonthLabel } from '../src/game/
 import { BILLS } from '../src/game/data/bills'
 import { EVENT_BY_ID } from '../src/game/data/events'
 import { responseBlockedReason, type MonthPlan } from '../src/game/game'
+import { billBlockedReason, forecastVote } from '../src/game/congress'
 import type { ActionId, GameState } from '../src/game/types'
 
 /** Responde ao fato do mês com o decreto mais barato da área (etapa 3A). */
@@ -76,5 +77,31 @@ if (process.argv[1]?.endsWith('sim.ts')) {
     const obst = runs.reduce((a, s) => a + (s.rival.stance === 'obstrucao' ? 1 : 0), 0)
     const kept = avg((s) => finalScore(s).parts.find((p) => p.label.startsWith('Promessas'))?.score ?? 0)
     console.log(`  ${n.padEnd(12)} aprov ${avg((s) => s.history.at(-1)!.approval)}  força ${avg((s) => s.rival.strength)}  governo ${avg((s) => s.rival.polls.at(-1)!.gov)}% x rival ${avg((s) => s.rival.polls.at(-1)!.rival)}%  governo na frente em ${ahead}/30  obstrução ${obst}/30  promessas ${kept}/300`)
+  }
+}
+
+/** Etapa 4C1: manda um projeto por mês (entre os que a Câmara tende a aprovar) e conta o que o Senado barra. */
+export function senateRun(seed: number, party: 'fpt' | 'mdn' | 'pol') {
+  let s = newGame('Teste', 'normal', seed, party, undefined, undefined, { promises: SIM_PROMISES })
+  let camara = 0, barrado = 0, leis = 0, segurados = 0
+  while (!s.finished) {
+    const pool = BILLS.filter((b) => b.instrument !== 'decreto' && !billBlockedReason(s, b.id) && forecastVote(s, b.id).chance > 0.45)
+    const bill = pool.length && s.month % 2 === 0 ? pool[(s.month * 7 + seed) % pool.length].id : undefined
+    s = advanceMonth(s, STRATEGIES.equilibrado(s), bill ? { bill } : {})
+    for (const v of s.lastReport!.votes) {
+      if (v.kind === 'veto') continue
+      if (v.house === 'senado') { if (v.approved) leis++; else barrado++ } else if (v.approved && !BILLS.every((b) => b.id !== v.bill)) camara++
+    }
+    segurados += s.lastReport!.headlines.filter((h) => h.text.includes('presidente do Senado, segura')).length
+  }
+  return { camara, barrado, leis, segurados }
+}
+
+if (process.argv[1]?.endsWith('sim.ts') && !process.argv[2]) {
+  console.log('\nSenado (projeto a cada 2 meses, 30 sementes por partido):')
+  for (const party of ['fpt', 'mdn', 'pol'] as const) {
+    const r = Array.from({ length: 30 }, (_, i) => senateRun(2000 + i, party))
+    const sum = (k: keyof (typeof r)[number]) => r.reduce((a, x) => a + x[k], 0)
+    console.log(`  ${party}  aprovados na Câmara ${(sum('camara') / 30).toFixed(1)}  barrados no Senado ${(sum('barrado') / 30).toFixed(1)}  viraram lei ${(sum('leis') / 30).toFixed(1)}  gaveta da presidente ${(sum('segurados') / 30).toFixed(1)} por mandato`)
   }
 }

@@ -1,5 +1,17 @@
 # Novidades
 
+## 0.12.0
+- **O Senado vota (etapa 4C1).** Tudo o que a Câmara aprova agora passa também pelo Senado, com **81 senadores** dos mesmos 9 partidos. O Senado é mais de centro e um pouco mais governista que a Câmara, mas revisa com mais cuidado.
+  - **Quando vota:** lei, lei complementar e MP aprovadas na Câmara vão ao Senado **no mesmo encerramento do mês**, logo depois (a resposta ao fato do mês continua podendo resolver no mesmo mês). **PEC** vai ao Senado **no mês seguinte**, em dois turnos.
+  - **Quóruns:** lei e MP pela maioria dos presentes; lei complementar com **41** votos; PEC com **49**, em dois turnos.
+  - **Rejeitado no Senado:** o projeto só pode voltar em 6 meses, custa um pouco de aprovação em todos os grupos, fortalece o rival e vira manchete. MP derrubada no Senado desfaz o efeito, como na Câmara. A obstrução do rival também vale lá.
+  - **Hermínia Valença (PSN), presidente do Senado:** personagem novo, com retrato. De mal com o governo (relação abaixo de 35), segura um projeto por mês (MP escapa). Dá para conversar com ela (ação de articulação).
+- **Janela de votação com duas abas, Câmara e Senado:** cada uma com previsão de placar, plenário (513 ou 81 cadeiras) e lideranças. No Senado você ouve até **2 lideranças por mês** (além das 3 da Câmara), com os mesmos preços: emendas (senador custa mais que deputado), pautar o projeto-bandeira, cargos, ou "não vende". Dá para negociar o Senado com o projeto ainda na Câmara: o acordo acompanha o projeto.
+- **Painel de votação do Senado:** depois do painel da Câmara vem o do Senado, com 81 cadeiras acendendo; a reação da sociedade só abre quando a lei passa nas duas casas e mostra os dois placares. Votação simbólica vale nas duas casas (no Senado, só se lá também houver maioria esmagadora).
+- **Aba Governo:** cartão do Senado (bancadas, presidente da casa, o que espera votação lá) e, em "Na pauta", a chance no Senado de cada projeto.
+- Promessas de contagem ("aprovar 12 leis", "aprovar uma PEC") contam só o que virou lei nas duas casas.
+- Mandatos salvos continuam normalmente (save versão 10): o Senado nasce no próximo mês; leis já aprovadas continuam valendo.
+
 ## 0.11.0
 - **Posse em 3 passos (etapa 5A):** candidato (rosto, nome, dificuldade e partido), perfil e promessas. Um painel ao lado mostra, a cada escolha, a aprovação inicial de cada grupo e quem será o seu rival.
 - **Ficha do candidato:** escolha até **2 traços** (Conciliador, Combativo, Técnico, Carismático, Austero, Gente como a gente, Linha dura, Servidor de carreira) e até **2 hábitos** (Pelada de domingo, Feira de sábado, Pescaria no interior, Corrida de rua, Lives toda semana, Viola caipira, Leitor de economia, Horta comunitária). Cada um agrada uns grupos e desagrada outros durante o mandato inteiro. Aparecem na sua ficha.

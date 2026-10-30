@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { affinity, amendmentOf, forecastVote, isRecess } from '../game/congress'
+import { affinity, amendmentOf, forecastSenate, forecastVote, isRecess, seatsIn, senatePending, type House } from '../game/congress'
 import { committeeOf, frenteSummary } from '../game/camara'
 import { BILL_BY_ID, GDP_BILLIONS, INSTRUMENTS } from '../game/data/bills'
 import { CAMARA } from '../game/data/camara'
 import { DEALS } from '../game/data/deals'
+import { SENADO } from '../game/data/senado'
 import { PARTIES, PARTY_BY_ID } from '../game/data/parties'
 import { offerFor, type Offer } from '../game/deals'
 import { procedureBlockedReason, type MonthPlan } from '../game/game'
@@ -23,16 +24,19 @@ const KIND_TAG: Record<Offer['kind'], { text: string; cls: string }> = {
 }
 
 /**
- * Votação na Câmara (etapa 4): placar previsto se fosse votado agora, lideranças e negociação.
- * O presidente ouve até 3 lideranças por mês; cada uma cobra conforme o alinhamento e o eleitorado.
+ * Votação no Congresso (etapas 4 e 4C1): placar previsto se fosse votado agora, lideranças e negociação,
+ * com uma aba para a Câmara e outra para o Senado. O presidente ouve até 3 lideranças por mês na Câmara e 2 no Senado.
  */
-export function VoteSheet({ state, bill, deals, listened, onListen, onDeal, onClose, plan, onProcedure }: {
+export function VoteSheet({ state, bill, deals, listened, onListen, listenedSenate, onListenSenate, onDeal, onClose, plan, onProcedure }: {
   state: GameState
   bill: BillId
-  /** Acordos do mês (todos os projetos). */
+  /** Acordos do mês (todos os projetos, nas duas casas). */
   deals: Deal[]
   listened: PartyId[]
   onListen: (p: PartyId) => void
+  /** Etapa 4C1: lideranças ouvidas no Senado neste mês. */
+  listenedSenate: PartyId[]
+  onListenSenate: (p: PartyId) => void
   onDeal: (d: Deal, add: boolean) => void
   onClose: () => void
   /** Plano do mês, para conferir os pedidos sobre a tramitação (etapa 4B). */
@@ -40,18 +44,29 @@ export function VoteSheet({ state, bill, deals, listened, onListen, onDeal, onCl
   onProcedure: (kind: ProcedureKind, id: BillId, on: boolean) => void
 }) {
   const b = BILL_BY_ID[bill]
-  const mine = deals.filter((d) => d.bill === bill)
+  const inSenate = senatePending(state, bill)
+  const [house, setHouse] = useState<House>(inSenate ? 'senado' : 'camara')
+  const senado = house === 'senado'
+  const total = senado ? SENADO.seats : 513
+  const mine = deals.filter((d) => d.bill === bill && (d.house ?? 'camara') === house)
   const has = (k: ProcedureKind) => (plan[k] ?? []).includes(bill)
   const original = has('original')
-  const fc = forecastVote(state, bill, mine, { original })
+  const fcCamara = forecastVote(state, bill, deals.filter((d) => d.bill === bill && d.house !== 'senado'), { original })
+  const fcSenado = forecastSenate(state, bill, deals.filter((d) => d.bill === bill && d.house === 'senado'), { original })
+  const fc = senado ? fcSenado : fcCamara
   const [open, setOpen] = useState<PartyId | null>(null)
   const recess = isRecess(state.month)
   const target = fc.needed || Math.ceil((fc.yes + fc.no) / 2) + 1
   const gap = target - fc.yes
-  const listenLeft = DEALS.listenPerMonth - listened.length
+  const heardList = senado ? listenedSenate : listened
+  const listenMax = senado ? SENADO.listenPerMonth : DEALS.listenPerMonth
+  const listenLeft = listenMax - heardList.length
   const present = fc.yes + fc.no + fc.abstain
-  const offer = open ? offerFor(state, open, bill, mine) : null
+  const offer = open ? offerFor(state, open, bill, mine, house) : null
   const pb = state.congress.pending.find((p) => p.id === bill)
+  const sn = state.congress.senate.president
+  const snParty = PARTY_BY_ID[SENADO.president.party]
+  const senateRisk = b.instrument !== 'mp' && sn.relation < SENADO.president.holdBelow && (inSenate?.holds ?? 0) < SENADO.president.maxHold
   const am = amendmentOf(state, bill)
   const relator = am ? PARTY_BY_ID[am.relator] : null
   const com = committeeOf(b)
@@ -64,23 +79,40 @@ export function VoteSheet({ state, bill, deals, listened, onListen, onDeal, onCl
   const frentes = frenteSummary(state, b).filter((f) => Math.abs(f.stance) >= 0.1)
   const why = (k: ProcedureKind) => procedureBlockedReason(state, plan, k, bill)
   const extraCost = am?.extra ? (((am.extra.spending ?? 0) - (am.extra.revenue ?? 0)) / 100) * GDP_BILLIONS : 0
-  const order = [...PARTIES].sort((a, z) => z.seats - a.seats)
+  const seatsOf = (pid: PartyId) => seatsIn(house, pid)
+  const order = [...PARTIES].filter((p) => seatsOf(p.id) > 0).sort((a, z) => seatsOf(z.id) - seatsOf(a.id))
+  const member = senado ? 'senador' : 'deputado'
 
-  // Plenário: um quadrado por deputado, partido a partido.
+  // Plenário: um quadrado por parlamentar, partido a partido.
   const squares: string[] = []
   for (const p of order) {
     const r = fc.byParty.find((x) => x.party === p.id)!
-    const abst = Math.max(0, Math.round(p.seats * 0.96) - r.yes - r.no)
-    for (let i = 0; i < p.seats; i++) squares.push(i < r.yes ? 'y' : i < r.yes + r.no ? 'n' : i < r.yes + r.no + abst ? 'a' : 'x')
+    const n = seatsOf(p.id)
+    const abst = Math.max(0, Math.round(n * 0.96) - r.yes - r.no)
+    for (let i = 0; i < n; i++) squares.push(i < r.yes ? 'y' : i < r.yes + r.no ? 'n' : i < r.yes + r.no + abst ? 'a' : 'x')
   }
+  const timing = recess ? 'Congresso em recesso: a votação fica para o mês que vem.'
+    : senado
+      ? inSenate ? (b.instrument === 'pec' && inSenate.sentMonth === state.month ? 'A PEC é votada no Senado no mês que vem, em dois turnos.' : 'Vai a voto no Senado ao encerrar o mês.')
+        : b.instrument === 'pec' ? 'Se a Câmara aprovar, a PEC vai ao Senado no mês seguinte, em dois turnos.' : 'Se a Câmara aprovar, o Senado vota logo em seguida, no mesmo encerramento.'
+      : b.instrument === 'mp' ? 'A MP vale na hora e é votada no mês seguinte; depois, no Senado.' : 'Vai a voto ao encerrar o mês; se passar, segue para o Senado.'
 
   return (
     <aside className="detail pn-sheet-back" onClick={onClose}>
       <div className="pn-sheet pn-sheet--wide" onClick={(e) => e.stopPropagation()}>
         <button className="detail__close" onClick={onClose}>×</button>
-        <div className="pn-kicker">Câmara dos Deputados · {INSTRUMENTS[b.instrument].label}</div>
+        <div className="pn-kicker">{senado ? 'Senado Federal' : 'Câmara dos Deputados'} · {INSTRUMENTS[b.instrument].label}</div>
         <h2>{b.name}</h2>
         <p className="pn-hint" style={{ marginTop: -6 }}>{b.summary}</p>
+
+        <div className="pn-seg pn-housetabs">
+          <button className={!senado ? 'on' : ''} onClick={() => { setHouse('camara'); setOpen(null) }}>
+            🏛️ Câmara {inSenate ? '· ✅ aprovado' : `· ${Math.round(fcCamara.chance * 100)}%`}
+          </button>
+          <button className={senado ? 'on' : ''} onClick={() => { setHouse('senado'); setOpen(null) }}>
+            🏛️ Senado · {Math.round(fcSenado.chance * 100)}%
+          </button>
+        </div>
 
         <div className="pn-vote">
           <div className="pn-vote__head">
@@ -89,18 +121,46 @@ export function VoteSheet({ state, bill, deals, listened, onListen, onDeal, onCl
           </div>
           <div className="pn-vote__score">
             <span className={gap > 0 ? 'dn' : 'up'}>{fc.yes}</span><i>×</i><span>{fc.no}</span>
-            <small>{fc.needed ? <>piso de <b>{fc.needed}</b> de 513{b.instrument === 'pec' ? ', em dois turnos' : ''}</> : <>maioria dos presentes (cerca de {present})</>}</small>
+            <small>{fc.needed ? <>piso de <b>{fc.needed}</b> de {total}{b.instrument === 'pec' ? ', em dois turnos' : ''}</> : <>maioria dos presentes (cerca de {present})</>}</small>
           </div>
-          <p className="pn-hint">Dificuldade: <b>{fc.label.toLowerCase()}</b> · chance de aprovar {Math.round(fc.chance * 100)}%. {recess ? 'Congresso em recesso: a votação fica para o mês que vem.' : b.instrument === 'mp' ? 'A MP vale na hora e é votada no mês seguinte.' : 'Vai a voto ao encerrar o mês.'}</p>
-          <div className="pn-plenary">{squares.map((c, i) => <i key={i} className={c} />)}</div>
-          <div className="pn-legend2"><span><i className="y" />Sim {fc.yes}</span><span><i className="n" />Não {fc.no}</span><span><i className="a" />Abstenção {fc.abstain}</span><span><i className="x" />Ausente {513 - present}</span></div>
-          <p className="pn-hint">Cada quadrado é um deputado e o voto dele se a sessão fosse agora.</p>
+          <p className="pn-hint">Dificuldade: <b>{fc.label.toLowerCase()}</b> · chance de aprovar {Math.round(fc.chance * 100)}%. {timing}</p>
+          <div className={`pn-plenary ${senado ? 'pn-plenary--senado' : ''}`}>{squares.map((c, i) => <i key={i} className={c} />)}</div>
+          <div className="pn-legend2"><span><i className="y" />Sim {fc.yes}</span><span><i className="n" />Não {fc.no}</span><span><i className="a" />Abstenção {fc.abstain}</span><span><i className="x" />Ausente {total - present}</span></div>
+          <p className="pn-hint">Cada quadrado é um {member} e o voto dele se a sessão fosse agora.{!senado && !inSenate ? ` Depois da Câmara vem o Senado: hoje, ${Math.round(fcSenado.chance * 100)}% de chance lá.` : ''}</p>
           {state.rival?.stance === 'obstrucao' && (
             <p className="pn-hint dn">🥊 Oposição em obstrução: {state.rival.name} puxa o {PARTY_BY_ID[state.rival.party].sigla} e aliados a votar mais contra o governo.</p>
           )}
         </div>
 
+        {senado && (
+          <>
+            <div className="pn-vote__head" style={{ marginTop: 16 }}><b>Tramitação no Senado</b><span className="pn-badge">depois da Câmara</span></div>
+            <div className="pn-tram">
+              <div className="pn-tram__step">
+                <small>1 · Câmara</small>
+                <b>{inSenate ? 'Aprovado' : 'Ainda não votado'}</b>
+                <span>{inSenate?.camara ? (inSenate.camara.symbolic ? 'Passou em votação simbólica.' : `Passou por ${inSenate.camara.yes} a ${inSenate.camara.no}.`) : 'O Senado só vota o que a Câmara aprovar, com o texto que ela aprovar.'}</span>
+              </div>
+              <div className={`pn-tram__step ${senateRisk ? 'risk' : ''}`}>
+                <small>2 · Plenário do Senado</small>
+                <b>{SENADO.president.name}, presidente do Senado</b>
+                <span>Relação com o governo: <b className={sn.relation >= 50 ? 'up' : sn.relation >= SENADO.president.holdBelow ? 'warn' : 'dn'}>{Math.round(sn.relation)}</b> · <span style={{ color: snParty.color }}>{snParty.sigla}</span>. {b.instrument === 'mp' ? 'MP tranca a pauta: ela não consegue segurar.' : senateRisk ? '⚠️ De mal com o governo: pode segurar o projeto na gaveta.' : 'Deve pautar a votação.'}</span>
+              </div>
+            </div>
+            {inSenate && (
+              <div className="pn-tram__actions">
+                <ProcButton label="⏸ Deixar na pauta" on={has('hold')} reason={why('hold')} onClick={() => onProcedure('hold', bill, !has('hold'))} hint="Não vota no Senado este mês: dá tempo de negociar." />
+                <ProcButton label="🔨 Votação simbólica" on={has('symbolic')} reason={why('symbolic')} onClick={() => onProcedure('symbolic', bill, !has('symbolic'))} hint="Com maioria esmagadora no Senado, aprova sem painel e sem risco." />
+              </div>
+            )}
+            {!inSenate && has('symbolic') && <p className="pn-hint">🔨 A votação simbólica pedida vale também no Senado, se lá a maioria também for esmagadora.</p>}
+          </>
+        )}
+
+        {!senado && <>
         <div className="pn-vote__head" style={{ marginTop: 16 }}><b>Tramitação</b><span className="pn-badge">o caminho até o plenário</span></div>
+        {inSenate && <p className="pn-hint up">✅ A Câmara já aprovou{inSenate.camara ? ` (${inSenate.camara.symbolic ? 'simbólica' : `${inSenate.camara.yes} a ${inSenate.camara.no}`})` : ''}. Agora o projeto está no Senado.</p>}
+        {!inSenate && <>
         <div className="pn-tram">
           {b.instrument !== 'mp' && (
             <div className={`pn-tram__step ${committeeRisk ? 'risk' : ''}`}>
@@ -132,6 +192,7 @@ export function VoteSheet({ state, bill, deals, listened, onListen, onDeal, onCl
           <ProcButton label="⏸ Deixar na pauta" on={has('hold')} reason={why('hold')} onClick={() => onProcedure('hold', bill, !has('hold'))} hint="Não vota este mês: dá tempo de negociar. Acordos fechados continuam valendo." />
           <ProcButton label="🔨 Votação simbólica" on={has('symbolic')} reason={why('symbolic')} onClick={() => onProcedure('symbolic', bill, !has('symbolic'))} hint="Com maioria esmagadora, o presidente da Câmara anuncia o resultado sem painel: aprova sem risco." />
         </div>
+        </>}
 
         {frentes.length > 0 && (
           <>
@@ -143,14 +204,17 @@ export function VoteSheet({ state, bill, deals, listened, onListen, onDeal, onCl
             </div>
           </>
         )}
+        </>}
 
+        {!senado && inSenate ? null : (
+        <>
         <div className="pn-vote__head" style={{ marginTop: 16 }}>
-          <b>Lideranças</b>
-          <span className="pn-badge">ouvir: {listenLeft} de {DEALS.listenPerMonth} este mês</span>
+          <b>Lideranças {senado ? 'no Senado' : 'na Câmara'}</b>
+          <span className="pn-badge">ouvir: {listenLeft} de {listenMax} este mês</span>
         </div>
         <p className="pn-hint">Chame a liderança e ouça o preço. Cada partido cobra numa moeda diferente, e alguns não vendem por nenhuma.</p>
 
-        {offer && <OfferCard offer={offer} deal={mine.find((d) => d.party === offer.party) ?? null} onClose={() => setOpen(null)} onDeal={onDeal} />}
+        {offer && <OfferCard offer={offer} house={house} deal={mine.find((d) => d.party === offer.party) ?? null} onClose={() => setOpen(null)} onDeal={onDeal} />}
 
         <div className="pn-leaders">
           {order.map((p) => {
@@ -159,25 +223,28 @@ export function VoteSheet({ state, bill, deals, listened, onListen, onDeal, onCl
             const tag = r.orientation > 0.25 || own ? { t: 'SIM', c: 'up' } : r.orientation < -0.25 ? { t: 'NÃO', c: 'dn' } : { t: 'LIBERADO', c: '' }
             const aff = affinity(p.econ, p.costumes, b)
             const why = own ? 'É o seu partido: fecha com o governo.' : aff > 0.5 ? 'Gostam do texto.' : aff < 0 ? 'O texto bate de frente com a bandeira deles.' : 'Sem bandeira no tema: votam pelo clima e pelo preço.'
-            const heard = listened.includes(p.id)
+            const heard = heardList.includes(p.id)
             const deal = mine.find((d) => d.party === p.id)
             const canListen = !own && (heard || listenLeft > 0)
+            const n = seatsOf(p.id)
             return (
-              <button key={p.id} className={`pn-leader ${open === p.id ? 'on' : ''}`} disabled={!canListen} onClick={() => { if (!heard) onListen(p.id); setOpen(p.id) }} title={own ? '' : heard ? 'Ver de novo a proposta' : listenLeft > 0 ? 'Chamar para conversar' : 'Você já ouviu 3 lideranças este mês'}>
+              <button key={p.id} className={`pn-leader ${open === p.id ? 'on' : ''}`} disabled={!canListen} onClick={() => { if (!heard) (senado ? onListenSenate : onListen)(p.id); setOpen(p.id) }} title={own ? '' : heard ? 'Ver de novo a proposta' : listenLeft > 0 ? 'Chamar para conversar' : `Você já ouviu ${listenMax} lideranças ${senado ? 'no Senado' : 'na Câmara'} este mês`}>
                 <div className="pn-leader__top">
                   <Portrait name={p.leader.name} feminine={p.leader.feminine} color={p.color} size={36} title={p.leader.name} />
-                  <div><b style={{ color: p.color }}>{p.sigla}</b> · {p.seats}<small>{p.leader.name}</small></div>
+                  <div><b style={{ color: p.color }}>{p.sigla}</b> · {n}<small>{p.leader.name}</small></div>
                   <span className={`pn-chip-mini ${tag.c}`}>{tag.t}</span>
                 </div>
                 {deal && <span className="pn-chip-mini up">Acordo: {KIND_TAG[deal.kind].text.toLowerCase()}</span>}
-                <div className="pn-leader__bar"><span style={{ width: `${(r.yes / p.seats) * 100}%`, background: r.yes / p.seats > 0.6 ? '#2fd07a' : r.yes / p.seats > 0.35 ? '#f5c542' : '#ff6b6b' }} /></div>
-                <small className="mono">hoje {r.yes} de {p.seats}</small>
+                <div className="pn-leader__bar"><span style={{ width: `${(r.yes / n) * 100}%`, background: r.yes / n > 0.6 ? '#2fd07a' : r.yes / n > 0.35 ? '#f5c542' : '#ff6b6b' }} /></div>
+                <small className="mono">hoje {r.yes} de {n}</small>
                 <small>{why}</small>
                 {!own && <small className="pn-leader__cta">{heard ? '↩ ver proposta' : listenLeft > 0 ? '🗣️ ouvir' : ''}</small>}
               </button>
             )
           })}
         </div>
+        </>
+        )}
 
         <div className="pn-sheet__foot">
           <button className="pn-btn pn-btn--big" onClick={onClose}>{recess ? 'Fica na pauta (recesso)' : has('hold') ? 'Fica na pauta este mês' : has('symbolic') ? 'Votação simbólica ao encerrar o mês' : 'Levar à votação ao encerrar o mês'}</button>
@@ -189,16 +256,16 @@ export function VoteSheet({ state, bill, deals, listened, onListen, onDeal, onCl
   )
 }
 
-function OfferCard({ offer, deal, onClose, onDeal }: {
-  offer: Offer; deal: Deal | null; onClose: () => void; onDeal: (d: Deal, add: boolean) => void
+function OfferCard({ offer, house, deal, onClose, onDeal }: {
+  offer: Offer; house: House; deal: Deal | null; onClose: () => void; onDeal: (d: Deal, add: boolean) => void
 }) {
   const p = PARTY_BY_ID[offer.party]
   const tag = KIND_TAG[offer.kind]
   const priced = !offer.closed && (offer.kind === 'emendas' || offer.kind === 'pauta' || offer.kind === 'cargos')
-  const d: Deal | null = priced ? { party: offer.party, kind: offer.kind as Deal['kind'], bill: offer.bill } : null
+  const d: Deal | null = priced ? { party: offer.party, kind: offer.kind as Deal['kind'], bill: offer.bill, ...(house === 'senado' ? { house: 'senado' as const } : {}) } : null
   return (
     <div className="pn-offer">
-      <div className="pn-offer__head"><b>{p.leader.name} · {p.sigla}</b><span className={`pn-chip-mini ${tag.cls}`}>{tag.text}</span></div>
+      <div className="pn-offer__head"><b>{p.leader.name} · {p.sigla}{house === 'senado' ? ' no Senado' : ''}</b><span className={`pn-chip-mini ${tag.cls}`}>{tag.text}</span></div>
       <div className="pn-offer__body">
         <Portrait name={p.leader.name} feminine={p.leader.feminine} color={p.color} size={84} title={p.leader.name} />
         <div>

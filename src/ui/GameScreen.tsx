@@ -63,6 +63,7 @@ export function GameScreen({ state, onChange, onExit }: {
   const [showAi, setShowAi] = useState(false)
   const [deals, setDeals] = useState<Deal[]>([])
   const [listened, setListened] = useState<PartyId[]>([])
+  const [listenedSenate, setListenedSenate] = useState<PartyId[]>([])
   const [voteSheet, setVoteSheet] = useState<BillId | null>(null)
   const [proc, setProc] = useState<Record<ProcedureKind, BillId[]>>(NO_PROC)
   const [sanctions, setSanctions] = useState<Record<string, 'sancionar' | 'vetar'>>({})
@@ -126,6 +127,7 @@ export function GameScreen({ state, onChange, onExit }: {
       setEventResponse(null)
       setDeals([])
       setListened([])
+      setListenedSenate([])
       setVoteSheet(null)
       setProc(NO_PROC)
       setSanctions({})
@@ -138,9 +140,14 @@ export function GameScreen({ state, onChange, onExit }: {
       // Fila do pós-mês: cada votação no painel animado e, depois de cada lei, a reação da sociedade.
       const rep = next.lastReport
       const q: Post[] = []
-      for (const v of rep?.votes ?? []) {
+      // Etapa 4C1: a votação do Senado aparece logo depois da Câmara para o mesmo projeto; a reação vem depois da última casa.
+      const all = rep?.votes ?? []
+      const ordered = all.filter((v) => v.house !== 'senado').flatMap((v) => [v, ...all.filter((x) => x.house === 'senado' && x.bill === v.bill && x.kind !== 'veto' && v.kind !== 'veto')])
+      for (const v of all) if (!ordered.includes(v)) ordered.push(v)
+      for (const v of ordered) {
         if (v.kind !== 'simbolica') q.push({ kind: 'vote', v })
-        if (v.approved && v.kind !== 'veto' && rep?.sanctioned?.includes(v.bill)) q.push({ kind: 'reaction', bill: v.bill, month: v.month })
+        const last = v.house === 'senado' || v.kind === 'veto' || !all.some((x) => x.house === 'senado' && x.bill === v.bill)
+        if (last && v.approved && v.kind !== 'veto' && rep?.sanctioned?.includes(v.bill) && !q.some((p) => p.kind === 'reaction' && p.bill === v.bill)) q.push({ kind: 'reaction', bill: v.bill, month: v.month })
       }
       for (const id of rep?.sanctioned ?? []) if (!q.some((p) => p.kind === 'reaction' && p.bill === id)) q.push({ kind: 'reaction', bill: id, month: rep!.month })
       setPost(q)
@@ -167,7 +174,7 @@ export function GameScreen({ state, onChange, onExit }: {
         <nav className="pn-nav">
           <a className={tab === 'painel' ? 'on' : ''} onClick={() => setTab('painel')}>🏠 Painel</a>
           <a className={tab === 'governo' ? 'on' : ''} onClick={() => setTab('governo')}>
-            🏛️ Governo {state.congress.pending.length + (bill ? 1 : 0) + state.congress.toSanction.length > 0 && <span className="pn-dot">{state.congress.pending.length + (bill ? 1 : 0) + state.congress.toSanction.length}</span>}
+            🏛️ Governo {state.congress.pending.length + state.congress.senate.pending.length + (bill ? 1 : 0) + state.congress.toSanction.length > 0 && <span className="pn-dot">{state.congress.pending.length + state.congress.senate.pending.length + (bill ? 1 : 0) + state.congress.toSanction.length}</span>}
           </a>
           <a className={tab === 'fichas' ? 'on' : ''} onClick={() => setTab('fichas')}>📇 Fichas</a>
           {SECTIONS.map((s) => (
@@ -183,9 +190,12 @@ export function GameScreen({ state, onChange, onExit }: {
           deals={deals}
           listened={listened}
           onListen={(p) => setListened((l) => (l.includes(p) ? l : [...l, p]))}
+          listenedSenate={listenedSenate}
+          onListenSenate={(p) => setListenedSenate((l) => (l.includes(p) ? l : [...l, p]))}
           onDeal={(d, add) => {
-            setDeals((ds) => (add ? [...ds.filter((x) => !(x.bill === d.bill && x.party === d.party)), d] : ds.filter((x) => !(x.bill === d.bill && x.party === d.party))))
-            if (add) toast(`🤝 Acordo com o ${PARTY_BY_ID[d.party].sigla}: vale ao encerrar o mês.`)
+            const same = (x: Deal) => x.bill === d.bill && x.party === d.party && (x.house ?? 'camara') === (d.house ?? 'camara')
+            setDeals((ds) => (add ? [...ds.filter((x) => !same(x)), d] : ds.filter((x) => !same(x))))
+            if (add) toast(`🤝 Acordo com o ${PARTY_BY_ID[d.party].sigla}${d.house === 'senado' ? ' no Senado' : ''}: vale ao encerrar o mês.`)
           }}
           onClose={() => setVoteSheet(null)}
           plan={plan}
@@ -335,7 +345,7 @@ export function GameScreen({ state, onChange, onExit }: {
                               selected.length ? `Decretos: ${selected.map((id) => lowerFirst(ACTION_BY_ID[id].name)).join(' e ')}.` : '',
                               bill ? `${BILL_KIND[BILL_BY_ID[bill].instrument]}: ${lowerFirst(BILL_BY_ID[bill].name)}.` : '',
                               eventResponse ? `Resposta ao fato do mês (${BILL_KIND[BILL_BY_ID[eventResponse].instrument].toLowerCase()}): ${lowerFirst(BILL_BY_ID[eventResponse].name)}.` : '',
-                              articulations.length ? `Articulação: ${articulations.map((a) => a.kind === 'presidente' ? 'conversa com o presidente da Câmara' : `${a.kind === 'conversar' ? 'conversa com' : 'emendas para'} ${PARTY_BY_ID[a.party].sigla}`).join(' e ')}.` : '',
+                              articulations.length ? `Articulação: ${articulations.map((a) => a.kind === 'presidente' ? 'conversa com o presidente da Câmara' : a.kind === 'senado' ? 'conversa com a presidente do Senado' : `${a.kind === 'conversar' ? 'conversa com' : 'emendas para'} ${PARTY_BY_ID[a.party].sigla}`).join(' e ')}.` : '',
                               ministry ? (ministry.party ? `Ministério: ceder ${ministry.area} ao ${PARTY_BY_ID[ministry.party].sigla}.` : `Ministério: retomar ${ministry.area}.`) : '',
                               Object.values(sanctions).some((d) => d === 'vetar') ? `Vetos: ${Object.values(sanctions).filter((d) => d === 'vetar').length}.` : '',
                             ].filter(Boolean).join(' ')}
@@ -499,7 +509,7 @@ export function GameScreen({ state, onChange, onExit }: {
             <section className="pn-card">
               <h3>🔜 Ainda não está no jogo</h3>
               <p className="pn-hint">
-                Senado votando, Supremo, CPIs, imprensa, governadores, diplomacia, os 27 estados e a apuração da eleição chegam nas próximas versões.
+                Supremo, CPIs, imprensa, governadores, diplomacia, os 27 estados e a apuração da eleição chegam nas próximas versões.
               </p>
             </section>
           </div>

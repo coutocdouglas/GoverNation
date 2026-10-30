@@ -1,21 +1,24 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { BILL_BY_ID, INSTRUMENTS } from '../game/data/bills'
 import { PARTIES, PARTY_BY_ID } from '../game/data/parties'
+import { houseSeats, seatsIn } from '../game/congress'
 import type { PartyId, VoteRecord } from '../game/types'
 
 type Cell = 'y' | 'n' | 'a' | 'x'
 
-/** Voto de cada cadeira, partido a partido (da esquerda para a direita na economia). */
+/** Voto de cada cadeira, partido a partido (da esquerda para a direita na economia). Câmara ou Senado (etapa 4C1). */
 function seatsOf(v: VoteRecord): { cells: Cell[]; party: PartyId[] } {
   const cells: Cell[] = []
   const party: PartyId[] = []
-  const totalRest = PARTIES.reduce((a, p) => a + p.seats - v.byParty[p.id].yes - v.byParty[p.id].no, 0) || 1
+  const house = v.house ?? 'camara'
+  const totalRest = PARTIES.reduce((a, p) => a + seatsIn(house, p.id) - v.byParty[p.id].yes - v.byParty[p.id].no, 0) || 1
   const abstShare = v.abstain / totalRest
   for (const p of [...PARTIES].sort((a, z) => a.econ - z.econ)) {
     const r = v.byParty[p.id]
-    const rest = p.seats - r.yes - r.no
+    const n = seatsIn(house, p.id)
+    const rest = n - r.yes - r.no
     const abst = Math.round(rest * abstShare)
-    for (let i = 0; i < p.seats; i++) {
+    for (let i = 0; i < n; i++) {
       cells.push(i < r.yes ? 'y' : i < r.yes + r.no ? 'n' : i < r.yes + r.no + abst ? 'a' : 'x')
       party.push(p.id)
     }
@@ -48,6 +51,8 @@ export function VoteAnimation({ vote, index, total, onNext, nextLabel }: {
 }) {
   const b = BILL_BY_ID[vote.bill]
   const veto = vote.kind === 'veto'
+  const senado = vote.house === 'senado'
+  const total_ = houseSeats(senado ? 'senado' : 'camara')
   const { cells, party } = useMemo(() => seatsOf(vote), [vote])
   const order = useMemo(() => revealOrder(cells.length, `${vote.bill}-${vote.month}`), [cells.length, vote.bill, vote.month])
   const [shown, setShown] = useState(0)
@@ -78,7 +83,7 @@ export function VoteAnimation({ vote, index, total, onNext, nextLabel }: {
   const koText = veto ? 'VETO MANTIDO' : 'REJEITADO'
   const good = veto ? !vote.approved : vote.approved
 
-  const byParty = [...PARTIES].sort((a, z) => z.seats - a.seats).map((p) => {
+  const byParty = [...PARTIES].filter((p) => seatsIn(vote.house ?? 'camara', p.id) > 0).sort((a, z) => seatsIn(vote.house ?? 'camara', z.id) - seatsIn(vote.house ?? 'camara', a.id)).map((p) => {
     let y = 0, n = 0
     cells.forEach((c, i) => { if (party[i] === p.id && visible.has(i)) { if (c === 'y') y++; else if (c === 'n') n++ } })
     return { p, y, n }
@@ -88,7 +93,7 @@ export function VoteAnimation({ vote, index, total, onNext, nextLabel }: {
     <div className="pn-ov pn-ov--vote" role="dialog" aria-label={`Votação: ${name}`}>
       <div className="pn-vanim">
         <div className="pn-vanim__top">
-          <span className="pn-kicker">🏛️ Plenário da Câmara · {veto ? 'Sessão do veto' : INSTRUMENTS[b?.instrument ?? 'lei'].label}{total > 1 ? ` · votação ${index + 1} de ${total}` : ''}</span>
+          <span className="pn-kicker">🏛️ Plenário {senado ? 'do Senado' : 'da Câmara'} · {veto ? 'Sessão do veto' : INSTRUMENTS[b?.instrument ?? 'lei'].label}{total > 1 ? ` · votação ${index + 1} de ${total}` : ''}</span>
           {!done && <button className="pn-btn pn-btn--ghost pn-btn--small" onClick={skip}>Pular ⏭</button>}
         </div>
         <h2>{name}</h2>
@@ -98,16 +103,16 @@ export function VoteAnimation({ vote, index, total, onNext, nextLabel }: {
           <div className="pn-vanim__num y"><small>SIM</small><b>{yes}</b></div>
           <div className="pn-vanim__mid">
             <div className="pn-vanim__bar">
-              <span className="y" style={{ width: `${(yes / 513) * 100}%` }} />
-              <span className="n" style={{ width: `${(no / 513) * 100}%` }} />
-              <span className="mark" style={{ left: `${(target / 513) * 100}%` }}><em>{vote.needed ? `${vote.needed}` : 'maioria'}</em></span>
+              <span className="y" style={{ width: `${(yes / total_) * 100}%` }} />
+              <span className="n" style={{ width: `${(no / total_) * 100}%` }} />
+              <span className="mark" style={{ left: `${(target / total_) * 100}%` }}><em>{vote.needed ? `${vote.needed}` : 'maioria'}</em></span>
             </div>
-            <small className="mono">{abst} abstenções · {shown} de 513 votos computados</small>
+            <small className="mono">{abst} abstenções · {shown} de {total_} votos computados</small>
           </div>
           <div className="pn-vanim__num n"><small>NÃO</small><b>{no}</b></div>
         </div>
 
-        <div className={`pn-vanim__grid ${done ? 'done' : ''}`}>
+        <div className={`pn-vanim__grid ${senado ? 'pn-vanim__grid--senado' : ''} ${done ? 'done' : ''}`}>
           {cells.map((c, i) => <i key={i} className={visible.has(i) ? c : ''} style={{ ['--pc' as string]: PARTY_BY_ID[party[i]].color }} />)}
         </div>
 

@@ -60,6 +60,8 @@ export const CAST: CastMember[] = [
   // Etapa 5A (data/rival.ts): líderes da oposição, um de cada lado
   { name: 'Leopoldo Rezende', role: 'Líder da oposição (POL)', gender: 'm', portrait: 95, alt: 73 },
   { name: 'Clarice Siqueira', role: 'Líder da oposição (FPT)', gender: 'f', portrait: 58, alt: 107 },
+  // Etapa 4C1 (data/senado.ts): presidente do Senado
+  { name: 'Hermínia Valença', role: 'Presidente do Senado Federal', gender: 'f', portrait: 19, alt: 23 },
 ]
 
 /**

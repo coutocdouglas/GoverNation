@@ -51,7 +51,7 @@ export const CAMARA = {
     keepOriginalPenalty: -0.2,
   },
   veto: {
-    /** Para derrubar um veto: maioria absoluta (257). O Senado não vota nesta versão. */
+    /** Para derrubar um veto: maioria absoluta (257). Nesta versão só a Câmara vota a sessão de vetos (o Senado entra depois). */
     needed: 257,
     /** Quem queria a medida vetada fica bravo. */
     partyHit: -6,

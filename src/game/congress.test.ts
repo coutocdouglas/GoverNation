@@ -68,8 +68,10 @@ describe('projetos no turno mensal', () => {
     expect(s.lastReport!.votes).toHaveLength(0)
     expect(s.congress.pending.map((p) => p.id)).toEqual(['isencaoIR'])
     s = advanceMonth(s, [])
-    expect(s.lastReport!.votes).toHaveLength(1)
+    // Etapa 4C1: Câmara e, no mesmo encerramento, Senado.
+    expect(s.lastReport!.votes.map((v) => v.house ?? 'camara')).toEqual(['camara', 'senado'])
     expect(s.congress.pending).toHaveLength(0)
+    expect(s.congress.senate.pending).toHaveLength(0)
   })
 
   it('lei aprovada aplica o efeito e não pode ser reenviada', () => {
@@ -134,7 +136,7 @@ describe('saves antigos', () => {
     delete s.playerParty
     s.saveVersion = 1
     const m = migrate(JSON.parse(JSON.stringify(s)))!
-    expect(m.saveVersion).toBe(9)
+    expect(m.saveVersion).toBe(10)
     expect(m.world.seeds).toEqual([])
     expect(m.demands).toEqual([])
     expect(m.playerParty).toBe('mdn')

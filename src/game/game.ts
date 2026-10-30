@@ -1,5 +1,6 @@
 import { ACTION_BY_ID, ACTIONS_PER_MONTH, blockedReason, effectMultiplier, type ActionEffects } from './actions'
-import { affinity, articulationBlockedReason, billBlockedReason, CONGRESS, driftRelations, forecastVote, initialCongress, isRecess, runChamberVote, runOverrideVote, runVote, symbolicBlockedReason } from './congress'
+import { affinity, articulationBlockedReason, billBlockedReason, CONGRESS, driftRelations, forecastSenate, forecastVote, initialCongress, isRecess, runChamberVote, runOverrideVote, runSenateVote, runVote, senatePending, symbolicBlockedReason } from './congress'
+import { SENADO } from './data/senado'
 import { actsNow, BILL_BY_ID, RESUBMIT_COOLDOWN } from './data/bills'
 import { MINISTER_BY_AREA } from './data/ministers'
 import { DEMAND_BY_ID } from './data/demands'
@@ -21,9 +22,9 @@ import { PROMISE_BY_ID } from './data/promises'
 import { RIVAL_BY_PARTY } from './data/rival'
 import { Rng } from './rng'
 import { DEALS } from './data/deals'
-import { dealBlockedReason, flagshipOf } from './deals'
+import { dealBlockedReason, emendasAmount, flagshipOf } from './deals'
 import { syncCustomBills } from './custom'
-import type { ActionId, Deal, Articulation, BillId, Cause, Economy, GameState, GroupId, Headline, Impulse, MonthReport, PartyId, SanctionItem, Snapshot, VetoItem, VoteRecord } from './types'
+import type { ActionId, Deal, Articulation, BillId, Cause, Economy, GameState, GroupId, Headline, Impulse, MonthReport, PartyId, PendingBill, SanctionItem, Snapshot, VetoItem, VoteRecord } from './types'
 
 export const TERM_MONTHS = 48
 
@@ -68,7 +69,7 @@ export function newGame(
   const rngState = seed ?? Math.floor(Math.random() * 2 ** 31)
   const bonus = DIFFICULTY[difficulty].approvalBonus
   const state: GameState = {
-    saveVersion: 9,
+    saveVersion: 10,
     month: 0,
     presidentName: presidentName.trim() || 'Presidente',
     difficulty,
@@ -182,15 +183,28 @@ export function vetoedBill(it: Pick<SanctionItem | VetoItem, 'kind' | 'bill' | '
   return it.kind === 'bomba' || !it.amendment ? BILL_BY_ID[it.bill] : jabutiBill(BILL_BY_ID[it.bill], it.amendment)
 }
 
-/** Projetos do governo que estão (ou vão estar) na Câmara neste mês. */
+/** Projetos do governo que estão (ou vão estar) no Congresso neste mês: na Câmara ou, depois dela, no Senado. */
 const inChamber = (s: GameState, plan: MonthPlan, id: BillId) =>
-  s.congress.pending.some((p) => p.id === id) || [plan.bill, plan.eventResponse].includes(id)
+  s.congress.pending.some((p) => p.id === id) || !!senatePending(s, id) || [plan.bill, plan.eventResponse].includes(id)
 
 /** Motivo pelo qual o pedido sobre a tramitação não vale, ou null. */
 export function procedureBlockedReason(s: GameState, plan: MonthPlan, kind: 'hold' | 'urgent' | 'original' | 'symbolic', id: BillId): string | null {
   const b = BILL_BY_ID[id]
   if (!b || b.instrument === 'decreto') return 'Decreto não passa pela Câmara.'
   if (!inChamber(s, plan, id)) return 'O projeto não está na Câmara.'
+  // Etapa 4C1: projeto que já passou na Câmara e espera o Senado.
+  const sp = senatePending(s, id)
+  if (sp) {
+    if (kind === 'urgent') return 'O projeto já passou na Câmara.'
+    if (kind === 'original') return 'O texto já foi aprovado pela Câmara.'
+    if (kind === 'hold' && b.instrument === 'mp') return 'A MP vence se não for votada agora.'
+    if (kind === 'hold' && (plan.symbolic ?? []).includes(id)) return 'Você pediu votação simbólica para este projeto.'
+    if (kind === 'symbolic') {
+      if ((plan.hold ?? []).includes(id)) return 'O projeto está segurado na pauta.'
+      return symbolicBlockedReason(s, id, (plan.deals ?? []).filter((d) => d.bill === id && d.house === 'senado'), {}, 'senado')
+    }
+    return null
+  }
   const pb = s.congress.pending.find((p) => p.id === id)
   if (kind === 'hold') {
     if (b.instrument === 'mp' && pb && s.month - pb.sentMonth >= CAMARA.mpDeadline - 1) return 'A MP vence se não for votada agora.'
@@ -207,7 +221,7 @@ export function procedureBlockedReason(s: GameState, plan: MonthPlan, kind: 'hol
   if (kind === 'symbolic') {
     if ((plan.hold ?? []).includes(id)) return 'O projeto está segurado na pauta.'
     if (b.instrument === 'mp' && (!pb || pb.sentMonth === s.month)) return 'A MP só vai a voto no mês seguinte à edição.'
-    return symbolicBlockedReason(s, id, (plan.deals ?? []).filter((d) => d.bill === id), { original: (plan.original ?? []).includes(id) || undefined })
+    return symbolicBlockedReason(s, id, (plan.deals ?? []).filter((d) => d.bill === id && d.house !== 'senado'), { original: (plan.original ?? []).includes(id) || undefined })
   }
   return null
 }
@@ -240,11 +254,13 @@ export function validatePlan(s: GameState, plan: MonthPlan): string | null {
     if (!Number.isInteger(plan.eventChoice) || plan.eventChoice < 0 || plan.eventChoice >= ev.options.length) return 'Opção inválida no fato do mês.'
   }
   const deals = plan.deals ?? []
-  if (deals.length > DEALS.listenPerMonth) return `No máximo ${DEALS.listenPerMonth} acordos por mês.`
+  const sameHouse = (a: Deal, b: Deal) => (a.house ?? 'camara') === (b.house ?? 'camara')
+  if (deals.filter((d) => d.house !== 'senado').length > DEALS.listenPerMonth) return `No máximo ${DEALS.listenPerMonth} acordos por mês na Câmara.`
+  if (deals.filter((d) => d.house === 'senado').length > SENADO.listenPerMonth) return `No máximo ${SENADO.listenPerMonth} acordos por mês no Senado.`
   const planBills = [plan.bill, plan.eventResponse].filter((x): x is BillId => !!x)
   for (const d of deals) {
-    if (deals.filter((x) => x.party === d.party && x.bill === d.bill).length > 1) return 'Acordo repetido.'
-    const r = dealBlockedReason(s, d, planBills, deals.filter((x) => x.bill === d.bill && x !== d))
+    if (deals.filter((x) => x.party === d.party && x.bill === d.bill && sameHouse(x, d)).length > 1) return 'Acordo repetido.'
+    const r = dealBlockedReason(s, d, planBills, deals.filter((x) => x.bill === d.bill && x !== d && sameHouse(x, d)))
     if (r) return `${PARTY_BY_ID[d.party].sigla}: ${r}`
   }
   for (const kind of ['hold', 'urgent', 'original', 'symbolic'] as const) {
@@ -343,6 +359,14 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
       addBio(s, CAMARA.speaker.name, `Recebeu o presidente ${s.presidentName} na residência oficial da Câmara.`)
       continue
     }
+    if (a.kind === 'senado') {
+      const sn = c.senate.president
+      sn.relation = Math.min(100, sn.relation + SENADO.president.talkGain)
+      sn.lastTalk = s.month
+      taken.push(`Conversa com ${SENADO.president.name}, presidente do Senado`)
+      addBio(s, SENADO.president.name, `Recebeu o presidente ${s.presidentName} na residência oficial do Senado.`)
+      continue
+    }
     const ps = c.parties[a.party]
     const sigla = PARTY_BY_ID[a.party].sigla
     if (a.kind === 'conversar') {
@@ -434,21 +458,32 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
 
   // 1c2. Acordos com partidos: o preço é pago agora; o voto vem na votação.
   for (const d of plan.deals ?? []) {
-    const pb = c.pending.find((x) => x.id === d.bill)
-    if (!pb) continue
-    pb.deals = [...(pb.deals ?? []), { party: d.party, kind: d.kind }]
+    const senado = d.house === 'senado'
+    const where = senado ? ' no Senado' : ''
+    if (senado) {
+      // No Senado: o projeto já pode estar lá ou ainda estar na Câmara (o acordo vale quando chegar).
+      const sp = senatePending(s, d.bill)
+      const pc = c.pending.find((x) => x.id === d.bill)
+      if (sp) sp.deals = [...(sp.deals ?? []), { party: d.party, kind: d.kind }]
+      else if (pc) pc.senateDeals = [...(pc.senateDeals ?? []), { party: d.party, kind: d.kind }]
+      else continue
+    } else {
+      const pb = c.pending.find((x) => x.id === d.bill)
+      if (!pb) continue
+      pb.deals = [...(pb.deals ?? []), { party: d.party, kind: d.kind }]
+    }
     const party = PARTY_BY_ID[d.party]
     const name = BILL_BY_ID[d.bill].name
     c.scandal = Math.min(100, c.scandal + DEALS.scandal[d.kind])
     if (d.kind === 'emendas') {
-      e.tempSpending.push({ label: `Emendas para o ${party.sigla}`, amount: DEALS.emendasPerSeat * party.seats, monthsLeft: DEALS.emendasMonths })
-      taken.push(`Emendas para o ${party.sigla} em troca de votos em “${name}”`)
-      addBio(s, party.leader.name, `Fechou acordo de emendas com o governo para votar “${name}”.`)
+      e.tempSpending.push({ label: `Emendas para o ${party.sigla}${where}`, amount: emendasAmount(d.party, senado ? 'senado' : 'camara'), monthsLeft: DEALS.emendasMonths })
+      taken.push(`Emendas para o ${party.sigla}${where} em troca de votos em “${name}”`)
+      addBio(s, party.leader.name, `Fechou acordo de emendas com o governo${where} para votar “${name}”.`)
     } else if (d.kind === 'cargos') {
       const own = c.parties[s.playerParty]
       own.relation = Math.max(0, own.relation + DEALS.ownPartyCargos)
-      taken.push(`Cargos para o ${party.sigla} em troca de votos em “${name}”`)
-      addBio(s, party.leader.name, `Indicou nomes para o segundo escalão em troca de votos em “${name}”.`)
+      taken.push(`Cargos para o ${party.sigla}${where} em troca de votos em “${name}”`)
+      addBio(s, party.leader.name, `Indicou nomes para o segundo escalão em troca de votos${where} em “${name}”.`)
     } else {
       const flag = flagshipOf(s, d.party, d.bill)
       if (flag) {
@@ -466,6 +501,54 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
   const approvalNow = s.history[s.history.length - 1].approval
   const sp = c.speaker
   const speakerName = CAMARA.speaker.name
+  /** Leis que entraram em vigor neste mês pelo caminho completo (Câmara e Senado). */
+  const enacted: BillId[] = []
+  const placarOf = (v: VoteRecord, symbolic: boolean) => symbolic ? 'em votação simbólica' : v.needed > 0 ? `${pt(v.yes)} votos (precisava de ${pt(v.needed)})` : `${pt(v.yes)} a ${pt(v.no)}`
+
+  // Projeto rejeitado na Câmara ou no Senado: volta para a fila em 6 meses, e MP derrubada desfaz o efeito.
+  const reject = (p: PendingBill, house: 'camara' | 'senado', placar: string) => {
+    const bill = BILL_BY_ID[p.id]
+    const senado = house === 'senado'
+    c.blockedUntil[p.id] = s.month + RESUBMIT_COOLDOWN
+    if (bill.instrument === 'mp') {
+      actionConfidence += applyEffects(e, impulses, bill.effects, bill.name, 1, -1)
+      for (const [gid, val] of Object.entries(bill.effects.groups ?? {}) as [GroupId, number][]) {
+        if (val > 0) impulses[gid].push({ label: `MP derrubada: ${bill.name}`, value: -val * 0.7 })
+      }
+    }
+    for (const g of GROUPS) impulses[g.id].push({ label: `Derrota do governo ${senado ? 'no Senado' : 'na Câmara'}`, value: senado ? SENADO.defeatHit : -0.8 })
+    addBio(s, s.presidentName, `Derrotado ${senado ? 'no Senado' : 'na Câmara'}: ${bill.name} (${placar}).`)
+    if (senado) {
+      addBio(s, SENADO.president.name, `Viu o Senado rejeitar “${bill.name}”, do governo ${s.presidentName}.`)
+      addChronicle(s, `Senado barra ${lowerFirst(bill.name)}, aprovado antes pela Câmara, no governo ${s.presidentName}`, 'bad')
+      headlines.push({ text: `${bill.instrument === 'mp' ? 'MP cai no Senado' : 'Senado rejeita'}: ${lowerFirst(bill.name)} (${placar}). O assunto só volta em ${RESUBMIT_COOLDOWN} meses, e o governo sai mais fraco`, tone: 'bad' })
+    } else {
+      headlines.push({ text: `${bill.instrument === 'mp' ? 'MP cai' : 'Câmara rejeita'}: ${lowerFirst(bill.name)} (${placar})`, tone: 'bad' })
+    }
+  }
+
+  // Aprovado nas duas casas: vira lei (MP vira lei de conversão; os efeitos dela já valiam).
+  const enact = (p: PendingBill, placarS: string) => {
+    const bill = BILL_BY_ID[p.id]
+    const am = p.original ? undefined : p.amendment
+    c.laws.push(p.id)
+    sanctioned.push(p.id)
+    enacted.push(p.id)
+    if (bill.instrument !== 'mp') {
+      actionConfidence += applyEffects(e, impulses, coreEffects(bill, am), bill.name)
+      plantSeeds(s, p.id, bill.name, s.presidentName, s.playerParty, rng)
+    }
+    if (am?.kind === 'jabuti' && am.extra) {
+      c.toSanction.push({ id: `jab-${p.id}-${absMonth(s)}`, kind: 'jabuti', bill: p.id, month: s.month, party: am.relator, amendment: am, vote: p.camara ? { yes: p.camara.yes, no: p.camara.no } : undefined })
+      headlines.push({ text: `Texto aprovado leva um “jabuti”: ${am.extra.label}. Cabe sanção ou veto`, tone: 'neutral' })
+    }
+    if (am) addBio(s, PARTY_BY_ID[am.relator].leader.name, `O ${PARTY_BY_ID[am.relator].sigla} relatou “${bill.name}”, aprovado.`)
+    const cam = p.camara
+    const placar = cam ? `Câmara ${cam.symbolic ? 'em votação simbólica' : `${pt(cam.yes)} a ${pt(cam.no)}`}; Senado ${placarS}` : placarS
+    addBio(s, s.presidentName, `Sancionou: ${bill.name} (${placar}).`)
+    addChronicle(s, `Lei aprovada: ${bill.name}, no governo ${s.presidentName} (${PARTY_BY_ID[s.playerParty].sigla})`, 'good')
+    headlines.push({ text: `Senado aprova ${lowerFirst(bill.name)}: ${placarS}. ${bill.instrument === 'mp' ? 'A MP vira lei' : bill.instrument === 'pec' ? 'A emenda é promulgada' : 'Vira lei'}`, tone: 'good' })
+  }
 
   // 1d1. Sessões para derrubar vetos de meses anteriores.
   if (!recess) {
@@ -569,42 +652,62 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
       }
       votes.push(v)
       c.pending = c.pending.filter((x) => x.id !== p.id)
-      const placar = symbolic ? 'em votação simbólica' : v.needed > 0 ? `${pt(v.yes)} votos (precisava de ${pt(v.needed)})` : `${pt(v.yes)} a ${pt(v.no)}`
+      const placar = placarOf(v, symbolic)
       const am = p.original ? undefined : p.amendment
       if (v.approved) {
-        c.laws.push(p.id)
-        sanctioned.push(p.id)
-        if (bill.instrument !== 'mp') {
-          actionConfidence += applyEffects(e, impulses, coreEffects(bill, am), bill.name)
-          plantSeeds(s, p.id, bill.name, s.presidentName, s.playerParty, rng)
+        // Etapa 4C1: aprovado na Câmara, segue para o Senado. Lei, LC e MP são votadas lá ainda neste mês; PEC, no mês seguinte.
+        if (am?.kind === 'desidrata') {
+          v.scale = am.scale
+          headlines.push({ text: `Relator do ${PARTY_BY_ID[am.relator].sigla} desidrata “${bill.name}”: o texto aprovado é mais fraco que o original`, tone: 'neutral' })
         }
-        if (am?.kind === 'desidrata') v.scale = am.scale
-        if (am?.kind === 'desidrata') headlines.push({ text: `Relator do ${PARTY_BY_ID[am.relator].sigla} desidrata “${bill.name}”: o texto aprovado é mais fraco que o original`, tone: 'neutral' })
-        if (am?.kind === 'jabuti' && am.extra) {
-          c.toSanction.push({ id: `jab-${p.id}-${absMonth(s)}`, kind: 'jabuti', bill: p.id, month: s.month, party: am.relator, amendment: am, vote: { yes: v.yes, no: v.no } })
-          headlines.push({ text: `Texto aprovado leva um “jabuti”: ${am.extra.label}. Cabe sanção ou veto`, tone: 'neutral' })
-        }
-        if (am) addBio(s, PARTY_BY_ID[am.relator].leader.name, `O ${PARTY_BY_ID[am.relator].sigla} relatou “${bill.name}”, aprovado.`)
-        addBio(s, s.presidentName, `Sancionou: ${bill.name} (${placar}).`)
-        addChronicle(s, `Lei aprovada: ${bill.name}, no governo ${s.presidentName} (${PARTY_BY_ID[s.playerParty].sigla})`, 'good')
-        headlines.push({ text: `Câmara aprova ${lowerFirst(bill.name)}: ${placar}`, tone: 'good' })
-      } else {
-        c.blockedUntil[p.id] = s.month + RESUBMIT_COOLDOWN
-        if (bill.instrument === 'mp') {
-          actionConfidence += applyEffects(e, impulses, bill.effects, bill.name, 1, -1)
-          for (const [gid, val] of Object.entries(bill.effects.groups ?? {}) as [GroupId, number][]) {
-            if (val > 0) impulses[gid].push({ label: `MP derrubada: ${bill.name}`, value: -val * 0.7 })
-          }
-        }
-        for (const g of GROUPS) impulses[g.id].push({ label: 'Derrota do governo na Câmara', value: -0.8 })
-        addBio(s, s.presidentName, `Derrotado na Câmara: ${bill.name} (${placar}).`)
-        headlines.push({
-          text: `${bill.instrument === 'mp' ? 'MP cai' : 'Câmara rejeita'}: ${lowerFirst(bill.name)} (${placar})`,
-          tone: 'bad',
-        })
-      }
+        const pec = bill.instrument === 'pec'
+        c.senate.pending.push({ id: p.id, sentMonth: s.month, amendment: p.amendment, original: p.original, deals: p.senateDeals, camara: { yes: v.yes, no: v.no, symbolic: symbolic || undefined, month: s.month } })
+        addBio(s, s.presidentName, `Aprovou na Câmara: ${bill.name} (${placar}).`)
+        headlines.push({ text: `Câmara aprova ${lowerFirst(bill.name)}: ${placar}. ${pec ? 'A PEC vai ao Senado no mês que vem' : 'Segue para o Senado'}`, tone: 'good' })
+      } else reject(p, 'camara', placar)
     }
-  } else if (c.pending.length > 0) {
+
+    // 1d3b. Senado (etapa 4C1): vota o que a Câmara aprovou. A presidente do Senado, de mal com o governo, segura um projeto por mês.
+    const sn = c.senate.president
+    const snParty = PARTY_BY_ID[SENADO.president.party]
+    const dislikeS = (id: BillId) => affinity(snParty.econ, snParty.costumes, BILL_BY_ID[id])
+    let presidentFree = sn.relation < SENADO.president.holdBelow
+    for (const p of [...c.senate.pending].sort((x, y) => dislikeS(x.id) - dislikeS(y.id))) {
+      const bill = BILL_BY_ID[p.id]
+      if (bill.instrument === 'pec' && p.sentMonth === s.month) continue
+      if (held.has(p.id) && bill.instrument !== 'mp') {
+        headlines.push({ text: `Governo segura “${bill.name}” na pauta do Senado e adia a votação`, tone: 'neutral' })
+        continue
+      }
+      if (presidentFree && bill.instrument !== 'mp' && (p.holds ?? 0) < SENADO.president.maxHold) {
+        presidentFree = false
+        p.holds = (p.holds ?? 0) + 1
+        headlines.push({ text: `${SENADO.president.name}, presidente do Senado, segura “${bill.name}” e não pauta a votação`, tone: 'bad' })
+        addBio(s, SENADO.president.name, `Segurou na gaveta do Senado “${bill.name}”, do governo ${s.presidentName}.`)
+        continue
+      }
+      const symbolic = (plan.symbolic ?? []).includes(p.id) && !symbolicBlockedReason(s, p.id, [], {}, 'senado')
+      let v: VoteRecord
+      if (symbolic) {
+        const f = forecastSenate(s, p.id)
+        const byParty = Object.fromEntries(f.byParty.map((r) => [r.party, { yes: r.yes, no: r.no }])) as VoteRecord['byParty']
+        v = { month: s.month, bill: p.id, yes: f.yes, no: f.no, abstain: f.abstain, absent: Math.max(0, SENADO.seats - f.yes - f.no - f.abstain), needed: 0, approved: true, byParty, kind: 'simbolica', house: 'senado' }
+      } else {
+        const { broken, ...rest } = runSenateVote(s, p.id, rng)
+        v = rest
+        for (const pid of broken) {
+          headlines.push({ text: `${PARTY_BY_ID[pid].sigla} não entrega todos os votos prometidos no Senado em “${bill.name}”`, tone: 'bad' })
+          addBio(s, PARTY_BY_ID[pid].leader.name, `Prometeu votos no Senado em “${bill.name}” e não entregou tudo.`)
+        }
+      }
+      if (p.camara?.month === s.month) v.scale = votes.find((x) => x.bill === p.id && x.house !== 'senado')?.scale
+      votes.push(v)
+      c.senate.pending = c.senate.pending.filter((x) => x.id !== p.id)
+      const placar = placarOf(v, symbolic)
+      if (v.approved) enact(p, placar)
+      else reject(p, 'senado', placar)
+    }
+  } else if (c.pending.length > 0 || c.senate.pending.length > 0) {
     headlines.push({ text: 'Congresso em recesso: votações ficam para o mês que vem', tone: 'neutral' })
   }
 
@@ -636,17 +739,17 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
     for (const [pid, r] of Object.entries(v.byParty) as [PartyId, { yes: number; no: number }][]) {
       if (r.yes + r.no === 0 || v.kind === 'simbolica') continue
       const side = r.yes >= r.no ? 'a favor' : 'contra'
-      addBio(s, PARTY_BY_ID[pid].leader.name, `Levou o ${PARTY_BY_ID[pid].sigla} a votar ${side} ${v.kind === 'veto' ? 'da derrubada do veto' : `de “${name}”`} (${r.yes} sim, ${r.no} não). ${v.approved ? (v.kind === 'veto' ? 'Veto derrubado' : 'Aprovado') : (v.kind === 'veto' ? 'Veto mantido' : 'Rejeitado')}.`)
+      addBio(s, PARTY_BY_ID[pid].leader.name, `Levou o ${PARTY_BY_ID[pid].sigla}${v.house === 'senado' ? ' no Senado' : ''} a votar ${side} ${v.kind === 'veto' ? 'da derrubada do veto' : `de “${name}”`} (${r.yes} sim, ${r.no} não). ${v.approved ? (v.kind === 'veto' ? 'Veto derrubado' : 'Aprovado') : (v.kind === 'veto' ? 'Veto mantido' : 'Rejeitado')}.`)
     }
     if (v.kind === 'simbolica') for (const p of PARTIES) addBio(s, p.leader.name, `Viu “${name}” passar em votação simbólica.`)
   }
   c.votes.push(...votes)
-  c.votes = c.votes.slice(-24)
+  c.votes = c.votes.slice(-48) // etapa 4C1: Câmara e Senado (antes, 24)
 
   // 1d5. Promessas a partidos e risco de escândalo.
   for (const pr of [...c.promises]) {
     const party = PARTY_BY_ID[pr.party]
-    const kept = c.laws.includes(pr.bill) || c.pending.some((x) => x.id === pr.bill) || votes.some((v) => v.bill === pr.bill)
+    const kept = c.laws.includes(pr.bill) || c.pending.some((x) => x.id === pr.bill) || c.senate.pending.some((x) => x.id === pr.bill) || votes.some((v) => v.bill === pr.bill)
     if (kept) {
       c.parties[pr.party].relation = Math.min(100, c.parties[pr.party].relation + DEALS.promiseKept)
       c.promises = c.promises.filter((x) => x !== pr)
@@ -679,7 +782,7 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
       if (def.effects) actionConfidence += applyEffects(e, impulses, def.effects, title)
       const resp = plan.eventResponse
       // A resposta escrita resolve o fato se já vale neste mês (decreto, MP ou lei aprovada agora).
-      const resolved = !!resp && (actsNow(resp) || votes.some((v) => v.bill === resp && v.approved))
+      const resolved = !!resp && (actsNow(resp) || enacted.includes(resp))
       const idx = resp ? defaultOption(def) : plan.eventChoice ?? defaultOption(def)
       const opt = def.options[idx]
       const minister = ministerOf(s, def.area)
@@ -696,12 +799,15 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
           s.event = null
         } else {
           // A lei ficou parada (recesso) ou caiu: o problema segue e vale o que acontece se ninguém age.
-          const pending = c.pending.some((p) => p.id === resp)
-          headlines.push({ text: `${title}: ${lowerFirst(name)} ${pending ? 'fica parada na Câmara' : 'é barrada na Câmara'} e o problema continua`, tone: 'bad' })
-          taken.push(`Respondeu ao fato do mês: ${name} (${pending ? 'aguardando a Câmara' : 'rejeitada'})`)
+          const inSenate = !!senatePending(s, resp)
+          const pending = inSenate || c.pending.some((p) => p.id === resp)
+          const house = inSenate ? 'no Senado' : 'na Câmara'
+          const barred = votes.some((v) => v.bill === resp && v.house === 'senado') ? 'no Senado' : 'na Câmara'
+          headlines.push({ text: `${title}: ${lowerFirst(name)} ${pending ? `fica parada ${house}` : `é barrada ${barred}`} e o problema continua`, tone: 'bad' })
+          taken.push(`Respondeu ao fato do mês: ${name} (${pending ? (inSenate ? 'aguardando o Senado' : 'aguardando a Câmara') : 'rejeitada'})`)
           actionConfidence += applyEffects(e, impulses, opt.effects, title)
           headlines.push({ text: opt.outcome, tone: opt.tone })
-          addBio(s, minister.name, `${minister.role}: viu a resposta a “${title}” travar na Câmara.`)
+          addBio(s, minister.name, `${minister.role}: viu a resposta a “${title}” travar no Congresso.`)
           s.eventLog.push({ id: def.id, month: s.month })
           eventReport = { id: def.id, option: idx, chosen: true, response: resp, resolved: false }
           s.event = null
@@ -751,7 +857,7 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
   const done = new Set<string>([
     ...actions,
     ...submitted.filter(actsNow),
-    ...votes.filter((v) => v.approved && v.kind !== 'veto').map((v) => v.bill),
+    ...enacted,
     ...sanctioned,
   ])
   s.demands = s.demands.filter((d) => {
