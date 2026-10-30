@@ -1,5 +1,16 @@
 # Novidades
 
+## 0.11.0
+- **Posse em 3 passos (etapa 5A):** candidato (rosto, nome, dificuldade e partido), perfil e promessas. Um painel ao lado mostra, a cada escolha, a aprovação inicial de cada grupo e quem será o seu rival.
+- **Ficha do candidato:** escolha até **2 traços** (Conciliador, Combativo, Técnico, Carismático, Austero, Gente como a gente, Linha dura, Servidor de carreira) e até **2 hábitos** (Pelada de domingo, Feira de sábado, Pescaria no interior, Corrida de rua, Lives toda semana, Viola caipira, Leitor de economia, Horta comunitária). Cada um agrada uns grupos e desagrada outros durante o mandato inteiro. Aparecem na sua ficha.
+- **Promessas de posse:** escolha **5 de 15**, cada uma com meta medida pelo jogo (desemprego abaixo de 6%, inflação na meta, dólar abaixo de R$ 5, aprovar uma PEC, 55 de aprovação entre os jovens...). Marcadas como de esquerda, centro, direita ou "qualquer governo"; as do seu lado animam o grupo que cobra logo na posse. O Painel mostra cada uma: no rumo, em risco ou longe. No fim do mandato, cumprida, quase ou quebrada.
+- **O rival:** a oposição tem nome e rosto. Leopoldo Rezende (POL) enfrenta governos de esquerda e Clarice Siqueira (FPT) enfrenta os de centro e direita. Ele existe desde o primeiro mês:
+  - **Força de 0 a 100**, que cresce com governo mal avaliado, escândalos, derrotas na Câmara e vetos derrubados, e cai com governo bem avaliado. O cartão mostra o motivo de cada mudança.
+  - **Postura:** observa (só fala), **desgaste** (a partir de 40: ataca todo mês o grupo mais insatisfeito ou uma promessa sua fora do rumo) e **obstrução** (a partir de 65: o partido dele e os aliados votam mais contra o governo, e a janela de votação avisa).
+  - **Pesquisa "se a eleição fosse hoje"** todo mês: você contra ele, mais brancos e indecisos, com o gráfico mês a mês. Vira manchete quando alguém passa à frente.
+- **Nota final** no lugar da nota provisória: aprovação (250), economia (250), contas (200) e **promessas de posse (300)**. A tela do fim mostra cada promessa e a última pesquisa.
+- Mandatos salvos continuam normalmente (save versão 9): o rival entra com força tirada da sua aprovação atual e as pesquisas dos meses passados são recalculadas. Esses mandatos não têm promessas, então a nota é reescalada para 1000.
+
 ## 0.10.0
 - **Congresso 2.0 (etapa 4B).** O caminho de um projeto agora tem etapas, e cada uma pode travar:
   - **Comissões:** cada área tem uma comissão presidida por um partido. Se o presidente da comissão for contra o texto e estiver longe do governo, ela **engaveta** o projeto por um mês. PEC passa pela CCJ e gasta um mês na comissão especial antes do plenário.

@@ -71,6 +71,30 @@ h1, h2 { font-family: Georgia, 'Times New Roman', serif; margin: 0; }
 .warning { color: var(--gold); margin: 0; }
 .muted { color: var(--muted); }
 
+/* ---------- Posse em passos (etapa 5A) ---------- */
+.home.posse { max-width: 1180px; }
+.posse__steps { list-style: none; display: flex; gap: 8px; padding: 0; margin: -16px 0 0; }
+.posse__steps button { font: inherit; background: none; border: 1px solid var(--line); color: var(--muted); border-radius: 999px; padding: 6px 14px; cursor: pointer; }
+.posse__steps li.on button { border-color: var(--gold); color: var(--gold); }
+.posse__steps li.done button { color: var(--text); }
+.posse__body { display: grid; grid-template-columns: 1fr 300px; gap: 28px; align-items: start; }
+.posse__main { display: flex; flex-direction: column; gap: 28px; min-width: 0; }
+.posse__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
+.posse__grid .choice { display: flex; flex-direction: column; gap: 6px; text-align: left; }
+.posse__grid .choice:disabled { opacity: .45; cursor: not-allowed; }
+.posse__fx { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: .78rem; }
+.up { color: var(--green); }
+.down { color: var(--red); }
+.posse__side { font-size: .75rem; color: var(--muted); }
+.posse__side.mine { color: var(--gold); }
+.posse__aside { position: sticky; top: 16px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 16px 18px; display: flex; flex-direction: column; gap: 10px; }
+.posse__aside h3 { margin: 0; font-size: 1rem; color: var(--gold); }
+.posse__aside ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; font-size: .85rem; }
+.posse__approval { margin: 0; }
+.posse__rival { display: flex; gap: 10px; align-items: center; border-top: 1px solid var(--line); padding-top: 10px; }
+.posse__rival > div { display: flex; flex-direction: column; gap: 2px; font-size: .85rem; }
+@media (max-width: 900px) { .posse__body { grid-template-columns: 1fr; } .posse__aside { position: static; } }
+
 /* ---------- Mandato ---------- */
 .game { display: flex; flex-direction: column; height: 100vh; }
 .game__top {

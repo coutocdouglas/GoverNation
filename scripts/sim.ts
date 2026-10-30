@@ -1,7 +1,7 @@
 // Simula mandatos inteiros com estratégias diferentes para conferir se os números fazem sentido.
 // Uso: npm run sim  (ou: npm run sim -- populista 42)
 import { blockedReason } from '../src/game/actions'
-import { advanceMonth, newGame, provisionalScore, shortMonthLabel } from '../src/game/game'
+import { advanceMonth, newGame, finalScore, shortMonthLabel } from '../src/game/game'
 import { BILLS } from '../src/game/data/bills'
 import { EVENT_BY_ID } from '../src/game/data/events'
 import { responseBlockedReason, type MonthPlan } from '../src/game/game'
@@ -15,6 +15,9 @@ const respond = (s: GameState): MonthPlan => {
   const pick = BILLS.filter((b) => b.area === ev.area && (b.instrument === 'decreto' || b.instrument === 'mp') && !responseBlockedReason(s, b.id)).sort((a, b) => cost(a) - cost(b))[0]
   return pick ? { eventResponse: pick.id } : {}
 }
+
+/** Promessas fixas do simulador: as cinco de "qualquer governo". */
+const SIM_PROMISES = ['desemprego6', 'inflacaoMeta', 'crescimento', 'aprovacao50', 'juros10']
 
 type Strategy = (s: GameState) => ActionId[]
 
@@ -33,7 +36,7 @@ export const STRATEGIES: Record<string, Strategy> = {
 const f = (n: number, d = 1) => n.toFixed(d).padStart(6)
 
 export function run(name: string, seed: number, verbose: boolean) {
-  let s = newGame('Teste', 'normal', seed)
+  let s = newGame('Teste', 'normal', seed, 'mdn', undefined, undefined, { promises: SIM_PROMISES })
   if (verbose) console.log(`\n=== ${name} (semente ${seed}) ===\n   mês   PIB  infl  selic desemp dívida  prim  conf  dólar aprov`)
   const line = (st: GameState) => {
     const h = st.history[st.history.length - 1]
@@ -50,7 +53,7 @@ export function run(name: string, seed: number, verbose: boolean) {
       if (/Crise|Petróleo|Seca|Safra|commodities|Agência|estrangeiras/.test(h.text)) console.log(`        > ${shortMonthLabel(s.lastReport.month)}: ${h.text}`)
     }
   }
-  return { state: s, score: provisionalScore(s) }
+  return { state: s, score: finalScore(s) }
 }
 
 if (process.argv[1]?.endsWith('sim.ts')) {
@@ -64,5 +67,14 @@ if (process.argv[1]?.endsWith('sim.ts')) {
   for (const n of Object.keys(STRATEGIES)) {
     const scores = Array.from({ length: 30 }, (_, i) => run(n, 1000 + i, false).score.total)
     console.log(`  ${n.padEnd(12)} média ${Math.round(scores.reduce((a, b) => a + b) / 30)}  min ${Math.min(...scores)}  max ${Math.max(...scores)}`)
+  }
+  console.log('\nRival e pesquisa no fim (30 sementes):')
+  for (const n of Object.keys(STRATEGIES)) {
+    const runs = Array.from({ length: 30 }, (_, i) => run(n, 1000 + i, false).state)
+    const avg = (f: (s: GameState) => number) => (runs.reduce((a, s) => a + f(s), 0) / runs.length).toFixed(1)
+    const ahead = runs.filter((s) => { const p = s.rival.polls.at(-1)!; return p.gov > p.rival }).length
+    const obst = runs.reduce((a, s) => a + (s.rival.stance === 'obstrucao' ? 1 : 0), 0)
+    const kept = avg((s) => finalScore(s).parts.find((p) => p.label.startsWith('Promessas'))?.score ?? 0)
+    console.log(`  ${n.padEnd(12)} aprov ${avg((s) => s.history.at(-1)!.approval)}  força ${avg((s) => s.rival.strength)}  governo ${avg((s) => s.rival.polls.at(-1)!.gov)}% x rival ${avg((s) => s.rival.polls.at(-1)!.rival)}%  governo na frente em ${ahead}/30  obstrução ${obst}/30  promessas ${kept}/300`)
   }
 }

@@ -1,3 +1,4 @@
+import { rivalBoost } from './rival'
 import { BILL_BY_ID, type BillDef } from './data/bills'
 import { GROUP_BY_ID } from './data/groups'
 import { PARTIES, PARTY_BY_ID } from './data/parties'
@@ -9,6 +10,14 @@ import { amendmentFor, cabinetBoost, effectiveBill, frenteBonuses } from './cama
 import type {
   Amendment, Articulation, BillId, CongressState, DealKind, Deputy, GameState, GroupId, PartyId, PartyState, VoteRecord,
 } from './types'
+
+
+/** Reforço fixo dos partidos numa votação do governo: ministérios cedidos (4B) e obstrução do rival (5A). */
+function govBoost(s: GameState): Partial<Record<PartyId, number>> {
+  const out = { ...cabinetBoost(s) }
+  for (const [pid, v] of Object.entries(rivalBoost(s)) as [PartyId, number][]) out[pid] = (out[pid] ?? 0) + v
+  return out
+}
 
 export { affinity }
 
@@ -191,7 +200,7 @@ function voteSetup(s: GameState, billId: BillId, deals: DealList, opts: VoteOpti
   const am = amendmentOf(s, billId)
   const bill = effectiveBill(BILL_BY_ID[billId], am, original)
   const boost = boosts(deals, broken)
-  for (const [pid, v] of Object.entries(cabinetBoost(s)) as [PartyId, number][]) boost[pid] = (boost[pid] ?? 0) + v
+  for (const [pid, v] of Object.entries(govBoost(s)) as [PartyId, number][]) boost[pid] = (boost[pid] ?? 0) + v
   if (original && am && am.kind !== 'mantem') boost[am.relator] = (boost[am.relator] ?? 0) + CAMARA.amendment.keepOriginalPenalty
   return { bill, boost }
 }
@@ -240,7 +249,7 @@ export function forecastVote(s: GameState, billId: BillId, extraDeals: DealList 
 /** Previsão da sessão que pode derrubar um veto: "sim" derruba (precisa de 257). */
 export function forecastOverride(s: GameState, bill: BillDef): Forecast {
   const boost: Partial<Record<PartyId, number>> = {}
-  for (const [pid, v] of Object.entries(cabinetBoost(s)) as [PartyId, number][]) boost[pid] = -v
+  for (const [pid, v] of Object.entries(govBoost(s)) as [PartyId, number][]) boost[pid] = -v
   return forecastWith(s, bill, boost, CAMARA.veto.needed, -1)
 }
 
@@ -297,7 +306,7 @@ export function runVote(s: GameState, billId: BillId, rng: Rng): VoteRecord & { 
 /** Sessão para derrubar um veto. "Aprovado" aqui quer dizer veto derrubado. */
 export function runOverrideVote(s: GameState, bill: BillDef, rng: Rng): VoteRecord {
   const boost: Partial<Record<PartyId, number>> = {}
-  for (const [pid, v] of Object.entries(cabinetBoost(s)) as [PartyId, number][]) boost[pid] = -v
+  for (const [pid, v] of Object.entries(govBoost(s)) as [PartyId, number][]) boost[pid] = -v
   const r = runWith(s, bill, boost, CAMARA.veto.needed, -1, rng)
   return { month: s.month, bill: bill.id, ...r, needed: CAMARA.veto.needed, kind: 'veto', title: `Veto: ${bill.name}` }
 }

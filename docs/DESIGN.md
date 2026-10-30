@@ -409,3 +409,75 @@ Substitui a decisão 4 da seção 15 ("texto livre sem IA por enquanto").
 - **Save versão 8:** `congress.speaker`, `toSanction`, `vetoes`, `bombLog`, `GameState.cabinet`; projetos já na Câmara seguem no plenário com o texto original.
 - **Balanceamento:** a ordem das estratégias no simulador não mudou (equilibrado 566 → 558, por causa das pautas-bomba sancionadas tacitamente).
 - **Fica para depois:** eleição da Mesa (fev/2029), negociar com frentes, IA nas falas do relator e do presidente da Câmara, Senado e Supremo (etapa 6), freio do Supremo nas medidas com risco jurídico.
+
+
+---
+
+## 23. Etapa 5A: rival, ficha do candidato e promessas de posse (plano aprovado em 30/10; feito na v0.11)
+
+- **Decisão do Douglas (30/10):** a etapa 5 foi dividida em **5A** (agora), **5B** (27 estados e apuração da eleição) e **5C** (governo seguinte e herança, só depois do vídeo do fim de mandato e da eleição). Fica fora da 5A: Senado, Supremo, CPIs, vice, inteligência e governadores. Base: `docs/levantamento-video-1.md` (itens 3, 6, 15 e 16). Tudo fictício e próprio.
+
+### 23.1 O rival (líder da oposição)
+
+- **Quem é:** um personagem novo no `CAST`, com retrato próprio, do maior partido do lado oposto ao do presidente (presidente da FPT → rival do POL; presidente do POL ou do MDN → rival da FPT ou do POL, o mais distante na ideologia). Dois rivais fictícios, um de cada lado; nomes e falas inventados por nós. Existe desde o mês 1 e tem ficha (biografia) como os outros.
+- **Estado novo** (`GameState.rival`): nome, partido, **força** (0 a 100), **postura** e **pesquisas** (uma por mês: governo, rival, brancos e indecisos).
+- **Força** (números em `src/game/data/rival.ts`): começa em ~35 e se mexe todo mês com causas visíveis: aprovação do governo abaixo de 50 fortalece, acima de 55 enfraquece; escândalo, derrota na Câmara e veto derrubado fortalecem; o tempo de mandato fortalece um pouco (a oposição se organiza para a eleição).
+- **Postura**, conforme a força: **observa** (abaixo de 40, só fala), **desgaste** (40 a 65: todo mês ataca o grupo mais insatisfeito ou uma promessa fora do rumo, com perda pequena, de 0,5 a 1,5 ponto, mostrada como "Ataques de <rival>") e **obstrução** (acima de 65: a bancada dele e as próximas a ela votam um pouco mais contra o governo; aparece como causa na previsão de votos).
+- **Intenção de voto** (pesquisa "se a eleição fosse hoje", governo contra rival): o governo parte da aprovação e é ajustado por desemprego e inflação; o rival parte da força dele e do desgaste do governo; sobram brancos e indecisos (8% a 25%). Calibrar no simulador para que aprovação perto de 45–50% dê empate técnico.
+- **Na tela:** cartão "Oposição" no Painel (retrato, partido, força, postura, intenção de voto e a linha mês a mês, com a causa da mudança). Manchete quando o rival muda de postura ou passa à frente na pesquisa. Falas fixas por enquanto (sem IA).
+- **A eleição de verdade (votos, apuração)** fica para a 5B. Na 5A, o fim do mandato mostra a última pesquisa.
+
+### 23.2 Ficha do candidato: traços e hábitos
+
+- Na posse, depois do partido e do rosto, o jogador escolhe **até 2 traços** e **até 2 hábitos** (`GameState.profile`). Cada um mexe pouco nos 7 grupos e **sempre tem quem perde** (regra 1: toda vantagem tem custo). Um painel ao lado mostra, a cada escolha, a aprovação inicial de cada grupo.
+- **Como age:** um ajuste permanente pequeno no alvo de cada grupo (`econTarget`), que aparece nas causas como "Perfil do presidente". Traços: de −2 a +2 por grupo; hábitos: de −0,5 a +1,5.
+- **Traços (rascunho, textos nossos):** Conciliador, Combativo, Técnico, Carismático, Austero, Gente como a gente, Linha dura, Servidor de carreira.
+- **Hábitos (rascunho):** Pelada de domingo, Feira de sábado, Pescaria no interior, Corrida de rua, Lives toda semana, Viola caipira, Leitor de economia, Horta comunitária.
+- A ficha (Fichas) passa a mostrar traços e hábitos do presidente e a biografia do rival. A "biografia acumulada" é a que já existe.
+
+### 23.3 Promessas de posse
+
+- Na posse o jogador escolhe **exatamente 5** de um catálogo de ~14 (`src/game/data/promises.ts`), cada uma com **meta medida** pelo motor: no fim do mandato (ex.: desemprego abaixo de 6%, inflação dentro da meta, dólar abaixo de R$ 5, aprovação final de 50% ou mais, aprovação de um grupo de 55 ou mais), na média do mandato (crescimento médio de 2,5% ou mais) ou por contagem (aprovar uma PEC, aprovar 12 leis, 3 leis da área social, dívida sem subir mais de 3 pontos).
+- Cada promessa tem uma marca: **esquerda**, **centro**, **direita** ou **qualquer governo**. As do lado do presidente dão um pequeno ânimo inicial ao grupo interessado (some com o tempo).
+- **Acompanhamento:** cartão "Promessas" no Painel com barra e situação (no rumo, em risco, longe). A promessa fora do rumo vira alvo dos ataques do rival.
+- **Cobrança no fim:** cumprida, quase (a menos de 10% da meta) ou quebrada. Entra na biografia do presidente e na crônica do país.
+
+### 23.4 Nota final (substitui a nota provisória)
+
+| Parte | Peso |
+|---|---|
+| Aprovação média | 250 |
+| Economia no fim | 250 |
+| Saúde fiscal | 200 |
+| Promessas de posse | 300 (60 por promessa: 60 cumprida, 25 quase, 0 quebrada) |
+
+Saves antigos sem promessas: a parte das promessas sai e as outras são reescaladas para 1000, com aviso na tela.
+
+### 23.5 Save, testes e balanceamento
+
+- **Save versão 9:** `rival`, `profile` e `promises`. Migração: o rival nasce com força tirada da aprovação atual e as pesquisas dos meses passados são recalculadas pelo histórico; perfil vazio; sem promessas.
+- **Testes:** escolha do rival por partido; força e postura com suas causas; pesquisa (aprovação alta → governo na frente; baixa → rival na frente); traços somando perdedores; limite de 2+2 e de 5 promessas; avaliação de cada tipo de meta; nota final com e sem promessas; migração 8 → 9; retratos sem repetir.
+- **Simulador:** a ordem das estratégias não pode mudar; conferir que o rival não derruba sozinho um governo bem avaliado.
+
+### 23.6 Telas
+
+- **Posse:** passos novos "Perfil" (traços e hábitos) e "Promessas", com o painel de grupos ao lado.
+- **Painel:** cartões "Oposição" e "Promessas".
+- **Fichas:** traços e hábitos do presidente; ficha do rival.
+- **Fim do mandato:** nota final nova, promessas uma a uma e a última pesquisa ("a eleição chega na 5B").
+
+### 23.7 Como ficou (v0.11)
+
+- **Arquivos:** números e textos em `src/game/data/rival.ts`, `profile.ts` e `promises.ts`; regras em `src/game/rival.ts` (força, postura, ataque, obstrução, pesquisa) e `src/game/promises.ts` (medição, situação, perfil, escolhas da posse, pontos); testes em `rival.test.ts`. Telas: `NewGame` em `src/App.tsx` (3 passos com painel ao lado), `src/ui/OppositionCards.tsx` (cartões do Painel), `FichasView`, `EndScreen` e aviso de obstrução no `VoteSheet`.
+- **Rivais:** Leopoldo Rezende (POL, aliados MRB e NRM) e Clarice Siqueira (FPT, aliado PVS), no `CAST` com retrato e reserva (`alt`). `RIVAL_PARTY_FOR` define o rival por partido do presidente (FPT e PVS → POL; MDN e PSN → POL; os outros → FPT). Nas Fichas só aparece o rival do mandato.
+- **Força** (`updateRival`, fim do mês, depois dos grupos): +0,06 por ponto de aprovação abaixo de 50; −0,05 por ponto acima de 55; +0,15 por mês (+0,4 no último ano); volta 3% ao mês para 35 (a oposição também cansa); escândalo +5; cada derrota do governo na Câmara +2 (pautas-bomba e vetos não contam); veto derrubado +3. Limites 5 a 95.
+- **Ataque** (`rivalAttack`, antes dos grupos): em desgaste ou obstrução, de 0,3 a 0,8 ponto conforme a força, com 50% de chance de mirar o grupo de uma promessa "longe" (se houver); senão, o grupo mais insatisfeito. **Mudança em relação ao plano:** o plano dizia 0,5 a 1,5; no simulador isso derrubava 3 a 4 pontos de aprovação no fim (as perdas são lembradas por ~2 anos) e o rival vencia em 30 de 30 partidas.
+- **Obstrução:** −0,25 na orientação do partido do rival e −0,1 nos aliados, somada ao reforço dos ministérios cedidos (`govBoost` em `congress.ts`; na sessão de veto vale ao contrário).
+- **Pesquisa** (`pollFor`): governo = 5 + 0,7 × aprovação − 0,8 × (desemprego − 7)⁺ − 0,5 × (inflação − 4,5)⁺; rival = 12 + 0,45 × força + 0,25 × (55 − aprovação); brancos e indecisos de 8% a 25%, reescalados. Aprovação 47 com força 50 dá empate técnico. `rival.polls[i].month` acompanha `history[i].month`.
+- **Perfil:** ajuste permanente no alvo de cada grupo (`profileOffsets` somado ao bônus de dificuldade em `initialGroups` e `stepGroup`). Traços de −2 a +2, hábitos de −0,5 a +1,5; todos têm ganhador e perdedor (teste).
+- **Promessas:** 15 no catálogo; `posseBlockedReason` exige exatamente 5 (ou nenhuma, para testes e simulador). Situação durante o mandato: valor que já cumpre = no rumo; dentro da folga (`slack`) = em risco; senão, longe. Contagens (PEC, leis, área social) comparam com o ritmo esperado até o mês 42. No fim: cumprida (60), quase (25), quebrada (0). Promessa do lado do presidente (`SIDE_OF_PARTY`) dá +1,5 de lembrança ao grupo que cobra.
+- **Nota final** (`finalScore`, substitui `provisionalScore`): 250 + 250 + 200 + 300. Sem promessas, as três primeiras partes são reescaladas (357 + 357 + 286) e a tela avisa.
+- **Memória:** posse registra traços, hábitos e promessas na biografia e na crônica; o rival ganha ficha na posse, a cada mudança de postura e quando a liderança na pesquisa troca de lado; no fim, cada promessa vai para a biografia do presidente e o balanço para a crônica.
+- **Save versão 9:** `rival`, `profile` e `promises`. Migração: força = 35 + (50 − aprovação) × 0,5; pesquisas recalculadas pelo histórico; perfil vazio; sem promessas.
+- **Simulador** (`npm run sim`, agora com 5 promessas "de qualquer governo"): a ordem das estratégias não mudou (responde aos fatos 588 > austero 551 > equilibrado 509 > passivo 460 > populista 311; antes, 622 / 620 / 558 / 488 / 393, numa escala sem promessas). Com aprovação final perto de 48% o governo lidera a pesquisa em 27 de 30 partidas; perto de 42%, o rival lidera em quase todas. A obstrução só aparece com governo fraco.
+- **Fica para a 5B e a 5C:** a eleição de verdade (votos, 27 estados, apuração), falas do rival por IA, rival com metas próprias (derrubar ministro, derrotar o governo no plenário) e herança para o mandato seguinte.

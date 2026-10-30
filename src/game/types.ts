@@ -123,7 +123,7 @@ export interface MonthReport {
 }
 
 export interface GameState {
-  saveVersion: 8
+  saveVersion: 9
   /** Mês atual, de 0 (janeiro do 1º ano) a 47. Em 48 o mandato acabou. */
   month: number
   presidentName: string
@@ -163,6 +163,33 @@ export interface GameState {
   customBills: BillDef[]
   /** Ministérios cedidos a partidos (etapa 4B): a área passa a ter o indicado do partido. */
   cabinet: Partial<Record<AreaId, { party: PartyId; since: number }>>
+  /** Etapa 5A: o líder da oposição, com força, postura e pesquisas mês a mês. */
+  rival: RivalState
+  /** Etapa 5A: traços e hábitos do presidente (ids de data/profile.ts). */
+  profile: { traits: string[]; habits: string[] }
+  /** Etapa 5A: promessas de posse (ids de data/promises.ts). Vazio em saves anteriores à 5A. */
+  promises: string[]
+}
+
+/** Pesquisa de intenção de voto do mês (soma 100). */
+export interface Poll {
+  month: number
+  gov: number
+  rival: number
+  other: number
+}
+
+export interface RivalState {
+  name: string
+  party: PartyId
+  /** Força da oposição, 0 a 100. */
+  strength: number
+  stance: 'observa' | 'desgaste' | 'obstrucao'
+  polls: Poll[]
+  /** O que mexeu na força no último mês. */
+  causes: Cause[]
+  /** Última fala do rival. */
+  quote?: string
 }
 
 export type ActionId =

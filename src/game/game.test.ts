@@ -3,7 +3,7 @@ import { blockedReason } from './actions'
 import { MACRO } from './data/balance'
 import { GROUPS } from './data/groups'
 import { inflation12, runCopom } from './economy'
-import { advanceMonth, newGame, provisionalScore, TERM_MONTHS, validateActions } from './game'
+import { advanceMonth, newGame, finalScore, TERM_MONTHS, validateActions } from './game'
 import type { ActionId, GameState } from './types'
 
 const play = (seed: number, choose: (s: GameState) => ActionId[] = () => []) => {
@@ -51,7 +51,7 @@ describe('mandato completo', () => {
     const q = passive.history.at(-1)!.indicators
     expect(p.debt).toBeGreaterThan(q.debt + 5)
     expect(p.confidence).toBeLessThan(q.confidence)
-    expect(provisionalScore(populist).total).toBeLessThan(provisionalScore(passive).total)
+    expect(finalScore(populist).total).toBeLessThan(finalScore(passive).total)
   })
 })
 

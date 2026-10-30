@@ -1,5 +1,7 @@
 import { useState } from 'react'
-import { CAST, playerPortraitId } from '../game/data/cast'
+import { CAST, castPortrait, playerPortraitId } from '../game/data/cast'
+import { PROFILE_BY_ID } from '../game/data/profile'
+import { RIVALS } from '../game/data/rival'
 import { PARTIES, PARTY_BY_ID } from '../game/data/parties'
 import { yearOf } from '../game/memory'
 import type { GameState } from '../game/types'
@@ -12,9 +14,10 @@ const when = (at: number) => `${MONTHS[at % 12]}/${yearOf(at)}`
 export function FichasView({ state }: { state: GameState }) {
   const people = [
     { name: state.presidentName, role: `Presidente da República (${PARTY_BY_ID[state.playerParty].sigla})`, portrait: playerPortraitId(state), color: PARTY_BY_ID[state.playerParty].color },
-    ...CAST.map((c) => {
-      const party = PARTIES.find((p) => p.leader.name === c.name)
-      return { name: c.name, role: c.role, portrait: c.portrait, color: party?.color ?? '#8a97a8' }
+    // Só o rival deste mandato aparece; o outro líder de oposição fica de fora.
+    ...CAST.filter((c) => !RIVALS.some((r) => r.name === c.name) || c.name === state.rival?.name).map((c) => {
+      const party = PARTIES.find((p) => p.leader.name === c.name) ?? (c.name === state.rival?.name ? PARTY_BY_ID[state.rival.party] : undefined)
+      return { name: c.name, role: c.name === state.rival?.name ? `Líder da oposição (${PARTY_BY_ID[state.rival.party].sigla})` : c.role, portrait: castPortrait(c.name) ?? c.portrait, color: party?.color ?? '#8a97a8' }
     }),
   ].sort((a, b) => (state.bios[b.name]?.length ?? 0) - (state.bios[a.name]?.length ?? 0))
   const [sel, setSel] = useState(people[0].name)
@@ -31,7 +34,15 @@ export function FichasView({ state }: { state: GameState }) {
             <div>
               <h2>{person.name}</h2>
               <p className="pn-hint">{person.role}</p>
-              <p className="pn-hint">{bio.length} {bio.length === 1 ? 'registro' : 'registros'} na ficha. Quando chegar a eleição, é por aqui que se escolhe um candidato com boa ficha.</p>
+              {person.name === state.presidentName && (state.profile?.traits.length || state.profile?.habits.length) ? (
+                <div className="pn-ficha__traits">
+                  {[...state.profile.traits, ...state.profile.habits].map((id) => PROFILE_BY_ID[id]).filter(Boolean).map((p) => (
+                    <span key={p.id} title={p.desc}>{p.kind === 'traco' ? '🧭' : '☕'} {p.name}</span>
+                  ))}
+                </div>
+              ) : null}
+              {person.name === state.rival?.name && <p className="pn-hint">{RIVALS.find((r) => r.name === person.name)?.blurb} Força {Math.round(state.rival.strength)}/100.</p>}
+              <p className="pn-hint">{bio.length} {bio.length === 1 ? 'registro' : 'registros'} na ficha. A ficha acumulada é a base da escolha de candidatos na eleição.</p>
             </div>
           </div>
           {bio.length === 0 ? (

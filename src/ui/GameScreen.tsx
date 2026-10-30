@@ -26,6 +26,7 @@ import { Portrait } from './Portrait'
 import { ACTION_ICON, GROUP_ICON, INDICATOR_ICON } from './icons'
 import { INDICATORS, lowerFirst, num, signed, type IndicatorMeta } from './format'
 import { Sparkline } from './Sparkline'
+import { PromisesCard, RivalCard } from './OppositionCards'
 import './painel.css'
 
 type Detail = { kind: 'indicator'; key: IndicatorKey } | { kind: 'group'; id: GroupId } | null
@@ -447,6 +448,9 @@ export function GameScreen({ state, onChange, onExit }: {
               <p className="pn-hint">É a média dos grupos abaixo, pesada pelo tamanho de cada um.</p>
             </section>
 
+            <RivalCard state={state} />
+            <PromisesCard state={state} />
+
             <DemandsCard state={state} plannedDecrees={selected} plannedBill={bill} />
 
             <section className="pn-card">
@@ -495,7 +499,7 @@ export function GameScreen({ state, onChange, onExit }: {
             <section className="pn-card">
               <h3>🔜 Ainda não está no jogo</h3>
               <p className="pn-hint">
-                Supremo, CPIs, imprensa, governadores, diplomacia e a campanha eleitoral chegam nas próximas versões.
+                Senado votando, Supremo, CPIs, imprensa, governadores, diplomacia, os 27 estados e a apuração da eleição chegam nas próximas versões.
               </p>
             </section>
           </div>

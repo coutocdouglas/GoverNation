@@ -3,17 +3,17 @@
 > **Leia este arquivo primeiro.** Ele diz onde o projeto está e qual é o próximo passo.
 > Atualize-o a cada mudança: seção "Estado atual", "Próximo passo" e uma linha no "Histórico".
 
-**Última atualização:** 30/10/2026 · **Versão publicada:** v0.10.0
+**Última atualização:** 30/10/2026 · **Versão publicada:** v0.11.0
 
 ---
 
 ## Próximo passo
 
-**Etapa 5: entre mandatos** (campanha contínua). Painel de eleição com escolha de candidato pela ficha, governo seguinte simulado se o jogador perder, herança.
+**Etapa 5B** (27 estados e apuração da eleição) ou **4C** (Senado e Supremo), à escolha do Douglas. A 5C (governo seguinte e herança) espera o vídeo do fim de mandato e da eleição. O levantamento do jogo de referência está em `docs/levantamento-video-1.md`.
 
 Complexidade: alta. Use o **Opus**, numa conversa nova.
 
-Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdouglas/GoverNation. Leia CLAUDE.md, docs/ESTADO.md e docs/DESIGN.md. Quero fazer a etapa 5."*
+Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdouglas/GoverNation. Leia CLAUDE.md, docs/ESTADO.md e docs/DESIGN.md. Quero fazer a etapa 5B."*
 
 ---
 
@@ -22,7 +22,7 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 **Base técnica**
 - App de Windows (Tauri 2 + React + TypeScript). O instalador é gerado pelo GitHub Actions e o jogo se atualiza sozinho, com atualização assinada.
 - O motor do jogo (`src/game/`) fica separado das telas (`src/ui/`). Os números de balanceamento ficam em `src/game/data/`.
-- 119 testes automáticos. Saves antigos são migrados (versão atual do save: 8).
+- 134 testes automáticos. Saves antigos são migrados (versão atual do save: 9).
 
 **Jogabilidade**
 - Mandato de 48 meses (jan/2027 a dez/2030), com o mês em 4 passos: notícias, fato do mês, decisões e encerrar.
@@ -42,17 +42,21 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
   - **Congresso 2.0 (v0.10):** comissões que engavetam, relator que mantém, desidrata ou enfia "jabuti", presidente da Câmara dono da pauta (segura projetos, escolhe relatores), urgência, deixar na pauta, 7 frentes parlamentares, pautas-bomba, sanção e veto com sessão de derrubada (257 votos) e ministérios cedidos a partidos (o indicado assume).
   - **Votação no painel (v0.10):** cada votação aparece com os votos acendendo um a um; maioria esmagadora em lei ou MP permite votação simbólica, sem painel.
   - **Reação da sociedade (v0.10):** depois de cada lei, página com nota de popularidade (0 a 10), % a favor, reação de cada grupo, mercado, frentes, partidos, custo e prós e contras.
+- **Posse em 3 passos (v0.11):** candidato, perfil (até 2 traços e 2 hábitos que agradam uns grupos e desagradam outros) e 5 promessas de posse com meta medida, com painel ao lado mostrando o efeito em cada grupo.
+- **Rival (v0.11):** líder da oposição fictício (Leopoldo Rezende, POL, ou Clarice Siqueira, FPT) desde o mês 1, com força de 0 a 100 e causas, postura (observa, desgaste com ataques mensais, obstrução na Câmara) e pesquisa de intenção de voto todo mês.
+- **Promessas (v0.11):** acompanhadas no Painel (no rumo, em risco, longe) e cobradas no fim (cumprida, quase, quebrada); valem 300 dos 1000 pontos da **nota final**.
 - **Fato do mês** com importância de 1 a 5, crises, boas notícias (promover, dar crédito ou ignorar) e consequências de leis antigas.
 - **Cobranças dos grupos** com prazo, recompensa e penalidade.
 - **Memória do mundo:** leis, MPs e obras plantam consequências que brotam meses ou anos depois. Há herança do governo anterior e o tempo é absoluto, pronto para vários mandatos.
 - **Fichas:** biografia acumulada de cada personagem e memória do país.
 - **Retratos:** 110 fotos, cada uma usada por uma pessoa só. O presidente escolhe o rosto na posse (65 livres) e 16 retratos ficam reservados para Defesa, Supremo, povos indígenas, campo e tradições.
 
-**Telas:** Painel (com cara de jogo, animações e plantão de notícias), Governo (mesa de sanção, presidente da Câmara, pauta, partidos e articulação, ministérios, frentes, leis com reação) e Fichas. Nação, Economia, Diplomacia, Programas e Vida pessoal aparecem bloqueadas.
+**Telas:** Posse em 3 passos, Painel (com cara de jogo, animações, plantão de notícias, cartões de Oposição e Promessas), Governo (mesa de sanção, presidente da Câmara, pauta, partidos e articulação, ministérios, frentes, leis com reação) e Fichas. Nação, Economia, Diplomacia, Programas e Vida pessoal aparecem bloqueadas.
 
 **Onde está cada coisa**
 - `CLAUDE.md`: regras do projeto e quando abrir uma conversa nova.
-- `docs/DESIGN.md`: decisões de desenho, seções 1 a 21.
+- `docs/DESIGN.md`: decisões de desenho, seções 1 a 23.
+- `docs/levantamento-video-1.md`: o que o jogo de referência tem e nós não (vídeo 1).
 - `CHANGELOG.md`: novidades de cada versão.
 - `docs/RELEASES.md`: como publicar.
 
@@ -64,7 +68,8 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 2. ✅ Memória do mundo, consequências, importância, fatos bons e herdados, biografias (v0.5.0)
 3. ✅ **3A** resposta em texto ao fato do mês, ministro responsável, catálogo grande de medidas (v0.6.0) · ✅ **3B** camada de IA: conselho do ministro, interpretação do texto livre, chave própria, plano B (v0.7.0) · ✅ **3C** medidas livres montadas pela IA (v0.9.0)
 4. ✅ **4A** votação com negociação por lideranças (v0.8.0) · ✅ **4B** Congresso 2.0, votação animada, voto simbólico e reação da sociedade (v0.10.0)
-5. ⏭️ Entre mandatos (campanha contínua): painel de eleição com escolha de candidato pela ficha, governo seguinte simulado se o jogador perder, herança
+5. Entre mandatos: ✅ **5A** rival, ficha do candidato e promessas de posse (v0.11.0) · ⏭️ **5B** 27 estados e apuração · **5C** governo seguinte e herança (depois do vídeo do fim de mandato)
+4C. Em aberto: Senado votando e Supremo julgando medidas (levantamento, itens 25 e 29 a 31)
 6. Depois: Senado com poderes próprios (sabatinas, impeachment), Supremo, imprensa e pesquisas, orçamento anual, ícones próprios
 
 ## Decisões já tomadas (resumo; detalhes no DESIGN.md)
@@ -99,3 +104,5 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 | 30/10/2026 | — | Decisão: etapa 3C (medidas livres montadas pela IA, entrando no catálogo do mandato) antes da 4B |
 | 30/10/2026 | v0.9.0 | Etapa 3C: medidas livres redigidas pela IA quando nada do catálogo serve, conferidas pelo motor (instrumento mínimo, faixas, almoço grátis, risco jurídico) e guardadas no catálogo do mandato; fim da "medida mais parecida" quando a IA diz que nada serve |
 | 30/10/2026 | v0.10.0 | Etapa 4B: comissões, relator e jabutis, presidente da Câmara, urgência, deixar na pauta, frentes, pautas-bomba, sanção/veto e derrubada, ministérios cedidos; votação animada no painel, voto simbólico e página de reação da sociedade; save 8 |
+| 30/10/2026 | — | Levantamento do vídeo 1 copiado para `docs/levantamento-video-1.md`; etapa 5 dividida em 5A, 5B e 5C; plano da 5A no DESIGN.md (seção 23), aguardando aprovação |
+| 30/10/2026 | v0.11.0 | Etapa 5A: posse em 3 passos, traços e hábitos, 5 promessas de posse com meta, rival com força, postura, ataques, obstrução e pesquisa mensal; nota final com promessas; save 9 |

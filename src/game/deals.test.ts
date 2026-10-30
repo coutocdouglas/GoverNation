@@ -65,7 +65,7 @@ describe('negociação de votos (etapa 4)', () => {
     delete c.promises; delete c.scandal
     s.saveVersion = 5
     const m = migrate(JSON.parse(JSON.stringify(s)))!
-    expect(m.saveVersion).toBe(8)
+    expect(m.saveVersion).toBe(9)
     expect(m.congress.promises).toEqual([])
     expect(m.congress.scandal).toBe(0)
   })

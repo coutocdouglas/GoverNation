@@ -33,10 +33,10 @@ export function computeApproval(g: Group): number {
   return clamp(g.econ + memorySum(g.memory), 0, 100)
 }
 
-export function initialGroups(ind: Indicators, bonus: number): Record<GroupId, Group> {
+export function initialGroups(ind: Indicators, bonus: number, offsets: Partial<Record<GroupId, number>> = {}): Record<GroupId, Group> {
   const out = {} as Record<GroupId, Group>
   for (const def of GROUPS) {
-    const econ = econTarget(def.id, ind, bonus)
+    const econ = econTarget(def.id, ind, bonus + (offsets[def.id] ?? 0))
     const g: Group = {
       id: def.id,
       econ,

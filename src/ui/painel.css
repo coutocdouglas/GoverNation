@@ -483,3 +483,23 @@
 .pn-react__pc { margin-top: 14px; font-size: 13.5px; line-height: 1.5; border-top: 1px solid var(--pn-line); padding-top: 10px; }
 .pn-react__pc p { margin: 4px 0; }
 @media (max-width: 760px) { .pn-react__groups, .pn-react__parties { grid-template-columns: 1fr; } .pn-react__hero { grid-template-columns: 1fr; } }
+
+/* Etapa 5A: oposição e promessas */
+.pn-rival { display: flex; gap: 12px; align-items: center; }
+.pn-rival > div { display: flex; flex-direction: column; gap: 2px; }
+.pn-rival .pn-stance { align-self: flex-start; font-size: 12px; font-weight: 700; border: 1px solid currentColor; border-radius: 999px; padding: 1px 8px; margin-top: 2px; }
+.pn-rival__quote { font-style: italic; color: var(--pn-mut); margin: 8px 0; font-size: 13px; }
+.pn-poll { display: flex; flex-direction: column; gap: 4px; margin: 6px 0 10px; }
+.pn-poll__row { display: flex; gap: 6px; align-items: baseline; font-size: 13px; }
+.pn-poll__row span { flex: 1; }
+.pn-poll__row b { font-family: var(--pn-mono); font-size: 16px; }
+.pn-poll__bar { display: flex; height: 10px; border-radius: 5px; overflow: hidden; }
+.pn-poll__bar span { display: block; height: 100%; }
+.pn-poll__chart { margin-top: 4px; }
+.pn-rival__force { border-top: 1px solid var(--pn-line); padding-top: 8px; display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+.pn-rival__causes { list-style: none; padding: 0; margin: 2px 0; font-size: 12px; color: var(--pn-mut); }
+.pn-rival__causes li { display: flex; justify-content: space-between; gap: 8px; }
+.pn-promises { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; font-size: 13px; }
+.pn-promises li { display: flex; flex-direction: column; gap: 3px; }
+.pn-ficha__traits { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
+.pn-ficha__traits span { font-size: 12px; border: 1px solid var(--pn-line); border-radius: 999px; padding: 2px 8px; }

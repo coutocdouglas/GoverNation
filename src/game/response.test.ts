@@ -112,7 +112,7 @@ describe('resposta escrita ao fato do mês', () => {
     const s = advanceMonth(newGame('T', 'normal', 5), [])
     const old = { ...structuredClone(s), saveVersion: 4 } as unknown
     const m = migrate(old)!
-    expect(m.saveVersion).toBe(8)
+    expect(m.saveVersion).toBe(9)
     expect(m.month).toBe(s.month)
     expect(() => advanceMonth(m, [])).not.toThrow()
     expect(BILL_BY_ID.hospitaisCampanha.instrument).toBe('decreto')

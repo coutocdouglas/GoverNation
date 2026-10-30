@@ -1,5 +1,8 @@
 import { initialCongress } from './congress'
 import { syncCustomBills } from './custom'
+import { RIVAL } from './data/rival'
+import { createRival } from './rival'
+import { addBio } from './memory'
 import type { GameState } from './types'
 
 // O jogo instalado guarda o localStorage na pasta de dados do usuário no Windows
@@ -81,7 +84,17 @@ export function migrate(raw: unknown): GameState | null {
       s.cabinet = {}
       s.saveVersion = 8
     }
-    if (s.saveVersion !== 8) return null
+    if (s.saveVersion === 8) {
+      // v0.10 → v0.11 (etapa 5A): o rival nasce com força tirada da aprovação atual e as pesquisas
+      // dos meses passados são recalculadas pelo histórico. Sem perfil e sem promessas de posse.
+      const approval = s.history[s.history.length - 1]?.approval ?? 50
+      s.rival = createRival(s, RIVAL.start + (50 - approval) * RIVAL.migrateSlope)
+      s.profile = { traits: [], habits: [] }
+      s.promises = []
+      addBio(s as GameState, s.rival.name, `Assume a liderança da oposição contra o governo ${s.presidentName}.`)
+      s.saveVersion = 9
+    }
+    if (s.saveVersion !== 9) return null
     syncCustomBills(s as GameState)
     return s as GameState
   } catch {

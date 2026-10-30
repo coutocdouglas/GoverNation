@@ -95,6 +95,9 @@ export function VoteSheet({ state, bill, deals, listened, onListen, onDeal, onCl
           <div className="pn-plenary">{squares.map((c, i) => <i key={i} className={c} />)}</div>
           <div className="pn-legend2"><span><i className="y" />Sim {fc.yes}</span><span><i className="n" />Não {fc.no}</span><span><i className="a" />Abstenção {fc.abstain}</span><span><i className="x" />Ausente {513 - present}</span></div>
           <p className="pn-hint">Cada quadrado é um deputado e o voto dele se a sessão fosse agora.</p>
+          {state.rival?.stance === 'obstrucao' && (
+            <p className="pn-hint dn">🥊 Oposição em obstrução: {state.rival.name} puxa o {PARTY_BY_ID[state.rival.party].sigla} e aliados a votar mais contra o governo.</p>
+          )}
         </div>
 
         <div className="pn-vote__head" style={{ marginTop: 16 }}><b>Tramitação</b><span className="pn-badge">o caminho até o plenário</span></div>

@@ -57,6 +57,9 @@ export const CAST: CastMember[] = [
   { name: 'Pastora Elisa Monteiro', role: 'Indicada do MRB para ministério', gender: 'f', portrait: 72, alt: 86 },
   { name: 'Anselmo Bragança', role: 'Indicado do MDN para ministério', gender: 'm', portrait: 49, alt: 51 },
   { name: 'Kátia Rangel', role: 'Indicada do PRA para ministério', gender: 'f', portrait: 76, alt: 96 },
+  // Etapa 5A (data/rival.ts): líderes da oposição, um de cada lado
+  { name: 'Leopoldo Rezende', role: 'Líder da oposição (POL)', gender: 'm', portrait: 95, alt: 73 },
+  { name: 'Clarice Siqueira', role: 'Líder da oposição (FPT)', gender: 'f', portrait: 58, alt: 107 },
 ]
 
 /**

@@ -13,7 +13,12 @@ import { DIFFICULTY, MACRO, START } from './data/balance'
 import { GROUPS } from './data/groups'
 import { SHOCKS, type ShockDef } from './data/shocks'
 import { indicators, initialEconomy, runCopom, stepEconomy, type ShockInput } from './economy'
-import { initialGroups, overallApproval, stepGroup } from './groups'
+import { computeApproval, initialGroups, overallApproval, stepGroup } from './groups'
+import { createRival, rivalAttack, updateRival } from './rival'
+import { posseBlockedReason, profileOffsets, promiseSideBoosts, promisesScore, STATUS_LABEL, formatPromiseValue, type PosseChoices } from './promises'
+import { PROFILE_BY_ID } from './data/profile'
+import { PROMISE_BY_ID } from './data/promises'
+import { RIVAL_BY_PARTY } from './data/rival'
 import { Rng } from './rng'
 import { DEALS } from './data/deals'
 import { dealBlockedReason, flagshipOf } from './deals'
@@ -53,12 +58,17 @@ export function newGame(
   playerParty: PartyId = 'mdn',
   avatarSeed?: string,
   avatarPortrait?: number,
+  posse: PosseChoices = {},
 ): GameState {
+  const posseError = posseBlockedReason(posse)
+  if (posseError) throw new Error(posseError)
+  const profile = { traits: [...(posse.traits ?? [])], habits: [...(posse.habits ?? [])] }
+  const promises = [...(posse.promises ?? [])]
   const economy = initialEconomy()
   const rngState = seed ?? Math.floor(Math.random() * 2 ** 31)
   const bonus = DIFFICULTY[difficulty].approvalBonus
   const state: GameState = {
-    saveVersion: 8,
+    saveVersion: 9,
     month: 0,
     presidentName: presidentName.trim() || 'Presidente',
     difficulty,
@@ -76,7 +86,7 @@ export function newGame(
     demandLog: [],
     rngState,
     economy,
-    groups: initialGroups(indicators(economy), bonus),
+    groups: initialGroups(indicators(economy), bonus, profileOffsets(profile)),
     history: [],
     cooldowns: {},
     actionLog: [],
@@ -84,12 +94,30 @@ export function newGame(
     finished: false,
     customBills: [],
     cabinet: {},
+    // Preenchido logo abaixo, depois do primeiro retrato do país.
+    rival: undefined as unknown as GameState['rival'],
+    profile,
+    promises,
   }
   syncCustomBills(state)
+  for (const b of promiseSideBoosts(promises, playerParty)) {
+    const g = state.groups[b.group]
+    g.memory.push({ label: b.label, value: b.value })
+    g.approval = computeApproval(g)
+  }
   state.history.push(snapshot(state))
+  state.rival = createRival(state)
   const rng = new Rng(state.rngState)
   plantInheritance(state, rng)
   addBio(state, state.presidentName, `Toma posse como presidente da República pelo ${PARTY_BY_ID[playerParty].sigla}.`)
+  const items = [...profile.traits, ...profile.habits].map((id) => PROFILE_BY_ID[id].name)
+  if (items.length) addBio(state, state.presidentName, `Chega ao Planalto com fama de: ${items.join(', ')}.`)
+  if (promises.length) {
+    addBio(state, state.presidentName, `Promessas de posse: ${promises.map((id) => PROMISE_BY_ID[id].name).join('; ')}.`)
+    addChronicle(state, `${state.presidentName} toma posse com ${promises.length} promessas: ${promises.map((id) => PROMISE_BY_ID[id].name).join('; ')}`, 'neutral')
+  }
+  const rivalDef = RIVAL_BY_PARTY[state.rival.party]
+  addBio(state, state.rival.name, `Assume a liderança da oposição (${PARTY_BY_ID[state.rival.party].sigla}) contra o governo ${state.presidentName}. ${rivalDef?.blurb ?? ''}`.trim())
   state.event = drawEvent(state, rng)
   state.rngState = rng.state
   return state
@@ -630,7 +658,9 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
       addBio(s, party.leader.name, `Rompeu com o governo depois de uma promessa não cumprida (“${BILL_BY_ID[pr.bill].name}”).`)
     }
   }
+  let scandalHit = false
   if (c.scandal > 0 && rng.next() < c.scandal / DEALS.scandalOdds) {
+    scandalHit = true
     for (const g of GROUPS) impulses[g.id].push({ label: 'Escândalo de indicações políticas', value: DEALS.scandalHit })
     headlines.push({ text: 'Escândalo: indicados políticos em estatais viram alvo de investigação', tone: 'bad' })
     addChronicle(s, `Escândalo de indicações no governo ${s.presidentName} (${PARTY_BY_ID[s.playerParty].sigla})`, 'bad')
@@ -761,15 +791,28 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
   causes.selic = selicCauses
   const after = indicators(e)
 
-  // 5. Grupos sociais
+  // 4b. Etapa 5A: ataque do líder da oposição (desgaste ou obstrução).
+  rivalAttack(s, rng, impulses, headlines)
+
+  // 5. Grupos sociais (com o ajuste permanente do perfil do presidente)
   const bonus = DIFFICULTY[s.difficulty].approvalBonus
+  const offsets = profileOffsets(s.profile)
   const approvalBefore = overallApproval(s.groups)
   const groupCauses = {} as Record<GroupId, Cause[]>
-  for (const def of GROUPS) groupCauses[def.id] = stepGroup(s.groups[def.id], after, bonus, impulses[def.id])
+  for (const def of GROUPS) groupCauses[def.id] = stepGroup(s.groups[def.id], after, bonus + offsets[def.id], impulses[def.id])
   const approvalAfter = overallApproval(s.groups)
 
   headlines.push(...economicHeadlines(before, after, approvalBefore, approvalAfter))
   driftRelations(c, approvalAfter, s.playerParty)
+
+  // 5b. Etapa 5A: força, postura e pesquisa do rival.
+  updateRival(s, {
+    approval: approvalAfter,
+    ind: after,
+    scandal: scandalHit,
+    defeats: votes.filter((v) => !v.approved && v.kind !== 'veto' && !BOMBS.some((b) => b.id === v.bill)).length,
+    overrides: votes.filter((v) => v.kind === 'veto' && v.approved).length,
+  }, s.month + 1, rng, headlines)
 
   // 6. Fecha o mês
   for (const id of Object.keys(s.cooldowns)) {
@@ -792,8 +835,10 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
   s.month += 1
   s.lastReport = report
   s.history.push(snapshot(s))
-  if (s.month >= TERM_MONTHS) s.finished = true
-  else {
+  if (s.month >= TERM_MONTHS) {
+    s.finished = true
+    closePromises(s, headlines)
+  } else {
     spawnDemand(s, rng)
     sproutSeeds(s)
     s.event = drawEvent(s, rng)
@@ -841,48 +886,77 @@ function economicHeadlines(
 }
 
 // ---------------------------------------------------------------------------
-// Nota provisória do mandato (a nota completa, com promessas e leis, vem na v0.4)
+// Promessas de posse cobradas no fim do mandato (etapa 5A)
+// ---------------------------------------------------------------------------
+
+function closePromises(s: GameState, headlines: Headline[]): void {
+  const { results } = promisesScore(s)
+  for (const r of results) {
+    const text = `Promessa “${r.def.name}”: ${STATUS_LABEL[r.status].toLowerCase()} (${formatPromiseValue(r.def, r.value)}).`
+    addBio(s, s.presidentName, text)
+  }
+  if (results.length) {
+    const kept = results.filter((r) => r.status === 'cumprida').length
+    headlines.push({ text: `Balanço do mandato: ${kept} de ${results.length} promessas de posse cumpridas`, tone: kept >= 3 ? 'good' : 'bad' })
+    addChronicle(s, `Governo ${s.presidentName} termina com ${kept} de ${results.length} promessas de posse cumpridas`, kept >= 3 ? 'good' : 'bad')
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Nota final do mandato (etapa 5A): aprovação, economia, contas e promessas de posse
 // ---------------------------------------------------------------------------
 
 export interface ScoreBreakdown {
   total: number
   parts: { label: string; score: number; max: number; detail: string }[]
+  /** Save anterior à 5A, sem promessas: as outras partes foram reescaladas para 1000. */
+  rescaled?: boolean
 }
 
 const unit = (v: number) => Math.min(1, Math.max(0, v))
 
-export function provisionalScore(s: GameState): ScoreBreakdown {
+export const SCORE_WEIGHTS = { approval: 250, econ: 250, fiscal: 200, promises: 300 } as const
+
+export function finalScore(s: GameState): ScoreBreakdown {
   const hist = s.history
   const avgApproval = hist.reduce((a, h) => a + h.approval, 0) / hist.length
   const last = hist[hist.length - 1].indicators
   const first = hist[0].indicators
   const avgGrowth = hist.length > 12 ? (last.growth + hist[Math.max(0, hist.length - 25)].indicators.growth) / 2 : last.growth
 
-  const approvalScore = unit((avgApproval - 20) / 50) * 350
+  const hasPromises = s.promises.length > 0
+  const k = hasPromises ? 1 : 1000 / (1000 - SCORE_WEIGHTS.promises)
+  const wA = SCORE_WEIGHTS.approval * k, wE = SCORE_WEIGHTS.econ * k, wF = SCORE_WEIGHTS.fiscal * k
+
+  const approvalScore = unit((avgApproval - 20) / 50) * wA
   const infl = unit(1 - Math.max(0, Math.abs(last.inflation - MACRO.inflationTarget) - MACRO.inflationTolerance) / 6)
   const unemp = unit((12 - last.unemployment) / 8)
   const growth = unit((avgGrowth + 1) / 5)
-  const econScore = ((infl + unemp + growth) / 3) * 350
+  const econScore = ((infl + unemp + growth) / 3) * wE
   const debtDelta = last.debt - first.debt
   const fiscal = unit(1 - debtDelta / 20) * 0.6 + unit((last.primary + 2) / 3) * 0.4
-  const fiscalScore = fiscal * 300
+  const fiscalScore = fiscal * wF
 
-  return {
-    total: Math.round(approvalScore + econScore + fiscalScore),
-    parts: [
-      { label: 'Aprovação média', score: Math.round(approvalScore), max: 350, detail: `${fmt(avgApproval, 0)}% de média no mandato` },
-      {
-        label: 'Economia no fim',
-        score: Math.round(econScore),
-        max: 350,
-        detail: `inflação ${fmt(last.inflation)}%, desemprego ${fmt(last.unemployment)}%, crescimento ${fmt(avgGrowth)}%`,
-      },
-      {
-        label: 'Saúde fiscal',
-        score: Math.round(fiscalScore),
-        max: 300,
-        detail: `dívida ${debtDelta >= 0 ? '+' : ''}${fmt(debtDelta)} pontos, primário ${fmt(last.primary)}% do PIB`,
-      },
-    ],
+  const parts: ScoreBreakdown['parts'] = [
+    { label: 'Aprovação média', score: Math.round(approvalScore), max: Math.round(wA), detail: `${fmt(avgApproval, 0)}% de média no mandato` },
+    {
+      label: 'Economia no fim',
+      score: Math.round(econScore),
+      max: Math.round(wE),
+      detail: `inflação ${fmt(last.inflation)}%, desemprego ${fmt(last.unemployment)}%, crescimento ${fmt(avgGrowth)}%`,
+    },
+    {
+      label: 'Saúde fiscal',
+      score: Math.round(fiscalScore),
+      max: Math.round(wF),
+      detail: `dívida ${debtDelta >= 0 ? '+' : ''}${fmt(debtDelta)} pontos, primário ${fmt(last.primary)}% do PIB`,
+    },
+  ]
+  if (hasPromises) {
+    const p = promisesScore({ ...s, finished: true })
+    const kept = p.results.filter((r) => r.status === 'cumprida').length
+    const almost = p.results.filter((r) => r.status === 'quase').length
+    parts.push({ label: 'Promessas de posse', score: p.points, max: SCORE_WEIGHTS.promises, detail: `${kept} cumpridas, ${almost} quase, ${p.results.length - kept - almost} quebradas` })
   }
+  return { total: parts.reduce((a, x) => a + x.score, 0), parts, rescaled: !hasPromises || undefined }
 }
