@@ -45,6 +45,7 @@ export function newGame(
   seed?: number,
   playerParty: PartyId = 'mdn',
   avatarSeed?: string,
+  avatarPortrait?: number,
 ): GameState {
   const economy = initialEconomy()
   const rngState = seed ?? Math.floor(Math.random() * 2 ** 31)
@@ -57,6 +58,7 @@ export function newGame(
     playerParty,
     congress: initialCongress(playerParty, rngState),
     avatarSeed: avatarSeed ?? `${presidentName}-${rngState}`,
+    avatarPortrait,
     event: null,
     eventLog: [],
     demands: [],

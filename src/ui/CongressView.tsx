@@ -4,7 +4,7 @@ import { BILL_BY_ID, GDP_BILLIONS, INSTRUMENTS } from '../game/data/bills'
 import { PARTIES, PARTY_BY_ID } from '../game/data/parties'
 import { monthLabel } from '../game/game'
 import type { Articulation, BillId, GameState, PartyId, VoteRecord } from '../game/types'
-import { Caricature } from './Caricature'
+import { Portrait } from './Portrait'
 import { num } from './format'
 
 const relationLabel = (r: number) =>
@@ -100,7 +100,7 @@ export function CongressView({ state, articulations, onToggle, bill }: {
             return (
               <div key={p.id} className={`pn-party ${own ? 'own' : ''}`} style={{ borderLeftColor: p.color }}>
                 <div className="pn-party__head">
-                  <Caricature seed={p.leader.name} feminine={p.leader.feminine} color={p.color} size={46} mood={ps.relation >= 60 ? 'feliz' : ps.relation < 35 ? 'bravo' : 'neutro'} title={`${p.leader.name}, líder do ${p.sigla}`} />
+                  <Portrait name={p.leader.name} feminine={p.leader.feminine} color={p.color} size={52} title={`${p.leader.name}, líder do ${p.sigla}`} />
                   <b>{p.sigla}</b> <span className="pn-hint" style={{ margin: 0 }}>{p.name}</span>
                   <span className="pn-party__seats">{p.seats} 🪑</span>
                 </div>

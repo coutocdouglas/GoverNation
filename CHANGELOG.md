@@ -1,5 +1,12 @@
 # Novidades
 
+## 0.4.1
+- **Retratos de verdade:** as 110 fotos substituem as caricaturas para o presidente, os líderes dos partidos e quem traz cada fato do mês. As caricaturas ficam só como reserva para personagens sem retrato.
+- **Elenco fixo:** cada personagem tem um retrato só dele e nenhum se repete. Os retratos foram escolhidos pelo cargo e pelo visual (jaleco para a Saúde, chapéu para a Agricultura).
+- **Escolha seu rosto** na posse, numa galeria de 72 retratos com filtro por mulheres e homens e botão de sortear. Os retratos de militares, magistratura, povos indígenas, campo e tradições ficam guardados para personagens que ainda vão entrar.
+- A ministra da Saúde passou a se chamar Dra. Ângela Pires, para combinar com o retrato.
+- Mandatos salvos antes recebem um retrato fixo, sem perder o jogo.
+
 ## 0.4.0
 - **Fato do mês** em painel próprio: 14 situações (dengue, greve de caminhoneiros, enchentes, escândalo, centrão pedindo ministério, queimadas, preço da comida, apagão, conflito no campo...). Algumas só aparecem quando a economia piora. Cada uma tem de 2 a 4 escolhas com efeitos visíveis antes de decidir; se você não escolher, vale a opção padrão, que costuma sair cara.
 - **Cobranças dos grupos** com prazo: até 3 ao mesmo tempo. Cumprir com o decreto ou a lei certa rende aprovação; deixar vencer custa. Grupos insatisfeitos cobram mais.

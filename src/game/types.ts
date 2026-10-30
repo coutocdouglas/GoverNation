@@ -126,8 +126,10 @@ export interface GameState {
   /** Partido do presidente. */
   playerParty: PartyId
   congress: CongressState
-  /** Semente da caricatura do presidente. */
+  /** Semente da caricatura do presidente (usada só se não houver retrato). */
   avatarSeed: string
+  /** Retrato do presidente (1 a 110). Saves antigos não têm: o jogo sorteia um fixo. */
+  avatarPortrait?: number
   /** Fato do mês à espera de resposta. */
   event: { id: string; month: number } | null
   eventLog: { id: string; month: number }[]

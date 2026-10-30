@@ -4,9 +4,11 @@ import { PLAYER_PARTY_CHOICES } from './game/data/parties'
 import { monthLabel, newGame } from './game/game'
 import { deleteSave, loadGame, saveGame } from './game/save'
 import type { GameState, PartyId } from './game/types'
-import { Caricature } from './ui/Caricature'
 import { EndScreen } from './ui/EndScreen'
+import { PLAYER_POOL } from './game/data/cast'
+import { PORTRAITS } from './game/data/portraits'
 import { PARTY_BY_ID } from './game/data/parties'
+import { Portrait } from './ui/Portrait'
 import { GameScreen } from './ui/GameScreen'
 
 const ROADMAP = [
@@ -50,7 +52,7 @@ export default function App() {
           hasSave={!!game && !game.finished}
           onCancel={() => setScreen('home')}
           onStart={(name, diff, party, face) => {
-            update(newGame(name, diff, undefined, party, face))
+            update(newGame(name, diff, undefined, party, String(face), face))
             setScreen('game')
           }}
         />
@@ -119,18 +121,37 @@ function Home({ saved, onNew, onContinue }: { saved: GameState | null; onNew: ()
 function NewGame({ hasSave, onCancel, onStart }: {
   hasSave: boolean
   onCancel: () => void
-  onStart: (name: string, d: GameState['difficulty'], party: PartyId, face: string) => void
+  onStart: (name: string, d: GameState['difficulty'], party: PartyId, face: number) => void
 }) {
   const [name, setName] = useState('')
   const [diff, setDiff] = useState<GameState['difficulty']>('normal')
   const [party, setParty] = useState<PartyId>('mdn')
-  const [face, setFace] = useState(() => String(Math.floor(Math.random() * 1e6)))
+  const [face, setFace] = useState(() => PLAYER_POOL[Math.floor(Math.random() * PLAYER_POOL.length)])
+  const [filter, setFilter] = useState<'todos' | 'f' | 'm'>('todos')
   return (
     <main className="home">
       <h1 className="newgame__title">Novo mandato</h1>
-      <div className="newgame__face">
-        <Caricature seed={face} color={PARTY_BY_ID[party].color} size={110} mood="feliz" title="Seu rosto" />
-        <button className="btn" onClick={() => setFace(String(Math.floor(Math.random() * 1e6)))}>🎲 Outro rosto</button>
+      <div className="field">
+        <span>Seu rosto</span>
+        <div className="newgame__face">
+          <Portrait id={face} color={PARTY_BY_ID[party].color} size={110} title="Seu rosto" />
+          <div className="newgame__filters">
+            {([['todos', 'Todos'], ['f', 'Mulheres'], ['m', 'Homens']] as const).map(([k, label]) => (
+              <button key={k} className={`btn ${filter === k ? 'btn--primary' : ''}`} onClick={() => setFilter(k)}>{label}</button>
+            ))}
+            <button className="btn" onClick={() => {
+              const pool = PLAYER_POOL.filter((id) => filter === 'todos' || PORTRAITS[id - 1].gender === filter)
+              setFace(pool[Math.floor(Math.random() * pool.length)])
+            }}>🎲 Sortear</button>
+          </div>
+        </div>
+        <div className="newgame__gallery">
+          {PLAYER_POOL.filter((id) => filter === 'todos' || PORTRAITS[id - 1].gender === filter).map((id) => (
+            <button key={id} className={`newgame__pick ${id === face ? 'on' : ''}`} onClick={() => setFace(id)} aria-label={`Retrato ${id}`}>
+              <Portrait id={id} color={id === face ? PARTY_BY_ID[party].color : 'transparent'} size={64} />
+            </button>
+          ))}
+        </div>
       </div>
       <label className="field">
         <span>Nome do presidente</span>

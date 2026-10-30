@@ -242,3 +242,8 @@
 .pn-timer { font-family: var(--pn-mono); font-size: 11px; padding: 3px 7px; border-radius: 6px; background: #f5c54222; color: var(--pn-gold); white-space: nowrap; }
 .pn-timer.hot { background: #ff5a5f22; color: var(--pn-red); animation: pn-pulse-b 1.5s infinite; }
 .pn-party__head .caricature { margin-right: 4px; align-self: center; }
+
+/* ---- Retratos (v0.4.1) ---- */
+.portrait { flex: none; border-radius: 50%; object-fit: cover; border: 2.5px solid; background: #0b0f14; filter: drop-shadow(0 4px 8px #0006); display: block; }
+.pn-hero > .portrait { align-self: center; }
+.pn-event__who .portrait { animation: pn-bob 3s ease-in-out infinite; }

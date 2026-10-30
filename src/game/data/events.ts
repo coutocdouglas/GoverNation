@@ -40,7 +40,7 @@ export const EVENTS: EventDef[] = [
     id: 'dengue', tag: 'Saúde · urgente', icon: '🦟', weight: 3,
     title: 'Surto de dengue lota hospitais no Sudeste',
     text: 'Prefeitos pedem socorro e a imprensa já fala em “apagão da saúde”. Os casos dobram a cada semana.',
-    presenter: { name: 'Dr. Álvaro Pires', role: 'Ministro da Saúde', feminine: false, color: '#2bb3a3' },
+    presenter: { name: 'Dra. Ângela Pires', role: 'Ministra da Saúde', feminine: true, color: '#2bb3a3' },
     options: [
       { icon: '🚑', label: 'Força Nacional do SUS', text: 'Hospitais de campanha em dez dias.', effects: { temp: { amount: 0.06, months: 4 }, groups: { baixaRenda: 4, classeMedia: 2, servidores: 1 } }, outcome: 'Hospitais de campanha aliviam a crise da dengue', tone: 'good' },
       { icon: '🤝', label: 'Repassar verba aos estados', text: 'Mais barato, mas o crédito fica com os governadores.', effects: { temp: { amount: 0.03, months: 3 }, groups: { baixaRenda: 1 } }, parties: { psn: 3, mdn: 3 }, outcome: 'Governadores recebem verba contra a dengue', tone: 'neutral' },

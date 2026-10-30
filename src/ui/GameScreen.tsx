@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { billBlockedReason, CONGRESS, isRecess } from '../game/congress'
 import { BILL_BY_ID, GDP_BILLIONS, INSTRUMENTS } from '../game/data/bills'
+import { playerPortraitId } from '../game/data/cast'
 import { EVENT_BY_ID } from '../game/data/events'
 import { PARTY_BY_ID } from '../game/data/parties'
 import { ACTION_BY_ID, ACTIONS, ACTIONS_PER_MONTH, blockedReason, effectMultiplier } from '../game/actions'
@@ -9,9 +10,9 @@ import { advanceMonth, isCopomMonth, monthLabel, TERM_MONTHS } from '../game/gam
 import { econPull } from '../game/groups'
 import { interpretMeasure, type MeasureRef } from '../game/interpret'
 import type { ActionId, Articulation, BillId, Cause, GameState, GroupId, IndicatorKey } from '../game/types'
-import { Caricature } from './Caricature'
 import { CongressView, ForecastRow, Scoreboard } from './CongressView'
 import { DemandsCard, EventPanel } from './EventPanel'
+import { Portrait } from './Portrait'
 import { ACTION_ICON, GROUP_ICON, INDICATOR_ICON } from './icons'
 import { INDICATORS, lowerFirst, num, signed, type IndicatorMeta } from './format'
 import { Sparkline } from './Sparkline'
@@ -117,7 +118,7 @@ export function GameScreen({ state, onChange, onExit }: {
 
       <main className="pn-main">
         <section className="pn-hero">
-          <Caricature seed={state.avatarSeed} color={PARTY_BY_ID[state.playerParty].color} size={92} mood={now.approval >= 50 ? 'feliz' : now.approval >= 35 ? 'neutro' : 'preocupado'} title={state.presidentName} />
+          <Portrait id={playerPortraitId(state)} color={PARTY_BY_ID[state.playerParty].color} size={96} title={state.presidentName} />
           <div>
             <div className="pn-sub">🇧🇷 Presidente da República · {PARTY_BY_ID[state.playerParty].name} ({PARTY_BY_ID[state.playerParty].sigla})</div>
             <h1>{state.presidentName.toUpperCase()}</h1>

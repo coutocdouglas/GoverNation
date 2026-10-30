@@ -4,7 +4,7 @@ import { DEMAND_BY_ID } from '../game/data/demands'
 import { GROUP_BY_ID } from '../game/data/groups'
 import { defaultOption, currentEvent } from '../game/events'
 import type { ActionId, BillId, GameState } from '../game/types'
-import { Caricature } from './Caricature'
+import { Portrait } from './Portrait'
 import { effectChips } from './effects'
 import { GROUP_ICON } from './icons'
 
@@ -36,7 +36,7 @@ export function EventPanel({ state, choice, onChoose }: {
       <h3>🔥 Fato do mês <span className="pn-badge">{choice === null ? `se você não decidir: ${ev.options[def].label.toLowerCase()}` : '✔ decidido'}</span></h3>
       <div className="pn-event__head">
         <div className="pn-event__who">
-          <Caricature seed={p.name} feminine={p.feminine} color={p.color} size={84} mood="preocupado" title={p.name} />
+          <Portrait name={p.name} feminine={p.feminine} color={p.color} size={96} title={p.name} />
           <div className="pn-event__name"><b>{p.name}</b><span>{p.role}</span></div>
         </div>
         <div className="pn-event__bubble">
