@@ -553,3 +553,63 @@ Saves antigos sem promessas: a parte das promessas sai e as outras são reescala
 ### 24.4 Retratos
 
 - Precisam de rosto: presidente do Senado (1), 11 ministros do Supremo e 3 a 4 indicáveis para vaga, cerca de 16 pessoas. Há 1 retrato reservado para a magistratura; o resto sai dos retratos livres. A escolha de rosto do presidente cai de 54 para cerca de 39 opções (aprovado pelo Douglas).
+
+
+---
+
+## 25. Etapas 4D, 4E e 4F: Congresso ao vivo, janelas e mês mais vivo (plano aprovado em 30/10)
+
+- **Pedido do Douglas (30/10, depois da 4C2):** o Senado ficou simples; a votação deve acontecer quando o jogador mandar, não no fechamento do mês; mais complexidade com líderes e bancadas; negociação com probabilidade e contraoferta; janela para a medida (com opção de desistir); sorteio do relator no Supremo; fato bom com botão de agir. Base: `docs/levantamento-video-1.md` (itens 12, 13, 14, 17, 24, 26, 27, 28). Tudo fictício e próprio.
+- **Divisão aprovada:** **4D Congresso ao vivo** (v0.14, Opus) · **4E Janelas** (v0.15, Sonnet serve) · **4F Mês mais vivo** (v0.16). A 5B (27 estados e apuração) passa para depois da 4F.
+- **Decisões do Douglas sobre as dúvidas:** (1) **uma votação por casa por mês**: uma na Câmara e uma no Senado; um projeto aprovado na Câmara pode votar no Senado no mesmo mês, se a votação do Senado ainda estiver livre; (2) **PEC**: cada turno é uma votação marcada por você, em meses diferentes, e cada um gasta a votação da casa no mês; (3) **recesso** (janeiro e julho): continua sem votação; (4) o que não for votado **fica parado na fila**, e as gavetas (comissão, presidentes da Câmara e do Senado) continuam valendo.
+
+### 25.1 Etapa 4D: Congresso ao vivo (v0.14)
+
+**Votar na hora**
+- Cada projeto na pauta ganha o botão **"Pautar agora"** (Câmara e Senado). A votação roda na hora, com painel animado; **a lei aprovada entra em vigor no mês atual**, antes de encerrar, e já aparece no Painel, nos indicadores e na resposta ao fato do mês.
+- O fechamento do mês **não vota mais sozinho**. Continuam acontecendo no fechamento: comissões avançando, gaveta, sanção ou veto, derrubada de veto, pautas-bomba e o Supremo.
+- **MP:** vale na hora, como hoje, mas precisa ser votada. Passado o prazo de 4 meses sem votar, **caduca** e os efeitos são desfeitos (manchete e crônica).
+- **Motor:** `voteNow(estado, projeto, casa)` devolve o estado novo e o registro da votação; `advanceMonth` deixa de votar plenário. Estado do mês (`GameState.monthUse`): votação da Câmara e do Senado usadas, medida negociada. Zera ao virar o mês.
+- **Gavetas à vista:** se a comissão ou o presidente da casa vão barrar, o botão avisa o motivo antes, sem gastar a votação do mês.
+- **Negociação:** uma medida negociada por mês em cada casa (a janela atual de lideranças passa a valer para um projeto só por casa).
+
+**Página própria do Senado**
+- Subabas da aba Governo: **Câmara · Senado · Supremo**.
+- A página do Senado tem: os 81 senadores por bancada, **líder de cada bancada** (9 personagens novos, fictícios, com retrato), presidente da casa, **relação individual** com as lideranças, comissões do Senado (CCJ, assuntos econômicos...) com o partido que preside, o que está na fila, **os indecisos** da próxima votação (até 5 senadores mais perto do limite, cada um com preço próprio: ligar, obra no estado, cargo regional) e o histórico das votações.
+- **Bancada estadual** (3 por estado) fica para a 5B, quando houver os 27 estados.
+
+**Líderes e eleições internas**
+- **Líder da bancada do seu partido** (Câmara e Senado): escolhido na posse e a cada 2 anos. 3 candidatos, cada um com perfil (governista, independente ou fisiológico); você apoia um e a bancada vota. Líder governista segura a disciplina e aproxima a bancada; líder rebelde atrapalha e cobra mais caro. Candidatos usam caricatura provisória (sem retrato próprio).
+- **Eleição da Mesa** (presidente da Câmara e do Senado) em **fevereiro de 2029** (mês 25 do mandato): 2 candidatos por casa, votação animada; você pode apoiar um (custo: emendas, cargos ou promessa). O eleito muda a relação e as gavetas.
+- **Líderes dos outros partidos** trocam sozinhos a cada 2 anos, com manchete e mudança de perfil (relação e disciplina).
+- **Alas internas (levantamento, item 28), versão enxuta:** cada partido tem uma ala governista e uma de oposição; o líder reflete a que está por cima.
+
+**Relação com os líderes, emendas e contraoferta**
+- **Conversar** tem tipos (ligação, almoço, receber na residência oficial, visita à base), cada um com custo e **chance de render efeito positivo**; pode render nada e, raramente, azedar.
+- **Emendas detalhadas:** emenda individual (pequena), de bancada e carimbada de obra, com valor em R$ bi à escolha, efeito proporcional, risco de escândalo e **chance de o partido aceitar e votar com você** (mostrada antes).
+- **Contraoferta:** o líder faz uma oferta pelo voto (tipo e preço). Você **aceita, recusa ou contrapõe** (preço menor, outro tipo ou outro prazo). A chance de aceitar depende da relação, da distância entre a oferta e a contraproposta e do fisiologismo; no máximo 2 rodadas. Recusar demais irrita e sobe o preço. Falhar custa um pouco de relação.
+- **Concessões que mudam o texto** (item 26): o líder pede uma cláusula ou a retirada de um trecho; o jogo mostra quanto o projeto enfraquece (ex.: "enfraquece o projeto em 19%") em troca do voto.
+- **Placar com traidores** (item 27): quantos votaram contra a própria liderança e como cada bancada votou.
+
+**Save, testes e balanceamento**
+- **Save versão 12:** `monthUse`, líderes (`congress.leaders`), líderes do Senado, eleições internas e da Mesa, ofertas em andamento. Migração: líderes atuais mantidos, `monthUse` zerado, projetos que esperavam votação seguem na fila.
+- **Testes:** uma votação por casa por mês; efeito da lei no mesmo mês; MP caduca; PEC em turnos separados; gavetas avisadas; contraoferta (aceita, recusa, rodadas); eleições internas e da Mesa; migração 11 → 12.
+- **Simulador:** os bots passam a chamar `voteNow` (um projeto por casa por mês); a ordem das estratégias não pode mudar; conferir quantas leis passam por mandato (hoje cerca de 17 a 23 com um projeto a cada 2 meses).
+- **Retratos:** 9 líderes do Senado + 4 candidatos à Mesa = 13 pessoas. A escolha de rosto do presidente cairia de 41 para cerca de 28. **Pendência para o Douglas:** mandar mais retratos antes da 4D (sugestão: +30).
+
+### 25.2 Etapa 4E: Janelas (v0.15)
+
+- **Janela da medida** (levantamento, item 24): ao pedir a leitura do gabinete, abre uma janela na frente, bem diagramada, em etapas: **1 leitura** (o que o gabinete entendeu e o parecer do ministro), **2 impacto fiscal e prazos**, **3 Congresso e Supremo** (nota de 0 a 10 de quanto a medida sobrevive no Congresso e no Supremo, com o risco jurídico que já existe) e **4 decisão**. **Nada vai ao Congresso até confirmar**: dá para descartar e voltar atrás. A medida enviada fica no plano do mês e pode ser **retirada** até a votação (depois de votada, não).
+- **Nome da medida** (item 14): opcional, vira a manchete do telejornal.
+- **Sorteio do relator no Supremo:** janela separada que abre na frente quando uma ação é aberta: os 11 retratos giram e param no relator. Entra na fila do pós-mês, antes do julgamento quando os dois caem no mesmo mês.
+- **Fato bom com botão de agir:** no modo **fácil** só as sugestões; nos modos **médio e difícil**, o botão de agir como nos fatos ruins (as opções prontas ficam como "se deixar passar"). A resposta escrita é lida pelo ministro e vira promover, dar crédito ou ignorar, mais uma medida da área, se houver. Sem IA continuam as opções prontas.
+
+### 25.3 Etapa 4F: Mês mais vivo (v0.16)
+
+- **Três caminhos para responder a uma crise** (item 12): escrever uma medida, **fazer um post** (a assessoria redige; não resolve o problema material, mas mexe em quem leva a culpa e na lealdade da base) ou **tratar com quem está na rua** (receber, ceder, mandar desobstruir, falar em cadeia nacional).
+- **"Sua agenda está limpa"** (item 13): em mês sem crise, a chance de liderar nos seus termos, com sugestões de iniciativa.
+- **"Enquanto você decidia"** (item 17): o que a oposição, o empresariado e a Câmara fizeram no mês, no Painel.
+
+### 25.4 Fica para depois
+
+Exposição a escândalo visível de 0 a 100 (item 20), CPIs (35), vice-presidente (32), execução e regulamentação das leis (34), bancada estadual no Senado e mapa por estado (5B), governadores (36), serviço de inteligência (33), conquistas (19) e cenas de transição (22). Ordem: 4D, 4E, 4F e depois a 5B.

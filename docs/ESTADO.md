@@ -9,11 +9,13 @@
 
 ## Próximo passo
 
-**Etapa 5B: os 27 estados e a apuração da eleição** (v0.14). Ainda sem plano detalhado: a primeira conversa deve escrever o plano no `docs/DESIGN.md` e pedir aprovação ao Douglas antes de programar (aprovação por estado no mapa, negociação por bancada estadual no Senado, eleição de 2030 com apuração estado por estado). A 5C espera o vídeo do fim de mandato e da eleição. O levantamento do jogo de referência está em `docs/levantamento-video-1.md`.
+**Etapa 4D: Congresso ao vivo** (v0.14). Plano aprovado em `docs/DESIGN.md`, seção 25.1: votar na hora que o jogador mandar (uma votação por casa por mês, lei aprovada vale no mês atual), página própria do Senado ao lado do Congresso e do Supremo, líderes e eleições internas (líder da bancada do seu partido, Mesa em fev/2029), conversas e emendas com probabilidade, contraoferta e concessões que mudam o texto. Depois vêm a **4E** (janela da medida com opção de desistir, sorteio do relator no Supremo, fato bom com botão de agir; v0.15) e a **4F** (post e rua como respostas, "agenda limpa", "enquanto você decidia"; v0.16), e só então a 5B (27 estados e apuração).
 
-Complexidade: alta. Use o **Opus**, numa conversa nova.
+**Pendência do Douglas antes de programar a 4D:** mandar mais retratos (sugestão: +30). A 4D cria cerca de 13 personagens com retrato (9 líderes do Senado e 4 candidatos à Mesa) e a escolha de rosto do presidente cairia de 41 para cerca de 28 opções.
 
-Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdouglas/GoverNation. Leia CLAUDE.md, docs/ESTADO.md e docs/DESIGN.md. Quero fazer a etapa 5B (27 estados e apuração)."*
+Complexidade: **muito alta**. Use o **Opus**, numa conversa nova (a 4E pode ser feita no Sonnet).
+
+Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdouglas/GoverNation. Leia CLAUDE.md, docs/ESTADO.md e docs/DESIGN.md. Quero fazer a etapa 4D (Congresso ao vivo, plano na seção 25.1 do DESIGN.md)."*
 
 ---
 
@@ -57,7 +59,7 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 
 **Onde está cada coisa**
 - `CLAUDE.md`: regras do projeto e quando abrir uma conversa nova.
-- `docs/DESIGN.md`: decisões de desenho, seções 1 a 24 (Supremo em 24.2 e 24.2.1).
+- `docs/DESIGN.md`: decisões de desenho, seções 1 a 25 (Supremo em 24.2 e 24.2.1; plano das etapas 4D a 4F na seção 25).
 - `docs/levantamento-video-1.md`: o que o jogo de referência tem e nós não (vídeo 1).
 - `CHANGELOG.md`: novidades de cada versão.
 - `docs/RELEASES.md`: como publicar.
@@ -70,8 +72,9 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 2. ✅ Memória do mundo, consequências, importância, fatos bons e herdados, biografias (v0.5.0)
 3. ✅ **3A** resposta em texto ao fato do mês, ministro responsável, catálogo grande de medidas (v0.6.0) · ✅ **3B** camada de IA: conselho do ministro, interpretação do texto livre, chave própria, plano B (v0.7.0) · ✅ **3C** medidas livres montadas pela IA (v0.9.0)
 4. ✅ **4A** votação com negociação por lideranças (v0.8.0) · ✅ **4B** Congresso 2.0, votação animada, voto simbólico e reação da sociedade (v0.10.0)
-5. Entre mandatos: ✅ **5A** rival, ficha do candidato e promessas de posse (v0.11.0) · ⏭️ **5B** 27 estados e apuração · **5C** governo seguinte e herança (depois do vídeo do fim de mandato)
+5. Entre mandatos: ✅ **5A** rival, ficha do candidato e promessas de posse (v0.11.0) · **5B** 27 estados e apuração (depois da 4F) · **5C** governo seguinte e herança (depois do vídeo do fim de mandato)
 4C. ✅ **4C1** Senado votando (v0.12.0) · ✅ **4C2** Supremo julgando medidas (v0.13.0)
+4D–4F. ⏭️ **4D** Congresso ao vivo (v0.14) · **4E** janelas (v0.15) · **4F** mês mais vivo (v0.16)
 6. Depois: Senado com poderes próprios (impeachment), imprensa e pesquisas, orçamento anual, ícones próprios
 
 ## Decisões já tomadas (resumo; detalhes no DESIGN.md)
@@ -111,3 +114,4 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 | 30/10/2026 | — | Decisão: 4C (Senado e Supremo) antes da 5B; plano aprovado no DESIGN.md (seção 24), dividido em 4C1 Senado e 4C2 Supremo; retratos novos saem dos livres |
 | 30/10/2026 | v0.12.0 | Etapa 4C1: Senado com 81 senadores votando depois da Câmara (lei, LC e MP no mesmo mês; PEC no seguinte, em dois turnos), presidente do Senado, rejeição com custo, negociação com 2 lideranças, abas Câmara/Senado na votação e painel de 81 cadeiras; save 10 |
 | 30/10/2026 | v0.13.0 | Etapa 4C2: Supremo com 11 ministros, risco jurídico em todas as medidas (mostrado antes de assinar), ações da oposição, julgamento voto a voto com animação, derrubada com fato do mês (acatar, nova proposta, criticar), vaga aos 75 anos com 3 indicáveis e sabatina no Senado; save 11 |
+| 30/10/2026 | — | Plano das etapas 4D (Congresso ao vivo), 4E (janelas) e 4F (mês mais vivo) aprovado e escrito no DESIGN.md (seção 25); a 5B passa para depois da 4F |
