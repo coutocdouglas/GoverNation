@@ -180,7 +180,7 @@ describe('Senado (etapa 4C1)', () => {
     delete raw.congress.senate
     raw.saveVersion = 9
     const m = migrate(raw)!
-    expect(m.saveVersion).toBe(15)
+    expect(m.saveVersion).toBe(16)
     expect(m.congress.senate.senators).toHaveLength(81)
     expect(m.congress.senate.pending).toEqual([])
     const next = advanceMonth(m, [], { bill: 'isencaoIR' })

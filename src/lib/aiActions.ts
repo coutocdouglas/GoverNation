@@ -1,4 +1,4 @@
-import { interpretPrompt, ministerAdvicePrompt, ministerReviewPrompt, parseAdvice, parseInterpretation, parseReview, type Advice, type Review } from '../game/ai'
+import { concessionPrompt, interpretPrompt, ministerAdvicePrompt, ministerReviewPrompt, parseAdvice, parseConcession, parseInterpretation, parseReview, type Advice, type Review } from '../game/ai'
 import type { BillId } from '../game/types'
 import type { EventDef } from '../game/data/events'
 import type { AreaId } from '../game/data/ministers'
@@ -65,4 +65,14 @@ export async function askReview(state: GameState, area: AreaId, order: string, m
   const r = parseReview(await callAi('fala', ministerReviewPrompt(state, area, order, measure)))
   if (!r) throw new AiError('O ministro não conseguiu opinar agora.')
   return r
+}
+
+/** Etapa 2: a IA escreve a concessão pedida pela liderança (só as frases; os números são do motor). Null = usar a lista pronta. */
+export async function askConcession(state: GameState, party: string, leader: string, bill: BillId, type: { label: string; change: string }): Promise<{ ask: string; change: string } | null> {
+  if (!aiReady()) return null
+  try {
+    return parseConcession(await callAi('fala', concessionPrompt(state, party, leader, bill, type)))
+  } catch {
+    return null
+  }
 }

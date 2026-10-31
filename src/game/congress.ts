@@ -8,8 +8,11 @@ import { CAMARA } from './data/camara'
 import { SENADO, SENATE_SEATS } from './data/senado'
 import { affinity, clamp } from './ideology'
 import { amendmentFor, cabinetBoost, effectiveBill, frenteBonuses } from './camara'
+import { ALAS } from './data/alas'
+import { alaByIndex, memberMods, orientSign, speakerOf } from './partidos'
+import { withConcessions } from './concessoes'
 import type {
-  Amendment, Articulation, BillId, CongressState, DealKind, Deputy, GameState, GroupId, PartyId, PartyState, PendingBill, SenateState, VoteRecord,
+  Amendment, Articulation, BillId, CongressState, DealKind, DealTerms, Deputy, GameState, GroupId, PartyId, PartyState, PendingBill, SenateState, VoteRecord,
 } from './types'
 
 /** Etapa 4C1: as duas casas do Congresso. */
@@ -91,22 +94,26 @@ export function initialCongress(player: PartyId, seed: number): CongressState {
   const deputies: Deputy[] = []
   for (const p of PARTIES) {
     for (let i = 0; i < p.seats; i++) {
+      // Etapa 2: cada deputado é de uma das 3 alas, com posição e disciplina deslocadas pela ala.
+      const ala = alaByIndex(p.id, i, p.seats)
+      const a = ALAS[p.id][ala]
       deputies.push({
         party: p.id,
-        econ: Math.round(clamp(p.econ + gauss() * 14, -100, 100)),
-        costumes: Math.round(clamp(p.costumes + gauss() * 14, -100, 100)),
-        loyalty: Math.round(clamp(p.discipline + gauss() * 0.12, 0.05, 1) * 100) / 100,
+        econ: Math.round(clamp(p.econ + a.econ + gauss() * 14, -100, 100)),
+        costumes: Math.round(clamp(p.costumes + a.costumes + gauss() * 14, -100, 100)),
+        loyalty: Math.round(clamp(p.discipline + a.disc + gauss() * 0.12, 0.05, 1) * 100) / 100,
+        ala,
       })
     }
   }
   const parties = {} as Record<PartyId, PartyState>
   for (const p of PARTIES) {
     const r = Math.round(startingRelation(p.id, player))
-    parties[p.id] = { id: p.id, relation: r, baseRelation: r, favors: 0, lastTalk: -99 }
+    parties[p.id] = { id: p.id, relation: r, baseRelation: r, favors: 0, lastTalk: -99, alas: ALAS[p.id].map((x) => x.lealdade), leader: 0 }
   }
   return {
     parties, deputies, pending: [], laws: [], blockedUntil: {}, votes: [], promises: [], scandal: 0,
-    speaker: { relation: parties[CAMARA.speaker.party].relation, lastTalk: -99 }, toSanction: [], vetoes: [], bombLog: [],
+    speaker: { relation: parties[CAMARA.speaker.party].relation, lastTalk: -99, name: CAMARA.speaker.name, party: CAMARA.speaker.party, feminine: CAMARA.speaker.feminine }, mesa: null, mesaLog: [], toSanction: [], vetoes: [], bombLog: [],
     senate: initialSenate(parties, seed),
   }
 }
@@ -157,8 +164,11 @@ function partyOrientation(ps: PartyState, bill: BillDef, approval: number, pop: 
   return clamp(score * 2.2, -1, 1)
 }
 
-/** Pontuação de um deputado, sem o ruído. Acima de zero tende ao sim. */
-function deputyScore(d: Deputy, c: CongressState, bill: BillDef, approval: number, orientation: number, pop: number, boost = 0, frente = 0, gov: 1 | -1 = 1, W: Weights = CONGRESS, relBonus = 0): number {
+/**
+ * Pontuação de um deputado, sem o ruído. Acima de zero tende ao sim.
+ * Etapa 2: `lf` = lealdade da ala (peso da orientação), `am` = líder popular (peso da aprovação), `fm` = fisiologismo da ala.
+ */
+function deputyScore(d: Deputy, c: CongressState, bill: BillDef, approval: number, orientation: number, pop: number, boost = 0, frente = 0, gov: 1 | -1 = 1, W: Weights = CONGRESS, relBonus = 0, lf = 1, am = 1, fm = 1): number {
   const ps = c.parties[d.party]
   const p = PARTY_BY_ID[d.party]
   return (
@@ -166,10 +176,10 @@ function deputyScore(d: Deputy, c: CongressState, bill: BillDef, approval: numbe
     frente +
     affinity(d.econ, d.costumes, bill) * W.wAffinity * (1 - d.loyalty * 0.5) +
     gov * ((ps.relation + relBonus - 50) / 50) * W.wRelation * (0.5 + p.fisiologismo * 0.5) +
-    orientation * d.loyalty * W.wOrientation +
+    orientation * d.loyalty * lf * W.wOrientation +
     pop * W.wPopularity +
-    gov * ((approval - 50) / 50) * W.wApproval +
-    gov * ps.favors * p.fisiologismo * W.wFavors +
+    gov * ((approval - 50) / 50) * W.wApproval * am +
+    gov * ps.favors * p.fisiologismo * fm * W.wFavors +
     gov * W.lean -
     W.statusQuo -
     (bill.instrument === 'pec' ? W.pecResistance : 0)
@@ -200,21 +210,29 @@ export interface Forecast {
   byParty: { party: PartyId; yes: number; no: number; seats: number; orientation: number }[]
 }
 
-export type DealList = { party: PartyId; kind: DealKind }[]
+export type DealList = DealTerms[]
 
 /** Confiabilidade de um acordo (0 a 1): chance de a bancada entregar o que prometeu. */
-export function dealReliability(party: PartyId, kind: DealKind): number {
+export function dealReliability(party: PartyId, kind: DealKind, terms?: Pick<DealTerms, 'counter' | 'tipo'>): number {
   const p = PARTY_BY_ID[party]
   const r = DEALS.reliability[kind]
-  return Math.max(0.2, Math.min(0.97, r.base + p.discipline * r.discipline))
+  const extra = (terms?.tipo === 'bancada' ? DEALS.emendaTipo.bancada.reliability : terms?.tipo === 'individual' ? DEALS.emendaTipo.individual.reliability : 0) + (terms?.counter ? DEALS.counter.reliability : 0)
+  return Math.max(0.2, Math.min(0.97, r.base + p.discipline * r.discipline + extra))
+}
+
+/** Reforço de um acordo (Etapa 2: contraoferta e tipo de emenda mudam o tamanho). */
+export function dealBoost(d: DealTerms): number {
+  const tipo = d.kind === 'emendas' && d.tipo ? DEALS.emendaTipo[d.tipo].boost : 1
+  return DEALS.boost[d.kind] * tipo * (d.counter ? DEALS.counter.boost : 1)
 }
 
 /** Reforço que os acordos dão a cada partido, numa votação. `broken` = acordos que falharam no dia. */
 function boosts(deals: DealList, broken?: Set<PartyId>): Partial<Record<PartyId, number>> {
   const out: Partial<Record<PartyId, number>> = {}
   for (const d of deals) {
-    const k = broken ? (broken.has(d.party) ? DEALS.brokenShare : 1) : dealReliability(d.party, d.kind) + (1 - dealReliability(d.party, d.kind)) * DEALS.brokenShare
-    out[d.party] = (out[d.party] ?? 0) + DEALS.boost[d.kind] * k
+    const rel = dealReliability(d.party, d.kind, d)
+    const k = broken ? (broken.has(d.party) ? DEALS.brokenShare : 1) : rel + (1 - rel) * DEALS.brokenShare
+    out[d.party] = (out[d.party] ?? 0) + dealBoost(d) * k
   }
   return out
 }
@@ -245,7 +263,9 @@ function voteSetup(s: GameState, billId: BillId, deals: DealList, opts: VoteOpti
   const pb = s.congress.pending.find((p) => p.id === billId) ?? senatePending(s, billId)
   const original = opts.original ?? pb?.original ?? false
   const am = amendmentOf(s, billId)
-  const bill = effectiveBill(BILL_BY_ID[billId], am, original)
+  // Etapa 2: concessões no texto (acordadas nesta votação ou antes, na Câmara) deixam o texto mais fraco.
+  const conc = [...(pb?.conceded ?? []), ...(pb?.deals ?? []), ...deals].filter((d, i, arr) => d.kind === 'concessao' && arr.findIndex((x) => x.kind === 'concessao' && x.party === d.party && x.concession?.type === d.concession?.type) === i)
+  const bill = withConcessions(effectiveBill(BILL_BY_ID[billId], am, original), conc)
   const boost = boosts(deals, broken)
   for (const [pid, v] of Object.entries(govBoost(s)) as [PartyId, number][]) boost[pid] = (boost[pid] ?? 0) + v
   // O relator contrariado é da Câmara; no Senado o texto já chega fechado.
@@ -263,12 +283,13 @@ function forecastWith(s: GameState, bill: BillDef, boost: Partial<Record<PartyId
   const fb = house === 'camara' ? frenteBonuses(c.deputies, bill) : null
   const orient = {} as Record<PartyId, number>
   for (const p of PARTIES) orient[p.id] = partyOrientation(c.parties[p.id], bill, approval, pop, boost[p.id], gov, W, relBonus)
+  const mods = memberMods(c, members, house === 'senado')
   let yes = 0, no = 0, abstain = 0, variance = 0
   const byParty = new Map<PartyId, number>()
   const noByParty = new Map<PartyId, number>()
   const present = 1 - W.absentRate
   members.forEach((d, i) => {
-    const m = deputyScore(d, c, bill, approval, orient[d.party], pop, boost[d.party], fb ? fb[i] : 0, gov, W, relBonus)
+    const m = deputyScore(d, c, bill, approval, orient[d.party], pop, boost[d.party], fb ? fb[i] : 0, gov, W, relBonus, mods.lf[i], mods.am[i], mods.fm[i])
     const pYes = 1 - phi((W.abstainBand - m) / W.noise)
     const pNo = phi((-W.abstainBand - m) / W.noise)
     yes += pYes * present
@@ -323,6 +344,7 @@ function runWith(s: GameState, bill: BillDef, boost: Partial<Record<PartyId, num
     const u = Math.max(1e-9, rng.next())
     return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * rng.next())
   }
+  const mods = memberMods(c, members, house === 'senado')
   const turn = () => {
     // Um sorteio por partido (o humor da bancada no dia) e um por deputado.
     const partyMood = {} as Record<PartyId, number>
@@ -331,16 +353,27 @@ function runWith(s: GameState, bill: BillDef, boost: Partial<Record<PartyId, num
       partyMood[p.id] = gauss() * 0.06
       orient[p.id] = partyOrientation(c.parties[p.id], bill, approval, pop, boost[p.id], gov, W, relBonus)
     }
+    // Etapa 2: orientação de cada bancada e quem votou contra ela (traidores), por ala.
+    const sign = {} as Record<PartyId, 1 | -1 | 0>
+    for (const p of PARTIES) sign[p.id] = orientSign(orient[p.id])
+    const traitors = {} as Record<PartyId, number>
+    const byAla = {} as Record<PartyId, number[]>
     let yes = 0, no = 0, abstain = 0, absent = 0
-    const byParty = Object.fromEntries(PARTIES.map((p) => [p.id, { yes: 0, no: 0 }])) as VoteRecord['byParty']
+    const byParty = Object.fromEntries(PARTIES.map((p) => [p.id, { yes: 0, no: 0, abs: 0, out: 0 }])) as VoteRecord['byParty']
     members.forEach((d, i) => {
-      if (rng.next() < W.absentRate) { absent++; return }
-      const score = deputyScore(d, c, bill, approval, orient[d.party], pop, boost[d.party], fb ? fb[i] : 0, gov, W, relBonus) + partyMood[d.party] + gauss() * W.noise
-      if (score > W.abstainBand) { yes++; byParty[d.party].yes++ }
-      else if (score < -W.abstainBand) { no++; byParty[d.party].no++ }
-      else abstain++
+      if (rng.next() < W.absentRate) { absent++; byParty[d.party].out!++; return }
+      const score = deputyScore(d, c, bill, approval, orient[d.party], pop, boost[d.party], fb ? fb[i] : 0, gov, W, relBonus, mods.lf[i], mods.am[i], mods.fm[i]) + partyMood[d.party] + gauss() * W.noise
+      let vote: 1 | -1 | 0 = 0
+      if (score > W.abstainBand) { yes++; byParty[d.party].yes++; vote = 1 }
+      else if (score < -W.abstainBand) { no++; byParty[d.party].no++; vote = -1 }
+      else { abstain++; byParty[d.party].abs!++ }
+      if (sign[d.party] !== 0 && vote === -sign[d.party]) {
+        traitors[d.party] = (traitors[d.party] ?? 0) + 1
+        const arr = (byAla[d.party] ??= [0, 0, 0])
+        arr[d.ala ?? 0]++
+      }
     })
-    return { yes, no, abstain, absent, byParty }
+    return { yes, no, abstain, absent, byParty, orient: sign, traitors, byAla }
   }
   let r = turn()
   let approved: boolean
@@ -353,24 +386,24 @@ function runWith(s: GameState, bill: BillDef, boost: Partial<Record<PartyId, num
   return { ...r, approved }
 }
 
-/** Vota um projeto na Câmara, com sorteio. Não altera o estado. */
-export function runVote(s: GameState, billId: BillId, rng: Rng): VoteRecord & { broken: PartyId[] } {
+/** Vota um projeto na Câmara, com sorteio. Não altera o estado. `byAla` = traidores por ala (Etapa 2). */
+export function runVote(s: GameState, billId: BillId, rng: Rng): VoteRecord & { broken: PartyId[]; byAla: Partial<Record<PartyId, number[]>> } {
   // Cada acordo pode falhar no dia: a bancada não entrega tudo o que prometeu.
   const deals = dealsOf(s, billId)
-  const broken = new Set(deals.filter((d) => rng.next() > dealReliability(d.party, d.kind)).map((d) => d.party))
+  const broken = new Set(deals.filter((d) => rng.next() > dealReliability(d.party, d.kind, d)).map((d) => d.party))
   const { bill, boost } = voteSetup(s, billId, deals, {}, broken)
   const needed = neededVotes(bill)
-  const r = runWith(s, bill, boost, needed, 1, rng)
-  return { month: s.month, bill: billId, ...r, needed, broken: [...broken] }
+  const { byAla, ...r } = runWith(s, bill, boost, needed, 1, rng)
+  return { month: s.month, bill: billId, ...r, needed, broken: [...broken], byAla }
 }
 
 /** Etapa 4C1: vota no Senado um projeto que a Câmara aprovou (precisa estar em `senate.pending`). Não altera o estado. */
 export function runSenateVote(s: GameState, billId: BillId, rng: Rng): VoteRecord & { broken: PartyId[] } {
   const deals = senateDealsOf(s, billId)
-  const broken = new Set(deals.filter((d) => rng.next() > dealReliability(d.party, d.kind)).map((d) => d.party))
+  const broken = new Set(deals.filter((d) => rng.next() > dealReliability(d.party, d.kind, d)).map((d) => d.party))
   const { bill, boost } = voteSetup(s, billId, deals, {}, broken, 'senado')
   const needed = neededVotes(bill, 'senado')
-  const r = runWith(s, bill, boost, needed, 1, rng, 'senado')
+  const { byAla: _a, ...r } = runWith(s, bill, boost, needed, 1, rng, 'senado')
   return { month: s.month, bill: billId, ...r, needed, broken: [...broken], house: 'senado' }
 }
 
@@ -378,13 +411,13 @@ export function runSenateVote(s: GameState, billId: BillId, rng: Rng): VoteRecor
 export function runOverrideVote(s: GameState, bill: BillDef, rng: Rng): VoteRecord {
   const boost: Partial<Record<PartyId, number>> = {}
   for (const [pid, v] of Object.entries(govBoost(s)) as [PartyId, number][]) boost[pid] = -v
-  const r = runWith(s, bill, boost, CAMARA.veto.needed, -1, rng)
+  const { byAla: _a, ...r } = runWith(s, bill, boost, CAMARA.veto.needed, -1, rng)
   return { month: s.month, bill: bill.id, ...r, needed: CAMARA.veto.needed, kind: 'veto', title: `Veto: ${bill.name}` }
 }
 
 /** A Câmara votando uma pauta própria (pauta-bomba): quem está longe do governo vota mais a favor. */
 export function runChamberVote(s: GameState, bill: BillDef, rng: Rng): VoteRecord {
-  const r = runWith(s, bill, {}, 0, -1, rng)
+  const { byAla: _a, ...r } = runWith(s, bill, {}, 0, -1, rng)
   return { month: s.month, bill: bill.id, ...r, needed: 0 }
 }
 
@@ -454,7 +487,7 @@ export function driftRelations(c: CongressState, approval: number, player: Party
   }
   // O presidente da Câmara acompanha o humor do partido dele.
   const sp = c.speaker
-  sp.relation = clamp(sp.relation + (c.parties[CAMARA.speaker.party].relation - sp.relation) * CAMARA.speaker.drift, 0, 100)
+  sp.relation = clamp(sp.relation + (c.parties[speakerOf(c).party].relation - sp.relation) * CAMARA.speaker.drift, 0, 100)
   // A presidente do Senado também (com o bônus governista da casa).
   const sn = c.senate.president
   sn.relation = clamp(sn.relation + (c.parties[SENADO.president.party].relation + SENADO.relationBonus - sn.relation) * SENADO.president.drift, 0, 100)
@@ -475,6 +508,6 @@ export function forecastNomination(s: GameState, bill: BillDef, lean: Partial<Re
 }
 
 export function runNomination(s: GameState, bill: BillDef, lean: Partial<Record<PartyId, number>>, needed: number, rng: Rng): VoteRecord {
-  const r = runWith(s, bill, nominationBoost(s, lean), needed, 1, rng, 'senado')
+  const { byAla: _a, ...r } = runWith(s, bill, nominationBoost(s, lean), needed, 1, rng, 'senado')
   return { month: s.month, bill: bill.id, ...r, needed, house: 'senado', kind: 'sabatina', title: bill.name }
 }

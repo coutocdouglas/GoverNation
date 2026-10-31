@@ -6,6 +6,8 @@ import { initialSupremo } from './supremo'
 import { initialMinistries } from './ministerios'
 import { addBio } from './memory'
 import { initialReputation } from './reputacao'
+import { ensureAlas, openMesa } from './partidos'
+import { CAMARA } from './data/camara'
 import type { GameState } from './types'
 
 // O jogo instalado guarda o localStorage na pasta de dados do usuário no Windows
@@ -131,7 +133,21 @@ export function migrate(raw: unknown): GameState | null {
       s.statementLog ??= []
       s.saveVersion = 15
     }
-    if (s.saveVersion !== 15) return null
+    if (s.saveVersion === 15) {
+      // v0.17 → v0.18 (etapa 2): alas e líderes de partida (sem mexer na posição dos deputados), presidente da Câmara
+      // com nome guardado, eleição da Mesa aberta se o save estiver num mês de eleição, medidas sem nome.
+      ensureAlas(s.congress)
+      const sp = s.congress.speaker
+      sp.name ??= CAMARA.speaker.name
+      sp.party ??= CAMARA.speaker.party
+      sp.feminine ??= CAMARA.speaker.feminine
+      s.congress.mesa ??= null
+      s.congress.mesaLog ??= []
+      s.names ??= {}
+      s.saveVersion = 16
+      openMesa(s as GameState)
+    }
+    if (s.saveVersion !== 16) return null
     syncCustomBills(s as GameState)
     return s as GameState
   } catch {

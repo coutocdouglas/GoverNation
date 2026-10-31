@@ -42,6 +42,7 @@ Etapas com portão: a próxima só abre quando a anterior fecha; ideia fora de h
 
 0. ✅ A rodada (v0.15)
 1. ✅ 1A Causa e consequência (v0.16) · ✅ 1B O mês mais vivo (v0.17)
-⏭️ 2. Câmara e partidos · 3. Senado · 4. Supremo profundo · 5. Oposição, escândalos e CPI · 6. Vice e governo · 7. Estados e governadores · 8. Começo, sociedade e fim · 9. Arte final
+2. ✅ Câmara e partidos (v0.18)
+⏭️ 3. Senado · 4. Supremo profundo · 5. Oposição, escândalos e CPI · 6. Vice e governo · 7. Estados e governadores · 8. Começo, sociedade e fim · 9. Arte final
 
 Antes disso (já feito): retratos, memória do mundo, IA, Congresso 2.0, rival e promessas, Senado votando, Supremo (v0.4 a v0.14).

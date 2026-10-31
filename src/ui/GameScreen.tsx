@@ -9,7 +9,7 @@ import { PARTY_BY_ID } from '../game/data/parties'
 import { ACTION_BY_ID, ACTIONS, ACTIONS_PER_MONTH, blockedReason, effectMultiplier } from '../game/actions'
 import { GROUPS, GROUP_BY_ID } from '../game/data/groups'
 import { advanceMonth, isCopomMonth, monthLabel, TERM_MONTHS, type MonthPlan } from '../game/game'
-import { articulate, articulateBlockedReason, gavetaReason, peekRound, queueHouse, sendBlockedReason, sendMeasure, voteNow, voteNowBlockedReason, type FloorOptions } from '../game/rodada'
+import { articulate, articulateBlockedReason, gavetaReason, ministryNow, peekRound, queueHouse, sendBlockedReason, sendMeasure, voteNow, voteNowBlockedReason, type FloorOptions } from '../game/rodada'
 import { Art } from './Art'
 import type { MinistryChange } from '../game/camara'
 import { VoteAnimation } from './VoteAnimation'
@@ -19,6 +19,7 @@ import type { MeasureRef } from '../game/interpret'
 import { readText } from '../lib/aiActions'
 import { AiSettings } from './AiSettings'
 import { VoteSheet, type ProcedureKind } from './VoteSheet'
+import { MeasureSheet } from './MeasureSheet'
 import { aiReady } from '../lib/ai'
 import type { ActionId, Articulation, BillId, Cause, Deal, GameState, GroupId, IndicatorKey, PartyId, VoteRecord } from '../game/types'
 import { CongressView, ForecastRow, Scoreboard } from './CongressView'
@@ -88,6 +89,8 @@ export function GameScreen({ state, onChange, onExit }: {
   const [govTab, setGovTab] = useState<'camara' | 'senado' | 'supremo' | 'ministerios'>('camara')
   const [nominee, setNominee] = useState<string | null>(null)
   const [consult, setConsult] = useState<BillId | null>(null)
+  /** Etapa 2: nome que o presidente deu à medida na janela em etapas (vai junto quando votar ou assinar). */
+  const [titles, setTitles] = useState<Record<BillId, string>>({})
   setPresidentPortrait(playerPortraitId(state))
   const plan: MonthPlan = {
     bill: bill ?? undefined, articulations, eventChoice: eventChoice ?? undefined, eventResponse: eventResponse ?? undefined, deals,
@@ -115,8 +118,10 @@ export function GameScreen({ state, onChange, onExit }: {
   const toggleArticulation = (a: Articulation) => {
     const why = articulateBlockedReason(state, a)
     if (why) { toast(`✋ ${why}`); return }
-    onChange(articulate(state, a))
-    toast(a.kind === 'presidente' ? '🤝 Conversa com o presidente da Câmara feita.' : a.kind === 'senado' ? '🤝 Conversa com a presidente do Senado feita.' : `🤝 ${a.kind === 'conversar' ? 'Conversa com' : 'Emendas para'} o ${PARTY_BY_ID[a.party].sigla}: vale já.`)
+    const next = articulate(state, a)
+    onChange(next)
+    const done = peekRound(next)?.articulations.at(-1)
+    toast(a.kind === 'presidente' ? '🤝 Conversa com o presidente da Câmara feita.' : a.kind === 'senado' ? '🤝 Conversa com a presidente do Senado feita.' : a.kind === 'conversar' ? `${done?.ok ? '🤝' : '😬'} ${peekRound(next)?.taken.at(-1) ?? 'Conversa feita.'}` : `🤝 Emendas para o ${PARTY_BY_ID[a.party].sigla}: vale já.`)
   }
   const eventRef = useRef<HTMLDivElement>(null)
   const medidaRef = useRef<HTMLElement>(null)
@@ -140,9 +145,10 @@ export function GameScreen({ state, onChange, onExit }: {
   }
   const gavetaOf = (id: BillId) => gavetaReason(state, id, queueHouse(state, id) ?? 'camara', { urgent: proc.urgent.includes(id) || undefined })
   /** Votar agora: manda a medida do mês (ou a resposta ao fato) ou pauta um projeto da fila. */
-  const runNow = (id: BillId, as: 'measure' | 'response' | 'queue' = roleOf(id)) => {
+  const runNow = (id: BillId, as: 'measure' | 'response' | 'queue' = roleOf(id), title?: string) => {
     const opts: FloorOptions = {
-      deals: deals.filter((d) => d.bill === id).map(({ party, kind, house }) => ({ party, kind, house })),
+      title: as === 'measure' ? (title ?? titles[id]) : undefined,
+      deals: deals.filter((d) => d.bill === id).map(({ bill: _b, ...terms }) => terms),
       urgent: proc.urgent.includes(id) || undefined,
       original: proc.original.includes(id) || undefined,
       symbolic: proc.symbolic.includes(id) || undefined,
@@ -198,6 +204,7 @@ export function GameScreen({ state, onChange, onExit }: {
       setMinistry(null)
       setNominee(null)
       setConsult(null)
+      setTitles({})
       setTab('painel')
       setStep(1)
       setTurning(false)
@@ -267,7 +274,7 @@ export function GameScreen({ state, onChange, onExit }: {
           onDeal={(d, add) => {
             const same = (x: Deal) => x.bill === d.bill && x.party === d.party && (x.house ?? 'camara') === (d.house ?? 'camara')
             setDeals((ds) => (add ? [...ds.filter((x) => !same(x)), d] : ds.filter((x) => !same(x))))
-            if (add) toast(`🤝 Acordo com o ${PARTY_BY_ID[d.party].sigla}${d.house === 'senado' ? ' no Senado' : ''}: vale ao encerrar o mês.`)
+            if (add) toast(`🤝 Acordo com o ${PARTY_BY_ID[d.party].sigla}${d.house === 'senado' ? ' no Senado' : ''}: vale na votação.`)
           }}
           onClose={() => setVoteSheet(null)}
           plan={plan}
@@ -275,6 +282,7 @@ export function GameScreen({ state, onChange, onExit }: {
           onVoteNow={(id) => runNow(id)}
           voteBlocked={voteBlock(voteSheet)}
           gaveta={gavetaOf(voteSheet)}
+          onState={onChange}
         />
       )}
       {post.length > 0 && (() => {
@@ -362,7 +370,11 @@ export function GameScreen({ state, onChange, onExit }: {
           ) : govTab === 'senado' ? (
             <SenadoView state={state} articulations={peekRound(state)?.articulations ?? []} onToggle={toggleArticulation} onNegotiate={setVoteSheet} deals={deals} plan={plan} />
           ) : govTab === 'ministerios' ? (
-            <MinistriosView state={state} change={ministry} onChange={setMinistry} />
+            <MinistriosView state={state} change={ministry} done={!!peekRound(state)?.ministryDone} onChange={(ch) => {
+              // Etapa 2: ceder, trocar ou retomar vale na hora.
+              if (!ch) { setMinistry(null); return }
+              try { onChange(ministryNow(state, ch)); toast(ch.party ? `🏢 Pasta ${state.cabinet[ch.area] ? 'trocada' : 'cedida'} ao ${PARTY_BY_ID[ch.party].sigla}: vale já.` : '🏢 Pasta retomada: vale já.') } catch (e) { toast(`✋ ${(e as Error).message}`) }
+            }} />
           ) : (
           <CongressView
             state={state}
@@ -376,6 +388,8 @@ export function GameScreen({ state, onChange, onExit }: {
             onReaction={setReactionView}
             articulations={peekRound(state)?.articulations ?? []}
             onToggle={toggleArticulation}
+            onState={onChange}
+            onToast={toast}
           />
           )}
           </>
@@ -527,11 +541,12 @@ export function GameScreen({ state, onChange, onExit }: {
                 selected={selected}
                 bill={bill}
                 onAddBill={addBill}
-                onSend={(id) => {
+                onSend={(id, title) => {
                   if (bill && bill !== id) dropDeals(bill)
                   const ins = BILL_BY_ID[id].instrument
+                  if (title) setTitles((t) => ({ ...t, [id]: title }))
                   // Etapa 0: decreto e MP valem na hora; projeto abre a janela de votação (votar agora).
-                  if (ins === 'decreto' || ins === 'mp') { runNow(id, 'measure'); return }
+                  if (ins === 'decreto' || ins === 'mp') { runNow(id, 'measure', title); return }
                   setBill(id)
                   setVoteSheet(id)
                 }}
@@ -756,10 +771,12 @@ function MeasureBox({ state, selected, bill, onSign, onSend, onAddBill, consult,
   selected: ActionId[]
   bill: BillId | null
   onSign: (id: ActionId) => void
-  onSend: (id: BillId) => void
+  onSend: (id: BillId, title?: string) => void
 }) {
   const [text, setText] = useState('')
-  const [result, setResult] = useState<{ matches: MeasureRef[]; speech: string; fallback: string | null; notes: string[] } | null>(null)
+  const [result, setResult] = useState<{ matches: MeasureRef[]; speech: string; fallback: string | null; notes: string[]; constraints: string[] } | null>(null)
+  /** Etapa 2: janela da medida em etapas aberta para esta medida. */
+  const [sheet, setSheet] = useState<BillId | null>(null)
   const [busy, setBusy] = useState(false)
   const read = async () => {
     if (!text.trim() || busy) return
@@ -769,7 +786,7 @@ function MeasureBox({ state, selected, bill, onSign, onSend, onAddBill, consult,
     const matches = r.matches.slice(0, r.source === 'ia' ? 3 : 2)
     // Etapa 3C: nada do catálogo servia e a IA redigiu uma medida nova; ela entra no catálogo do mandato.
     if (r.draft) matches.push({ kind: 'bill', id: onAddBill(r.draft) })
-    setResult({ matches, speech: r.speech, fallback: r.fallback, notes: r.notes })
+    setResult({ matches, speech: r.speech, fallback: r.fallback, notes: r.notes, constraints: r.constraints })
   }
   return (
     <>
@@ -788,6 +805,7 @@ function MeasureBox({ state, selected, bill, onSign, onSend, onAddBill, consult,
       <div className="pn-row">
         <button className="pn-btn" disabled={!text.trim() || busy} onClick={read}>{busy ? '⏳ Lendo…' : '📋 Pedir leitura do gabinete'}</button>
       </div>
+      {sheet && <MeasureSheet state={state} id={sheet} request={text} constraints={result?.constraints} onClose={() => setSheet(null)} onConfirm={(id, title) => { setSheet(null); onSend(id, title) }} />}
       {result && (
         <div className="pn-preview">
           {result.fallback && <p className="pn-hint">⚠️ {result.fallback} Lido por palavras-chave.</p>}
@@ -809,7 +827,7 @@ function MeasureBox({ state, selected, bill, onSign, onSend, onAddBill, consult,
                   <DecreeReading key={m.id} state={state} id={m.id} first={i === 0} selected={selected} onSign={onSign} />
                 ) : (
                   <div key={m.id}>
-                    <BillReading state={state} id={m.id} first={i === 0} chosen={bill} onSend={onSend} consult={consult} onConsult={setConsult} />
+                    <BillReading state={state} id={m.id} first={i === 0} chosen={bill} onSend={setSheet} consult={consult} onConsult={setConsult} />
                     {BILL_BY_ID[m.id].custom && <NewBillNotes id={m.id} notes={result.notes} />}
                   </div>
                 ),

@@ -9,6 +9,10 @@ import { FrentesCard, SanctionCard, SpeakerCard } from './CamaraPanels'
 import { ccjApplies, isFrozen } from '../game/supremo'
 import { Portrait } from './Portrait'
 import { num } from './format'
+import { AlasList, BancadasChart, MesaCard, OwnLeaderPicker, TalkButtons } from './PartidosPanels'
+import { leaderOf } from '../game/partidos'
+import { urgencyNow, urgencyNowBlockedReason } from '../game/rodada'
+import { LEADER_STYLE } from '../game/data/alas'
 
 const relationLabel = (r: number) =>
   r >= 70 ? { t: 'Aliado', c: 'up' } : r >= 50 ? { t: 'Simpático', c: 'up' } : r >= 35 ? { t: 'Neutro', c: 'warn' } : { t: 'Oposição', c: 'dn' }
@@ -41,7 +45,7 @@ function useHemicycle() {
   }, [])
 }
 
-export function CongressView({ state, articulations, onToggle, bill, extraBill, deals, onNegotiate, plan, sanctions, onSanction, onReaction }: {
+export function CongressView({ state, articulations, onToggle, bill, extraBill, deals, onNegotiate, plan, sanctions, onSanction, onReaction, onState, onToast }: {
   state: GameState
   articulations: Articulation[]
   onToggle: (a: Articulation) => void
@@ -53,8 +57,12 @@ export function CongressView({ state, articulations, onToggle, bill, extraBill, 
   sanctions?: Record<string, 'sancionar' | 'vetar'>
   onSanction?: (id: string, d: 'sancionar' | 'vetar') => void
   onReaction?: (id: BillId) => void
+  /** Etapa 2: ações que valem na hora (líder, Mesa, urgência). */
+  onState?: (s: GameState) => void
+  onToast?: (t: string) => void
 }) {
   const seats = useHemicycle()
+  const toast = onToast ?? (() => {})
   const c = state.congress
   const left = CONGRESS.articulationsPerMonth - articulations.length
   const watching: BillId[] = [...new Set([...(bill ? [bill] : []), ...(extraBill ? [extraBill] : []), ...c.pending.map((p) => p.id), ...c.senate.pending.map((p) => p.id)])].filter((id) => BILL_BY_ID[id].instrument !== 'decreto')
@@ -90,13 +98,21 @@ export function CongressView({ state, articulations, onToggle, bill, extraBill, 
 
       <SpeakerCard state={state} articulations={articulations} onToggle={onToggle} />
 
+      {onState && <MesaCard state={state} onState={onState} onToast={toast} />}
+
       {watching.length > 0 && (
         <section className="pn-card pn-card--gold">
           <h3>🗳️ Na pauta <span className="pn-badge">placar previsto hoje</span></h3>
           {watching.map((id) => (
             <div key={id}>
               <ForecastRow state={state} id={id} isNew={(id === bill || id === extraBill) && !c.pending.some((p) => p.id === id) && !senatePending(state, id)} deals={deals?.filter((d) => d.bill === id)} plan={plan} />
-              {onNegotiate && <div className="pn-row"><button className="pn-btn pn-btn--ghost" onClick={() => onNegotiate(id)}>🗳️ Negociar e pautar agora</button></div>}
+              <div className="pn-row">
+                {onNegotiate && <button className="pn-btn pn-btn--ghost" onClick={() => onNegotiate(id)}>🗳️ Negociar e pautar agora</button>}
+                {onState && c.pending.some((p) => p.id === id) && !c.pending.find((p) => p.id === id)!.urgent && (BILL_BY_ID[id].instrument === 'lei' || BILL_BY_ID[id].instrument === 'complementar') && (() => {
+                  const why = urgencyNowBlockedReason(state, id)
+                  return <button className="pn-btn pn-btn--ghost pn-btn--small" disabled={!!why} title={why ?? 'Pula a comissão e a gaveta da Câmara quando for pautado. Custa um pouco da relação com o presidente da Câmara.'} onClick={() => { onState(urgencyNow(state, id)); toast(`⚡ Urgência pedida para “${BILL_BY_ID[id].name}”: vale já.`) }}>⚡ Pedir urgência (vale já)</button>
+                })()}
+              </div>
             </div>
           ))}
           <p className="pn-hint" style={{ marginTop: 10 }}>
@@ -108,9 +124,11 @@ export function CongressView({ state, articulations, onToggle, bill, extraBill, 
       <section className="pn-card">
         <h3>🤝 Articulação política <span className="pn-badge">{left} de {CONGRESS.articulationsPerMonth} ações restantes este mês</span></h3>
         <p className="pn-hint">
-          Conversar sobe a relação com o partido (uma vez a cada {CONGRESS.talkCooldown} meses). Liberar emendas compra votos
-          dos partidos fisiológicos por um tempo e custa cerca de R$ {num(emendasBillions, 1)} bi. Tudo vale ao encerrar o mês.
+          Conversar tem 4 jeitos, cada um com a chance de dar certo mostrada no botão (e o ganho ou a perda de relação se der certo ou errado).
+          Uma conversa por partido a cada {CONGRESS.talkCooldown} meses. Liberar emendas compra votos dos partidos fisiológicos por um tempo e custa cerca de R$ {num(emendasBillions, 1)} bi.
+          Tudo vale na hora. Cada partido tem 3 alas: ala pouco leal vota pela própria cabeça.
         </p>
+        {onState && <OwnLeaderPicker state={state} onState={onState} onToast={toast} />}
         <div className="pn-parties">
           {order.map((p) => {
             const ps = c.parties[p.id]
@@ -119,11 +137,11 @@ export function CongressView({ state, articulations, onToggle, bill, extraBill, 
             return (
               <div key={p.id} className={`pn-party ${own ? 'own' : ''}`} style={{ borderLeftColor: p.color }}>
                 <div className="pn-party__head">
-                  <Portrait name={p.leader.name} feminine={p.leader.feminine} color={p.color} size={52} title={`${p.leader.name}, líder do ${p.sigla}`} />
+                  <Portrait name={leaderOf(state, p.id).name} feminine={leaderOf(state, p.id).feminine} color={p.color} size={52} title={`${leaderOf(state, p.id).name}, líder do ${p.sigla}`} />
                   <b>{p.sigla}</b> <span className="pn-hint" style={{ margin: 0 }}>{p.name}</span>
                   <span className="pn-party__seats">{p.seats} 🪑</span>
                 </div>
-                <div className="pn-hint" style={{ margin: '2px 0 6px' }}>👤 Líder: <b>{p.leader.name}</b>. {own ? '⭐ Seu partido. ' : ''}{p.blurb}</div>
+                <div className="pn-hint" style={{ margin: '2px 0 6px' }}>👤 Líder: <b>{leaderOf(state, p.id).name}</b> ({LEADER_STYLE[leaderOf(state, p.id).style].icon} {LEADER_STYLE[leaderOf(state, p.id).style].label.toLowerCase()}). {own ? '⭐ Seu partido. ' : ''}{p.blurb}</div>
                 <div className="pn-party__stats">
                   <span>Relação <b className={rel.c}>{Math.round(ps.relation)} · {rel.t}</b></span>
                   <span>Disciplina <b>{Math.round(p.discipline * 100)}%</b></span>
@@ -132,11 +150,17 @@ export function CongressView({ state, articulations, onToggle, bill, extraBill, 
                 </div>
                 <span className="pn-meter"><span style={{ width: `${ps.relation}%`, background: p.color }} /></span>
                 <Axis econ={p.econ} costumes={p.costumes} />
+                <details className="pn-alas-box">
+                  <summary>🧩 As 3 alas do {p.sigla}</summary>
+                  <AlasList state={state} p={p} />
+                </details>
                 {!own && (
-                  <div className="pn-row" style={{ marginTop: 8 }}>
-                    <ArtButton state={state} a={{ kind: 'conversar', party: p.id }} articulations={articulations} onToggle={onToggle} label="🗣️ Conversar" />
-                    <ArtButton state={state} a={{ kind: 'emendas', party: p.id }} articulations={articulations} onToggle={onToggle} label="💰 Liberar emendas" />
-                  </div>
+                  <>
+                    <TalkButtons state={state} party={p.id} articulations={articulations} onToggle={onToggle} />
+                    <div className="pn-row" style={{ marginTop: 6 }}>
+                      <ArtButton state={state} a={{ kind: 'emendas', party: p.id }} articulations={articulations} onToggle={onToggle} label="💰 Liberar emendas" />
+                    </div>
+                  </>
                 )}
               </div>
             )
@@ -153,8 +177,8 @@ export function CongressView({ state, articulations, onToggle, bill, extraBill, 
             <div className="pn-laws">
               ✅ Leis e decretos em vigor:{' '}
               {c.laws.map((id) => BILL_BY_ID[id].instrument === 'decreto' || !onReaction
-                ? <span key={id} className="pn-law">{BILL_BY_ID[id].name}</span>
-                : <button key={id} className="pn-law pn-law--btn" title="Ver como a sociedade reagiu" onClick={() => onReaction(id)}>📣 {BILL_BY_ID[id].name}</button>)}
+                ? <span key={id} className="pn-law">{state.names?.[id] ? `“${state.names[id]}” · ` : ''}{BILL_BY_ID[id].name}</span>
+                : <button key={id} className="pn-law pn-law--btn" title="Ver como a sociedade reagiu" onClick={() => onReaction(id)}>📣 {state.names?.[id] ? `“${state.names[id]}” · ` : ''}{BILL_BY_ID[id].name}</button>)}
             </div>
           )}
           {[...c.votes].reverse().map((v, i) => <Scoreboard key={i} v={v} compact />)}
@@ -245,7 +269,8 @@ export function Scoreboard({ v, compact }: { v: VoteRecord; compact?: boolean })
         <span className="pn-hint" style={{ margin: 0 }}>{monthLabel(v.month)} · {v.house === 'senado' ? 'Senado · ' : 'Câmara · '}{veto ? 'Sessão do veto' : v.kind === 'sabatina' ? 'Sabatina para o Supremo' : INSTRUMENTS[b?.instrument ?? 'lei'].label}</span>
       </div>
       <VoteBar yes={v.yes} no={v.no} target={v.needed || Math.ceil((v.yes + v.no) / 2) + 1} needLabel={v.needed ? `precisa ${v.needed}` : 'maioria'} total={houseSeats(v.house ?? 'camara')} />
-      {!compact && v.kind !== 'simbolica' && (
+      {!compact && v.kind !== 'simbolica' && v.orient && <BancadasChart v={v} />}
+      {!compact && v.kind !== 'simbolica' && !v.orient && (
         <div className="pn-score__parties">
           {parties.map((p) => {
             const r = v.byParty[p.id]

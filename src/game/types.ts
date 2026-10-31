@@ -139,7 +139,7 @@ export interface Meanwhile {
 import type { ReputationState } from './reputacao'
 
 export interface GameState {
-  saveVersion: 15
+  saveVersion: 16
   /** Mês atual, de 0 (janeiro do 1º ano) a 47. Em 48 o mandato acabou. */
   month: number
   presidentName: string
@@ -198,6 +198,8 @@ export interface GameState {
   reputation: ReputationState
   /** Etapa 1B (v0.17): posts da assessoria e falas ao país dos últimos meses (para a repetição e o intervalo). */
   statementLog: { id: string; month: number }[]
+  /** Etapa 2 (v0.18): nomes que o presidente deu às medidas (viram manchete e ficam na Ficha). */
+  names: Partial<Record<BillId, string>>
 }
 
 /** Etapa 0: efeitos acumulados na rodada, aplicados no fechamento do mês. */
@@ -219,6 +221,11 @@ export interface RoundBuffer {
   pautou: { camara?: BillId; senado?: BillId }
   /** Articulações já feitas na rodada. */
   articulations: Articulation[]
+  /** Etapa 2: contraofertas tentadas na rodada (a resposta fica valendo até o fim do mês). */
+  counters?: { party: PartyId; bill: BillId; house?: 'senado'; ok: boolean }[]
+  /** Etapa 2: urgência pedida e ministério mudado nesta rodada (um de cada). */
+  urgencyAsked?: boolean
+  ministryDone?: boolean
   /** O presidente da Câmara e o do Senado já seguraram um projeto nesta rodada. */
   speakerHeld?: boolean
   senateHeld?: boolean
@@ -369,6 +376,8 @@ export interface Deputy {
   costumes: number
   /** 0 a 1: quanto segue a orientação do partido. */
   loyalty: number
+  /** Etapa 2: ala do partido (0, 1 ou 2; data/alas.ts). Senadores não têm ala. */
+  ala?: number
 }
 
 export interface PartyState {
@@ -381,6 +390,10 @@ export interface PartyState {
   favors: number
   /** Último mês em que o presidente conversou com o partido. */
   lastTalk: number
+  /** Etapa 2: lealdade de cada uma das 3 alas ao partido (0 a 100). */
+  alas?: number[]
+  /** Etapa 2: ala do líder atual (0 = o líder de partida). */
+  leader?: number
 }
 
 export interface PendingBill {
@@ -388,7 +401,7 @@ export interface PendingBill {
   /** Mês em que foi enviado. */
   sentMonth: number
   /** Acordos fechados com partidos para esta votação (etapa 4). */
-  deals?: { party: PartyId; kind: DealKind }[]
+  deals?: DealTerms[]
   /** Etapa 4B: onde o projeto está. Ausente = plenário (saves antigos). */
   stage?: 'comissao' | 'plenario'
   /** Parecer do relator (etapa 4B). */
@@ -400,11 +413,13 @@ export interface PendingBill {
   /** Meses que ficou parado na gaveta (comissão ou presidente da Câmara; no Senado, a presidente do Senado). */
   holds?: number
   /** Etapa 4C1: acordos fechados com lideranças do Senado enquanto o projeto ainda está na Câmara. */
-  senateDeals?: { party: PartyId; kind: DealKind }[]
+  senateDeals?: DealTerms[]
   /** Etapa 4C1 (só no Senado): como a Câmara aprovou o texto. */
   camara?: { yes: number; no: number; symbolic?: boolean; month: number }
   /** Etapa 4C3: passou pela CCJ (aprovado como veio ou com emenda de adequação, que enfraquece os efeitos). */
   ccj?: 'aprovado' | 'adequado'
+  /** Etapa 2 (só no Senado): concessões no texto acordadas na Câmara (o texto chega mais fraco). */
+  conceded?: DealTerms[]
 }
 
 /** Etapa 4C1: o Senado. Os partidos são os mesmos da Câmara (a relação com o governo é a mesma, mais um bônus). */
@@ -453,13 +468,30 @@ export interface VetoItem {
   amendment?: Amendment
 }
 
-/** Preço que um partido cobra pelo voto (etapa 4). */
-export type DealKind = 'emendas' | 'pauta' | 'cargos'
+/** Preço que um partido cobra pelo voto (etapa 4). Etapa 2: concessão = mudança no texto. */
+export type DealKind = 'emendas' | 'pauta' | 'cargos' | 'concessao'
 
-/** Acordo fechado no mês: o partido vota com o governo neste projeto em troca do preço. */
-export interface Deal {
+/** Etapa 2: destino das emendas (agrada o grupo ligado a ele). */
+export type EmendaDestino = 'saude' | 'estradas' | 'saneamento' | 'seguranca'
+
+/** Etapa 2: tipo de concessão no texto (data/negociacao.ts). */
+export type ConcessionType = 'validade' | 'trecho' | 'tcu' | 'transicao' | 'piloto' | 'contrapartida'
+
+/** Termos de um acordo: a moeda e, na Etapa 2, os detalhes. */
+export interface DealTerms {
   party: PartyId
   kind: DealKind
+  /** Contraoferta aceita: preço menor, apoio menor. */
+  counter?: boolean
+  /** Emendas: individual (mais barata, menos votos) ou de bancada. */
+  tipo?: 'individual' | 'bancada'
+  destino?: EmendaDestino
+  /** Concessão no texto: o tipo e as frases (escritas pela IA ou da lista pronta). */
+  concession?: { type: ConcessionType; ask: string; change: string }
+}
+
+/** Acordo fechado no mês: o partido vota com o governo neste projeto em troca do preço. */
+export interface Deal extends DealTerms {
   bill: BillId
   /** Etapa 4C1: acordo com a liderança no Senado (sem isso, é na Câmara). */
   house?: 'senado'
@@ -471,6 +503,8 @@ export interface Promise_ {
   bill: BillId
   made: number
   due: number
+  /** Etapa 2: promessa de espaço no governo (conversa "oferecer espaço"): cumpre cedendo ministério ou cargos ao partido. */
+  kind?: 'espaco'
 }
 
 export interface VoteRecord {
@@ -483,8 +517,11 @@ export interface VoteRecord {
   /** Votos a favor necessários (ou maioria dos presentes, quando 0). */
   needed: number
   approved: boolean
-  /** Como cada partido votou, em maioria. */
-  byParty: Record<PartyId, { yes: number; no: number }>
+  /** Como cada partido votou. Etapa 2: abstenções e ausentes por partido. */
+  byParty: Record<PartyId, { yes: number; no: number; abs?: number; out?: number }>
+  /** Etapa 2: orientação de cada bancada (1 sim, -1 não, 0 liberou) e quantos votaram contra ela. */
+  orient?: Partial<Record<PartyId, 1 | -1 | 0>>
+  traitors?: Partial<Record<PartyId, number>>
   /** Etapa 4B: votação simbólica (sem painel) ou sessão para derrubar um veto. */
   kind?: 'simbolica' | 'veto' | 'sabatina'
   /** Título quando não é o nome da medida (ex.: "Veto: ..."). */
@@ -496,7 +533,36 @@ export interface VoteRecord {
 }
 
 /** 'presidente' = conversar com o presidente da Câmara; 'senado' = com a presidente do Senado (party é o partido de quem preside). */
-export type Articulation = { kind: 'conversar' | 'emendas' | 'presidente' | 'senado'; party: PartyId }
+export type Articulation = {
+  kind: 'conversar' | 'emendas' | 'presidente' | 'senado'
+  party: PartyId
+  /** Etapa 2: tipo de conversa (sem isso, "pedir apoio"). */
+  tipo?: TalkKind
+  /** Etapa 2: deu certo? (preenchido ao conversar) */
+  ok?: boolean
+}
+
+/** Etapa 2: tipos de conversa com um partido. */
+export type TalkKind = 'apoio' | 'base' | 'espaco' | 'endurecer'
+
+/** Etapa 2: eleição da Mesa da Câmara aberta (decide-se no mês `at`; vota no fechamento). */
+export interface MesaState {
+  at: number
+  candidates: { name: string; party: PartyId; feminine: boolean; incumbent?: boolean; own?: boolean }[]
+  /** Apoio do governo: candidato e moeda. */
+  support?: { name: string; push: 'apoio' | 'emendas' | 'cargos' }
+}
+
+/** Etapa 2: resultado de uma eleição da Mesa. */
+export interface MesaResult {
+  month: number
+  term: number
+  rounds: { name: string; party: PartyId; votes: number }[][]
+  winner: string
+  support?: MesaState['support']
+  /** Deputados que votaram em outro candidato que não o do partido (voto secreto). */
+  traitors: number
+}
 
 export interface CongressState {
   parties: Record<PartyId, PartyState>
@@ -512,7 +578,10 @@ export interface CongressState {
   /** Risco de escândalo acumulado por cargos e emendas, 0 a 100. */
   scandal: number
   /** Etapa 4B: relação com o presidente da Câmara (0 a 100) e última conversa. */
-  speaker: { relation: number; lastTalk: number }
+  speaker: { relation: number; lastTalk: number; name?: string; party?: PartyId; feminine?: boolean }
+  /** Etapa 2: eleição da Mesa aberta e as já feitas. */
+  mesa?: MesaState | null
+  mesaLog?: MesaResult[]
   /** Aprovados esperando sanção ou veto. */
   toSanction: SanctionItem[]
   /** Vetos esperando a Câmara. */

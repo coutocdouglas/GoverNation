@@ -695,7 +695,7 @@ Exposição a escândalo visível de 0 a 100 (item 20), CPIs (35), vice-presiden
 |---|---|---|
 | **0 · A rodada** (v0.15) | Medida do mês e resposta ao fato votam na hora (Câmara → Senado), gavetas avisadas antes, CCJ na hora; "Pautar agora" para 1 projeto da fila por casa; MP caduca em 4 meses sem votação; Supremo julga no fechamento da mesma rodada; buffer da rodada no estado; fases visíveis; sistema de ilustrações placeholder | 4D (votar na hora) |
 | **1 · Causa e consequência** | Ficha de governo com marcas de reputação (medida enviada já marca), desdobramentos em 3 camadas, anti-repetição, capítulos da presidência com IA, exposição a escândalo visível, três caminhos para a crise (post, rua), agenda limpa, enquanto você decidia, fato bom com botão de agir | 4E, 4F, novo |
-| **2 · Câmara e partidos** | Líder do seu partido indicável, eleições internas e da Mesa, alas, conversa por tipos, emendas detalhadas, contraoferta, concessões no texto, traidores, janela da medida em etapas com nota de freios e contrapesos, nome da medida | 4D, 4E |
+| ✅ **2 · Câmara e partidos** (v0.18) | Líder do seu partido indicável, eleições internas e da Mesa, alas, conversa por tipos, emendas detalhadas, contraoferta, concessões no texto, traidores, janela da medida em etapas com nota de freios e contrapesos, nome da medida | 4D, 4E |
 | **3 · Senado** | Página própria, líderes de bancada, indecisos com preço, comissões do Senado, 27 estados com bancadas estaduais, emendas por estado | 4D, 5B (parte) |
 | **4 · Supremo profundo** | Sorteio do relator, validação que protege, crise pós-derrubada ampliada, reputação jurídica, pedido de vista | 4E, novo |
 | **5 · Oposição, escândalos e CPI** | Escândalos revelados, CPI, inteligência | levantamento |
@@ -747,9 +747,51 @@ Exposição a escândalo visível de 0 a 100 (item 20), CPIs (35), vice-presiden
 
 **Caixa de ideias desta etapa:** "precisa de você" (alertas) e cenas de transição ficam para a Etapa 8; post com texto livre escrito pela IA fica para a Etapa 9 (polimento).
 
+### 27.5 Etapa 2: Câmara e partidos (v0.18, aprovada em 31/10/2026)
+
+**Respostas do Douglas (31/10):** (1) **uma versão só** (v0.18), sem dividir em 2A e 2B; os blocos abaixo continuam como ordem de trabalho; (2) na eleição da Mesa o presidente pode **apoiar um candidato e também lançar um candidato próprio** do seu partido; (3) as **concessões no texto são escritas pela IA** (o motor confere os números); sem chave, cai numa lista pronta de tipos; (4) **sempre 3 alas** por partido.
+
+**Ponto de partida (v0.17):** 9 partidos com disciplina e fisiologismo; cada deputado tem posição própria e lealdade; o líder de cada partido só tem nome; a negociação oferece um preço fixo por partido (emendas, pauta ou cargos) que se aceita ou não; o placar mostra sim e não por partido; a janela de votação é uma tela só; o presidente da Câmara (Dagoberto Leme, UCD) é fixo.
+
+**Ordem de trabalho** (tudo sai na v0.18):
+
+**Bloco A · Os partidos por dentro**
+1. **Alas.** Cada partido ganha 3 alas (ex.: na UCD, "cúpula", "baixo clero" e "bancada do agro"), cada uma com tamanho, posição (desvio de econ/costumes), fisiologismo e **lealdade ao partido** (0 a 100). Cada deputado pertence a uma ala. A orientação do partido chega à ala pesada pela lealdade: ala pouco leal vota pela própria cabeça. Dados em `data/alas.ts`. Continuam 9 partidos (a referência tem 22; as alas dão a variedade sem poluir).
+2. **Traidores no placar.** `VoteRecord` passa a guardar a orientação de cada bancada e quantos votaram contra ela. Placar com abstenções, ausentes e "N traíram a própria liderança"; gráfico "como cada bancada votou" (sim, não, abstenção, ausente, traidores); "piso" (mínimo de votos sobre os presentes) visível nas votações por maioria simples. Traição repetida vira linha na biografia do partido.
+3. **Líder do seu partido indicável.** Na posse e depois a cada fevereiro, o presidente escolhe entre 3 deputados do próprio partido (fictícios, com retrato), cada um com um estilo: **articulador** (conversas rendem mais), **disciplinador** (bancada trai menos), **popular** (bancada vai melhor com a aprovação alta). Trocar no meio do ano custa relação com a ala do líder derrubado.
+4. **Eleições internas.** Todo fevereiro os outros partidos podem trocar de líder (chance maior se a relação com o governo mudou muito). Líder novo puxa a relação para o lado da ala que o elegeu. Vira manchete e "enquanto você decidia".
+5. **Eleição da Mesa.** Fevereiro de 2027 (mês 2) e de 2029: eleição do presidente da Câmara com 2 ou 3 candidatos fictícios (o atual entre eles). O jogador pode **apoiar** um candidato (custa emendas, cargos ou relação com quem perdeu), **lançar um candidato próprio** do seu partido (mais caro e arriscado: o centrão resiste) ou ficar neutro. Votação animada, secreta (traição maior). O eleito vira o dono da pauta, com relação inicial que depende do apoio.
+
+**Bloco B · A mesa de negociação e a janela da medida**
+6. **Conversa por tipos, com chance.** "Conversar" vira 4 tipos, cada um com a chance de dar certo mostrada antes: **pedir apoio** (depende da relação), **apelar à base** (depende da aprovação no grupo do partido), **oferecer espaço futuro** (promessa; cobrada depois) e **endurecer** (cortar emendas; ganha disciplina dos aliados, perde o partido). Falhar também tem efeito.
+7. **Contraoferta.** Diante do preço, o jogador pode oferecer menos (metade das emendas, cargo menor, prazo maior para a pauta). Chance de aceitar pela necessidade do governo, fisiologismo e relação; recusa gasta a conversa e custa um pouco de relação.
+8. **Emendas detalhadas.** Emenda com destino (saúde, estrada, saneamento, segurança) e tipo (individual ou de bancada); o efeito no primário e no risco-país aparece **na hora**, e o destino agrada o grupo ligado a ele.
+9. **Concessões que mudam o texto.** Algumas lideranças pedem mudança no texto em vez de moeda. **Com chave de IA, a IA escreve a concessão para a medida** (o pedido do líder e o que muda no texto) e o motor fixa os números pelo tipo; sem chave, a lista pronta de tipos: cláusula de validade (a lei caduca em X anos), retirar um trecho, condicionar ao TCU, regra de transição. Cada concessão mostra "enfraquece o projeto em N%" e o que muda (efeitos menores, risco jurídico menor, um grupo a menos irritado). Partidos ideológicos às vezes respondem "não temos preço, temos posição".
+10. **Janela da medida em etapas** (também para decreto, que ganha confirmação antes de assinar): **1 · O que entendemos** (texto lido, "respeitando: ..." com as condições que o jogador escreveu, custo, quem sente); **2 · Ficha da medida** (comunicação, impacto fiscal, complexidade de entrega, sensibilidade pública, risco central, recomendação da pasta e **nota de freios e contrapesos de 0 a 10**, juntando a chance na Câmara, no Senado e o risco no Supremo); **3 · Votação** (a janela atual, com negociação).
+11. **Nome da medida** (opcional): o jogador batiza a medida; o nome vira a manchete do telejornal e fica na Ficha de governo.
+12. **Da Caixa de ideias:** ministério cedido valendo na hora; urgência como ação da rodada.
+
+**Fica fora (vai para a Caixa):** vice-líder do governo (Etapa 6, junto do vice); orçamento paralelo do relator (Etapa 5).
+
+**Save:** 16 (alas, líderes, Mesa, orientação no `VoteRecord`, contraofertas, concessões, nome da medida), com migração.
+
+**Balanceamento a conferir no simulador:** leis por mandato no mesmo nível (16 a 22); traição média entre 3% e 10% por votação; apoiar o candidato vencedor da Mesa vale a pena, apoiar o perdedor custa; contraoferta não pode virar desconto garantido.
+
+**Como ficou (v0.18, código):**
+- **Alas e líderes:** `data/alas.ts` (`ALAS`, `PARTIDOS`, `MESA`) e `src/game/partidos.ts`. Deputado com `ala`; `PartyState.alas` (lealdade) e `leader`. A lealdade entra no voto como fator do peso da orientação (`alaFactor`: 1 + (lealdade − 62)/100 × 1,1; média das bancadas = 61,6, então o Congresso como um todo ficou no mesmo lugar). Estilo do líder: disciplinador +0,15 no fator; articulador +10% de chance e ×1,4 de ganho nas conversas; popular ×1,8 no peso da aprovação. `leaderOf` e `speakerOf` substituem o nome fixo nas telas e biografias. Lealdade volta 6%/mês para a de partida.
+- **Traidores:** `runWith` registra `orient`, `traitors` e abstenções/ausentes por partido no `VoteRecord` (orientação acima de ±0,25 fecha questão). `noteTraitors` dá manchete com 4+ traidores e 12% da bancada; a ala que mais traiu perde 4 de lealdade.
+- **Eleições internas:** todo fevereiro, chance 14% + 0,6% por ponto que a relação se afastou da de partida (+20% se a ala do líder estiver abaixo de 42), no máximo 55%. A ala nova muda a relação em até ±8 pela distância ideológica ao presidente. Sorteios com semente própria do mês.
+- **Mesa:** abre no mês 0 e no 24 (`openMesa`), vota no fechamento do mesmo mês (`runMesa`), voto secreto (lealdade ×0,6, ruído 0,35), segundo turno sem 257. Apoio: declarado 0,15, emendas 0,3 (0,05% do PIB por 3 meses), cargos 0,42 (escândalo +8, seu partido −3); puxão por bancada = força × (0,5 + (relação − 40)/60). Candidato próprio: −0,35 nos fisiológicos e −15 com o presidente atual. Resultado (simulador): com o MDN, cargos deixam a disputa empatada; com o POL, até o apoio declarado vira a eleição (a bancada de 118 segue o governo); candidato próprio com emendas não venceu em 30 partidas com MDN ou FPT.
+- **Negociação:** `data/negociacao.ts` e `src/game/negociacao.ts`. Conversa por tipo (`Articulation.tipo`, resultado em `ok`), promessa de espaço (`Promise_.kind = 'espaco'`, cumprida ao ceder ministério ou cargos; −18 se vencer). Contraoferta sorteada uma vez por rodada (`RoundBuffer.counters`): chance 0,3 + fisiologismo × 0,25 + (relação − 50) × 0,006 − necessidade × 0,35; aceita = metade do dinheiro e do escândalo, 65% do reforço, pauta em 6 meses. Emendas: individual ×0,6 do valor e ×0,8 do reforço; bancada ×1,25 e ×1,15; confiança −40 por ponto % do PIB; destino +0,6 no grupo.
+- **Concessões:** `src/game/concessoes.ts`. Partido com fisiologismo < 0,45 que pediria pauta pede concessão (metade das vezes, ou sempre sem projeto-bandeira) em lei, LC e PEC. O tipo vem da medida (`concessionTypeFor`); o efeito multiplica tudo pela escala e os efeitos negativos por `negMul`; TCU rebaixa o risco jurídico. As concessões da Câmara seguem para o Senado (`PendingBill.conceded`). A IA escreve as frases (`concessionPrompt` em `game/ai.ts`, `askConcession` em `lib/aiActions.ts`).
+- **Ficha da medida:** `src/game/ficha.ts` (`fichaDaMedida`, `conditionsOf`). Nota = 10 × chance na Câmara × chance no Senado × (1 − chance de ser contestada em 12 meses × chance de cair). Tela `src/ui/MeasureSheet.tsx`.
+- **Na hora:** `ministryNow` e `urgencyNow` em `rodada.ts` (uma de cada por rodada); `applyMinistryChange` é o mesmo código do fechamento.
+- **Telas:** `src/ui/PartidosPanels.tsx` (alas, conversa por tipos, líder, Mesa, gráfico das bancadas), oferta nova na `VoteSheet` (concessão, contraoferta, emendas), traidores na votação animada e no placar.
+- **Save 16** (`names`, alas, Mesa, nome do presidente da Câmara guardado). 232 testes.
+
 ### 27.1 Caixa de ideias por etapa
 - Etapa 1 (revisada ao fechar a 1B): conquistas como selos da Ficha vão para a Etapa 8 (já lista conquistas); nome da medida no telejornal e decreto também com janela de confirmação antes de assinar vão para a Etapa 2 (janela da medida em etapas).
 - Etapa 2 (da 1B): o post de agenda com texto livre escrito pela IA fica para a Etapa 9 (polimento); "precisa de você" (alertas) e cenas de transição, para a Etapa 8.
-- Etapa 2: ministério cedido valendo na hora (hoje vale no fechamento do mês); urgência como ação da rodada.
-- Etapa 2: vice-líder do governo; orçamento paralelo como escândalo (vai para a 5).
+- Etapa 2 (feito na v0.18): ministério cedido valendo na hora; urgência como ação da rodada.
+- Etapa 2 (revisada ao fechar): vice-líder do governo vai para a Etapa 6 (vice e governo); orçamento paralelo como escândalo vai para a 5; 22 partidos como na referência ficou de fora (as alas dão a variedade); "precisa de você" quando a ala do seu partido estiver perto de rachar, para a Etapa 8.
 - Etapa 3: governador puxando a bancada (vai para a 7).

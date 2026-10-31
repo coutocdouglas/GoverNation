@@ -85,6 +85,25 @@ export const CAST: CastMember[] = [
   { name: 'Lívia Assunção', role: 'Indicável ao Supremo (garantista)', gender: 'f', portrait: 48, alt: 23 },
   { name: 'Hamilton Rocha', role: 'Indicável ao Supremo (conservador)', gender: 'm', portrait: 21, alt: 16 },
   { name: 'Sueli Barreto', role: 'Indicável ao Supremo (aliada do presidente)', gender: 'f', portrait: 82, alt: 23 },
+  // Etapa 2 (v0.18, data/alas.ts): chefes das alas dos partidos (os líderes de partida chefiam a primeira ala).
+  { name: 'Gilmar Espíndola', role: 'Chefe da ala ideológica do POL', gender: 'm', portrait: 131, alt: 16 },
+  { name: 'Regina Fontoura', role: 'Chefe da ala da segurança do POL', gender: 'f', portrait: 121, alt: 23 },
+  { name: 'Valdir Nogueira', role: 'Chefe da ala sindical da FPT', gender: 'm', portrait: 119, alt: 16 },
+  { name: 'Tainá Barros', role: 'Chefe da esquerda radical da FPT', gender: 'f', portrait: 122, alt: 23 },
+  { name: 'Nelson Furlan', role: 'Chefe do baixo clero do UCD', gender: 'm', portrait: 117, alt: 16 },
+  { name: 'Marlene Cavalcanti', role: 'Chefe da bancada do agro do UCD', gender: 'f', portrait: 137, alt: 23 },
+  { name: 'Osvaldo Brito', role: 'Chefe da ala governista do PSN', gender: 'm', portrait: 127, alt: 16 },
+  { name: 'Denise Amorim', role: 'Chefe da ala independente do PSN', gender: 'f', portrait: 123, alt: 23 },
+  { name: 'Rubens Aguiar', role: 'Chefe da ala liberal do MRB', gender: 'm', portrait: 129, alt: 16 },
+  { name: 'Edna Vilela', role: 'Chefe da ala rural do MRB', gender: 'f', portrait: 116, alt: 23 },
+  { name: 'Heloísa Brandt', role: 'Chefe da ala do Sul do MDN', gender: 'f', portrait: 124, alt: 23 },
+  { name: 'Caetano Melo', role: 'Chefe da ala social do MDN', gender: 'm', portrait: 130, alt: 16 },
+  { name: 'Wesley Paranhos', role: 'Chefe dos vindos do PLB no PRA', gender: 'm', portrait: 120, alt: 16 },
+  { name: 'Simone Tavares', role: 'Chefe dos vindos da UTR no PRA', gender: 'f', portrait: 126, alt: 23 },
+  { name: 'Kauã Ferreira', role: 'Chefe da ala de direitos do PVS', gender: 'm', portrait: 135, alt: 16 },
+  { name: 'Jussara Lima', role: 'Chefe dos ecossocialistas do PVS', gender: 'f', portrait: 128, alt: 23 },
+  { name: 'Bruno Kessler', role: 'Chefe dos libertários do NRM', gender: 'm', portrait: 163, alt: 16 },
+  { name: 'Laura Gusmão', role: 'Chefe dos liberais conservadores do NRM', gender: 'f', portrait: 132, alt: 23 },
 ]
 
 /**

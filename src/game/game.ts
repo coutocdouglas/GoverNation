@@ -8,7 +8,7 @@ import { EVENT_BY_ID } from './data/events'
 import { defaultOption, drawEvent, spawnDemand } from './events'
 import { absMonth, addBio, addChronicle, fillText, plantInheritance, plantSeeds, sproutSeeds } from './memory'
 import { amendmentFor, jabutiBill, ministerOf, ministryBlockedReason, type MinistryChange } from './camara'
-import { BOMBS, CAMARA, NOMINEE_BY_PARTY } from './data/camara'
+import { BOMBS, CAMARA } from './data/camara'
 import { PARTIES, PARTY_BY_ID } from './data/parties'
 import { DIFFICULTY, MACRO, START } from './data/balance'
 import { GROUPS } from './data/groups'
@@ -24,16 +24,18 @@ import { Rng } from './rng'
 import { applyEffects } from './effects'
 import { addMark, initialReputation, maybeCloseChapter, noteRecord, stepReputation } from './reputacao'
 import { REPUTACAO } from './data/marks'
-import { applyPlanToRound, expireMps, peekRound, roundOf, type RoundCtx } from './rodada'
+import { applyMinistryChange, applyPlanToRound, expireMps, peekRound, roundOf, type RoundCtx } from './rodada'
 import { DEALS } from './data/deals'
 import { dealBlockedReason } from './deals'
 import { syncCustomBills } from './custom'
 import { applyStfChoice, appointJustice, askConsulta, consultBlockedReason, initialSupremo, nominationBill, nominationBlockedReason, nominationLean, rejectNominee, stepSupremo, struckImpulses, struckOrigin, undoEffects } from './supremo'
-import { initialMinistries, resetMinistry, stepMinistries, type MinistryMonth } from './ministerios'
+import { initialMinistries, stepMinistries, type MinistryMonth } from './ministerios'
 import { NOMINEE_BY_ID, SUPREMO } from './data/supremo'
 import { ASSESSORIA, type StatementId } from './data/assessoria'
 import { applyAssessoria, lostCreditValue, softenEffects, statementBlockedReason, streetBlockedReason } from './assessoria'
 import { buildMeanwhile } from './entretanto'
+import { driftAlas, internalElections, leaderOf, openMesa, runMesa, speakerOf } from './partidos'
+import { TALK } from './data/negociacao'
 
 import type { ActionId, Deal, Articulation, BillId, Cause, GameState, GroupId, Headline, Impulse, MonthReport, PartyId, SanctionItem, Snapshot, VetoItem, VoteRecord } from './types'
 
@@ -80,7 +82,7 @@ export function newGame(
   const rngState = seed ?? Math.floor(Math.random() * 2 ** 31)
   const bonus = DIFFICULTY[difficulty].approvalBonus
   const state: GameState = {
-    saveVersion: 15,
+    saveVersion: 16,
     month: 0,
     presidentName: presidentName.trim() || 'Presidente',
     difficulty,
@@ -115,6 +117,7 @@ export function newGame(
     ministries: undefined as unknown as GameState['ministries'],
     reputation: initialReputation(),
     statementLog: [],
+    names: {},
   }
   state.supremo = initialSupremo(state)
   state.ministries = initialMinistries(state)
@@ -140,6 +143,8 @@ export function newGame(
   addBio(state, state.rival.name, `Assume a liderança da oposição (${PARTY_BY_ID[state.rival.party].sigla}) contra o governo ${state.presidentName}. ${rivalDef?.blurb ?? ''}`.trim())
   state.event = drawEvent(state, rng)
   state.rngState = rng.state
+  // Etapa 2: a eleição da Mesa da Câmara é em 1º de fevereiro; o presidente decide se apoia alguém em janeiro.
+  openMesa(state)
   return state
 }
 
@@ -376,54 +381,14 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
   const taken = [...actions.map((id) => ACTION_BY_ID[id].name), ...(round?.taken ?? [])]
   const c = s.congress
 
-  // 1b2. Ministérios cedidos (etapa 4B).
-  if (plan.ministry) {
-    const { area, party } = plan.ministry
-    const before = ministerOf(s, area)
-    const swapped = s.cabinet[area]
-    if (party && swapped) {
-      // Etapa 4C3: reforma ministerial direta, de um partido para outro.
-      const old = PARTY_BY_ID[swapped.party]
-      const ops = c.parties[swapped.party]
-      ops.relation = Math.max(0, ops.relation + CAMARA.ministry.dismissHit)
-      ops.baseRelation = Math.max(5, ops.baseRelation - CAMARA.ministry.baseGain)
-      delete s.cabinet[area]
-      addBio(s, before.name, `Foi demitido pelo presidente ${s.presidentName} numa reforma ministerial.`)
-      headlines.push({ text: `Reforma ministerial: ${before.name} (${old.sigla}) sai do governo`, tone: 'neutral' })
-    }
-    resetMinistry(s, area)
-    if (party) {
-      const p = PARTY_BY_ID[party]
-      const nominee = NOMINEE_BY_PARTY[party]!
-      s.cabinet[area] = { party, since: s.month }
-      const ps = c.parties[party]
-      ps.relation = Math.min(100, ps.relation + CAMARA.ministry.relationGain)
-      ps.baseRelation = Math.min(95, ps.baseRelation + CAMARA.ministry.baseGain)
-      const own = c.parties[s.playerParty]
-      own.relation = Math.max(0, own.relation + CAMARA.ministry.ownPartyHit)
-      if (before.party !== s.playerParty && before.party !== party) c.parties[before.party].relation = Math.max(0, c.parties[before.party].relation + CAMARA.ministry.formerHit)
-      c.scandal = Math.min(100, c.scandal + CAMARA.ministry.scandal)
-      const after = ministerOf(s, area)
-      taken.push(`Cedeu ${after.role.replace(/^(Ministr|Secretári)[oa] /, 'a pasta ')} ao ${p.sigla}`)
-      headlines.push({ text: `${nominee.name} (${p.sigla}) assume no lugar de ${before.name}: ${p.sigla} entra na base do governo`, tone: 'neutral' })
-      addBio(s, nominee.name, `Assumiu: ${after.role}, indicação do ${p.sigla} no governo ${s.presidentName}.`)
-      addBio(s, before.name, `Deixou o cargo (${before.role}) para dar lugar a uma indicação do ${p.sigla}.`)
-      addChronicle(s, `${p.sigla} ganha ministério no governo ${s.presidentName}: ${nominee.name}`, 'neutral')
-    } else {
-      const seat = s.cabinet[area]!
-      const p = PARTY_BY_ID[seat.party]
-      delete s.cabinet[area]
-      const ps = c.parties[seat.party]
-      ps.relation = Math.max(0, ps.relation + CAMARA.ministry.dismissHit)
-      ps.baseRelation = Math.max(5, ps.baseRelation - CAMARA.ministry.baseGain)
-      const back = ministerOf(s, area)
-      taken.push(`Retomou do ${p.sigla} a pasta de ${back.areaName.toLowerCase()}`)
-      headlines.push({ text: `${before.name} é demitido; ${p.sigla} deixa a base e ameaça retaliar na Câmara`, tone: 'bad' })
-      addBio(s, before.name, `Foi demitido pelo presidente ${s.presidentName}.`)
-      addBio(s, back.name, `Voltou ao cargo: ${back.role}.`)
-      addChronicle(s, `${p.sigla} perde ministério no governo ${s.presidentName}`, 'neutral')
-    }
-  }
+  // 1b2. Ministérios cedidos (etapa 4B). Etapa 2: na tela vale na hora (rodada.ministryNow); o plano antigo ainda passa por aqui.
+  if (plan.ministry) applyMinistryChange(s, plan.ministry, headlines, taken)
+
+  // 1b3. Etapa 2: eleição da Mesa (no fechamento de janeiro) e eleições internas dos partidos (todo fevereiro).
+  // Sorteios com semente própria do mês, para não mexer no resto do jogo.
+  const partyRng = new Rng((prev.rngState ^ 0x7a1a) + absMonth(s) * 6151)
+  const mesaResult = runMesa(s, headlines, partyRng)
+  const internals = internalElections(s, headlines, partyRng)
 
   // 1c. A medida do mês, a resposta ao fato do mês, os acordos e as votações já aconteceram na rodada (rodada.ts).
   const submitted: BillId[] = [round?.measure, round?.response].filter((x): x is BillId => !!x)
@@ -439,7 +404,7 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
   const recess = isRecess(s.month)
   const approvalNow = s.history[s.history.length - 1].approval
   const sp = c.speaker
-  const speakerName = CAMARA.speaker.name
+  const speakerName = speakerOf(c).name
   /** Leis que entraram em vigor neste mês pelo caminho completo (Câmara e Senado). */
   const enacted: BillId[] = [...(round?.enacted ?? [])]
 
@@ -468,7 +433,6 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
   // 1d2. Sanção ou veto do que a Câmara aprovou no mês passado. Sem decisão, vale a sanção tácita.
   for (const it of c.toSanction.filter((x) => x.month < s.month)) {
     const vb = vetoedBill(it)
-    const party = PARTY_BY_ID[it.party]
     c.toSanction = c.toSanction.filter((x) => x !== it)
     if ((plan.sanctions?.[it.id] ?? 'sancionar') === 'sancionar') {
       actionConfidence += applyEffects(e, impulses, vb.effects, vb.name)
@@ -476,7 +440,7 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
       taken.push(`Sancionou: ${vb.name}`)
       headlines.push({ text: `Presidente sanciona ${lowerFirst(vb.name)}`, tone: 'neutral' })
       addBio(s, s.presidentName, `Sancionou ${lowerFirst(vb.name)}, aprovado pela Câmara.`)
-      addBio(s, party.leader.name, `Viu o presidente sancionar ${lowerFirst(vb.name)}.`)
+      addBio(s, leaderOf(s, it.party).name, `Viu o presidente sancionar ${lowerFirst(vb.name)}.`)
     } else {
       c.vetoes.push({ id: it.id, kind: it.kind, bill: it.bill, month: s.month, party: it.party, amendment: it.amendment })
       c.parties[it.party].relation = Math.max(0, c.parties[it.party].relation + CAMARA.veto.partyHit)
@@ -487,7 +451,7 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
       taken.push(`Vetou: ${vb.name}`)
       headlines.push({ text: `Presidente veta ${it.kind === 'jabuti' ? 'trecho incluído pelo relator' : lowerFirst(vb.name)}; Câmara pode derrubar no mês que vem`, tone: 'neutral' })
       addBio(s, s.presidentName, `Vetou ${lowerFirst(vb.name)}.`)
-      addBio(s, party.leader.name, `Teve uma pauta vetada pelo presidente: ${vb.name}.`)
+      addBio(s, leaderOf(s, it.party).name, `Teve uma pauta vetada pelo presidente: ${vb.name}.`)
     }
   }
 
@@ -513,12 +477,11 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
       c.bombLog.push({ id: bomb.id, month: s.month })
       c.bombLog = c.bombLog.slice(-20)
       const v = runChamberVote(s, bomb, rng)
-      const sponsor = PARTY_BY_ID[bomb.sponsor]
       if (v.approved) {
         c.toSanction.push({ id: `bomba-${bomb.id}-${absMonth(s)}`, kind: 'bomba', bill: bomb.id, month: s.month, party: bomb.sponsor, vote: { yes: v.yes, no: v.no } })
         headlines.push({ text: `Pauta-bomba: Câmara aprova ${lowerFirst(bomb.name)} (${pt(v.yes)} a ${pt(v.no)}). Vai à sanção`, tone: 'bad' })
         addBio(s, speakerName, `Pautou e aprovou ${lowerFirst(bomb.name)} sem o aval do governo.`)
-        addBio(s, sponsor.leader.name, `Puxou a aprovação de ${lowerFirst(bomb.name)} na Câmara.`)
+        addBio(s, leaderOf(s, bomb.sponsor).name, `Puxou a aprovação de ${lowerFirst(bomb.name)} na Câmara.`)
         addChronicle(s, `Pauta-bomba aprovada na Câmara: ${bomb.name}`, 'bad')
       } else {
         headlines.push({ text: `Câmara rejeita a pauta-bomba ${lowerFirst(bomb.name)}`, tone: 'good' })
@@ -531,9 +494,9 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
     for (const [pid, r] of Object.entries(v.byParty) as [PartyId, { yes: number; no: number }][]) {
       if (r.yes + r.no === 0 || v.kind === 'simbolica') continue
       const side = r.yes >= r.no ? 'a favor' : 'contra'
-      addBio(s, PARTY_BY_ID[pid].leader.name, `Levou o ${PARTY_BY_ID[pid].sigla}${v.house === 'senado' ? ' no Senado' : ''} a votar ${side} ${v.kind === 'veto' ? 'da derrubada do veto' : `de “${name}”`} (${r.yes} sim, ${r.no} não). ${v.approved ? (v.kind === 'veto' ? 'Veto derrubado' : 'Aprovado') : (v.kind === 'veto' ? 'Veto mantido' : 'Rejeitado')}.`)
+      addBio(s, leaderOf(s, pid).name, `Levou o ${PARTY_BY_ID[pid].sigla}${v.house === 'senado' ? ' no Senado' : ''} a votar ${side} ${v.kind === 'veto' ? 'da derrubada do veto' : `de “${name}”`} (${r.yes} sim, ${r.no} não). ${v.approved ? (v.kind === 'veto' ? 'Veto derrubado' : 'Aprovado') : (v.kind === 'veto' ? 'Veto mantido' : 'Rejeitado')}.`)
     }
-    if (v.kind === 'simbolica') for (const p of PARTIES) addBio(s, p.leader.name, `Viu “${name}” passar em votação simbólica.`)
+    if (v.kind === 'simbolica') for (const p of PARTIES) addBio(s, leaderOf(s, p.id).name, `Viu “${name}” passar em votação simbólica.`)
   }
   c.votes.push(...votes.slice(round?.votes.length ?? 0)) // as da rodada já entraram na hora
   c.votes = c.votes.slice(-48) // etapa 4C1: Câmara e Senado (antes, 24)
@@ -541,18 +504,29 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
   // 1d5. Promessas a partidos e risco de escândalo.
   for (const pr of [...c.promises]) {
     const party = PARTY_BY_ID[pr.party]
+    // Etapa 2: promessa de espaço no governo (cumprida na hora, ao ceder ministério ou cargos; aqui só vence).
+    if (pr.kind === 'espaco') {
+      if (s.month >= pr.due) {
+        c.parties[pr.party].relation = Math.max(0, c.parties[pr.party].relation + TALK.espacoBroken)
+        addMark(s, 'fura', REPUTACAO.pts.fura, `Não cumpriu a promessa de espaço no governo ao ${party.sigla}`, 'acordo')
+        c.promises = c.promises.filter((x) => x !== pr)
+        headlines.push({ text: `${party.sigla} cobra o governo: o espaço prometido não veio`, tone: 'bad' })
+        addBio(s, leaderOf(s, pr.party).name, 'Rompeu com o governo depois de uma promessa de espaço não cumprida.')
+      }
+      continue
+    }
     const kept = c.laws.includes(pr.bill) || c.pending.some((x) => x.id === pr.bill) || c.senate.pending.some((x) => x.id === pr.bill) || votes.some((v) => v.bill === pr.bill)
     if (kept) {
       c.parties[pr.party].relation = Math.min(100, c.parties[pr.party].relation + DEALS.promiseKept)
       addMark(s, 'palavra', REPUTACAO.pts.palavra, `Cumpriu a promessa ao ${party.sigla}: pautou “${BILL_BY_ID[pr.bill].name}”`, 'acordo', pr.bill)
       c.promises = c.promises.filter((x) => x !== pr)
-      addBio(s, party.leader.name, `Viu o governo cumprir a promessa de pautar “${BILL_BY_ID[pr.bill].name}”.`)
+      addBio(s, leaderOf(s, pr.party).name, `Viu o governo cumprir a promessa de pautar “${BILL_BY_ID[pr.bill].name}”.`)
     } else if (s.month >= pr.due) {
       c.parties[pr.party].relation = Math.max(0, c.parties[pr.party].relation + DEALS.promiseBroken)
       addMark(s, 'fura', REPUTACAO.pts.fura, `Não cumpriu a promessa ao ${party.sigla}: “${BILL_BY_ID[pr.bill].name}” não foi pautado`, 'acordo', pr.bill)
       c.promises = c.promises.filter((x) => x !== pr)
       headlines.push({ text: `${party.sigla} acusa o governo de não cumprir acordo: “${BILL_BY_ID[pr.bill].name}” não foi pautado`, tone: 'bad' })
-      addBio(s, party.leader.name, `Rompeu com o governo depois de uma promessa não cumprida (“${BILL_BY_ID[pr.bill].name}”).`)
+      addBio(s, leaderOf(s, pr.party).name, `Rompeu com o governo depois de uma promessa não cumprida (“${BILL_BY_ID[pr.bill].name}”).`)
     }
   }
   let scandalHit = false
@@ -805,6 +779,7 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
 
   headlines.push(...economicHeadlines(before, after, approvalBefore, approvalAfter))
   driftRelations(c, approvalAfter, s.playerParty)
+  driftAlas(c)
 
   // 5b. Etapa 5A: força, postura e pesquisa do rival.
   const nBeforeRival = headlines.length
@@ -843,6 +818,12 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
       votes: votes.slice(round?.votes.length ?? 0),
     }),
   }
+  // Etapa 2: o que mudou dentro dos partidos aparece em "Enquanto você decidia".
+  const partyLines = [
+    ...(mesaResult ? [{ who: 'camara' as const, icon: '🏛️', text: `A Câmara elegeu ${mesaResult.winner} para presidir a Casa.`, why: mesaResult.support ? `O governo apoiou ${mesaResult.support.name}.` : 'O governo ficou neutro.', tone: (mesaResult.support ? (mesaResult.support.name === mesaResult.winner ? 'good' : 'bad') : 'neutral') as 'good' | 'bad' | 'neutral' }] : []),
+    ...internals.map((x) => ({ who: 'camara' as const, icon: '🗳️', text: `${PARTY_BY_ID[x.party].sigla} trocou de líder: sai ${x.from}, entra ${x.to}.`, why: x.delta ? `A ala do novo líder está ${x.delta > 0 ? 'mais perto' : 'mais longe'} do governo (relação ${x.delta > 0 ? '+' : ''}${x.delta}).` : 'Disputa interna do partido.', tone: (x.delta > 0 ? 'good' : x.delta < 0 ? 'bad' : 'neutral') as 'good' | 'bad' | 'neutral' })),
+  ]
+  if (partyLines.length) report.meanwhile = [...(report.meanwhile ?? []), ...partyLines]
 
   // Etapa 1: a cada 6 meses, um capítulo da presidência.
   const chapter = maybeCloseChapter(s, approvalAfter)
@@ -858,6 +839,7 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
     spawnDemand(s, rng)
     sproutSeeds(s)
     s.event = drawEvent(s, rng)
+    openMesa(s)
   }
   s.rngState = rng.state
   return s

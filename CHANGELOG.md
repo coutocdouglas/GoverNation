@@ -1,5 +1,22 @@
 # Novidades
 
+## 0.18.0
+- **Câmara e partidos (etapa 2).** Os partidos ganharam vida por dentro, e a negociação ficou uma mesa de verdade.
+  - **3 alas em cada partido** (ex.: no UCD, cúpula, baixo clero e bancada do agro), cada uma com posição, chefe com retrato e **lealdade** de 0 a 100. Ala pouco leal vota pela própria cabeça. 18 personagens novos (os chefes de ala).
+  - **Traidores no placar:** cada votação mostra a orientação de cada bancada (sim, não ou liberou), quantos traíram, abstenções e ausentes por partido e o **piso** para aprovar. Racha grande vira manchete e a ala que mais traiu perde lealdade.
+  - **Líder do seu partido:** você escolhe entre os 3 chefes de ala, cada um com um estilo (articulador, disciplinador ou popular). Troca livre no começo do mandato e todo fevereiro; fora disso, a ala do derrubado fica de mal.
+  - **Eleições internas:** todo fevereiro os outros partidos podem trocar de líder. O líder novo puxa a relação com o governo para o lado da ala dele. Aparece em "Enquanto você decidia".
+  - **Eleição da Mesa** (fevereiro de 2027 e de 2029): o atual presidente da Câmara contra um desafiante do centro. Você pode ficar neutro, **apoiar** um candidato (declarado, com emendas ou com cargos) ou **lançar um candidato próprio** do seu partido. Voto secreto, segundo turno se ninguém chegar a 257. Apoiar quem vence dá um aliado na cadeira; apoiar quem perde, um inimigo.
+  - **Conversa por tipos, com chance:** pedir apoio, apelar à base, oferecer espaço futuro (promessa cobrada em 6 meses) e endurecer. A chance aparece no botão, e dar errado também tem efeito.
+  - **Contraoferta:** ofereça menos que o preço pedido (metade das emendas, um cargo só, prazo maior). A chance aparece antes; recusa ofende um pouco.
+  - **Emendas detalhadas:** individuais (mais baratas) ou de bancada (mais votos), com destino (saúde, estradas, saneamento, segurança) que agrada um grupo. O peso nas contas e na confiança do mercado aparece na hora.
+  - **Concessões no texto:** partidos de posição pedem mudar o projeto em vez de dinheiro (cláusula de validade, retirar o trecho polêmico, condicionar ao TCU, transição, piloto, contrapartida). O jogo mostra quanto o projeto enfraquece. **Com a IA ligada, ela escreve a concessão para a sua medida**; os números continuam do jogo.
+  - **Janela da medida em 3 etapas:** 1 · o que o gabinete entendeu ("respeitando: ..." com as suas condições) e o **nome da medida**; 2 · **ficha da medida** com comunicação, impacto fiscal, complexidade, sensibilidade, risco central, recomendação da pasta e a **nota de freios e contrapesos** (0 a 10); 3 · votação ou assinatura (decreto e MP também passam pela confirmação).
+  - **Nome da medida:** vira manchete e fica na Ficha de governo e na lista de leis.
+  - **Na hora:** ceder, trocar ou retomar ministério e pedir urgência para um projeto da fila valem já, na rodada.
+- Balanceamento (30 partidas simuladas): as estratégias seguem iguais; o apoio do governo decide eleições da Mesa apertadas, e o candidato próprio só vence com bancada grande e moeda forte.
+- Mandatos salvos continuam normalmente (save versão 16): os deputados recebem alas sem mudar de posição, os líderes de partida continuam e o presidente da Câmara segue o mesmo.
+
 ## 0.17.0
 - **O mês mais vivo (etapa 1B).** A crise do mês agora tem três caminhos, que podem ser combinados, e o mês sem crise ganhou vida.
   - **Post da assessoria** (grátis, 1 por mês): em crise, *nota de solidariedade*, *apontar o culpado* e *chamar a base*; em mês limpo, *pauta positiva*, *prestar contas* e *chamar a base*. O post **não resolve o problema material**: o efeito depende do **peso do discurso** da crise (dengue e apagão pesam pouco; escândalo e polêmica pesam muito), aparece no cartão antes de você decidir e **cansa** se você postar dois meses seguidos (metade do efeito). Apontar o culpado agrada a base, abre briga com a oposição e, se a crise nasceu de uma lei sua, pode ser desmentido.

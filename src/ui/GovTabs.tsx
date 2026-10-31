@@ -61,14 +61,14 @@ export function SenadoView({ state, articulations, onToggle, onNegotiate, deals,
 const STATUS_CLS: Record<string, string> = { rumo: 'up', cumprida: 'up', risco: 'warn', longe: 'dn', quase: 'warn', quebrada: 'dn' }
 
 /** Aba Ministérios: os 13 ministros, desgaste, meta de cada pasta e reforma ministerial. */
-export function MinistriosView({ state, change, onChange }: { state: GameState; change: MinistryChange | null; onChange: (c: MinistryChange | null) => void }) {
+export function MinistriosView({ state, change, onChange, done }: { state: GameState; change: MinistryChange | null; onChange: (c: MinistryChange | null) => void; done?: boolean }) {
   const [open, setOpen] = useState<AreaId | null>(null)
   const ceded = Object.values(state.cabinet ?? {}).filter(Boolean).length
   const trouble = ministriesInTrouble(state)
   return (
     <div className="pn-col">
       <section className="pn-card">
-        <h3>🏢 Ministérios <span className="pn-badge">{ceded} de {CAMARA.ministry.maxCeded} pastas cedidas · uma troca por mês</span></h3>
+        <h3>🏢 Ministérios <span className="pn-badge">{ceded} de {CAMARA.ministry.maxCeded} pastas cedidas · vale na hora · uma troca por rodada</span></h3>
         <p className="pn-hint">
           Cada ministro tem um <b>desgaste</b> de 0 a 100. Sobe com crise da área sem resposta, medida derrubada ou suspensa no Supremo e meta longe;
           cai quando você resolve o fato do mês da área, põe medidas da área em vigor e a meta anda. A partir de {MINISTERIOS.worn}, o ministro está desgastado e custa aprovação no grupo que mais sente a pasta.
@@ -104,8 +104,8 @@ export function MinistriosView({ state, change, onChange }: { state: GameState; 
                     <button className="pn-btn pn-btn--small" onClick={() => onChange(null)}>✔ {pending.party ? `${seat ? 'trocar pelo' : 'ceder ao'} ${PARTY_BY_ID[pending.party].sigla}` : 'retomar'} · desfazer</button>
                   ) : locked ? <small className="pn-hint" style={{ margin: 0 }}>🔒 do presidente</small> : (
                     <>
-                      {seat && <button className="pn-btn pn-btn--ghost pn-btn--small" disabled={!!change} title={change ? 'Uma troca por mês.' : 'O ministro original volta.'} onClick={() => onChange({ area, party: null })}>Retomar</button>}
-                      <button className="pn-btn pn-btn--ghost pn-btn--small" disabled={!!change} title={change ? 'Uma troca por mês.' : ''} onClick={() => setOpen(open === area ? null : area)}>{seat ? 'Trocar…' : 'Ceder…'}</button>
+                      {seat && <button className="pn-btn pn-btn--ghost pn-btn--small" disabled={!!change || done} title={change || done ? 'Uma troca por rodada.' : 'O ministro original volta (vale na hora).'} onClick={() => onChange({ area, party: null })}>Retomar</button>}
+                      <button className="pn-btn pn-btn--ghost pn-btn--small" disabled={!!change || done} title={change || done ? 'Uma troca por rodada.' : 'Vale na hora: o partido já vota diferente nesta rodada.'} onClick={() => setOpen(open === area ? null : area)}>{seat ? 'Trocar…' : 'Ceder…'}</button>
                     </>
                   )}
                 </div>

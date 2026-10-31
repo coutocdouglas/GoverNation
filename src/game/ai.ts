@@ -240,3 +240,39 @@ export function chapterRequest(s: Pick<GameState, 'presidentName'>, ch: { title:
     maxTokens: 400,
   }
 }
+
+/**
+ * Etapa 2 (v0.18): a IA escreve a concessão que a liderança pede no texto da medida.
+ * O tipo (validade, retirar trecho, TCU, transição, piloto, contrapartida) e os números são do motor;
+ * a IA só escreve a fala do líder e a mudança, adaptadas à medida (regras decidem, IA narra).
+ */
+export function concessionPrompt(state: GameState, party: string, leader: string, billId: BillId, type: { label: string; change: string }): AiRequest {
+  const b = BILL_BY_ID[billId]
+  const p = PARTY_BY_ID[party]
+  return {
+    system: [
+      `Você é ${leader}, líder do ${p?.name ?? party} na Câmara num jogo de simulação política. Personagens e partidos são fictícios; não cite pessoas reais.`,
+      `Perfil do partido: ${p?.blurb ?? ''}`,
+      `O presidente quer o seu voto na medida abaixo. Você não quer dinheiro nem cargo: quer uma mudança no texto do tipo "${type.label}" (referência: ${type.change}).`,
+      'Escreva em português do Brasil, adaptado a esta medida específica, sem inventar números, valores ou votos:',
+      '- "pedido": a sua fala ao presidente, 1 ou 2 frases, em primeira pessoa, no tom de um líder partidário.',
+      '- "mudanca": o que muda no texto da medida, 1 frase objetiva (como numa emenda).',
+      'Responda SOMENTE com JSON: {"pedido":"...","mudanca":"..."}',
+    ].join('\n'),
+    user: `${countryContext(state)}\n\nMedida: ${b?.name ?? billId} (${b ? INSTRUMENTS[b.instrument].label : ''}). ${b?.summary ?? ''}`,
+    maxTokens: 300,
+  }
+}
+
+export function parseConcession(raw: string): { ask: string; change: string } | null {
+  try {
+    const m = raw.match(/\{[\s\S]*\}/)
+    if (!m) return null
+    const j = JSON.parse(m[0]) as { pedido?: unknown; mudanca?: unknown }
+    const ask = typeof j.pedido === 'string' ? j.pedido.trim().slice(0, 280) : ''
+    const change = typeof j.mudanca === 'string' ? j.mudanca.trim().slice(0, 200) : ''
+    return ask && change ? { ask, change } : null
+  } catch {
+    return null
+  }
+}

@@ -1,3 +1,5 @@
+import { ALAS } from '../game/data/alas'
+import { leaderOf, speakerOf } from '../game/partidos'
 import { useState } from 'react'
 import { GovernmentRecord } from './ReputationView'
 import { CAST, castPortrait, playerPortraitId } from '../game/data/cast'
@@ -17,8 +19,15 @@ export function FichasView({ state, onChange }: { state: GameState; onChange: (s
     { name: state.presidentName, role: `Presidente da República (${PARTY_BY_ID[state.playerParty].sigla})`, portrait: playerPortraitId(state), color: PARTY_BY_ID[state.playerParty].color },
     // Só o rival deste mandato aparece; o outro líder de oposição fica de fora.
     ...CAST.filter((c) => (!RIVALS.some((r) => r.name === c.name) || c.name === state.rival?.name) && (!c.role.startsWith('Indicável') || state.bios[c.name]?.length)).map((c) => {
-      const party = PARTIES.find((p) => p.leader.name === c.name) ?? (c.name === state.rival?.name ? PARTY_BY_ID[state.rival.party] : undefined)
-      return { name: c.name, role: c.name === state.rival?.name ? `Líder da oposição (${PARTY_BY_ID[state.rival.party].sigla})` : c.role, portrait: castPortrait(c.name) ?? c.portrait, color: party?.color ?? '#8a97a8' }
+      const party = PARTIES.find((p) => ALAS[p.id].some((x) => x.chief.name === c.name)) ?? (c.name === state.rival?.name ? PARTY_BY_ID[state.rival.party] : undefined)
+      // Etapa 2: o cargo acompanha quem é líder hoje e quem preside a Câmara.
+      const leads = PARTIES.find((p) => leaderOf(state, p.id).name === c.name)
+      const role = c.name === state.rival?.name ? `Líder da oposição (${PARTY_BY_ID[state.rival.party].sigla})`
+        : leads ? `Líder do ${leads.sigla} na Câmara`
+          : speakerOf(state.congress).name === c.name ? `Presidente da Câmara (${PARTY_BY_ID[speakerOf(state.congress).party].sigla})`
+            : c.role.startsWith('Líder do') && party ? `Chefe da ala “${ALAS[party.id].find((x) => x.chief.name === c.name)!.name}” do ${party.sigla}`
+              : c.role.startsWith('Presidente da Câmara') ? 'Ex-presidente da Câmara' : c.role
+      return { name: c.name, role, portrait: castPortrait(c.name) ?? c.portrait, color: party?.color ?? '#8a97a8' }
     }),
   ].sort((a, b) => (state.bios[b.name]?.length ?? 0) - (state.bios[a.name]?.length ?? 0))
   const [sel, setSel] = useState(people[0].name)

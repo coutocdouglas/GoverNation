@@ -1,3 +1,5 @@
+import { BancadasChart } from './PartidosPanels'
+import { traitorsTotal } from '../game/partidos'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { BILL_BY_ID, INSTRUMENTS } from '../game/data/bills'
 import { PARTIES, PARTY_BY_ID } from '../game/data/parties'
@@ -125,7 +127,8 @@ export function VoteAnimation({ vote, index, total, onNext, nextLabel }: {
         {done ? (
           <div className="pn-vanim__end">
             <span className={`pn-vanim__stamp ${good ? 'ok' : 'ko'}`}>{vote.approved ? okText : koText}</span>
-            <p className="pn-hint">{vote.yes} sim · {vote.no} não · {vote.abstain} abstenções · {vote.absent} ausentes</p>
+            <p className="pn-hint">{vote.yes} sim · {vote.no} não · {vote.abstain} abstenções · {vote.absent} ausentes{vote.traitors ? ` · 🗡️ ${traitorsTotal(vote)} traíram a própria liderança` : ''}</p>
+            {vote.orient && <BancadasChart v={vote} />}
             <button className="pn-btn pn-btn--big" onClick={onNext} autoFocus>{nextLabel}</button>
           </div>
         ) : (

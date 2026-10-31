@@ -9,6 +9,7 @@ import { PARTY_BY_ID } from '../game/data/parties'
 import { monthLabel, vetoedBill } from '../game/game'
 import type { Articulation, GameState, SanctionItem } from '../game/types'
 import { Portrait } from './Portrait'
+import { speakerOf } from '../game/partidos'
 import { num, signed } from './format'
 
 const costOf = (fx: { spending?: number; revenue?: number }) => (((fx.spending ?? 0) - (fx.revenue ?? 0)) / 100) * GDP_BILLIONS
@@ -18,8 +19,9 @@ export function SpeakerCard({ state, articulations, onToggle }: {
   state: GameState; articulations: Articulation[]; onToggle: (a: Articulation) => void
 }) {
   const sp = state.congress.speaker
-  const party = PARTY_BY_ID[CAMARA.speaker.party]
-  const a: Articulation = { kind: 'presidente', party: CAMARA.speaker.party }
+  const who = speakerOf(state.congress)
+  const party = PARTY_BY_ID[who.party]
+  const a: Articulation = { kind: 'presidente', party: who.party }
   const on = articulations.some((x) => x.kind === 'presidente')
   const blocked = articulationBlockedReason(state, a)
   const full = !on && articulations.length >= CONGRESS.articulationsPerMonth
@@ -30,20 +32,20 @@ export function SpeakerCard({ state, articulations, onToggle }: {
     <section className="pn-card pn-speaker">
       <h3>🔨 Presidência da Câmara <span className="pn-badge">dono da pauta</span></h3>
       <div className="pn-speaker__body">
-        <Portrait name={CAMARA.speaker.name} color={party.color} size={72} title={CAMARA.speaker.name} />
+        <Portrait name={who.name} feminine={who.feminine} color={party.color} size={72} title={who.name} />
         <div>
-          <b>{CAMARA.speaker.name}</b> <span className="pn-hint" style={{ margin: 0 }}>· {party.sigla}</span>
+          <b>{who.name}</b> <span className="pn-hint" style={{ margin: 0 }}>· {party.sigla}</span>
           <div className="pn-party__stats" style={{ marginTop: 4 }}>
             <span>Relação <b className={mood.c}>{Math.round(sp.relation)}</b></span>
             <span>Chance de pauta-bomba <b className={bombChance > 0.12 ? 'dn' : ''}>{Math.round(bombChance * 100)}% ao mês</b></span>
           </div>
           <span className="pn-meter"><span style={{ width: `${sp.relation}%`, background: party.color }} /></span>
           <p className="pn-hint" style={{ marginTop: 6 }}>
-            <b className={mood.c}>{mood.t}.</b> Ele decide o que vai a voto e quem relata cada projeto. Com a relação abaixo de {CAMARA.speaker.holdBelow}, segura um projeto por mês (urgência e MP escapam).
+            <b className={mood.c}>{mood.t}.</b> {who.feminine ? 'Ela' : 'Ele'} decide o que vai a voto e quem relata cada projeto. Com a relação abaixo de {CAMARA.speaker.holdBelow}, segura um projeto por mês (urgência e MP escapam).
             Relação baixa e governo impopular fazem a Câmara aprovar <b>pautas-bomba</b> por conta própria.
           </p>
           <button className={`pn-btn pn-btn--small ${on ? '' : 'pn-btn--ghost'}`} disabled={!!blocked || full} title={blocked ?? (full ? 'Ações de articulação do mês esgotadas.' : '')} onClick={() => onToggle(a)}>
-            {on ? '✔ Conversa marcada' : `🗣️ Conversar com ele (+${CAMARA.speaker.talkGain})`}
+            {on ? '✔ Conversa marcada' : `🗣️ Conversar com ${who.feminine ? 'ela' : 'ele'} (+${CAMARA.speaker.talkGain})`}
           </button>
           {blocked && <small className="pn-hint" style={{ marginLeft: 8 }}>{blocked}</small>}
         </div>

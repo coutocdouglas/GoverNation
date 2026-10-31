@@ -592,3 +592,53 @@
 .pn-meanwhile__row.bad { border-left-color: var(--pn-red); }
 .pn-meanwhile__row > span { font-size: 20px; line-height: 1.2; }
 .pn-meanwhile__row small { display: block; opacity: .7; margin-top: 2px; }
+
+/* Etapa 2 (v0.18): partidos por dentro, Mesa, negociação e janela da medida */
+.pn-alas-box { margin-top: 8px; }
+.pn-alas-box summary { cursor: pointer; font-size: 12px; color: var(--pn-mut); }
+.pn-alas { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
+.pn-ala { display: grid; grid-template-columns: 34px 1fr; gap: 8px; align-items: start; background: var(--pn-panel2); border-radius: 8px; padding: 6px 8px; border: 1px solid transparent; }
+.pn-ala.lead { border-color: var(--pn-gold); }
+.pn-ala b { font-size: 13px; }
+.pn-ala small { display: block; color: var(--pn-mut); font-size: 11px; margin: 1px 0; }
+.pn-talks { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.pn-talks .pn-btn small { display: block; font-size: 10px; opacity: .8; font-weight: 400; }
+.pn-talk-done { margin-top: 8px; font-size: 12px; font-weight: 700; }
+.pn-leader-pick { background: var(--pn-panel2); border: 1px solid var(--pn-gold); border-radius: 10px; padding: 8px 10px; margin: 8px 0; }
+.pn-mesa { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+.pn-mesa__cand { display: flex; flex-direction: column; align-items: center; gap: 3px; text-align: center; background: var(--pn-panel2); border-radius: 10px; padding: 10px; border: 1px solid var(--pn-line); }
+.pn-mesa__cand.sup { border-color: var(--pn-green); }
+.pn-mesa__cand small { color: var(--pn-mut); font-size: 11px; }
+.pn-bancadas { margin-top: 8px; display: flex; flex-direction: column; gap: 3px; }
+.pn-bancadas__head { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--pn-mut); margin-bottom: 4px; }
+.pn-bancadas__head .warn { color: var(--pn-gold); }
+.pn-bancada { display: grid; grid-template-columns: 42px 1fr 150px; gap: 8px; align-items: center; font-size: 11px; }
+.pn-bancada .sig { font-weight: 800; }
+.pn-bancada .bar { display: flex; height: 8px; border-radius: 4px; overflow: hidden; background: #1f2a38; }
+.pn-bancada .bar i { display: block; height: 100%; }
+.pn-bancada .bar .y { background: var(--pn-green); }
+.pn-bancada .bar .n { background: var(--pn-red); }
+.pn-bancada .bar .a { background: var(--pn-gold); }
+.pn-bancada .bar .o { background: #3a4656; }
+.pn-bancada small { color: var(--pn-mut); }
+.pn-emendas { display: flex; flex-direction: column; gap: 6px; margin: 8px 0; }
+.pn-emendas .pn-seg button { font-size: 11px; }
+.pn-counter { margin: 8px 0; font-size: 12px; }
+.pn-steps3 { display: flex; gap: 6px; margin: 4px 0 12px; }
+.pn-steps3 span { flex: 1; text-align: center; font-size: 11px; padding: 5px; border-radius: 6px; background: var(--pn-panel2); color: var(--pn-mut); }
+.pn-steps3 span.on { background: var(--pn-gold); color: #111; font-weight: 700; }
+.pn-steps3 span.ok { color: var(--pn-green); }
+.pn-respect { background: var(--pn-panel2); border-radius: 10px; padding: 8px 12px; margin: 8px 0; }
+.pn-respect ul { margin: 4px 0; padding-left: 4px; list-style: none; font-size: 13px; }
+.pn-name { display: flex; flex-direction: column; gap: 4px; margin: 10px 0; font-size: 13px; }
+.pn-name small { color: var(--pn-mut); }
+.pn-input { background: var(--pn-panel2); color: var(--pn-ink); border: 1px solid var(--pn-line); border-radius: 8px; padding: 8px 10px; font-size: 14px; }
+.pn-ficha { display: grid; grid-template-columns: 170px 1fr; gap: 12px; margin: 8px 0; }
+.pn-ficha__nota { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; background: var(--pn-panel2); border-radius: 12px; padding: 10px; gap: 2px; }
+.pn-ficha__nota b { font-size: 44px; font-family: var(--pn-title); line-height: 1; }
+.pn-ficha__nota small { color: var(--pn-mut); font-size: 11px; }
+.pn-ficha__grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.pn-ficha__grid div { background: var(--pn-panel2); border-radius: 10px; padding: 8px 10px; font-size: 12px; color: var(--pn-mut); }
+.pn-ficha__grid b { display: block; color: var(--pn-ink); font-size: 13px; margin-top: 2px; }
+.pn-ficha__grid small { display: block; margin-top: 2px; }
+@media (max-width: 720px) { .pn-ficha { grid-template-columns: 1fr; } .pn-ficha__grid { grid-template-columns: 1fr; } .pn-bancada { grid-template-columns: 38px 1fr; } .pn-bancada small { grid-column: 2; } }

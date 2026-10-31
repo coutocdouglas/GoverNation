@@ -3,7 +3,11 @@ import { BILL_BY_ID, BILLS, GDP_BILLIONS } from './data/bills'
 import { DEALS } from './data/deals'
 import { PARTY_BY_ID } from './data/parties'
 import { SENADO } from './data/senado'
-import type { BillId, Deal, DealKind, GameState, PartyId } from './types'
+import { canAskConcession, concessionText, concessionTypeFor } from './concessoes'
+import { CONCESSION_BY_ID, CONCESSAO } from './data/negociacao'
+import { legalRiskIn } from './supremo'
+import { leaderOf } from './partidos'
+import type { BillId, ConcessionType, Deal, DealKind, DealTerms, GameState, PartyId } from './types'
 
 /**
  * Negociação de votos (etapa 4): o que cada liderança pede para votar com o governo num projeto.
@@ -34,6 +38,14 @@ export interface Offer {
   scandal: number
   /** Acordo fechado em mês anterior: nada a negociar. */
   closed?: boolean
+  /** Etapa 2: concessão pedida no texto (tipo, frases da lista pronta e quanto o texto enfraquece). */
+  concession?: { type: ConcessionType; ask: string; change: string; weaken: number }
+  /** Etapa 2: chance de a liderança aceitar uma contraoferta (só nas moedas que dá para baratear). */
+  counterChance?: number
+  /** Etapa 2: o que a contraoferta muda, em uma linha. */
+  counterAsk?: string
+  /** Etapa 2: termos do acordo já fechado (para mostrar). */
+  terms?: DealTerms
 }
 
 const pick = <T,>(arr: T[], seed: number) => arr[Math.abs(seed) % arr.length]
@@ -58,8 +70,24 @@ export const emendasAmount = (party: PartyId, house: House = 'camara') =>
   (house === 'senado' ? SENADO.emendasPerSeat : DEALS.emendasPerSeat) * seatsIn(house, party)
 
 /** Valor das emendas que o partido cobra, em R$ bi no total. */
-export const emendasMoney = (party: PartyId, house: House = 'camara') =>
-  (emendasAmount(party, house) / 100) * GDP_BILLIONS * (DEALS.emendasMonths / 12)
+export const emendasMoney = (party: PartyId, house: House = 'camara', terms?: Pick<DealTerms, 'tipo' | 'counter'>) =>
+  (emendasAmount(party, house) * emendasFactor(terms) / 100) * GDP_BILLIONS * (DEALS.emendasMonths / 12)
+
+/** Etapa 2: quanto o tipo de emenda e a contraoferta mudam o valor (1 = o preço pedido). */
+export const emendasFactor = (terms?: Pick<DealTerms, 'tipo' | 'counter'>) =>
+  (terms?.tipo ? DEALS.emendaTipo[terms.tipo].money : 1) * (terms?.counter ? DEALS.counter.money : 1)
+
+/**
+ * Etapa 2: chance de a liderança aceitar menos (0 a 1). Fisiológico e de bem com o governo aceita mais;
+ * se o governo depende muito daquela bancada para ganhar, ela segura o preço.
+ */
+export function counterChanceOf(s: GameState, party: PartyId, yesNow: number, yesWith: number, gap: number): number {
+  const C = DEALS.counter
+  const p = PARTY_BY_ID[party]
+  const need = gap > 0 ? Math.min(1, Math.max(0, yesWith - yesNow) / gap) : 0
+  const ch = C.base + p.fisiologismo * C.fisiologismo + (s.congress.parties[party].relation - 50) * C.relation - need * C.need
+  return Math.max(C.min, Math.min(C.max, ch))
+}
 
 /** A oferta de uma liderança para o projeto, com os acordos já na mesa (`planned`). `house` = Câmara ou Senado (etapa 4C1). */
 export function offerFor(s: GameState, party: PartyId, bill: BillId, planned: DealList = [], house: House = 'camara'): Offer {
@@ -84,7 +112,7 @@ export function offerFor(s: GameState, party: PartyId, bill: BillId, planned: De
   }
   const existing = (senado ? senateDealsOf : dealsOf)(s, bill).find((d) => d.party === party)
   if (existing) {
-    return { ...base, kind: existing.kind, quote: 'Acordo é acordo, presidente. Estamos com o senhor nessa.', ask: 'Acordo já fechado.', detail: 'O preço já foi pago quando o acordo foi fechado.', reliability: dealReliability(party, existing.kind), closed: true }
+    return { ...base, kind: existing.kind, quote: 'Acordo é acordo, presidente. Estamos com o senhor nessa.', ask: 'Acordo já fechado.', detail: 'O preço já foi pago quando o acordo foi fechado.', reliability: dealReliability(party, existing.kind, existing), closed: true, terms: existing }
   }
   if (row.yes >= row.seats * (1 - 0.04) * DEALS.alreadyYes) {
     return {
@@ -102,16 +130,34 @@ export function offerFor(s: GameState, party: PartyId, bill: BillId, planned: De
     }
   }
   let kind: DealKind = p.fisiologismo >= DEALS.cargosFisiologismo && seats >= (senado ? SENADO.cargosMinSeats : DEALS.cargosMinSeats) ? 'cargos' : p.fisiologismo >= DEALS.emendasFisiologismo ? 'emendas' : 'pauta'
-  const flagship = kind === 'pauta' ? flagshipOf(s, party, bill) : null
+  // Etapa 2: partido de posição pede mudança no texto (concessão) em vez de pauta, metade das vezes (ou sempre, sem bandeira).
+  const flag0 = kind === 'pauta' ? flagshipOf(s, party, bill) : null
+  if (kind === 'pauta' && canAskConcession(b, party) && aff < CONCESSAO.maxAffinity && (!flag0 || (hash(party + bill) & 1) === 0)) kind = 'concessao'
+  const flagship = kind === 'pauta' ? flag0 : null
   if (kind === 'pauta' && !flagship) kind = 'emendas'
-  const yesWith = forecast(s, bill, [...others, { party, kind }]).byParty.find((r) => r.party === party)!.yes
+  const ctype = kind === 'concessao' ? concessionTypeFor(b, party, legalRiskIn(s, bill)) : undefined
+  const cterms: DealTerms = { party, kind, ...(ctype ? { concession: { type: ctype, ...concessionText(ctype) } } : {}) }
+  const yesWith = forecast(s, bill, [...others, cterms]).byParty.find((r) => r.party === party)!.yes
   const reliability = dealReliability(party, kind)
   const against = aff < 0
   const pitch = against ? 'Este texto contraria o que eu digo no palanque. Vou ter que explicar isso na convenção, e explicação custa.' : 'O texto não é ruim, mas voto não cai do céu.'
+  const target = fc.needed || Math.floor((fc.yes + fc.no) / 2) + 1
+  const counterChance = counterChanceOf(s, party, row.yes, yesWith, target - fc.yes)
+  const lead = leaderOf(s, party)
 
+  if (kind === 'concessao') {
+    const def = CONCESSION_BY_ID[ctype!]
+    return {
+      ...base, kind, yesWith, reliability, counterChance, counterAsk: 'Uma versão mais leve da mudança: o texto enfraquece menos, e a bancada vem com menos gente.',
+      concession: { type: ctype!, ...concessionText(ctype!), weaken: Math.round((1 - def.scale) * 100) },
+      quote: concessionText(ctype!).ask,
+      ask: `${def.label}: ${def.change}`,
+      detail: `Não custa dinheiro nem cargo, mas enfraquece o projeto em ${Math.round((1 - def.scale) * 100)}%${def.negMul < 1 ? ' (e corta mais do que dói nos grupos)' : ''}${def.safer ? '; em troca, o texto fica mais seguro no Supremo' : ''}. ${lead.feminine ? 'Ela' : 'Ele'} vota por posição, não por preço.`,
+    }
+  }
   if (kind === 'cargos') {
     return {
-      ...base, kind, yesWith, reliability, scandal: DEALS.scandal.cargos,
+      ...base, kind, yesWith, reliability, scandal: DEALS.scandal.cargos, counterChance, counterAsk: 'Um cargo só, em vez da diretoria inteira: metade do risco de escândalo, menos votos.',
       quote: pick(['Não é sobre o projeto. É sobre a mesa. Quem não senta na mesa vira cardápio. Vamos falar do que compensa a bancada.', `${pitch} A bancada quer espaço no governo, presidente.`], seed),
       ask: 'Diretorias de estatais e cargos no segundo escalão para indicados do partido',
       detail: `Bancada de ${seats} ${who}. Indicações políticas aumentam o risco de escândalo, e o ${PARTY_BY_ID[s.playerParty].sigla} não gosta de dividir espaço.`,
@@ -120,7 +166,7 @@ export function offerFor(s: GameState, party: PartyId, bill: BillId, planned: De
   if (kind === 'emendas') {
     const money = emendasMoney(party, house)
     return {
-      ...base, kind, yesWith, reliability, money, scandal: DEALS.scandal.emendas,
+      ...base, kind, yesWith, reliability, money, scandal: DEALS.scandal.emendas, counterChance, counterAsk: `Metade: R$ ${Math.round(money * DEALS.counter.money)} bi. Menos votos e um pouco menos de confiança.`,
       quote: pick([`${pitch} As bases estão pedindo obra, presidente.`, senado ? 'Senador tem estado inteiro para atender, presidente. Libera as emendas e a bancada vem.' : 'Meu deputado precisa voltar para casa com algo na mão. Libera as emendas e a bancada vem.'], seed),
       ask: `Liberar R$ ${Math.round(money)} bi em emendas da bancada em ${DEALS.emendasMonths} meses`,
       detail: `Dinheiro para obras nas bases dos ${who}. Pesa nas contas e, se mal usado, vira notícia.`,
@@ -128,7 +174,7 @@ export function offerFor(s: GameState, party: PartyId, bill: BillId, planned: De
   }
   const f = BILL_BY_ID[flagship!]
   return {
-    ...base, kind, yesWith, reliability, flagship: flagship!,
+    ...base, kind, yesWith, reliability, flagship: flagship!, counterChance, counterAsk: `Pautar “${f.name}” em ${DEALS.counter.promiseMonths} meses, em vez de ${DEALS.promiseMonths}.`,
     quote: pick([`Voto o seu se o senhor mandar o nosso: “${f.name}”. ${pitch}`, `A gente topa, presidente, mas quer ver “${f.name}” na pauta. Três meses.`], seed),
     ask: `Enviar “${f.name}” à Câmara em até ${DEALS.promiseMonths} meses`,
     detail: `Não custa dinheiro agora. Se o prazo vencer sem o projeto ser enviado, a bancada cobra (${DEALS.promiseBroken} na relação).`,
@@ -149,5 +195,10 @@ export function dealBlockedReason(s: GameState, d: Deal, planBills: BillId[], pl
   }
   const o = offerFor(s, d.party, d.bill, planned, d.house ?? 'camara')
   if (o.kind !== d.kind) return `${PARTY_BY_ID[d.party].sigla} não aceita esse tipo de acordo.`
+  if (d.kind === 'concessao' && d.concession?.type !== o.concession?.type) return 'A concessão não é a que a liderança pediu.'
+  if (d.counter) {
+    const tried = s.round?.month === s.month ? s.round.counters?.find((x) => x.party === d.party && x.bill === d.bill && (x.house ?? 'camara') === (d.house ?? 'camara')) : undefined
+    if (!tried?.ok) return 'A liderança não aceitou a contraoferta.'
+  }
   return null
 }

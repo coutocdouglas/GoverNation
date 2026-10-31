@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { affinity, amendmentOf, forecastSenate, forecastVote, isRecess, seatsIn, senatePending, type House } from '../game/congress'
 import { committeeOf, frenteSummary } from '../game/camara'
 import { BILL_BY_ID, GDP_BILLIONS, INSTRUMENTS } from '../game/data/bills'
@@ -6,9 +6,15 @@ import { CAMARA } from '../game/data/camara'
 import { DEALS } from '../game/data/deals'
 import { SENADO } from '../game/data/senado'
 import { PARTIES, PARTY_BY_ID } from '../game/data/parties'
-import { offerFor, type Offer } from '../game/deals'
+import { emendasAmount, emendasFactor, emendasMoney, offerFor, type Offer } from '../game/deals'
+import { leaderOf, speakerOf } from '../game/partidos'
+import { counterBlockedReason, counterOf, counterOffer } from '../game/negociacao'
+import { CONCESSION_BY_ID, DESTINOS } from '../game/data/negociacao'
+import { GROUP_BY_ID } from '../game/data/groups'
+import { aiReady } from '../lib/ai'
+import { askConcession } from '../lib/aiActions'
 import { procedureBlockedReason, type MonthPlan } from '../game/game'
-import type { BillId, Deal, GameState, PartyId } from '../game/types'
+import type { BillId, Deal, EmendaDestino, GameState, PartyId } from '../game/types'
 import { Portrait } from './Portrait'
 import { Art } from './Art'
 import { num } from './format'
@@ -22,13 +28,14 @@ const KIND_TAG: Record<Offer['kind'], { text: string; cls: string }> = {
   emendas: { text: 'Quer emendas', cls: 'warn' },
   pauta: { text: 'Quer o projeto dele na pauta', cls: 'blue' },
   cargos: { text: 'Quer cargos', cls: 'warn' },
+  concessao: { text: 'Quer mudar o texto', cls: 'blue' },
 }
 
 /**
  * Votação no Congresso (etapas 4 e 4C1): placar previsto se fosse votado agora, lideranças e negociação,
  * com uma aba para a Câmara e outra para o Senado. O presidente ouve até 3 lideranças por mês na Câmara e 2 no Senado.
  */
-export function VoteSheet({ state, bill, deals, listened, onListen, listenedSenate, onListenSenate, onDeal, onClose, plan, onProcedure, onVoteNow, voteBlocked, gaveta }: {
+export function VoteSheet({ state, bill, deals, listened, onListen, listenedSenate, onListenSenate, onDeal, onClose, plan, onProcedure, onVoteNow, voteBlocked, gaveta, onState }: {
   state: GameState
   bill: BillId
   /** Acordos do mês (todos os projetos, nas duas casas). */
@@ -49,6 +56,8 @@ export function VoteSheet({ state, bill, deals, listened, onListen, listenedSena
   voteBlocked?: string | null
   /** O que vai segurar o projeto antes do voto, se mandar agora. */
   gaveta?: string | null
+  /** Etapa 2: ações que mudam o estado na hora (contraoferta). */
+  onState?: (s: GameState) => void
 }) {
   const b = BILL_BY_ID[bill]
   const inSenate = senatePending(state, bill)
@@ -189,8 +198,8 @@ export function VoteSheet({ state, bill, deals, listened, onListen, listenedSena
           </div>
           <div className={`pn-tram__step ${speakerRisk ? 'risk' : ''}`}>
             <small>{b.instrument === 'mp' ? '2' : '3'} · Plenário</small>
-            <b>{CAMARA.speaker.name}, presidente da Câmara</b>
-            <span>Relação com o governo: <b className={sp.relation >= 50 ? 'up' : sp.relation >= CAMARA.speaker.holdBelow ? 'warn' : 'dn'}>{Math.round(sp.relation)}</b>. {b.instrument === 'mp' ? 'MP tranca a pauta: ele não consegue segurar.' : speakerRisk ? '⚠️ De mal com o governo: pode segurar o projeto na gaveta.' : 'Deve pautar a votação.'}</span>
+            <b>{speakerOf(state.congress).name}, presidente da Câmara</b>
+            <span>Relação com o governo: <b className={sp.relation >= 50 ? 'up' : sp.relation >= CAMARA.speaker.holdBelow ? 'warn' : 'dn'}>{Math.round(sp.relation)}</b>. {b.instrument === 'mp' ? `MP tranca a pauta: ${speakerOf(state.congress).feminine ? 'ela' : 'ele'} não consegue segurar.` : speakerRisk ? '⚠️ De mal com o governo: pode segurar o projeto na gaveta.' : 'Deve pautar a votação.'}</span>
           </div>
         </div>
         <div className="pn-tram__actions">
@@ -219,7 +228,7 @@ export function VoteSheet({ state, bill, deals, listened, onListen, listenedSena
         </div>
         <p className="pn-hint">Chame a liderança e ouça o preço. Cada partido cobra numa moeda diferente, e alguns não vendem por nenhuma.</p>
 
-        {offer && <OfferCard offer={offer} house={house} deal={mine.find((d) => d.party === offer.party) ?? null} onClose={() => setOpen(null)} onDeal={onDeal} />}
+        {offer && <OfferCard key={`${offer.party}-${house}`} state={state} offer={offer} house={house} deal={mine.find((d) => d.party === offer.party) ?? null} onClose={() => setOpen(null)} onDeal={onDeal} onState={onState} />}
 
         <div className="pn-leaders">
           {order.map((p) => {
@@ -235,8 +244,8 @@ export function VoteSheet({ state, bill, deals, listened, onListen, listenedSena
             return (
               <button key={p.id} className={`pn-leader ${open === p.id ? 'on' : ''}`} disabled={!canListen} onClick={() => { if (!heard) (senado ? onListenSenate : onListen)(p.id); setOpen(p.id) }} title={own ? '' : heard ? 'Ver de novo a proposta' : listenLeft > 0 ? 'Chamar para conversar' : `Você já ouviu ${listenMax} lideranças ${senado ? 'no Senado' : 'na Câmara'} este mês`}>
                 <div className="pn-leader__top">
-                  <Portrait name={p.leader.name} feminine={p.leader.feminine} color={p.color} size={36} title={p.leader.name} />
-                  <div><b style={{ color: p.color }}>{p.sigla}</b> · {n}<small>{p.leader.name}</small></div>
+                  <Portrait name={leaderOf(state, p.id).name} feminine={leaderOf(state, p.id).feminine} color={p.color} size={36} title={leaderOf(state, p.id).name} />
+                  <div><b style={{ color: p.color }}>{p.sigla}</b> · {n}<small>{leaderOf(state, p.id).name}</small></div>
                   <span className={`pn-chip-mini ${tag.c}`}>{tag.t}</span>
                 </div>
                 {deal && <span className="pn-chip-mini up">Acordo: {KIND_TAG[deal.kind].text.toLowerCase()}</span>}
@@ -266,36 +275,100 @@ export function VoteSheet({ state, bill, deals, listened, onListen, listenedSena
   )
 }
 
-function OfferCard({ offer, house, deal, onClose, onDeal }: {
-  offer: Offer; house: House; deal: Deal | null; onClose: () => void; onDeal: (d: Deal, add: boolean) => void
+function OfferCard({ state, offer, house, deal, onClose, onDeal, onState }: {
+  state: GameState; offer: Offer; house: House; deal: Deal | null; onClose: () => void; onDeal: (d: Deal, add: boolean) => void; onState?: (s: GameState) => void
 }) {
   const p = PARTY_BY_ID[offer.party]
+  const lead = leaderOf(state, offer.party)
   const tag = KIND_TAG[offer.kind]
-  const priced = !offer.closed && (offer.kind === 'emendas' || offer.kind === 'pauta' || offer.kind === 'cargos')
-  const d: Deal | null = priced ? { party: offer.party, kind: offer.kind as Deal['kind'], bill: offer.bill, ...(house === 'senado' ? { house: 'senado' as const } : {}) } : null
+  const priced = !offer.closed && (offer.kind === 'emendas' || offer.kind === 'pauta' || offer.kind === 'cargos' || offer.kind === 'concessao')
+  // Etapa 2: emendas com tipo e destino; concessão com o texto escrito pela IA (se houver chave).
+  const [tipo, setTipo] = useState<'individual' | 'bancada' | undefined>(undefined)
+  const [destino, setDestino] = useState<EmendaDestino | undefined>(undefined)
+  const [aiText, setAiText] = useState<{ ask: string; change: string } | null>(null)
+  const [aiBusy, setAiBusy] = useState(false)
+  const conc = offer.concession
+  useEffect(() => {
+    if (!conc || offer.closed || !aiReady()) return
+    let live = true
+    setAiBusy(true)
+    const def = CONCESSION_BY_ID[conc.type]
+    askConcession(state, offer.party, lead.name, offer.bill, { label: def.label, change: def.change }).then((r) => { if (live) { setAiText(r); setAiBusy(false) } })
+    return () => { live = false }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [offer.party, offer.bill, conc?.type])
+  const counter = counterOf(state, offer.party, offer.bill, house)
+  const counterWhy = counterBlockedReason(state, offer.party, offer.bill, house)
+  const texts = conc ? (aiText ?? { ask: conc.ask, change: conc.change }) : null
+  const make = (withCounter: boolean): Deal | null => priced ? {
+    party: offer.party, kind: offer.kind as Deal['kind'], bill: offer.bill, ...(house === 'senado' ? { house: 'senado' as const } : {}),
+    ...(withCounter ? { counter: true } : {}),
+    ...(offer.kind === 'emendas' && tipo ? { tipo } : {}),
+    ...(offer.kind === 'emendas' && destino ? { destino } : {}),
+    ...(conc && texts ? { concession: { type: conc.type, ask: texts.ask, change: texts.change } } : {}),
+  } : null
+  const d = make(false)
+  const money = offer.kind === 'emendas' ? emendasMoney(offer.party, house, { tipo }) : offer.money
   return (
     <div className="pn-offer">
-      <div className="pn-offer__head"><b>{p.leader.name} · {p.sigla}{house === 'senado' ? ' no Senado' : ''}</b><span className={`pn-chip-mini ${tag.cls}`}>{tag.text}</span></div>
+      <div className="pn-offer__head"><b>{lead.name} · {p.sigla}{house === 'senado' ? ' no Senado' : ''}</b><span className={`pn-chip-mini ${tag.cls}`}>{tag.text}</span></div>
       <div className="pn-offer__body">
-        <Portrait name={p.leader.name} feminine={p.leader.feminine} color={p.color} size={84} title={p.leader.name} />
+        <Portrait name={lead.name} feminine={lead.feminine} color={p.color} size={84} title={lead.name} />
         <div>
-          <p className="pn-offer__quote">“{offer.quote}”</p>
+          <p className="pn-offer__quote">“{texts?.ask ?? offer.quote}”{aiBusy && <small className="pn-hint"> ✍️ a IA está escrevendo a concessão…</small>}</p>
           <div className="pn-offer__ask">
-            <small>{priced ? `O que ${p.leader.feminine ? 'ela' : 'ele'} pede` : 'Resposta'}</small>
-            <b>{offer.ask}</b>
+            <small>{priced ? `O que ${lead.feminine ? 'ela' : 'ele'} pede` : 'Resposta'}</small>
+            <b>{conc && texts ? `${CONCESSION_BY_ID[conc.type].label}: ${texts.change}` : offer.ask}</b>
             <p>{offer.detail}</p>
+            {conc && <p className="warn">✂️ Enfraquece o projeto em {conc.weaken}%{aiText ? ' · texto escrito pela IA; os números são do jogo' : ''}.</p>}
           </div>
         </div>
       </div>
+      {priced && offer.kind === 'emendas' && !deal && (
+        <div className="pn-emendas">
+          <div className="pn-seg">
+            <button className={!tipo ? 'on' : ''} onClick={() => setTipo(undefined)}>Como pediu</button>
+            {(['individual', 'bancada'] as const).map((k) => (
+              <button key={k} className={tipo === k ? 'on' : ''} title={DEALS.emendaTipo[k].desc} onClick={() => setTipo(k)}>{DEALS.emendaTipo[k].label}</button>
+            ))}
+          </div>
+          <div className="pn-seg">
+            <button className={!destino ? 'on' : ''} onClick={() => setDestino(undefined)}>Destino livre</button>
+            {(Object.keys(DESTINOS) as EmendaDestino[]).map((k) => (
+              <button key={k} className={destino === k ? 'on' : ''} title={`Agrada ${GROUP_BY_ID[DESTINOS[k].group].name.toLowerCase()}`} onClick={() => setDestino(k)}>{DESTINOS[k].icon} {DESTINOS[k].label}</button>
+            ))}
+          </div>
+          <p className="pn-hint" style={{ margin: 0 }}>
+            Na hora: <b>R$ {Math.round(money)} bi</b> em {DEALS.emendasMonths} meses (cerca de {num(money / GDP_BILLIONS * 100 * 12 / DEALS.emendasMonths, 2)}% do PIB ao ano no primário) e a confiança do mercado cai {num(Math.abs(emendasAmount(offer.party, house) * emendasFactor({ tipo }) * DEALS.emendasConfidence / 100), 1)} ponto.
+            {tipo ? ` ${DEALS.emendaTipo[tipo].desc}` : ''}{destino ? ` ${DESTINOS[destino].icon} ${GROUP_BY_ID[DESTINOS[destino].group].name} gostam.` : ''}
+          </p>
+        </div>
+      )}
       <div className="pn-sheet__grid pn-sheet__grid--4">
         <div><span>Votos da bancada</span><b className="up">{priced && !deal ? `${offer.yesNow} → ${offer.yesWith}` : `hoje ${offer.yesNow}`}</b></div>
         <div><span>Confiabilidade</span><b className={offer.reliability > 0.75 ? 'up' : 'warn'}>{priced || offer.closed ? `${Math.round(offer.reliability * 100)}%` : '—'}</b></div>
-        <div><span>Custo</span><b>{offer.money > 0 ? `R$ ${Math.round(offer.money)} bi` : 'sem custo em dinheiro'}</b></div>
+        <div><span>Custo</span><b>{money > 0 ? `R$ ${Math.round(money)} bi` : conc ? 'muda o texto' : 'sem custo em dinheiro'}</b></div>
         <div><span>Risco de escândalo</span><b className={offer.scandal ? 'warn' : ''}>{offer.scandal ? `+${offer.scandal}` : 'nenhum'}</b></div>
       </div>
       {priced && !deal && <p className="pn-hint">Hoje {offer.yesNow} votam sim. Com o acordo, a conta dá {offer.yesWith}.</p>}
+      {priced && !deal && offer.counterChance !== undefined && onState && (
+        <div className="pn-counter">
+          {!counter ? (
+            <button className="pn-btn pn-btn--ghost pn-btn--small" disabled={!!counterWhy} title={counterWhy ?? ''} onClick={() => {
+              try { onState(counterOffer(state, offer.party, offer.bill, house).state) } catch { /* bloqueado */ }
+            }}>🤏 Fazer contraoferta · chance {Math.round(offer.counterChance * 100)}%</button>
+          ) : counter.ok ? (
+            <span className="up">✅ {lead.name} aceitou a contraoferta.</span>
+          ) : <span className="dn">❌ {lead.name} recusou a contraoferta e ficou um pouco ofendid{lead.feminine ? 'a' : 'o'} ({DEALS.counter.refusedHit} de relação). O preço cheio continua na mesa.</span>}
+          <small className="pn-hint" style={{ display: 'block', margin: '2px 0 0' }}>{offer.counterAsk} Se recusar, a liderança se ofende um pouco. Uma tentativa por rodada.</small>
+        </div>
+      )}
       <div className="pn-sheet__foot">
-        {d && !deal && <><button className="pn-btn pn-btn--ghost" onClick={onClose}>Recusar</button><button className="pn-btn" onClick={() => { onDeal(d, true); onClose() }}>Aceitar e fechar</button></>}
+        {d && !deal && <>
+          <button className="pn-btn pn-btn--ghost" onClick={onClose}>Recusar</button>
+          {counter?.ok ? <button className="pn-btn" onClick={() => { onDeal(make(true)!, true); onClose() }}>Fechar pela contraoferta</button>
+            : <button className="pn-btn" onClick={() => { onDeal(d, true); onClose() }}>Aceitar e fechar</button>}
+        </>}
         {deal && <><button className="pn-btn pn-btn--ghost" onClick={() => onDeal(deal, false)}>Desfazer o acordo</button><button className="pn-btn" onClick={onClose}>Fechar</button></>}
         {!d && <button className="pn-btn pn-btn--ghost" style={{ gridColumn: '1 / -1' }} onClick={onClose}>Encerrar a conversa</button>}
       </div>
