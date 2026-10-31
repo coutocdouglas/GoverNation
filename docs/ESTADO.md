@@ -3,7 +3,7 @@
 > **Leia este arquivo primeiro.** Ele diz onde o projeto está e qual é o próximo passo.
 > Atualize-o a cada mudança: seção "Estado atual", "Próximo passo" e uma linha no "Histórico".
 
-**Última atualização:** 31/10/2026 · **Versão publicada:** v0.16.0
+**Última atualização:** 31/10/2026 · **Versão publicada:** v0.16.1
 
 ---
 
@@ -15,7 +15,7 @@ Complexidade: **média-alta**. Opus no desenho das regras do post e da rua; Sonn
 
 Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdouglas/GoverNation. Leia CLAUDE.md, docs/ESTADO.md e docs/DESIGN.md (seção 27). Quero fazer a etapa 1B."*
 
-**Pendência do Douglas:** melhorar os 30 retratos provisórios (`public/portraits/111.webp` a `140.webp`) e devolver com o mesmo nome; mandar as ilustrações dos slots (`public/art/LEIAME.md`) quando quiser.
+**Pendência do Douglas:** mandar as ilustrações dos slots (`public/art/LEIAME.md`) quando quiser. Retratos: 198 no total, 124 livres; para gerar provisórios de quem ainda não tem rosto, `scripts/retratos-provisorios.py` (sai em `scripts/retratos-provisorios/`, a partir do 199).
 
 ---
 
@@ -57,7 +57,7 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 - **Memória do mundo:** leis, MPs e obras plantam consequências que brotam meses ou anos depois. Há herança do governo anterior e o tempo é absoluto, pronto para vários mandatos.
 - **Fichas:** biografia acumulada de cada personagem e memória do país.
 - **Causa e consequência (v0.16):** Ficha de governo, 10 marcas de reputação (medida impopular marca no envio), marcas pesando todo mês, 10 desdobramentos ligados ao que você fez, capítulos da presidência a cada 6 meses (narração opcional pela IA), reputação e exposição a escândalo no Painel.
-- **Retratos:** 110 fotos, cada uma usada por uma pessoa só, e 30 retratos provisórios (111 a 140) para personagens novos. O presidente escolhe o rosto na posse (41 livres) e 15 retratos ficam reservados para Defesa, povos indígenas, campo e tradições.
+- **Retratos:** 110 fotos, cada uma usada por uma pessoa só, e 88 retratos ilustrados (111 a 198) feitos pelo Douglas. 124 rostos livres para personagens novos e para o presidente. O presidente escolhe o rosto na posse (41 livres) e 15 retratos ficam reservados para Defesa, povos indígenas, campo e tradições.
 
 **Telas:** Posse em 3 passos, Painel (com cara de jogo, animações, plantão de notícias, cartões de Oposição, Promessas e Supremo), Governo com quatro abas: **Câmara** (mesa de sanção, presidente da Câmara, pauta com a chance nas duas casas, partidos e articulação, frentes, leis com reação), **Senado** (casa, presidente, pauta e votações), **Supremo** (ministros, ações, liminares, projetos travados, consultas, decisões, vaga) e **Ministérios** (desgaste, meta e reforma), e Fichas. Nação, Economia, Diplomacia, Programas e Vida pessoal aparecem bloqueadas.
 
@@ -126,3 +126,4 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 | 30/10/2026 | — | Plano novo por etapas com portão (DESIGN.md, seção 27), fundido com 4D/4E/4F: medida do mês vota na hora, 1 projeto da fila por casa, Supremo na mesma rodada |
 | 31/10/2026 | v0.15.0 | Etapa 0: a rodada. Votar agora (Câmara → Senado), pautar da fila, articulação na hora, gaveta avisada, MP caduca, Supremo na mesma rodada, faixa da rodada, ilustrações provisórias; save 13 |
 | 31/10/2026 | v0.16.0 | Etapa 1A: Ficha de governo, 10 marcas de reputação, desdobramentos, capítulos da presidência com narração pela IA, reputação e escândalo no Painel; 30 retratos provisórios; save 14 |
+| 31/10/2026 | v0.16.1 | 88 retratos ilustrados do Douglas (111 a 198) no lugar dos 30 provisórios |

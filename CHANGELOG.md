@@ -1,5 +1,9 @@
 # Novidades
 
+## 0.16.1
+- **88 retratos ilustrados novos** (111 a 198), feitos pelo Douglas: substituem os 30 provisórios. Os 5 personagens dos desdobramentos (economista da agência, colunista, presidente da Ordem dos Juristas, diretora do instituto de pesquisa e líder dos protestos) ganham rosto de verdade, e os outros entram para os personagens das próximas etapas e para a escolha do rosto do presidente (agora 124 rostos livres).
+- Entre os novos há rostos para personagens especiais: liderança indígena (dois), produtor rural de chapéu (dois), militar fardado e mulheres de turbante e lenço.
+
 ## 0.16.0
 - **Causa e consequência (etapa 1A).** Tudo o que você faz fica marcado e volta depois.
   - **Ficha de governo** (aba Fichas): a linha do tempo do mandato. Cada medida enviada, lei aprovada, derrota, crise respondida ou ignorada, acordo cumprido ou furado e decisão do Supremo vira uma entrada.

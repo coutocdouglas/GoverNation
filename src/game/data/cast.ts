@@ -32,7 +32,7 @@ export const CAST: CastMember[] = [
   { name: 'Neusa Galvão', role: 'Ministra dos Transportes', gender: 'f', portrait: 15 },
   { name: 'Heitor Valadares', role: 'Governador do Sul', gender: 'm', portrait: 53 },
   { name: 'Vera Toledo', role: 'Chefe da Controladoria', gender: 'f', portrait: 36 },
-  // Etapa 1 (v0.16): desdobramentos da reputação. Retratos provisórios (111+), a melhorar.
+  // Etapa 1 (v0.16): desdobramentos da reputação (retratos ilustrados 111 a 115).
   { name: 'Rogério Albuquerque', role: 'Economista-chefe da agência de risco Atlas', gender: 'm', portrait: 111 },
   { name: 'Sílvia Mattoso', role: 'Colunista política', gender: 'f', portrait: 112 },
   { name: 'Dr. Fausto Lemos', role: 'Presidente da Ordem dos Juristas', gender: 'm', portrait: 113 },

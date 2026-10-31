@@ -1,5 +1,5 @@
 """Gera retratos provisórios (111.webp em diante) no estilo dos retratos do jogo: busto ilustrado, 192x192.
-São placeholders: o Douglas melhora numa IA de imagem e devolve com o mesmo nome de arquivo.
+São placeholders (para personagens que ainda não têm rosto): o Douglas melhora numa IA de imagem e devolve com o mesmo nome de arquivo.
 Uso: python3 scripts/retratos-provisorios.py  (lista em SPECS; mesmo resultado sempre)."""
 import random
 from PIL import Image, ImageDraw, ImageFilter
@@ -14,7 +14,7 @@ SPECS = []
 for i in range(30):
     g = 'f' if i % 2 else 'm'
     age = 'jmmo'[i % 4]
-    SPECS.append((111 + i, g, age))
+    SPECS.append((199 + i, g, age))  # depois do último retrato do jogo (198)
 
 def hexrgb(h):
     h = h.lstrip('#'); return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
@@ -111,7 +111,9 @@ def portrait(pid, g, age):
 
 if __name__ == '__main__':
     import os
-    out = os.path.join(os.path.dirname(__file__), '..', 'public', 'portraits')
+    # Escreve fora do jogo: os retratos 111 a 198 já são os ilustrados e não podem ser sobrescritos.
+    out = os.path.join(os.path.dirname(__file__), 'retratos-provisorios')
+    os.makedirs(out, exist_ok=True)
     for pid, g, age in SPECS:
         portrait(pid, g, age).save(os.path.join(out, f'{pid:03d}.webp'), 'WEBP', quality=90)
     print(len(SPECS), 'retratos provisórios gerados')
