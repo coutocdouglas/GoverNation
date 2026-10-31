@@ -680,3 +680,43 @@ Exposição a escândalo visível de 0 a 100 (item 20), CPIs (35), vice-presiden
 - **Simulador** (`npm run sim`): a ordem das estratégias não mudou (responde aos fatos 582 > austero 551 > equilibrado 509 > passivo 460 > populista 311). Projeto a cada 2 meses (mistura comum): 2 a 4 ações por mandato e 0,2 a 0,7 derrubada; estratégias só de decreto seguro: nenhuma ação. Bloco novo "medidas arriscadas" (uma medida com risco a cada 2 meses, o caso extremo): 8 a 10 julgamentos, 1,6 a 2,4 derrubadas e 1,5 a 1,9 liminar por mandato; a CCJ barra 3,1 projetos por mandato de um governo de esquerda (o POL preside) e quase nada de um de direita; projetos contestados durante a tramitação são raros (0,4 por mandato), porque passam rápido e a fila de ações costuma estar cheia. O desgaste quase não mexe na nota: quem ignora as crises chega ao fim com 0 a 3 ministros desgastados; quem responde aos fatos, com nenhum.
 - **Fica para depois:** "Pautar agora" bloqueado com o motivo (4D), articular com o Supremo (audiências, AGU), IA nos votos dos ministros, ações contra leis de governos anteriores, ministros substitutos com retrato próprio (para trocar Fazenda e Política), metas por pasta escolhidas pelo jogador.
 
+
+---
+
+## 27. Plano novo por etapas com portão (decisão de 30/10/2026, substitui as seções 25 e o roteiro antigo daqui para frente)
+
+**Pedido do Douglas:** o tempo do jogo deve ser mais "jogo" que realidade. Só escrever uma medida nova é limitado (uma por rodada); Câmara, Senado e Supremo agem **na mesma rodada**. Causa e consequência forte (medida impopular enviada marca a reputação mesmo sem aprovar), fatos do mês vindos dos desdobramentos, narrativa da presidência, mais uso da IA, Senado e STF mais profundos, vice com ações, interface com ilustrações (placeholders). Etapas com portão: a próxima só abre quando a anterior fecha; ideia fora de hora vai para a **Caixa de ideias** da etapa certa. Plano completo também no doc do projeto `plano-de-desenvolvimento.md`.
+
+**Decisões (30/10):** (1) fundir com o plano antigo (4D/4E/4F); (2) **a medida do mês vota na hora**, nas duas casas, e além dela **1 projeto da fila por casa** pode ser pautado no mês (substitui "uma votação por casa por mês"); (3) **o Supremo julga na mesma rodada**; só a consulta prévia e as ações com liminar ficam para a rodada seguinte. PEC: os dois turnos acontecem na mesma rodada (substitui a decisão 25(2)).
+
+**Princípios:** realidade na lógica, jogo no tempo · regras decidem, IA narra · todo resultado tem "por que isso aconteceu?".
+
+| Etapa | Conteúdo | Origem |
+|---|---|---|
+| **0 · A rodada** (v0.15) | Medida do mês e resposta ao fato votam na hora (Câmara → Senado), gavetas avisadas antes, CCJ na hora; "Pautar agora" para 1 projeto da fila por casa; MP caduca em 4 meses sem votação; Supremo julga no fechamento da mesma rodada; buffer da rodada no estado; fases visíveis; sistema de ilustrações placeholder | 4D (votar na hora) |
+| **1 · Causa e consequência** | Ficha de governo com marcas de reputação (medida enviada já marca), desdobramentos em 3 camadas, anti-repetição, capítulos da presidência com IA, exposição a escândalo visível, três caminhos para a crise (post, rua), agenda limpa, enquanto você decidia, fato bom com botão de agir | 4E, 4F, novo |
+| **2 · Câmara e partidos** | Líder do seu partido indicável, eleições internas e da Mesa, alas, conversa por tipos, emendas detalhadas, contraoferta, concessões no texto, traidores, janela da medida em etapas com nota de freios e contrapesos, nome da medida | 4D, 4E |
+| **3 · Senado** | Página própria, líderes de bancada, indecisos com preço, comissões do Senado, 27 estados com bancadas estaduais, emendas por estado | 4D, 5B (parte) |
+| **4 · Supremo profundo** | Sorteio do relator, validação que protege, crise pós-derrubada ampliada, reputação jurídica, pedido de vista | 4E, novo |
+| **5 · Oposição, escândalos e CPI** | Escândalos revelados, CPI, inteligência | levantamento |
+| **6 · Vice e governo** | Vice com ações e lealdade, execução das leis, relógios do mandato | levantamento |
+| **7 · Estados e governadores** | 27 governadores, mapa por estado, apuração | 5B |
+| **8 · Começo, sociedade e fim** | Candidatura completa, pessoas fictícias e jornais, conquistas, fim de mandato e herança | 5C |
+| **9 · Arte final** | Trocar placeholders, painéis personalizáveis, polimento | — |
+
+**Definição de pronto de cada etapa:** testes passando, partida simulada de 12 rodadas sem erro, balanceamento revisado, efeitos ligados à memória do mundo, placeholders cadastrados, sem regressão, versão publicada, Caixa de ideias revisada.
+
+### 27.2 Como ficou a Etapa 0 (v0.15)
+- **Motor:** `src/game/rodada.ts`. `sendMeasure` (medida do mês ou resposta ao fato), `voteNow` (um projeto da fila por casa), `articulate`; `gavetaReason` e `sendBlockedReason`/`voteNowBlockedReason` para avisar antes. Os efeitos ficam em `GameState.round` (impulsos, confiança, manchetes, votações, leis) e `advanceMonth` aplica e zera. Planos no formato antigo (simulador, testes) passam por `applyPlanToRound`. `applyEffects` foi para `src/game/effects.ts`.
+- **Regras:** lei, LC e PEC votam na hora (Câmara → Senado; PEC com os dois turnos juntos). MP vale na hora e fica na fila; caduca se não for pautada até a 4ª rodada. Gaveta (comissão, presidente da Câmara, presidente do Senado) e CCJ na hora; recesso e projeto travado pelo Supremo ficam na fila. O fechamento não vota plenário; continuam lá vetos, sanções, pautas-bomba e o Supremo.
+- **Supremo:** prazos de julgamento zerados (`data/supremo.ts`); no fechamento, primeiro as novas ações, depois os julgamentos (um contra medida em vigor e um contra projeto por mês). Liminar julgada na rodada seguinte; consulta responde em 1 rodada.
+- **Telas:** botão "Votar agora" na janela de votação (com o aviso da gaveta), "Negociar e pautar agora" nas filas, faixa da rodada, medida enviada no lugar da caixa de texto, articulação na hora, animações das votações na hora (sem repetir no fechamento).
+- **Ilustrações:** `src/ui/art.ts` (slots) e `src/ui/Art.tsx` (placeholder até existir `public/art/<slot>.webp`).
+- **Balanceamento:** simulador com `pautarFila` (pauta o que estiver livre na fila). Ordem das estratégias igual; leis por mandato no mesmo nível de antes (16 a 22 com um projeto a cada 2 meses).
+- **Save versão 13.**
+
+### 27.1 Caixa de ideias por etapa
+- Etapa 1: conquistas como selos da Ficha; nome da medida no telejornal; decreto também com janela de confirmação antes de assinar.
+- Etapa 2: ministério cedido valendo na hora (hoje vale no fechamento do mês); urgência como ação da rodada.
+- Etapa 2: vice-líder do governo; orçamento paralelo como escândalo (vai para a 5).
+- Etapa 3: governador puxando a bancada (vai para a 7).

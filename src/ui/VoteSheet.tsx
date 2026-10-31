@@ -10,6 +10,7 @@ import { offerFor, type Offer } from '../game/deals'
 import { procedureBlockedReason, type MonthPlan } from '../game/game'
 import type { BillId, Deal, GameState, PartyId } from '../game/types'
 import { Portrait } from './Portrait'
+import { Art } from './Art'
 import { num } from './format'
 
 export type ProcedureKind = 'hold' | 'urgent' | 'original' | 'symbolic'
@@ -27,7 +28,7 @@ const KIND_TAG: Record<Offer['kind'], { text: string; cls: string }> = {
  * Votação no Congresso (etapas 4 e 4C1): placar previsto se fosse votado agora, lideranças e negociação,
  * com uma aba para a Câmara e outra para o Senado. O presidente ouve até 3 lideranças por mês na Câmara e 2 no Senado.
  */
-export function VoteSheet({ state, bill, deals, listened, onListen, listenedSenate, onListenSenate, onDeal, onClose, plan, onProcedure }: {
+export function VoteSheet({ state, bill, deals, listened, onListen, listenedSenate, onListenSenate, onDeal, onClose, plan, onProcedure, onVoteNow, voteBlocked, gaveta }: {
   state: GameState
   bill: BillId
   /** Acordos do mês (todos os projetos, nas duas casas). */
@@ -42,6 +43,12 @@ export function VoteSheet({ state, bill, deals, listened, onListen, listenedSena
   /** Plano do mês, para conferir os pedidos sobre a tramitação (etapa 4B). */
   plan: MonthPlan
   onProcedure: (kind: ProcedureKind, id: BillId, on: boolean) => void
+  /** Etapa 0: votar agora (mandar a medida ou pautar o projeto da fila). */
+  onVoteNow?: (id: BillId) => void
+  /** Por que não dá para votar agora (null = pode). */
+  voteBlocked?: string | null
+  /** O que vai segurar o projeto antes do voto, se mandar agora. */
+  gaveta?: string | null
 }) {
   const b = BILL_BY_ID[bill]
   const inSenate = senatePending(state, bill)
@@ -91,16 +98,16 @@ export function VoteSheet({ state, bill, deals, listened, onListen, listenedSena
     const abst = Math.max(0, Math.round(n * 0.96) - r.yes - r.no)
     for (let i = 0; i < n; i++) squares.push(i < r.yes ? 'y' : i < r.yes + r.no ? 'n' : i < r.yes + r.no + abst ? 'a' : 'x')
   }
-  const timing = recess ? 'Congresso em recesso: a votação fica para o mês que vem.'
-    : senado
-      ? inSenate ? (b.instrument === 'pec' && inSenate.sentMonth === state.month ? 'A PEC é votada no Senado no mês que vem, em dois turnos.' : 'Vai a voto no Senado ao encerrar o mês.')
-        : b.instrument === 'pec' ? 'Se a Câmara aprovar, a PEC vai ao Senado no mês seguinte, em dois turnos.' : 'Se a Câmara aprovar, o Senado vota logo em seguida, no mesmo encerramento.'
-      : b.instrument === 'mp' ? 'A MP vale na hora e é votada no mês seguinte; depois, no Senado.' : 'Vai a voto ao encerrar o mês; se passar, segue para o Senado.'
+  const timing = recess ? 'Congresso em recesso: nada vai a voto nesta rodada; o projeto espera na fila.'
+    : b.instrument === 'mp' && !inSenate ? 'A MP vale na hora e entra na fila: pautada até a 4ª rodada, vai à Câmara e ao Senado; sem votação, caduca.'
+      : inSenate ? 'Vota no Senado na hora em que você pautar (um projeto da fila por casa em cada rodada).'
+        : 'Vota na hora: Câmara e, se passar, o Senado logo em seguida, na mesma rodada. PEC vota os dois turnos de uma vez.'
 
   return (
     <aside className="detail pn-sheet-back" onClick={onClose}>
       <div className="pn-sheet pn-sheet--wide" onClick={(e) => e.stopPropagation()}>
         <button className="detail__close" onClick={onClose}>×</button>
+        <Art slot={senado ? 'senado-plenario' : 'camara-plenario'} height={76} />
         <div className="pn-kicker">{senado ? 'Senado Federal' : 'Câmara dos Deputados'} · {INSTRUMENTS[b.instrument].label}</div>
         <h2>{b.name}</h2>
         <p className="pn-hint" style={{ marginTop: -6 }}>{b.summary}</p>
@@ -149,7 +156,6 @@ export function VoteSheet({ state, bill, deals, listened, onListen, listenedSena
             </div>
             {inSenate && (
               <div className="pn-tram__actions">
-                <ProcButton label="⏸ Deixar na pauta" on={has('hold')} reason={why('hold')} onClick={() => onProcedure('hold', bill, !has('hold'))} hint="Não vota no Senado este mês: dá tempo de negociar." />
                 <ProcButton label="🔨 Votação simbólica" on={has('symbolic')} reason={why('symbolic')} onClick={() => onProcedure('symbolic', bill, !has('symbolic'))} hint="Com maioria esmagadora no Senado, aprova sem painel e sem risco." />
               </div>
             )}
@@ -189,7 +195,6 @@ export function VoteSheet({ state, bill, deals, listened, onListen, listenedSena
         </div>
         <div className="pn-tram__actions">
           <ProcButton label="⚡ Pedir urgência" on={has('urgent') || !!pb?.urgent} reason={pb?.urgent ? 'Já tramita em urgência.' : why('urgent')} onClick={() => onProcedure('urgent', bill, !has('urgent'))} hint={`Pula a comissão e a gaveta do presidente da Câmara. Custa ${CAMARA.speaker.urgencyCost} de relação com ele. Uma por mês.`} />
-          <ProcButton label="⏸ Deixar na pauta" on={has('hold')} reason={why('hold')} onClick={() => onProcedure('hold', bill, !has('hold'))} hint="Não vota este mês: dá tempo de negociar. Acordos fechados continuam valendo." />
           <ProcButton label="🔨 Votação simbólica" on={has('symbolic')} reason={why('symbolic')} onClick={() => onProcedure('symbolic', bill, !has('symbolic'))} hint="Com maioria esmagadora, o presidente da Câmara anuncia o resultado sem painel: aprova sem risco." />
         </div>
         </>}
@@ -247,10 +252,15 @@ export function VoteSheet({ state, bill, deals, listened, onListen, listenedSena
         )}
 
         <div className="pn-sheet__foot">
-          <button className="pn-btn pn-btn--big" onClick={onClose}>{recess ? 'Fica na pauta (recesso)' : has('hold') ? 'Fica na pauta este mês' : has('symbolic') ? 'Votação simbólica ao encerrar o mês' : 'Levar à votação ao encerrar o mês'}</button>
-          <button className="pn-btn pn-btn--ghost pn-btn--big" onClick={onClose}>Fechar</button>
+          {onVoteNow ? (
+            <button className="pn-btn pn-btn--big" disabled={!!voteBlocked} title={voteBlocked ?? undefined} onClick={() => onVoteNow(bill)}>
+              {voteBlocked ? `✋ ${voteBlocked}` : gaveta ? '🗄️ Mandar mesmo assim (vai para a fila)' : has('symbolic') ? '🔨 Votar agora, em votação simbólica' : '🗳️ Votar agora'}
+            </button>
+          ) : <button className="pn-btn pn-btn--big" onClick={onClose}>Fechar</button>}
+          <button className="pn-btn pn-btn--ghost pn-btn--big" onClick={onClose}>{onVoteNow ? 'Deixar para depois' : 'Fechar'}</button>
         </div>
-        <p className="pn-hint">Acordos pagam o preço ao encerrar o mês. Bancadas podem não entregar tudo: a confiabilidade diz a chance de cumprirem.</p>
+        {gaveta && !voteBlocked && <><Art slot="gaveta" height={56} caption="Projeto parado na gaveta" /><p className="pn-gaveta">🗄️ {gaveta}</p></>}
+        <p className="pn-hint">Acordos pagam o preço na hora da votação. Bancadas podem não entregar tudo: a confiabilidade diz a chance de cumprirem. Se você deixar para depois, a medida do mês vota ao encerrar a rodada.</p>
       </div>
     </aside>
   )

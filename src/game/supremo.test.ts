@@ -85,7 +85,8 @@ describe('Supremo (etapa 4C2)', () => {
   it('medida com risco em vigor fica na mira e pode virar ação', () => {
     let s = newGame('T', 'normal', 5, 'pol')
     s = advanceMonth(s, [], { bill: 'armas' })
-    expect(s.supremo.watch.map((w) => w.bill)).toContain('armas')
+    // Etapa 0: a ação pode ser aberta e julgada já na mesma rodada.
+    expect([...s.supremo.watch, ...s.supremo.cases, ...s.supremo.rulings].map((w) => w.bill)).toContain('armas')
     let filed = false
     for (let i = 0; i < 24 && !filed; i++) {
       s.rival.strength = 95
@@ -206,7 +207,7 @@ describe('Supremo (etapa 4C2)', () => {
     delete raw.supremo
     raw.saveVersion = 10
     const m = migrate(raw)!
-    expect(m.saveVersion).toBe(12)
+    expect(m.saveVersion).toBe(13)
     expect(m.supremo.justices).toHaveLength(11)
     expect(m.supremo.cases).toEqual([])
     expect(m.supremo.watch).toEqual([])

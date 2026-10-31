@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Art } from './Art'
 import { BILL_BY_ID } from '../game/data/bills'
 import { PARTY_BY_ID } from '../game/data/parties'
 import { DOCTRINE_HINT, DOCTRINE_LABEL, NOMINEE_BY_ID, SUPREMO } from '../game/data/supremo'
@@ -292,6 +293,7 @@ export function RulingAnimation({ ruling, onNext, nextLabel }: { ruling: Ruling;
   return (
     <div className="pn-ov pn-ov--vote" role="dialog" aria-label={`Julgamento: ${ruling.name}`}>
       <div className="pn-vanim">
+        <Art slot="supremo-plenario" height={70} />
         <div className="pn-vanim__top">
           <span className="pn-kicker">⚖️ Plenário do Supremo · ação do {PARTY_BY_ID[ruling.party].sigla}</span>
           {!done && <button className="pn-btn pn-btn--ghost pn-btn--small" onClick={() => setShown(total)}>Pular ⏭</button>}

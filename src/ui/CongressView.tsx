@@ -96,7 +96,7 @@ export function CongressView({ state, articulations, onToggle, bill, extraBill, 
           {watching.map((id) => (
             <div key={id}>
               <ForecastRow state={state} id={id} isNew={(id === bill || id === extraBill) && !c.pending.some((p) => p.id === id) && !senatePending(state, id)} deals={deals?.filter((d) => d.bill === id)} plan={plan} />
-              {onNegotiate && <div className="pn-row"><button className="pn-btn pn-btn--ghost" onClick={() => onNegotiate(id)}>🤝 Negociar votos com as lideranças</button></div>}
+              {onNegotiate && <div className="pn-row"><button className="pn-btn pn-btn--ghost" onClick={() => onNegotiate(id)}>🗳️ Negociar e pautar agora</button></div>}
             </div>
           ))}
           <p className="pn-hint" style={{ marginTop: 10 }}>

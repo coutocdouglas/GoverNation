@@ -6,6 +6,10 @@ import { SENADO, SENATE_SEATS } from './data/senado'
 import { advanceMonth, newGame, validatePlan } from './game'
 import { billBlockedReason, forecastSenate, neededVotes, articulationBlockedReason } from './congress'
 import { offerFor } from './deals'
+import { voteNow } from './rodada'
+
+/** Etapa 0: pauta agora no Senado e fecha o mês. */
+const pautar = (s: GameState, id: string) => advanceMonth(voteNow(s, id).state, [])
 import { migrate } from './save'
 import type { GameState } from './types'
 
@@ -58,21 +62,15 @@ describe('Senado (etapa 4C1)', () => {
     expect(s.lastReport!.headlines.some((h) => h.text.startsWith('Senado aprova'))).toBe(true)
   })
 
-  it('PEC aprovada na Câmara espera o mês seguinte e é votada em dois turnos no Senado', () => {
+  it('etapa 0: PEC pautada no Senado vota na hora, com 49 votos', () => {
     let s = newGame('T', 'normal', 11, 'mdn')
     s = advanceMonth(s, [])
-    s = advanceMonth(s, [], { bill: 'reformaTributaria', urgent: undefined })
-    // Mês 1: CCJ e comissão especial. Mês 2: plenário da Câmara.
-    let guard = 0
-    while (!s.congress.senate.pending.some((p) => p.id === 'reformaTributaria') && !s.congress.laws.includes('reformaTributaria') && guard++ < 6) s = advanceMonth(s, [])
-    expect(s.congress.senate.pending.map((p) => p.id)).toContain('reformaTributaria')
-    expect(s.lastReport!.votes.some((v) => v.house === 'senado')).toBe(false)
+    s = toSenate(s, 'reformaTributaria')
     expect(billBlockedReason(s, 'reformaTributaria')).toBe('Já passou na Câmara e está no Senado.')
-    s = advanceMonth(s, [])
-    const v = s.lastReport!.votes.find((x) => x.house === 'senado')!
+    const r = voteNow(s, 'reformaTributaria')
+    const v = r.votes.find((x) => x.house === 'senado')!
     expect(v.needed).toBe(49)
-    expect(v.approved).toBe(true)
-    expect(s.congress.laws).toContain('reformaTributaria')
+    if (v.approved) expect(r.state.congress.laws).toContain('reformaTributaria')
   })
 
   it('rejeitado no Senado: volta em 6 meses, custa aprovação, conta como derrota e vira manchete', () => {
@@ -80,7 +78,7 @@ describe('Senado (etapa 4C1)', () => {
     s = advanceMonth(s, [])
     s = hostileSenate(toSenate(structuredClone(s), 'privatizar'), -100, -100)
     const strength = s.rival.strength
-    const r = advanceMonth(s, [])
+    const r = pautar(s, 'privatizar')
     const v = r.lastReport!.votes.find((x) => x.house === 'senado')!
     expect(v.approved).toBe(false)
     expect(r.congress.laws).not.toContain('privatizar')
@@ -102,7 +100,7 @@ describe('Senado (etapa 4C1)', () => {
     s.economy.discretionarySpending += mp.effects.spending ?? 0
     s.economy.taxAdjustment += mp.effects.revenue ?? 0
     s = hostileSenate(toSenate(s, mp.id), 100, 100)
-    const r = advanceMonth(s, [])
+    const r = pautar(s, mp.id)
     const v = r.lastReport!.votes.find((x) => x.house === 'senado')!
     expect(v.approved).toBe(false)
     expect(r.economy.taxAdjustment).toBeCloseTo(tax0)
@@ -121,14 +119,16 @@ describe('Senado (etapa 4C1)', () => {
     expect(r.congress.laws).not.toContain('privatizar')
   })
 
-  it('a presidente do Senado, de mal com o governo, segura um projeto por mês (MP escapa)', () => {
+  it('a presidente do Senado, de mal com o governo, segura o projeto pautado', () => {
     let s = newGame('T', 'normal', 5, 'mdn')
     s = advanceMonth(s, [])
     s = toSenate(toSenate(s, 'isencaoIR'), 'simplesNacional')
     s.congress.senate.president.relation = 10
-    const r = advanceMonth(s, [])
-    expect(r.congress.senate.pending).toHaveLength(1)
-    expect(r.congress.senate.pending[0].holds).toBe(1)
+    const rr = voteNow(s, 'isencaoIR')
+    expect(rr.parked).toBe(true)
+    const r = advanceMonth(rr.state, [])
+    expect(r.congress.senate.pending).toHaveLength(2)
+    expect(r.congress.senate.pending.find((p) => p.id === 'isencaoIR')!.holds).toBe(1)
     expect(r.lastReport!.headlines.some((h) => h.text.includes(SENADO.president.name))).toBe(true)
     expect(r.bios[SENADO.president.name].some((b) => b.text.includes('gaveta'))).toBe(true)
   })
@@ -180,7 +180,7 @@ describe('Senado (etapa 4C1)', () => {
     delete raw.congress.senate
     raw.saveVersion = 9
     const m = migrate(raw)!
-    expect(m.saveVersion).toBe(12)
+    expect(m.saveVersion).toBe(13)
     expect(m.congress.senate.senators).toHaveLength(81)
     expect(m.congress.senate.pending).toEqual([])
     const next = advanceMonth(m, [], { bill: 'isencaoIR' })

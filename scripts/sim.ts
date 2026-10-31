@@ -7,6 +7,7 @@ import { EVENT_BY_ID } from '../src/game/data/events'
 import { responseBlockedReason, type MonthPlan } from '../src/game/game'
 import { billBlockedReason, forecastVote } from '../src/game/congress'
 import { legalRiskOf } from '../src/game/supremo'
+import { gavetaReason, queueHouse, voteNow, voteNowBlockedReason } from '../src/game/rodada'
 import type { ActionId, GameState } from '../src/game/types'
 
 /** Responde ao fato do mês com o decreto mais barato da área (etapa 3A). */
@@ -35,6 +36,16 @@ export const STRATEGIES: Record<string, Strategy> = {
     s.economy.gap < -0.5 ? pick(s, ['anteciparObras', 'pronunciamento']) : pick(s, ['cortarGastos', 'pronunciamento']),
 }
 
+/** Etapa 0: pauta na hora um projeto da fila em cada casa (o que não estiver na gaveta). */
+export const pautarFila = (s: GameState): GameState => {
+  for (const id of [...s.congress.pending.map((p) => p.id), ...s.congress.senate.pending.map((p) => p.id)]) {
+    const house = queueHouse(s, id)
+    if (!house || voteNowBlockedReason(s, id) || gavetaReason(s, id, house)) continue
+    s = voteNow(s, id).state
+  }
+  return s
+}
+
 const f = (n: number, d = 1) => n.toFixed(d).padStart(6)
 
 export function run(name: string, seed: number, verbose: boolean) {
@@ -49,6 +60,7 @@ export function run(name: string, seed: number, verbose: boolean) {
   }
   if (verbose) line(s)
   while (!s.finished) {
+    s = pautarFila(s)
     s = advanceMonth(s, STRATEGIES[name](s), name === 'respondeFatos' ? respond(s) : {})
     if (verbose && (s.month % 6 === 0 || s.month === 48)) line(s)
     if (verbose && s.lastReport) for (const h of s.lastReport.headlines.filter((h) => !h.text.startsWith('Copom'))) {
@@ -89,7 +101,7 @@ export function senateRun(seed: number, party: 'fpt' | 'mdn' | 'pol') {
   while (!s.finished) {
     const pool = BILLS.filter((b) => b.instrument !== 'decreto' && !billBlockedReason(s, b.id) && forecastVote(s, b.id).chance > 0.45)
     const bill = pool.length && s.month % 2 === 0 ? pool[(s.month * 7 + seed) % pool.length].id : undefined
-    s = advanceMonth(s, STRATEGIES.equilibrado(s), bill ? { bill } : {})
+    s = advanceMonth(pautarFila(s), STRATEGIES.equilibrado(s), bill ? { bill } : {})
     for (const v of s.lastReport!.votes) {
       if (v.kind === 'veto') continue
       if (v.house === 'senado') { if (v.approved) leis++; else barrado++ } else if (v.approved && !BILLS.every((b) => b.id !== v.bill)) camara++
@@ -131,7 +143,7 @@ export function riskyRun(seed: number, party: 'fpt' | 'mdn' | 'pol') {
   while (!s.finished) {
     const pool = BILLS.filter((b) => legalRiskOf(b.id) !== 'baixo' && !billBlockedReason(s, b.id) && (b.instrument === 'decreto' || forecastVote(s, b.id).chance > 0.4))
     const bill = pool.length && s.month % 2 === 0 ? pool[(s.month * 7 + seed) % pool.length].id : undefined
-    s = advanceMonth(s, STRATEGIES.equilibrado(s), bill ? { bill } : {})
+    s = advanceMonth(pautarFila(s), STRATEGIES.equilibrado(s), bill ? { bill } : {})
     for (const h of s.lastReport!.headlines) {
       if (h.text.startsWith('Liminar:')) n.liminares++
       if (/^CCJ, presidida/.test(h.text)) n.ccjBarra++

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { voteNow } from './rodada'
 import { BILL_BY_ID, BILLS, RESUBMIT_COOLDOWN, type BillDef } from './data/bills'
 import { EVENT_BY_ID } from './data/events'
 import { MINISTERIOS } from './data/ministerios'
@@ -180,7 +181,7 @@ describe('Etapa 4C3: filtro da CCJ', () => {
       const s = feb(seed, (['fpt', 'mdn', 'pol'] as const)[seed % 3])
       s.congress.parties.pol.relation = [15, 50, 95][Math.floor(seed / 3) % 3]
       s.congress.pending.push({ id: 'pisoEnfermagem', sentMonth: s.month, stage: 'comissao' })
-      const r = advanceMonth(s, [])
+      const r = advanceMonth(voteNow(s, 'pisoEnfermagem').state, [])
       const h = r.lastReport!.headlines.map((x) => x.text).join(' | ')
       if (/barra “Piso salarial da enfermagem/.test(h)) {
         seen.add('barra')
@@ -224,8 +225,7 @@ describe('Etapa 4C3: consulta ao Supremo', () => {
 
   it('reprovada: o governo sabe antes e a relação com a corte cai', () => {
     let s = mood(feb(8, 'fpt'), 0)
-    s = advanceMonth(s, [], { consult: 'armas' })
-    s = mood(advanceMonth(s, []), 0)
+    s = mood(advanceMonth(s, [], { consult: 'armas' }), 0)
     const before = s.supremo.justices[0].relation
     s = advanceMonth(s, [])
     const q = s.supremo.consultas.at(-1)!
@@ -279,7 +279,7 @@ describe('Etapa 4C3: save', () => {
     delete raw.supremo.consultas
     delete raw.supremo.adjusted
     const m = migrate(raw)!
-    expect(m.saveVersion).toBe(12)
+    expect(m.saveVersion).toBe(13)
     expect(m.supremo.consultas).toEqual([])
     expect(m.supremo.adjusted).toEqual({})
     expect(m.ministries.seguranca.wear).toBe(MINISTERIOS.start + MINISTERIOS.struck)

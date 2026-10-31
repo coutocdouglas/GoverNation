@@ -36,7 +36,7 @@ export function SenadoView({ state, articulations, onToggle, onNegotiate, deals,
           {c.senate.pending.map((p) => (
             <div key={p.id}>
               <ForecastRow state={state} id={p.id} deals={deals?.filter((d) => d.bill === p.id)} plan={plan} />
-              {onNegotiate && <div className="pn-row"><button className="pn-btn pn-btn--ghost" onClick={() => onNegotiate(p.id)}>🤝 Negociar votos com as lideranças</button></div>}
+              {onNegotiate && <div className="pn-row"><button className="pn-btn pn-btn--ghost" onClick={() => onNegotiate(p.id)}>🗳️ Negociar e pautar agora</button></div>}
             </div>
           ))}
         </section>

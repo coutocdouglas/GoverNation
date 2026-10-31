@@ -134,7 +134,7 @@ describe('medidas livres (etapa 3C): catálogo do mandato e save', () => {
     delete old.customBills
     old.saveVersion = 6
     const m = migrate(old)!
-    expect(m.saveVersion).toBe(12)
+    expect(m.saveVersion).toBe(13)
     expect(m.customBills).toEqual([])
 
     const { bill } = built(s0)

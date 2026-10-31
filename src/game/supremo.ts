@@ -425,58 +425,6 @@ export function stepSupremo(s: GameState, rng: Rng, headlines: Headline[]): Supr
     }
   }
 
-  // 4. Julgamento (no máximo um por mês): o recurso do governo primeiro, depois a ação mais antiga que venceu o prazo.
-  const due = sup.cases.filter((x) => x.judgeAt <= now).sort((a, b) => (a.appealed === b.appealed ? a.judgeAt - b.judgeAt : a.appealed ? -1 : 1))[0]
-  if (due) {
-    sup.cases = sup.cases.filter((x) => x !== due)
-    const bill = BILL_BY_ID[due.bill]
-    const party = PARTY_BY_ID[due.party]
-    const relator = justiceInfo({ id: due.relator })
-    const inForce = c.laws.includes(due.bill)
-    const inCongress = c.pending.some((p) => p.id === due.bill) || c.senate.pending.some((p) => p.id === due.bill)
-    if (bill && !inForce && inCongress && due.kind === 'projeto') {
-      // Projeto ainda no Congresso: se cair, é arquivado.
-      const ruling = judge(s, due, bill, rng)
-      ruling.project = true
-      pushRuling(sup, ruling)
-      const placar = placarOf(ruling)
-      if (ruling.struck) {
-        out.archived = due.bill
-        headlines.push({ text: `Supremo barra ${lowerFirst(bill.name)} ainda no Congresso (${placar}), a pedido do ${party.sigla}. O projeto é arquivado`, tone: 'bad' })
-        addBio(s, s.presidentName, `Teve um projeto barrado no Supremo antes da votação: ${bill.name} (${placar}).`)
-        addBio(s, relator.name, `Relatou a ação do ${party.sigla} contra o projeto “${bill.name}”: arquivado (${placar}).`)
-        addBio(s, party.leader.name, `Levou ao Supremo o projeto “${bill.name}” e conseguiu barrá-lo (${placar}).`)
-        addChronicle(s, `Supremo barra no Congresso ${lowerFirst(bill.name)}, do governo ${s.presidentName}`, 'bad')
-      } else {
-        headlines.push({ text: `Supremo libera ${lowerFirst(bill.name)} (${placar}): o projeto ${due.suspended ? 'volta a tramitar' : 'segue no Congresso'}`, tone: 'good' })
-        addBio(s, relator.name, `Relatou a ação do ${party.sigla} contra o projeto “${bill.name}”: liberado (${placar}).`)
-        addBio(s, party.leader.name, `Perdeu no Supremo a ação contra o projeto “${bill.name}” (${placar}).`)
-      }
-    } else if (bill && inForce) {
-      const ruling = judge(s, due, bill, rng)
-      pushRuling(sup, ruling)
-      const w = sup.watch.find((x) => x.bill === due.bill)
-      sup.watch = sup.watch.filter((x) => x.bill !== due.bill)
-      const placar = placarOf(ruling)
-      if (ruling.struck) {
-        headlines.push({ text: `Supremo derruba ${lowerFirst(bill.name)} por ${placar}, a pedido do ${party.sigla}. A medida deixa de valer`, tone: 'bad' })
-        addBio(s, s.presidentName, `Teve uma medida derrubada no Supremo: ${bill.name} (${placar}).`)
-        addBio(s, relator.name, `Relatou no Supremo a ação do ${party.sigla} contra “${bill.name}”: a medida caiu (${placar}).`)
-        addBio(s, party.leader.name, `Levou o ${party.sigla} ao Supremo contra “${bill.name}” e venceu (${placar}).`)
-        addChronicle(s, `Supremo derruba ${lowerFirst(bill.name)} (${placar}), do governo ${s.presidentName}`, 'bad')
-        out.struck = { bill: due.bill, author: w?.author ?? s.presidentName, scale: w?.scale, ruling, wasSuspended: due.suspended && due.kind !== 'projeto' }
-      } else {
-        const back = due.suspended && due.kind !== 'projeto'
-        headlines.push({ text: `Supremo mantém ${lowerFirst(bill.name)} por ${placar}: o ${party.sigla} perde a ação${back ? ' e a medida volta a valer' : ''}`, tone: 'good' })
-        addBio(s, s.presidentName, `Viu o Supremo manter ${lowerFirst(bill.name)} (${placar}).`)
-        addBio(s, relator.name, `Relatou no Supremo a ação do ${party.sigla} contra “${bill.name}”: a medida foi mantida (${placar}).`)
-        addBio(s, party.leader.name, `Perdeu no Supremo a ação contra “${bill.name}” (${placar}).`)
-        addChronicle(s, `Supremo mantém ${lowerFirst(bill.name)} (${placar}), do governo ${s.presidentName}`, 'good')
-        if (back) out.restored = { bill: due.bill, scale: w?.scale }
-      }
-    }
-  }
-
   // 5. Novas ações contra medidas em vigor (uma por mês). Etapa 4C3: o relator pode dar liminar na hora.
   if (sup.cases.length < SUPREMO.maxOpen && sup.justices.length) {
     for (const w of [...sup.watch].sort((a, b) => a.since - b.since)) {
@@ -535,6 +483,60 @@ export function stepSupremo(s: GameState, rng: Rng, headlines: Headline[]): Supr
       break
     }
   }
+  // 7. Julgamento na mesma rodada (etapa 0): no máximo uma ação contra medida em vigor e uma contra projeto por mês;
+  // o recurso do governo primeiro, depois a ação mais antiga que venceu o prazo.
+  const ready = sup.cases.filter((x) => x.judgeAt <= now).sort((a, b) => (a.appealed === b.appealed ? a.judgeAt - b.judgeAt : a.appealed ? -1 : 1))
+  const dues = [ready.find((x) => x.kind !== 'projeto'), ready.find((x) => x.kind === 'projeto')].filter((x): x is CourtCase => !!x)
+  for (const due of dues) {
+    sup.cases = sup.cases.filter((x) => x !== due)
+    const bill = BILL_BY_ID[due.bill]
+    const party = PARTY_BY_ID[due.party]
+    const relator = justiceInfo({ id: due.relator })
+    const inForce = c.laws.includes(due.bill)
+    const inCongress = c.pending.some((p) => p.id === due.bill) || c.senate.pending.some((p) => p.id === due.bill)
+    if (bill && !inForce && inCongress && due.kind === 'projeto') {
+      // Projeto ainda no Congresso: se cair, é arquivado.
+      const ruling = judge(s, due, bill, rng)
+      ruling.project = true
+      pushRuling(sup, ruling)
+      const placar = placarOf(ruling)
+      if (ruling.struck) {
+        out.archived = due.bill
+        headlines.push({ text: `Supremo barra ${lowerFirst(bill.name)} ainda no Congresso (${placar}), a pedido do ${party.sigla}. O projeto é arquivado`, tone: 'bad' })
+        addBio(s, s.presidentName, `Teve um projeto barrado no Supremo antes da votação: ${bill.name} (${placar}).`)
+        addBio(s, relator.name, `Relatou a ação do ${party.sigla} contra o projeto “${bill.name}”: arquivado (${placar}).`)
+        addBio(s, party.leader.name, `Levou ao Supremo o projeto “${bill.name}” e conseguiu barrá-lo (${placar}).`)
+        addChronicle(s, `Supremo barra no Congresso ${lowerFirst(bill.name)}, do governo ${s.presidentName}`, 'bad')
+      } else {
+        headlines.push({ text: `Supremo libera ${lowerFirst(bill.name)} (${placar}): o projeto ${due.suspended ? 'volta a tramitar' : 'segue no Congresso'}`, tone: 'good' })
+        addBio(s, relator.name, `Relatou a ação do ${party.sigla} contra o projeto “${bill.name}”: liberado (${placar}).`)
+        addBio(s, party.leader.name, `Perdeu no Supremo a ação contra o projeto “${bill.name}” (${placar}).`)
+      }
+    } else if (bill && inForce) {
+      const ruling = judge(s, due, bill, rng)
+      pushRuling(sup, ruling)
+      const w = sup.watch.find((x) => x.bill === due.bill)
+      sup.watch = sup.watch.filter((x) => x.bill !== due.bill)
+      const placar = placarOf(ruling)
+      if (ruling.struck) {
+        headlines.push({ text: `Supremo derruba ${lowerFirst(bill.name)} por ${placar}, a pedido do ${party.sigla}. A medida deixa de valer`, tone: 'bad' })
+        addBio(s, s.presidentName, `Teve uma medida derrubada no Supremo: ${bill.name} (${placar}).`)
+        addBio(s, relator.name, `Relatou no Supremo a ação do ${party.sigla} contra “${bill.name}”: a medida caiu (${placar}).`)
+        addBio(s, party.leader.name, `Levou o ${party.sigla} ao Supremo contra “${bill.name}” e venceu (${placar}).`)
+        addChronicle(s, `Supremo derruba ${lowerFirst(bill.name)} (${placar}), do governo ${s.presidentName}`, 'bad')
+        out.struck = { bill: due.bill, author: w?.author ?? s.presidentName, scale: w?.scale, ruling, wasSuspended: due.suspended && due.kind !== 'projeto' }
+      } else {
+        const back = due.suspended && due.kind !== 'projeto'
+        headlines.push({ text: `Supremo mantém ${lowerFirst(bill.name)} por ${placar}: o ${party.sigla} perde a ação${back ? ' e a medida volta a valer' : ''}`, tone: 'good' })
+        addBio(s, s.presidentName, `Viu o Supremo manter ${lowerFirst(bill.name)} (${placar}).`)
+        addBio(s, relator.name, `Relatou no Supremo a ação do ${party.sigla} contra “${bill.name}”: a medida foi mantida (${placar}).`)
+        addBio(s, party.leader.name, `Perdeu no Supremo a ação contra “${bill.name}” (${placar}).`)
+        addChronicle(s, `Supremo mantém ${lowerFirst(bill.name)} (${placar}), do governo ${s.presidentName}`, 'good')
+        if (back) out.restored = { bill: due.bill, scale: w?.scale }
+      }
+    }
+  }
+
   return out
 }
 

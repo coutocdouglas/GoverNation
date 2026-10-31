@@ -163,10 +163,10 @@ export const SUPREMO = {
   /** Quem contesta: partido contra a medida (afinidade abaixo disto) e de relação ruim com o governo. */
   fileAffinity: 0.1,
   fileRelation: 55,
-  /** Ações abertas ao mesmo tempo e meses até o julgamento (4C3: risco alto é julgado em 1 a 2 meses). */
+  /** Ações abertas ao mesmo tempo e meses até o julgamento (etapa 0, v0.15: julgadas na mesma rodada). */
   maxOpen: 3,
-  judgeDelay: [2, 4] as [number, number],
-  judgeDelayHigh: [1, 2] as [number, number],
+  judgeDelay: [0, 0] as [number, number],
+  judgeDelayHigh: [0, 0] as [number, number],
 
   // ─── Etapa 4C3 ───
   /** Regra do instrumento: decreto com despesa nova permanente acima disto (% do PIB) é risco médio; acima do dobro, alto. */
@@ -175,8 +175,8 @@ export const SUPREMO = {
   decreeRenuncia: 0.03,
   /** Liminar: chance de o relator suspender a medida na hora = fator × chance de ele votar para derrubar. */
   liminarFactor: { baixo: 0, medio: 0.35, alto: 0.8 } as Record<LegalRisk, number>,
-  /** Com liminar, o plenário demora mais (o recurso do governo antecipa para o mês seguinte). */
-  liminarJudgeDelay: [3, 5] as [number, number],
+  /** Com liminar, o plenário julga na rodada seguinte (etapa 0: caso grande). */
+  liminarJudgeDelay: [1, 1] as [number, number],
   /** Respostas à liminar (fato do mês). */
   recuar: { ministers: 2 },
   recorrer: { ministers: -3 },
@@ -184,9 +184,9 @@ export const SUPREMO = {
   projectFileChance: { alto: 0.4, fundamental: 0.3, jabuti: 0.12 },
   /** O relator trava a tramitação com esta fração da chance de ele votar para derrubar. */
   freezeFactor: 0.8,
-  projectJudgeDelay: [1, 3] as [number, number],
+  projectJudgeDelay: [0, 0] as [number, number],
   /** Consulta ao Supremo: meses de espera, relação perdida ao pedir ("a corte fica de olho") e ao ser reprovada, imunidade. */
-  consulta: { months: 2, askHit: -1, reprovadaHit: -3, immunity: 24 },
+  consulta: { months: 1, askHit: -1, reprovadaHit: -3, immunity: 24 },
   /** CCJ: projeto de risco alto passa pelo filtro. Nota = base + afinidade + relação + ruído; acima de approveAbove aprova, abaixo de barBelow barra. */
   ccj: { base: 0.15, wAffinity: 1.2, pivot: 0.4, wRelation: 0.02, noise: 0.5, approveAbove: 0.4, barBelow: -0.45, adequaScale: 0.85 },
 

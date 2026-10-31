@@ -114,7 +114,13 @@ export function migrate(raw: unknown): GameState | null {
       if (!s.ministries) s.ministries = initialMinistries(s)
       s.saveVersion = 12
     }
-    if (s.saveVersion !== 12) return null
+    if (s.saveVersion === 12) {
+      // v0.14 → v0.15 (etapa 0, a rodada): o plenário passa a votar na hora. Projetos que esperavam a votação
+      // seguem na fila e podem ser pautados; a rodada começa vazia.
+      delete (s as Partial<GameState>).round
+      s.saveVersion = 13
+    }
+    if (s.saveVersion !== 13) return null
     syncCustomBills(s as GameState)
     return s as GameState
   } catch {

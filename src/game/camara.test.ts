@@ -91,13 +91,11 @@ describe('comissões, presidente da Câmara e pauta', () => {
     expect(urgent.congress.speaker.relation).toBeLessThan(s.congress.speaker.relation)
   })
 
-  it('PEC passa um mês na comissão especial antes do plenário', () => {
+  it('etapa 0: PEC vota na hora, os dois turnos na mesma rodada', () => {
     const s = feb('mdn')
     const a = advanceMonth(s, [], { bill: 'reformaTributaria' })
-    expect(a.lastReport!.votes).toHaveLength(0)
-    expect(a.congress.pending[0].stage).toBe('plenario')
-    const b = advanceMonth(a, [])
-    expect(b.lastReport!.votes.map((v) => v.bill)).toContain('reformaTributaria')
+    const gaveta = a.lastReport!.headlines.some((h) => /engaveta|segura/.test(h.text))
+    if (!gaveta) expect(a.lastReport!.votes.map((v) => v.bill)).toContain('reformaTributaria')
     expect(validatePlan(s, { bill: 'reformaTributaria', urgent: ['reformaTributaria'] })).toMatch(/Urgência só vale/)
   })
 
@@ -113,15 +111,15 @@ describe('comissões, presidente da Câmara e pauta', () => {
     expect(castMember(CAMARA.speaker.name)).toBeDefined()
   })
 
-  it('deixar na pauta adia a votação; MP no prazo não pode esperar', () => {
+  it('etapa 0: MP fica na fila e caduca se não for pautada em 4 meses', () => {
     const s = feb('mdn')
-    const a = advanceMonth(s, [], { bill: 'isencaoIR', urgent: ['isencaoIR'], hold: ['isencaoIR'] })
-    expect(a.lastReport!.votes).toHaveLength(0)
-    expect(a.congress.pending.map((p) => p.id)).toEqual(['isencaoIR'])
+    const base = s.economy.discretionarySpending
     let m = advanceMonth(s, [], { bill: 'programaSocial' })
-    m = advanceMonth(m, [], { hold: ['programaSocial'] })
-    m = advanceMonth(m, [], { hold: ['programaSocial'] })
-    expect(validatePlan(m, { hold: ['programaSocial'] })).toMatch(/vence/)
+    expect(m.congress.pending.map((p) => p.id)).toEqual(['programaSocial'])
+    for (let i = 0; i < 3; i++) m = advanceMonth(m, [])
+    expect(m.congress.pending).toHaveLength(0)
+    expect(m.lastReport!.headlines.some((h) => h.text.startsWith('MP caduca'))).toBe(true)
+    expect(m.economy.discretionarySpending).toBeCloseTo(base)
   })
 })
 
@@ -218,7 +216,7 @@ describe('save e mandato inteiro', () => {
     delete old.congress.bombLog
     old.saveVersion = 7
     const m = migrate(JSON.parse(JSON.stringify(old)))!
-    expect(m.saveVersion).toBe(12)
+    expect(m.saveVersion).toBe(13)
     expect(m.cabinet).toEqual({})
     expect(m.congress.speaker.relation).toBeGreaterThan(0)
     expect(() => advanceMonth(m, [])).not.toThrow()

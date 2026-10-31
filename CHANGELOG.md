@@ -1,5 +1,17 @@
 # Novidades
 
+## 0.15.0
+- **A rodada (etapa 0 do plano novo).** O tempo do jogo ficou mais "jogo": só a medida nova é limitada (uma por rodada). Câmara, Senado e Supremo agem na mesma rodada.
+  - **Votar agora:** a medida do mês vai à Câmara na hora em que você manda e, se passar, ao Senado logo em seguida, com o painel animado ("votação 1 de 2"). A lei aprovada já conta na rodada (resolve o fato do mês, atende cobranças) e os efeitos entram no fechamento. PEC vota os dois turnos de uma vez. A resposta ao fato do mês também vota na hora e continua sem gastar a medida do mês.
+  - **Decreto e MP valem na hora:** o decreto é assinado ao escolher. A MP vale já e entra na fila: precisa ser pautada até a 4ª rodada, ou **caduca** (o efeito é desfeito e vira manchete).
+  - **Pautar agora:** além da medida do mês, dá para levar **um projeto da fila por casa** a voto em cada rodada (botão "Negociar e pautar agora"). O fechamento do mês não vota mais sozinho.
+  - **Gaveta avisada antes:** se a comissão ou o presidente da casa vão segurar o projeto, a janela de votação avisa antes ("Mandar mesmo assim, vai para a fila"). A CCJ julga na hora.
+  - **Articular vale na hora:** conversa e emendas já contam para a votação da mesma rodada. O botão "Deixar na pauta" saiu (sem pautar, o projeto já espera).
+  - **O Supremo julga na mesma rodada:** ação aberta é julgada no fechamento do mesmo mês. Só a liminar (julgada na rodada seguinte) e a consulta prévia (resposta em 1 rodada) esperam.
+- **Faixa da rodada no Painel:** medida do mês, pauta da Câmara, pauta do Senado e votações feitas, com o que já foi feito marcado.
+- **Ilustrações provisórias:** quadros tracejados com a descrição da arte nos lugares que vão ter ilustração (plenários da Câmara, do Senado e do Supremo, medida enviada, gaveta, rodada e fim de mês). Para trocar, basta salvar a imagem em `public/art` (lista em `public/art/LEIAME.md`).
+- Mandatos salvos continuam normalmente (save versão 13): os projetos que esperavam votação ficam na fila, prontos para pautar.
+
 ## 0.14.0
 - **O Supremo entra no caminho das medidas (etapa 4C3).** Antes ele só aparecia, raramente, depois. Agora algumas medidas passam por ele antes, durante e depois da votação, sempre com aviso antes de assinar.
   - **Risco jurídico pela regra do instrumento:** além da lista das polêmicas, o jogo confere a própria medida. Decreto não pode criar nem aumentar imposto (risco alto); decreto que abre mão de receita ou cria despesa permanente grande pode cair (médio ou alto); medida provisória não trata de pena nem de direito fundamental; instrumento mais fraco que o exigido pela matéria é "vício de forma". São **31 medidas** do catálogo com risco médio ou alto (antes, 24), e as medidas criadas pela IA seguem a mesma regra.

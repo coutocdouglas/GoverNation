@@ -36,13 +36,12 @@ Continue na mesma conversa quando estiver no meio de uma etapa, corrigindo algo 
 
 **Como começar a conversa nova:** "Projeto GoverNation, repositório coutocdouglas/GoverNation. Leia CLAUDE.md, docs/ESTADO.md e docs/DESIGN.md. Quero fazer a etapa X." Não precisa reenviar prints antigos: o que importa já está no ESTADO.md e no DESIGN.md.
 
-## Roteiro atual (detalhes em docs/DESIGN.md, seções 11 a 26)
+## Roteiro atual (detalhes em docs/DESIGN.md, seção 27, que substitui o roteiro antigo)
 
-1. ✅ Retratos e elenco fixo (v0.4.1)
-2. ✅ Memória do mundo, consequências, importância, fatos bons e herdados, biografias (v0.5.0)
-3. ✅ **3A** resposta em texto ao fato do mês, ministro responsável, catálogo grande de medidas por área (v0.6.0) · ✅ **3B** camada de IA (v0.7.0) · ✅ **3C** medidas livres montadas pela IA (v0.9.0)
-4. ✅ 4A votação com negociação (v0.8.0) · ✅ 4B Congresso 2.0, votação animada, voto simbólico, reação da sociedade (v0.10.0)
-5. Entre mandatos: ✅ 5A rival, ficha do candidato e promessas de posse (v0.11.0) · 5B 27 estados e apuração (depois da 4F) · 5C governo seguinte e herança (depois do vídeo do fim de mandato)
-4C. ✅ 4C1 Senado votando (v0.12.0) · ✅ 4C2 Supremo (v0.13.0)
-4C3–4F. ✅ 4C3 Supremo no caminho das medidas e abas (v0.14.0) · 4D Congresso ao vivo (próxima, v0.15) · 4E janelas (v0.16) · 4F mês mais vivo (v0.17); plano na seção 25 do DESIGN.md
-6. Depois: Senado com poderes próprios, imprensa e pesquisas, orçamento anual
+Etapas com portão: a próxima só abre quando a anterior fecha; ideia fora de hora vai para a Caixa de ideias da etapa certa (DESIGN.md 27.1).
+
+0. ✅ A rodada (v0.15)
+1. ⏭️ Causa e consequência
+2. Câmara e partidos · 3. Senado · 4. Supremo profundo · 5. Oposição, escândalos e CPI · 6. Vice e governo · 7. Estados e governadores · 8. Começo, sociedade e fim · 9. Arte final
+
+Antes disso (já feito): retratos, memória do mundo, IA, Congresso 2.0, rival e promessas, Senado votando, Supremo (v0.4 a v0.14).

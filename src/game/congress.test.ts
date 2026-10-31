@@ -3,6 +3,7 @@ import { billBlockedReason, CONGRESS, forecastVote, runVote } from './congress'
 import { BILL_BY_ID, BILLS } from './data/bills'
 import { PARTIES, TOTAL_SEATS } from './data/parties'
 import { advanceMonth, newGame, validatePlan } from './game'
+import { voteNow } from './rodada'
 import { Rng } from './rng'
 import { migrate } from './save'
 import type { GameState, PartyId } from './types'
@@ -67,9 +68,10 @@ describe('projetos no turno mensal', () => {
     s = advanceMonth(s, [], { bill: 'isencaoIR' })
     expect(s.lastReport!.votes).toHaveLength(0)
     expect(s.congress.pending.map((p) => p.id)).toEqual(['isencaoIR'])
-    s = advanceMonth(s, [])
-    // Etapa 4C1: Câmara e, no mesmo encerramento, Senado.
-    expect(s.lastReport!.votes.map((v) => v.house ?? 'camara')).toEqual(['camara', 'senado'])
+    // Etapa 0: fora do recesso, o projeto da fila é pautado na hora; passa na Câmara e vai direto ao Senado.
+    const r = voteNow(s, 'isencaoIR')
+    expect(r.votes.map((v) => v.house ?? 'camara')).toEqual(['camara', 'senado'])
+    s = r.state
     expect(s.congress.pending).toHaveLength(0)
     expect(s.congress.senate.pending).toHaveLength(0)
   })
@@ -91,9 +93,10 @@ describe('projetos no turno mensal', () => {
     const base = s.economy.discretionarySpending
     s = advanceMonth(hostile(s), [], { bill: 'programaSocial' })
     expect(s.economy.discretionarySpending).toBeCloseTo(base + 0.35)
-    s = advanceMonth(hostile(s), [])
-    const v = s.lastReport!.votes[0]
-    expect(v.approved).toBe(false)
+    // Etapa 0: a MP fica na fila; pautada na rodada seguinte, cai e o efeito é desfeito no fechamento.
+    const r = voteNow(hostile(s), 'programaSocial')
+    expect(r.votes[0].approved).toBe(false)
+    s = advanceMonth(r.state, [])
     expect(s.economy.discretionarySpending).toBeCloseTo(base)
     expect(billBlockedReason(s, 'programaSocial')).toMatch(/Pode reenviar/)
   })
@@ -136,7 +139,7 @@ describe('saves antigos', () => {
     delete s.playerParty
     s.saveVersion = 1
     const m = migrate(JSON.parse(JSON.stringify(s)))!
-    expect(m.saveVersion).toBe(12)
+    expect(m.saveVersion).toBe(13)
     expect(m.world.seeds).toEqual([])
     expect(m.demands).toEqual([])
     expect(m.playerParty).toBe('mdn')

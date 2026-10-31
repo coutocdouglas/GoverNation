@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { billBlockedReason, CONGRESS, isRecess } from '../game/congress'
+import { billBlockedReason, isRecess } from '../game/congress'
 import { BILL_BY_ID, BILLS, GDP_BILLIONS, INSTRUMENTS, type BillDef } from '../game/data/bills'
 import { addCustomBill } from '../game/custom'
 import { NewBadge, NewBillNotes } from './NewBill'
@@ -9,6 +9,8 @@ import { PARTY_BY_ID } from '../game/data/parties'
 import { ACTION_BY_ID, ACTIONS, ACTIONS_PER_MONTH, blockedReason, effectMultiplier } from '../game/actions'
 import { GROUPS, GROUP_BY_ID } from '../game/data/groups'
 import { advanceMonth, isCopomMonth, monthLabel, TERM_MONTHS, type MonthPlan } from '../game/game'
+import { articulate, articulateBlockedReason, gavetaReason, peekRound, queueHouse, sendBlockedReason, sendMeasure, voteNow, voteNowBlockedReason, type FloorOptions } from '../game/rodada'
+import { Art } from './Art'
 import type { MinistryChange } from '../game/camara'
 import { VoteAnimation } from './VoteAnimation'
 import { ReactionSheet } from './ReactionSheet'
@@ -37,7 +39,7 @@ import './painel.css'
 type Detail = { kind: 'indicator'; key: IndicatorKey } | { kind: 'group'; id: GroupId } | null
 type Step = 1 | 2 | 3 | 4
 /** Depois de encerrar o mês: painel de votação animado e página de reação de cada lei (etapa 4B). */
-type Post = { kind: 'vote'; v: VoteRecord } | { kind: 'reaction'; bill: BillId; month: number } | { kind: 'ruling'; id: string }
+type Post = { kind: 'vote'; v: VoteRecord; i?: number; n?: number } | { kind: 'reaction'; bill: BillId; month: number } | { kind: 'ruling'; id: string }
 const NO_PROC: Record<ProcedureKind, BillId[]> = { hold: [], urgent: [], original: [], symbolic: [] }
 
 /** Seções do menu que ainda não existem, com a versão prevista. */
@@ -61,7 +63,8 @@ export function GameScreen({ state, onChange, onExit }: {
   const [turning, setTurning] = useState(false)
   const [toasts, setToasts] = useState<{ id: number; text: string }[]>([])
   const [bill, setBill] = useState<BillId | null>(null)
-  const [articulations, setArticulations] = useState<Articulation[]>([])
+  /** Etapa 0: as articulações valem na hora (estão na rodada); o plano do mês não leva nenhuma. */
+  const articulations: Articulation[] = []
   const [tab, setTab] = useState<'painel' | 'governo' | 'fichas'>('painel')
   const [eventChoice, setEventChoice] = useState<number | null>(null)
   const [eventResponse, setEventResponse] = useState<BillId | null>(null)
@@ -93,18 +96,20 @@ export function GameScreen({ state, onChange, onExit }: {
   /** Medida nova montada pela IA (etapa 3C): entra no catálogo deste mandato e fica salva. */
   const addBill = (b: BillDef): BillId => { onChange(addCustomBill(state, b)); return b.id }
   const goesToVote = (id: BillId) => BILL_BY_ID[id].instrument !== 'decreto'
+  const actsNowUi = (id: BillId) => ['decreto', 'mp'].includes(BILL_BY_ID[id].instrument)
   /** Troca um projeto do mês: acordos do projeto antigo caem. */
   const dropDeals = (old: BillId | null) => {
     if (!old || state.congress.pending.some((p) => p.id === old)) return
     setDeals((ds) => ds.filter((d) => d.bill !== old))
     setProc((cur) => Object.fromEntries(Object.entries(cur).map(([k, ids]) => [k, ids.filter((x) => x !== old)])) as Record<ProcedureKind, BillId[]>)
   }
-  const toggleArticulation = (a: Articulation) =>
-    setArticulations((cur) =>
-      cur.some((x) => x.kind === a.kind && x.party === a.party)
-        ? cur.filter((x) => !(x.kind === a.kind && x.party === a.party))
-        : cur.length < CONGRESS.articulationsPerMonth ? [...cur, a] : cur,
-    )
+  /** Etapa 0: articular vale na hora (já conta para as votações da rodada). */
+  const toggleArticulation = (a: Articulation) => {
+    const why = articulateBlockedReason(state, a)
+    if (why) { toast(`✋ ${why}`); return }
+    onChange(articulate(state, a))
+    toast(a.kind === 'presidente' ? '🤝 Conversa com o presidente da Câmara feita.' : a.kind === 'senado' ? '🤝 Conversa com a presidente do Senado feita.' : `🤝 ${a.kind === 'conversar' ? 'Conversa com' : 'Emendas para'} o ${PARTY_BY_ID[a.party].sigla}: vale já.`)
+  }
   const eventRef = useRef<HTMLDivElement>(null)
   const medidaRef = useRef<HTMLElement>(null)
   const history = state.history
@@ -116,6 +121,42 @@ export function GameScreen({ state, onChange, onExit }: {
     const id = Date.now() + Math.random()
     setToasts((t) => [...t, { id, text }])
     setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 5000)
+  }
+
+  const round = peekRound(state)
+  /** Etapa 0: o que impede votar agora e o que vai segurar o projeto. */
+  const roleOf = (id: BillId): 'measure' | 'response' | 'queue' => (id === bill ? 'measure' : id === eventResponse ? 'response' : 'queue')
+  const voteBlock = (id: BillId) => {
+    const role = roleOf(id)
+    return role === 'queue' ? voteNowBlockedReason(state, id) : sendBlockedReason(state, id, role === 'response')
+  }
+  const gavetaOf = (id: BillId) => gavetaReason(state, id, queueHouse(state, id) ?? 'camara', { urgent: proc.urgent.includes(id) || undefined })
+  /** Votar agora: manda a medida do mês (ou a resposta ao fato) ou pauta um projeto da fila. */
+  const runNow = (id: BillId, as: 'measure' | 'response' | 'queue' = roleOf(id)) => {
+    const opts: FloorOptions = {
+      deals: deals.filter((d) => d.bill === id).map(({ party, kind, house }) => ({ party, kind, house })),
+      urgent: proc.urgent.includes(id) || undefined,
+      original: proc.original.includes(id) || undefined,
+      symbolic: proc.symbolic.includes(id) || undefined,
+    }
+    try {
+      const r = as === 'queue' ? voteNow(state, id, opts) : sendMeasure(state, id, opts, as === 'response')
+      onChange(r.state)
+      if (as === 'measure') setBill(null)
+      if (as === 'response') { setEventResponse(null); setEventChoice(null) }
+      setDeals((ds) => ds.filter((d) => d.bill !== id))
+      setProc((cur) => Object.fromEntries(Object.entries(cur).map(([k, ids]) => [k, ids.filter((x) => x !== id)])) as Record<ProcedureKind, BillId[]>)
+      setVoteSheet(null)
+      const shown = r.votes.filter((v) => v.kind !== 'simbolica')
+      const q: Post[] = shown.map((v, i) => ({ kind: 'vote' as const, v, i, n: shown.length }))
+      const before = new Set(round?.sanctioned ?? [])
+      for (const lid of r.state.round?.sanctioned ?? []) if (!before.has(lid)) q.push({ kind: 'reaction', bill: lid, month: state.month })
+      setPost((p) => [...p, ...q])
+      const ins = BILL_BY_ID[id].instrument
+      if (r.votes.length === 0) toast(ins === 'decreto' ? `🖊️ Decreto assinado: ${BILL_BY_ID[id].name}. Os efeitos entram no fechamento do mês.` : ins === 'mp' && as !== 'queue' ? `📜 MP editada: ${BILL_BY_ID[id].name}. Vale já; pauta até a 4ª rodada ou ela caduca.` : `🗄️ ${r.headlines.at(-1)?.text ?? 'O projeto ficou na fila.'}`)
+    } catch (e) {
+      toast(`✋ ${(e as Error).message}`)
+    }
   }
 
   const toggle = (id: ActionId) =>
@@ -136,7 +177,6 @@ export function GameScreen({ state, onChange, onExit }: {
       onChange(next)
       setSelected([])
       setBill(null)
-      setArticulations([])
       setEventChoice(null)
       setEventResponse(null)
       setDeals([])
@@ -157,7 +197,10 @@ export function GameScreen({ state, onChange, onExit }: {
       const rep = next.lastReport
       const q: Post[] = []
       // Etapa 4C1: a votação do Senado aparece logo depois da Câmara para o mesmo projeto; a reação vem depois da última casa.
-      const all = rep?.votes ?? []
+      // Etapa 0: as votações da rodada já foram mostradas na hora.
+      const live = round?.votes.length ?? 0
+      const liveLaws = new Set(round?.sanctioned ?? [])
+      const all = (rep?.votes ?? []).slice(live)
       const ordered = all.filter((v) => v.house !== 'senado').flatMap((v) => [v, ...all.filter((x) => x.house === 'senado' && x.bill === v.bill && x.kind !== 'veto' && v.kind !== 'veto')])
       for (const v of all) if (!ordered.includes(v)) ordered.push(v)
       for (const v of ordered) {
@@ -165,7 +208,7 @@ export function GameScreen({ state, onChange, onExit }: {
         const last = v.house === 'senado' || v.kind === 'veto' || !all.some((x) => x.house === 'senado' && x.bill === v.bill)
         if (last && v.approved && v.kind !== 'veto' && rep?.sanctioned?.includes(v.bill) && !q.some((p) => p.kind === 'reaction' && p.bill === v.bill)) q.push({ kind: 'reaction', bill: v.bill, month: v.month })
       }
-      for (const id of rep?.sanctioned ?? []) if (!q.some((p) => p.kind === 'reaction' && p.bill === id)) q.push({ kind: 'reaction', bill: id, month: rep!.month })
+      for (const id of rep?.sanctioned ?? []) if (!liveLaws.has(id) && !q.some((p) => p.kind === 'reaction' && p.bill === id)) q.push({ kind: 'reaction', bill: id, month: rep!.month })
       // Etapa 4C2: julgamento do Supremo no mês, com os 11 votos um a um.
       const ruling = rep ? next.supremo.rulings.find((r) => r.at === absMonth({ term: next.term, month: rep.month })) : undefined
       if (ruling) q.push({ kind: 'ruling', id: ruling.id })
@@ -219,6 +262,9 @@ export function GameScreen({ state, onChange, onExit }: {
           onClose={() => setVoteSheet(null)}
           plan={plan}
           onProcedure={onProcedure}
+          onVoteNow={(id) => runNow(id)}
+          voteBlocked={voteBlock(voteSheet)}
+          gaveta={gavetaOf(voteSheet)}
         />
       )}
       {post.length > 0 && (() => {
@@ -233,8 +279,8 @@ export function GameScreen({ state, onChange, onExit }: {
         if (head.kind === 'vote') {
           const nextIsReaction = rest[0]?.kind === 'reaction' && rest[0].bill === head.v.bill
           const votesLeft = rest.filter((p) => p.kind === 'vote').length
-          const total = state.lastReport?.votes.filter((v) => v.kind !== 'simbolica').length ?? 1
-          const idx = Math.max(0, total - votesLeft - 1)
+          const total = head.n ?? state.lastReport?.votes.filter((v) => v.kind !== 'simbolica').length ?? 1
+          const idx = head.i ?? Math.max(0, total - votesLeft - 1)
           return <VoteAnimation key={`${head.v.bill}-${post.length}`} vote={head.v} index={idx} total={total}
             nextLabel={nextIsReaction ? '📣 Ver a reação da sociedade →' : rest.length ? 'Continuar →' : 'Fechar'}
             onNext={() => { if (head.v.approved && head.v.kind !== 'veto') confetti(); advance() }} />
@@ -304,7 +350,7 @@ export function GameScreen({ state, onChange, onExit }: {
           {govTab === 'supremo' ? (
             <SupremoView state={state} nominee={nominee} onNominee={(id) => { setNominee(id); if (id) toast(`📨 ${NOMINEE_BY_ID[id].name} vai à sabatina no Senado ao encerrar o mês.`) }} />
           ) : govTab === 'senado' ? (
-            <SenadoView state={state} articulations={articulations} onToggle={toggleArticulation} onNegotiate={setVoteSheet} deals={deals} plan={plan} />
+            <SenadoView state={state} articulations={peekRound(state)?.articulations ?? []} onToggle={toggleArticulation} onNegotiate={setVoteSheet} deals={deals} plan={plan} />
           ) : govTab === 'ministerios' ? (
             <MinistriosView state={state} change={ministry} onChange={setMinistry} />
           ) : (
@@ -318,7 +364,7 @@ export function GameScreen({ state, onChange, onExit }: {
             sanctions={sanctions}
             onSanction={(id, d) => setSanctions((cur) => ({ ...cur, [id]: d }))}
             onReaction={setReactionView}
-            articulations={articulations}
+            articulations={peekRound(state)?.articulations ?? []}
             onToggle={toggleArticulation}
           />
           )}
@@ -331,7 +377,7 @@ export function GameScreen({ state, onChange, onExit }: {
               <div className="pn-steps">
                 <StepButton n={1} cur={step} done={step > 1} icon="📰" title="O que aconteceu" sub={report ? `${report.headlines.length} notícias` : 'primeiro mês'} onClick={() => goStep(1)} />
                 <StepButton n={2} cur={step} done={eventChoice !== null || eventResponse !== null || !state.event} icon="🔥" title="Fato do mês" sub={!state.event ? 'mês sem crise' : eventChoice !== null || eventResponse !== null ? 'decidido' : 'aguarda você'} onClick={() => goStep(2)} />
-                <StepButton n={3} cur={step} done={selected.length > 0 || !!bill} icon="✍️" title="Suas decisões" sub={[selected.length ? `${selected.length} decreto${selected.length > 1 ? 's' : ''}` : '', bill ? '1 projeto' : '', articulations.length ? `${articulations.length} articulação` : ''].filter(Boolean).join(' · ') || 'decretos, projeto, articulação'} onClick={() => goStep(3)} />
+                <StepButton n={3} cur={step} done={selected.length > 0 || !!bill} icon="✍️" title="Suas decisões" sub={[selected.length ? `${selected.length} decreto${selected.length > 1 ? 's' : ''}` : '', bill ? '1 projeto' : '', (peekRound(state)?.articulations ?? []).length ? `${(peekRound(state)?.articulations ?? []).length} articulação` : ''].filter(Boolean).join(' · ') || 'decretos, projeto, articulação'} onClick={() => goStep(3)} />
                 <StepButton n={4} cur={step} done={false} icon="⏭️" title="Encerrar o mês" sub="ver as consequências" onClick={() => goStep(4)} />
               </div>
 
@@ -379,13 +425,14 @@ export function GameScreen({ state, onChange, onExit }: {
                     <div>
                       <h2>Tudo pronto para virar o mês?</h2>
                       <p className="pn-hint">
-                        {selected.length === 0 && !bill && !eventResponse && articulations.length === 0 && !nominee && !consult && !ministry
+                        {selected.length === 0 && !bill && !eventResponse && !round && (peekRound(state)?.articulations ?? []).length === 0 && !nominee && !consult && !ministry
                           ? 'Você não tomou nenhuma decisão. O país segue sozinho este mês.'
                           : [
                               selected.length ? `Decretos: ${selected.map((id) => lowerFirst(ACTION_BY_ID[id].name)).join(' e ')}.` : '',
-                              bill ? `${BILL_KIND[BILL_BY_ID[bill].instrument]}: ${lowerFirst(BILL_BY_ID[bill].name)}.` : '',
+                              round?.measure ? `Já feito na rodada: ${lowerFirst(BILL_BY_ID[round.measure].name)}${round.votes.length ? ` e ${round.votes.length} votação(ões)` : ''}.` : '',
+                              bill ? `${BILL_KIND[BILL_BY_ID[bill].instrument]}: ${lowerFirst(BILL_BY_ID[bill].name)} (vota ao encerrar).` : '',
                               eventResponse ? `Resposta ao fato do mês (${BILL_KIND[BILL_BY_ID[eventResponse].instrument].toLowerCase()}): ${lowerFirst(BILL_BY_ID[eventResponse].name)}.` : '',
-                              articulations.length ? `Articulação: ${articulations.map((a) => a.kind === 'presidente' ? 'conversa com o presidente da Câmara' : a.kind === 'senado' ? 'conversa com a presidente do Senado' : `${a.kind === 'conversar' ? 'conversa com' : 'emendas para'} ${PARTY_BY_ID[a.party].sigla}`).join(' e ')}.` : '',
+                              (peekRound(state)?.articulations ?? []).length ? `Articulação: ${(peekRound(state)?.articulations ?? []).map((a) => a.kind === 'presidente' ? 'conversa com o presidente da Câmara' : a.kind === 'senado' ? 'conversa com a presidente do Senado' : `${a.kind === 'conversar' ? 'conversa com' : 'emendas para'} ${PARTY_BY_ID[a.party].sigla}`).join(' e ')}.` : '',
                               nominee ? `Supremo: indicar ${NOMINEE_BY_ID[nominee].name} (sabatina no Senado).` : '',
                               ministry ? (ministry.party ? `Ministério: ${state.cabinet[ministry.area] ? 'trocar' : 'ceder'} ${ministry.area} ${state.cabinet[ministry.area] ? 'pelo' : 'ao'} ${PARTY_BY_ID[ministry.party].sigla}.` : `Ministério: retomar ${ministry.area}.`) : '',
                               consult ? `Supremo: pedir parecer sobre ${lowerFirst(BILL_BY_ID[consult].name)}.` : '',
@@ -413,11 +460,12 @@ export function GameScreen({ state, onChange, onExit }: {
                 state={state}
                 choice={eventChoice}
                 onChoose={(i) => { setEventChoice(i); if (i !== null) toast(`🔥 Decisão anotada: ${currentEventLabel(state, i)}`) }}
-                response={eventResponse}
+                response={eventResponse ?? round?.response ?? null}
                 plannedBill={bill}
                 onAddBill={addBill}
                 onRespond={(id) => {
                   if (eventResponse && eventResponse !== id) dropDeals(eventResponse)
+                  if (id && actsNowUi(id)) { runNow(id, 'response'); return }
                   setEventResponse(id)
                   if (id && goesToVote(id)) setVoteSheet(id)
                   if (id) {
@@ -429,8 +477,24 @@ export function GameScreen({ state, onChange, onExit }: {
               />
             </div>
 
+            <section className="pn-card">
+              <Art slot="rodada" height={64} caption="A rodada: uma medida nova por mês; o Congresso e o Supremo agem na hora" />
+              <div className="pn-round">
+                <div className={`pn-round__step ${round?.measure ? 'done' : ''}`}><small>Medida do mês</small><b>{round?.measure ? `✔ ${BILL_BY_ID[round.measure].name}` : bill ? `pronta: ${BILL_BY_ID[bill].name}` : 'ainda não'}</b></div>
+                <div className={`pn-round__step ${round?.pautou.camara ? 'done' : ''}`}><small>Pauta da Câmara</small><b>{round?.pautou.camara ? `✔ ${BILL_BY_ID[round.pautou.camara].name}` : state.congress.pending.length ? `${state.congress.pending.length} na fila` : 'fila vazia'}</b></div>
+                <div className={`pn-round__step ${round?.pautou.senado ? 'done' : ''}`}><small>Pauta do Senado</small><b>{round?.pautou.senado ? `✔ ${BILL_BY_ID[round.pautou.senado].name}` : state.congress.senate.pending.length ? `${state.congress.senate.pending.length} na fila` : 'fila vazia'}</b></div>
+                <div className={`pn-round__step ${(round?.votes.length ?? 0) > 0 ? 'done' : ''}`}><small>Votações na rodada</small><b>{round?.votes.length ? `${round.votes.length} (${round.votes.filter((v) => v.approved).length} aprovadas)` : 'nenhuma ainda'}</b></div>
+              </div>
+            </section>
+
             <section className="pn-card pn-card--gold" ref={medidaRef}>
-              <MeasureBox consult={consult} setConsult={(id) => { setConsult(id); if (id) toast(`📨 O Supremo recebe o pedido de parecer ao encerrar o mês. A resposta sai em ${SUPREMO.consulta.months} meses.`) }}
+              {round?.measure ? (
+                <>
+                  <h3>✍️ Medida do mês <span className="pn-badge">enviada</span></h3>
+                  <Art slot="medida-enviada" height={70} />
+                  <p className="pn-hint">Você já mandou a medida desta rodada: <b>{BILL_BY_ID[round.measure].name}</b>. A próxima medida nova, só na rodada que vem. Enquanto isso, dá para pautar um projeto da fila em cada casa, articular e responder ao fato do mês.</p>
+                </>
+              ) : <MeasureBox consult={consult} setConsult={(id) => { setConsult(id); if (id) toast(`📨 O Supremo recebe o pedido de parecer ao encerrar o mês. A resposta sai em ${SUPREMO.consulta.months} meses.`) }}
                 key={state.month}
                 state={state}
                 selected={selected}
@@ -438,10 +502,11 @@ export function GameScreen({ state, onChange, onExit }: {
                 onAddBill={addBill}
                 onSend={(id) => {
                   if (bill && bill !== id) dropDeals(bill)
-                  setBill(id)
-                  if (goesToVote(id)) setVoteSheet(id)
                   const ins = BILL_BY_ID[id].instrument
-                  toast(`📨 ${BILL_BY_ID[id].name}: ${ins === 'decreto' ? 'o decreto será assinado' : ins === 'mp' ? 'a MP será editada' : 'o projeto vai à Câmara'} ao encerrar o mês.`)
+                  // Etapa 0: decreto e MP valem na hora; projeto abre a janela de votação (votar agora).
+                  if (ins === 'decreto' || ins === 'mp') { runNow(id, 'measure'); return }
+                  setBill(id)
+                  setVoteSheet(id)
                 }}
                 onSign={(id) => {
                   if (selected.includes(id)) return
@@ -453,7 +518,7 @@ export function GameScreen({ state, onChange, onExit }: {
                   toast(`🖊️ Assinado: ${ACTION_BY_ID[id].name}. Vale ao encerrar o mês.`)
                   confetti()
                 }}
-              />
+              />}
             </section>
 
             {!aiReady() || state.difficulty === 'facil' ? (
@@ -571,6 +636,7 @@ export function GameScreen({ state, onChange, onExit }: {
 
       {turning && (
         <div className="pn-ov">
+          <div style={{ position: 'absolute', top: 24, left: '50%', transform: 'translateX(-50%)', width: 'min(640px, 90vw)' }}><Art slot="fim-de-mes" height={80} caption="Fechando o mês: Câmara, Senado e Supremo encerram a rodada" /></div>
           <div className="pn-cal">
             <div className="top">{monthLabel(nextMonth).split(' de ')[0].toUpperCase()}</div>
             <div className="num">{Math.min(nextMonth + 1, TERM_MONTHS)}</div>

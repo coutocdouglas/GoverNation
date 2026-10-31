@@ -100,7 +100,7 @@ export function SenateCard({ state, articulations, onToggle, onNegotiate, hidePe
           {pending.map((p) => (
             <div key={p.id} className="pn-row" style={{ alignItems: 'center', gap: 8 }}>
               <span>{BILL_BY_ID[p.id].name}{p.holds ? ` · 🗄️ ${p.holds}× na gaveta` : ''}</span>
-              {onNegotiate && <button className="pn-btn pn-btn--ghost pn-btn--small" onClick={() => onNegotiate(p.id)}>🤝 Negociar no Senado</button>}
+              {onNegotiate && <button className="pn-btn pn-btn--ghost pn-btn--small" onClick={() => onNegotiate(p.id)}>🗳️ Negociar e pautar no Senado</button>}
             </div>
           ))}
         </div>

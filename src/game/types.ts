@@ -123,7 +123,7 @@ export interface MonthReport {
 }
 
 export interface GameState {
-  saveVersion: 12
+  saveVersion: 13
   /** Mês atual, de 0 (janeiro do 1º ano) a 47. Em 48 o mandato acabou. */
   month: number
   presidentName: string
@@ -173,6 +173,36 @@ export interface GameState {
   supremo: SupremoState
   /** Etapa 4C3: desgaste de cada ministro (0 a 100) e desde quando está no cargo (mês absoluto). */
   ministries: Record<AreaId, MinistrySeat>
+  /**
+   * Etapa 0 (plano novo, v0.15): o que já aconteceu nesta rodada antes de encerrar o mês
+   * (medida enviada e votada na hora, projeto pautado da fila, articulações). O fechamento do mês aplica e zera.
+   */
+  round?: RoundBuffer
+}
+
+/** Etapa 0: efeitos acumulados na rodada, aplicados no fechamento do mês. */
+export interface RoundBuffer {
+  month: number
+  impulses: Partial<Record<GroupId, Impulse[]>>
+  confidence: number
+  headlines: Headline[]
+  taken: string[]
+  votes: VoteRecord[]
+  /** Leis que entraram em vigor na rodada pelo caminho completo (Câmara e Senado). */
+  enacted: BillId[]
+  sanctioned: BillId[]
+  mm: { enacted: AreaId[]; struck: AreaId[]; liminar: AreaId[]; barred: AreaId[] }
+  /** A medida do mês (uma por rodada) e a resposta ao fato do mês, se já enviadas. */
+  measure?: BillId
+  response?: BillId
+  /** Projeto da fila pautado em cada casa (um por casa por rodada). */
+  pautou: { camara?: BillId; senado?: BillId }
+  /** Articulações já feitas na rodada. */
+  articulations: Articulation[]
+  /** O presidente da Câmara e o do Senado já seguraram um projeto nesta rodada. */
+  speakerHeld?: boolean
+  senateHeld?: boolean
+  rngState: number
 }
 
 /** Etapa 4C3: situação de um ministério. */

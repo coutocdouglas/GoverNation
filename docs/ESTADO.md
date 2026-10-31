@@ -3,19 +3,19 @@
 > **Leia este arquivo primeiro.** Ele diz onde o projeto está e qual é o próximo passo.
 > Atualize-o a cada mudança: seção "Estado atual", "Próximo passo" e uma linha no "Histórico".
 
-**Última atualização:** 30/10/2026 · **Versão publicada:** v0.14.0
+**Última atualização:** 31/10/2026 · **Versão publicada:** v0.15.0
 
 ---
 
 ## Próximo passo
 
-**Etapa 4D: Congresso ao vivo** (v0.15). Plano aprovado em `docs/DESIGN.md`, seção 25.1. Inclui o botão "Pautar agora" (que aparece bloqueado, com o motivo, quando o Supremo trava um projeto). Depois: **4E** janelas (v0.16), **4F** mês mais vivo (v0.17) e só então a 5B.
+**Etapa 1 do plano novo: causa e consequência** (v0.16). Plano em `docs/DESIGN.md`, seção 27 (e no doc do projeto `plano-de-desenvolvimento.md`). Ficha de governo com marcas de reputação (medida impopular enviada já marca, mesmo sem aprovar), desdobramentos em 3 camadas, anti-repetição dos fatos, capítulos da presidência com IA, exposição a escândalo visível, três caminhos para a crise, agenda limpa, "enquanto você decidia".
 
-**Pendência do Douglas (para a 4D):** mandar mais retratos (sugestão: +30).
+Complexidade: **muito alta**. Use o **Opus** (ou o Fable) no desenho do motor; as telas podem ir para o Sonnet.
 
-Complexidade: **alta**. Use o **Opus** no desenho do Congresso ao vivo; as telas podem ir para o Sonnet numa conversa à parte.
+Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdouglas/GoverNation. Leia CLAUDE.md, docs/ESTADO.md e docs/DESIGN.md (seção 27). Quero fazer a etapa 1 (causa e consequência)."*
 
-Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdouglas/GoverNation. Leia CLAUDE.md, docs/ESTADO.md e docs/DESIGN.md. Quero fazer a etapa 4D (Congresso ao vivo, plano na seção 25.1 do DESIGN.md)."*
+**Pendência do Douglas:** mandar mais retratos (para a etapa 2, líderes e candidatos) e, quando quiser, as ilustrações dos slots em `public/art/LEIAME.md`.
 
 ---
 
@@ -24,10 +24,11 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 **Base técnica**
 - App de Windows (Tauri 2 + React + TypeScript). O instalador é gerado pelo GitHub Actions e o jogo se atualiza sozinho, com atualização assinada.
 - O motor do jogo (`src/game/`) fica separado das telas (`src/ui/`). Os números de balanceamento ficam em `src/game/data/`.
-- 179 testes automáticos. Saves antigos são migrados (versão atual do save: 12).
+- 186 testes automáticos. Saves antigos são migrados (versão atual do save: 13).
 
 **Jogabilidade**
 - Mandato de 48 meses (jan/2027 a dez/2030), com o mês em 4 passos: notícias, fato do mês, decisões e encerrar.
+- **A rodada (v0.15):** uma medida nova por rodada; ela vota na hora (Câmara e Senado), decreto e MP valem na hora, um projeto da fila por casa pode ser pautado, articulação vale na hora, gaveta avisada antes, MP caduca em 4 rodadas sem votação, Supremo julga no fechamento da mesma rodada. Faixa da rodada no Painel e ilustrações provisórias (slots em `src/ui/art.ts`, arte em `public/art`).
 - **Economia** com causa e efeito: PIB, inflação, Selic (Banco Central independente, 8 reuniões do Copom por ano), desemprego, dívida, contas públicas, confiança do mercado, dólar e choques externos.
 - **7 grupos sociais** com memória: ganhos são esquecidos em cerca de 9 meses e perdas em cerca de 2 anos.
 - **Medida do mês em texto livre**, lida por palavras-chave. Leva aos 7 decretos rápidos ou a um catálogo de 91 medidas em 13 áreas (decreto, MP, lei, lei complementar ou PEC) e mostra o instrumento, o custo e o placar previsto.
@@ -76,7 +77,9 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 4. ✅ **4A** votação com negociação por lideranças (v0.8.0) · ✅ **4B** Congresso 2.0, votação animada, voto simbólico e reação da sociedade (v0.10.0)
 5. Entre mandatos: ✅ **5A** rival, ficha do candidato e promessas de posse (v0.11.0) · **5B** 27 estados e apuração (depois da 4F) · **5C** governo seguinte e herança (depois do vídeo do fim de mandato)
 4C. ✅ **4C1** Senado votando (v0.12.0) · ✅ **4C2** Supremo julgando medidas (v0.13.0)
-4C3–4F. ✅ **4C3** Supremo no caminho das medidas e abas (v0.14.0) · ⏭️ **4D** Congresso ao vivo (v0.15) · **4E** janelas (v0.16) · **4F** mês mais vivo (v0.17)
+4C3. ✅ **4C3** Supremo no caminho das medidas e abas (v0.14.0). As etapas 4D, 4E e 4F foram fundidas no plano novo (abaixo).
+
+**Plano novo (DESIGN.md, seção 27):** ✅ **0** a rodada (v0.15) · ⏭️ **1** causa e consequência · **2** Câmara e partidos · **3** Senado · **4** Supremo profundo · **5** oposição, escândalos e CPI · **6** vice e governo · **7** estados e governadores · **8** começo, sociedade e fim · **9** arte final
 6. Depois: Senado com poderes próprios (impeachment), imprensa e pesquisas, orçamento anual, ícones próprios
 
 ## Decisões já tomadas (resumo; detalhes no DESIGN.md)
@@ -119,3 +122,5 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 | 30/10/2026 | — | Plano das etapas 4D (Congresso ao vivo), 4E (janelas) e 4F (mês mais vivo) aprovado e escrito no DESIGN.md (seção 25); a 5B passa para depois da 4F |
 | 30/10/2026 | — | Decisão: nova etapa 4C3 (Supremo no caminho das medidas, liminar, travar votação, consulta, abas Câmara/Senado/Supremo/Ministérios) antes da 4D; plano no DESIGN.md (seção 26); versões das etapas seguintes renumeradas (4D v0.15, 4E v0.16, 4F v0.17) |
 | 30/10/2026 | v0.14.0 | Etapa 4C3: risco jurídico pela regra do instrumento (31 medidas), ação quase certa para risco alto, liminar com fato do mês (esperar, recuar, recorrer, criticar), projeto travado no Supremo, filtro da CCJ, consulta ao Supremo; abas Câmara · Senado · Supremo · Ministérios, com desgaste, meta por pasta e reforma ministerial; save 12 |
+| 30/10/2026 | — | Plano novo por etapas com portão (DESIGN.md, seção 27), fundido com 4D/4E/4F: medida do mês vota na hora, 1 projeto da fila por casa, Supremo na mesma rodada |
+| 31/10/2026 | v0.15.0 | Etapa 0: a rodada. Votar agora (Câmara → Senado), pautar da fila, articulação na hora, gaveta avisada, MP caduca, Supremo na mesma rodada, faixa da rodada, ilustrações provisórias; save 13 |
