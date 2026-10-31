@@ -9,6 +9,8 @@
 
 ## Próximo passo
 
+**Antes da Etapa 3 (decisão pendente do Douglas):** o levantamento do Congresso (`docs/levantamento-congresso.md`, prints de 31/10) mostrou duas lacunas grandes: a **base como contrato por pasta** (cota por votação, fidelidade, "A base nesta votação", pacto sem ministério) e o **fluxo do dia em janelas encadeadas** (leitura, ficha, votação, resultado e país no mesmo dia, com o Supremo e o efeito na aprovação na hora). Proposta: uma **Etapa 2B** antes do Senado (seção F do levantamento). Faltam prints do Senado, da sanção e de uma derrota em plenário (seção G). Quando decidir, escrever o plano da 2B em `docs/DESIGN.md` (seção 27.6) e mostrar ao Douglas.
+
 **Etapa 3: Senado** (v0.19). Plano em `docs/DESIGN.md`, seção 27 (tabela): página própria, líderes de bancada, indecisos com preço, comissões do Senado, 27 estados com bancadas estaduais (3 senadores e os deputados de cada estado, fictícios e proporcionais), emendas por estado e por bancada. Antes de programar, escrever o plano da etapa no DESIGN.md (seção 27.6) e mostrar ao Douglas. Boa base pronta da Etapa 2: alas, conversa por tipos, contraoferta e concessões podem ser reaproveitadas no Senado.
 
 Complexidade: **alta**. Opus para as regras (bancadas estaduais, indecisos com preço) e o balanceamento; Sonnet nas telas e nos dados dos 27 estados.
@@ -69,6 +71,7 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 - `CLAUDE.md`: regras do projeto e quando abrir uma conversa nova.
 - `docs/DESIGN.md`: decisões de desenho, seções 1 a 27 (Supremo em 24.2, 24.2.1 e 26; como ficou a 4C3 em 26.8; plano novo por etapas na seção 27, com a 1A em 27.3, a 1B em 27.4 e a 2 em 27.5).
 - `docs/levantamento-video-1.md`: o que o jogo de referência tem e nós não (vídeo 1).
+- `docs/levantamento-congresso.md`: o mesmo para o Congresso, a medida do dia e o Supremo (prints de 31/10), com a proposta da Etapa 2B.
 - `CHANGELOG.md`: novidades de cada versão.
 - `docs/RELEASES.md`: como publicar.
 
@@ -133,3 +136,4 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 | 31/10/2026 | v0.16.1 | 88 retratos ilustrados do Douglas (111 a 198) no lugar dos 30 provisórios |
 | 31/10/2026 | v0.17.0 | Etapa 1B: post da assessoria (grátis, 1 por mês, com peso do discurso e cansaço), rua (7 crises e fala ao país), agenda limpa, fato bom com resposta escrita e perda de oportunidade (Normal e Difícil), "enquanto você decidia"; save 15 |
 | 31/10/2026 | v0.18.0 | Etapa 2: alas e lealdade, traidores no placar, líder indicável, eleições internas, eleição da Mesa (apoio e candidato próprio), conversa por tipos, contraoferta, emendas detalhadas, concessões no texto pela IA, janela da medida em 3 etapas com nota de freios e contrapesos, nome da medida, ministério e urgência na hora; 18 chefes de ala; save 16 |
+| 31/10/2026 | — | Levantamento do Congresso, da medida do dia e do Supremo (prints do jogo de referência) em `docs/levantamento-congresso.md`; proposta da Etapa 2B aguardando decisão |

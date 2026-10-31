@@ -795,3 +795,7 @@ Exposição a escândalo visível de 0 a 100 (item 20), CPIs (35), vice-presiden
 - Etapa 2 (feito na v0.18): ministério cedido valendo na hora; urgência como ação da rodada.
 - Etapa 2 (revisada ao fechar): vice-líder do governo vai para a Etapa 6 (vice e governo); orçamento paralelo como escândalo vai para a 5; 22 partidos como na referência ficou de fora (as alas dão a variedade); "precisa de você" quando a ala do seu partido estiver perto de rachar, para a Etapa 8.
 - Etapa 3: governador puxando a bancada (vai para a 7).
+- Da Etapa 2 (levantamento do Congresso, 31/10): ideias que ficaram para o Judiciário, já mapeadas em `docs/levantamento-congresso.md`: popup "O Supremo pede você" (cadeira de jurista no TSE, com 1 mês, padrão e preço), ação já na assinatura com autor nomeado e fundamento, sorteio do relator com a doutrina dos 11, acórdão com a frase de cada ministro, "Trabalhar o plenário", índice "A seu favor" da Corte e "o precedente agora é seu".
+- Da Etapa 2, para a Etapa 8: partido do presidente por dentro (direção, congresso do partido, linha, escola de formação, estatuto, convenção, puxador de votos), federação, incorporação, fusão, cláusula de barreira e janela partidária, ala que muda de legenda.
+- Da Etapa 2, para a Etapa 6: líder do governo na Câmara (junto com o vice-líder).
+
