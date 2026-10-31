@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { PartyLogo } from './PartyLogo'
 import { billBlockedReason, isRecess } from '../game/congress'
 import { BILL_BY_ID, BILLS, type BillDef } from '../game/data/bills'
 import { addCustomBill } from '../game/custom'
@@ -342,7 +343,7 @@ export function GameScreen({ state, onChange, onExit }: {
         <section className="pn-hero">
           <Portrait id={playerPortraitId(state)} color={PARTY_BY_ID[state.playerParty].color} size={96} title={state.presidentName} />
           <div>
-            <div className="pn-sub">🇧🇷 Presidente da República · {PARTY_BY_ID[state.playerParty].name} ({PARTY_BY_ID[state.playerParty].sigla})</div>
+            <div className="pn-sub">🇧🇷 Presidente da República · <PartyLogo party={state.playerParty} size={22} />{PARTY_BY_ID[state.playerParty].name} ({PARTY_BY_ID[state.playerParty].sigla} {PARTY_BY_ID[state.playerParty].number})</div>
             <h1>{state.presidentName.toUpperCase()}</h1>
             <div className="pn-sub">
               Aprovação <b className={now.approval >= 50 ? 'up' : now.approval >= 35 ? 'warn' : 'dn'}>{num(now.approval, 0)}%</b>

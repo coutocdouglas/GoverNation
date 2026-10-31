@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { PartyLogo } from './PartyLogo'
 import { articulationBlockedReason, CONGRESS } from '../game/congress'
 import { ALAS, LEADER_STYLE, MESA } from '../game/data/alas'
 import { TALKS } from '../game/data/negociacao'
@@ -183,7 +184,7 @@ export function BancadasChart({ v }: { v: VoteRecord }) {
         const t = v.traitors?.[p.id] ?? 0
         return (
           <div key={p.id} className="pn-bancada">
-            <span className="sig" style={{ color: p.color }}>{p.sigla}</span>
+            <span className="sig" style={{ color: p.color }}><PartyLogo party={p.id} size={18} />{p.sigla}</span>
             <span className="bar">
               <i className="y" style={{ width: `${(r.yes / n) * 100}%` }} />
               <i className="n" style={{ width: `${(r.no / n) * 100}%` }} />

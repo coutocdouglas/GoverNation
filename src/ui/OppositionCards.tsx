@@ -1,5 +1,6 @@
 // Etapa 5A: cartões do Painel com o líder da oposição (pesquisa) e as promessas de posse.
 import { castPortrait } from '../game/data/cast'
+import { PartyLogo } from './PartyLogo'
 import { PARTY_BY_ID } from '../game/data/parties'
 import { PROMISE_BY_ID } from '../game/data/promises'
 import { RIVAL } from '../game/data/rival'
@@ -43,7 +44,7 @@ export function RivalCard({ state }: { state: GameState }) {
         <Portrait id={castPortrait(r.name)} color={party.color} size={56} title={r.name} />
         <div>
           <b>{r.name}</b>
-          <small className="pn-hint">{party.sigla} · líder da oposição</small>
+          <small className="pn-hint"><PartyLogo party={party.id} size={18} /> {party.sigla} · líder da oposição</small>
           <span className={`pn-stance ${stanceTone}`}>{STANCE_LABEL[r.stance]}</span>
         </div>
       </div>

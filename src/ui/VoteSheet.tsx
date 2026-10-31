@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { PartyLogo } from './PartyLogo'
 import { affinity, amendmentOf, forecastSenate, forecastVote, isRecess, seatsIn, senatePending, type House } from '../game/congress'
 import { committeeOf, frenteSummary } from '../game/camara'
 import { BILL_BY_ID, GDP_BILLIONS, INSTRUMENTS } from '../game/data/bills'
@@ -250,7 +251,7 @@ export function VoteSheet({ state, bill, deals, listened, onListen, listenedSena
               <button key={p.id} className={`pn-leader ${open === p.id ? 'on' : ''}`} disabled={!canListen} onClick={() => { if (!heard) (senado ? onListenSenate : onListen)(p.id); setOpen(p.id) }} title={own ? '' : heard ? 'Ver de novo a proposta' : listenLeft > 0 ? 'Chamar para conversar' : `Você já ouviu ${listenMax} lideranças ${senado ? 'no Senado' : 'na Câmara'} este mês`}>
                 <div className="pn-leader__top">
                   <Portrait name={leaderOf(state, p.id).name} feminine={leaderOf(state, p.id).feminine} color={p.color} size={36} title={leaderOf(state, p.id).name} />
-                  <div><b style={{ color: p.color }}>{p.sigla}</b> · {n}<small>{leaderOf(state, p.id).name}</small></div>
+                  <div><PartyLogo party={p.id} size={20} /> <b style={{ color: p.color }}>{p.sigla}</b> · {n}<small>{leaderOf(state, p.id).name}</small></div>
                   <span className={`pn-chip-mini ${tag.c}`}>{tag.t}</span>
                 </div>
                 {deal && <span className="pn-chip-mini up">Acordo: {KIND_TAG[deal.kind].text.toLowerCase()}</span>}

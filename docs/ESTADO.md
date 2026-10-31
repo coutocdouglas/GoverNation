@@ -3,13 +3,13 @@
 > **Leia este arquivo primeiro.** Ele diz onde o projeto está e qual é o próximo passo.
 > Atualize-o a cada mudança: seção "Estado atual", "Próximo passo" e uma linha no "Histórico".
 
-**Última atualização:** 31/10/2026 · **Versão publicada:** v0.19.0
+**Última atualização:** 31/10/2026 · **Versão publicada:** v0.19.1
 
 ---
 
 ## Próximo passo
 
-**Etapa 2C: a mesa de negociação e a base** (v0.20). Plano em `docs/DESIGN.md`, seção 27.6 (bloco 2C): acordo com um partido vale na Câmara e no Senado (3 conversas por rodada no total), cardápio de pedidos variado (2 ou 3 opções com os votos convertidos de cada uma), as ruas (ato nacional, greve geral), pauta que esfria e arquiva em 6 rodadas, base como contrato (cota, linha vermelha, fidelidade, "A base nesta votação"), pacto sem ministério, registro de votos dos partidos e das medidas barradas (matéria-prima da eleição) e os logos dos partidos (`public/logos/<id>.webp`, o Douglas desenha em cima dos placeholders).
+**Etapa 2C: a mesa de negociação e a base** (v0.20). Plano em `docs/DESIGN.md`, seção 27.6 (bloco 2C): acordo com um partido vale na Câmara e no Senado (3 conversas por rodada no total), cardápio de pedidos variado (2 ou 3 opções com os votos convertidos de cada uma), as ruas (ato nacional, greve geral), pauta que esfria e arquiva em 6 rodadas, base como contrato (cota, linha vermelha, fidelidade, "A base nesta votação"), pacto sem ministério e registro de votos dos partidos e das medidas barradas (matéria-prima da eleição). Os logos dos partidos já entraram (v0.19.1).
 
 Complexidade: **muito alta**. Modelo: **Opus** nas regras e no balanceamento; Sonnet nas telas.
 
@@ -22,6 +22,8 @@ Complexidade: **alta**. Opus para as regras (bancadas estaduais, indecisos com p
 Para começar numa conversa nova (depois da 2C): *"Projeto GoverNation, repositório coutocdouglas/GoverNation. Leia CLAUDE.md, docs/ESTADO.md e docs/DESIGN.md (seção 27). Quero fazer a etapa 3."*
 
 **Sugestão (opcional, 1B):** pedir a um Opus uma revisão final dos números da assessoria (`data/assessoria.ts`: `postScale`, `omissoShare`, `fatigueFactor`, `softenMax`; e `data/rua.ts`). O simulador mostra que ficou equilibrado (DESIGN.md 27.4), mas é a primeira etapa balanceada fora do Opus.
+
+**Material de campanha guardado** (para a Etapa 8): `arte/campanha/` (kit por partido, caminhadas, editor de cartazes; ver o LEIAME).
 
 **Pendência do Douglas:** mandar as ilustrações dos slots (`public/art/LEIAME.md`) quando quiser. Retratos: 198 no total, 106 livres; para gerar provisórios de quem ainda não tem rosto, `scripts/retratos-provisorios.py` (sai em `scripts/retratos-provisorios/`, a partir do 199).
 
@@ -68,6 +70,7 @@ Para começar numa conversa nova (depois da 2C): *"Projeto GoverNation, reposit�
 - **O mês mais vivo (v0.17):** três caminhos para a crise (medida, post da assessoria grátis 1 por mês, rua), com peso do discurso, cansaço e penalidade de deixar passar amenizada; cartão "Sua agenda está limpa" com posts de agenda em mês sem crise; fato bom com resposta escrita e, no Normal e no Difícil, perda de oportunidade (a oposição leva o crédito); "Enquanto você decidia" (oposição, empresariado e Câmara, com o porquê) no passo 1 do mês seguinte.
 - **Câmara e partidos (v0.18):** cada partido tem 3 alas com chefe e lealdade (ala pouco leal trai a orientação); placar com orientação das bancadas, traidores, abstenções, ausentes e piso; líder do seu partido indicável (articulador, disciplinador ou popular); eleições internas todo fevereiro; eleição da Mesa em fev/2027 e fev/2029 (apoiar com moeda ou lançar candidato próprio); conversa por tipos com chance (pedir apoio, apelar à base, oferecer espaço, endurecer); contraoferta; emendas individuais ou de bancada com destino; concessões no texto (escritas pela IA, se ligada); janela da medida em 3 etapas com nota de freios e contrapesos; nome da medida; ministério e urgência valendo na hora.
 - **Página inicial e fluxo do dia (v0.19):** fato do mês em destaque com **Agir** (resumo da assessoria, opinião do ministro com 2 ou 3 ordens, campo de escrever, post e rua) ou **Deixar passar** (sem opções prontas, menos nos fatos do Supremo); central de pendências por urgência; "o que mudou no mês passado" recolhido no fim; corrente de janelas "Etapa N de M" (Leitura → Ficha → Votação → Placar → Supremo → O país reage → Encerrar o mês), também para decreto e MP; quem vai reagir (8 reações com chance e efeito, sorteadas no envio); notas Congressual e Judicial, risco jurídico em número, potencial de crescimento e resumo executivo; **o Supremo julga no mesmo dia** (ação, relator, liminar e plenário); mercado precifica 1/3 da lei no envio; "já valeu" (prévia da aprovação) e primário antes → depois.
+- **Logos dos partidos (v0.19.1):** arte do Douglas em `public/logos/`, na posse, no Painel, na Câmara, nas lideranças e no cartão da oposição; número na urna de cada partido.
 - **Retratos:** 110 fotos, cada uma usada por uma pessoa só, e 88 retratos ilustrados (111 a 198) feitos pelo Douglas. 106 rostos livres para personagens novos e para o presidente (18 foram para os chefes de ala na v0.18). O presidente escolhe o rosto na posse (41 livres) e 15 retratos ficam reservados para Defesa, povos indígenas, campo e tradições.
 
 **Telas:** Posse em 3 passos, Painel (com cara de jogo, animações, plantão de notícias, fato do mês em destaque, central de pendências, cartões de Oposição, Promessas e Supremo), Governo com quatro abas: **Câmara** (mesa de sanção, presidente da Câmara, pauta com a chance nas duas casas, partidos e articulação, frentes, leis com reação), **Senado** (casa, presidente, pauta e votações), **Supremo** (ministros, ações, liminares, projetos travados, consultas, decisões, vaga) e **Ministérios** (desgaste, meta e reforma), e Fichas. Nação, Economia, Diplomacia, Programas e Vida pessoal aparecem bloqueadas.
@@ -144,3 +147,4 @@ Para começar numa conversa nova (depois da 2C): *"Projeto GoverNation, reposit�
 | 31/10/2026 | — | Levantamento do Congresso, da medida do dia e do Supremo (prints do jogo de referência) em `docs/levantamento-congresso.md`; proposta da Etapa 2B aguardando decisão |
 | 31/10/2026 | — | Plano das etapas 2B e 2C (DESIGN.md 27.6) com as decisões do Douglas; levantamento do Congresso ampliado (CPI, Senado por estado, Painel); placeholders dos logos dos partidos |
 | 31/10/2026 | v0.19.0 | Etapa 2B: fato do mês em destaque com Agir ou Deixar passar, central de pendências, corrente de janelas "Etapa N de M" (também decreto e MP), quem vai reagir, notas Congressual e Judicial, Supremo no mesmo dia, mercado no envio, "já valeu"; save 17 |
+| 31/10/2026 | v0.19.1 | Logos dos partidos (arte do Douglas) no jogo e número na urna; material de campanha guardado em `arte/campanha/` para a Etapa 8 |

@@ -719,3 +719,10 @@
 .pn-pend__body { flex: 1; display: flex; flex-direction: column; gap: 2px; font-size: 13px; min-width: 0; }
 .pn-pend__body small { color: var(--pn-mut); font-size: 11.5px; }
 @media (max-width: 760px) { .pn-twoway, .pn-notas, .pn-fresh__row, .pn-court { grid-template-columns: 1fr; } }
+
+/* Logos dos partidos (v0.19.1) */
+.pn-plogo { border-radius: 50%; flex: none; object-fit: cover; vertical-align: middle; box-shadow: 0 1px 4px #0006; }
+.pn-logo-ph { display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; flex: none; color: #fff; font-weight: 800; font-family: var(--pn-title); vertical-align: middle; }
+.pn-party__seats { white-space: nowrap; }
+.pn-bancada .sig { display: inline-flex; align-items: center; gap: 5px; }
+.pn-sub .pn-plogo { margin: 0 4px 0 2px; }

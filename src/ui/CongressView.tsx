@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { PartyLogo } from './PartyLogo'
 import { articulationBlockedReason, CONGRESS, forecastSenate, forecastVote, houseSeats, isRecess, senatePending } from '../game/congress'
 import { BILL_BY_ID, GDP_BILLIONS, INSTRUMENTS } from '../game/data/bills'
 import { PARTIES, PARTY_BY_ID } from '../game/data/parties'
@@ -140,6 +141,7 @@ export function CongressView({ state, articulations, onToggle, bill, extraBill, 
                   <Portrait name={leaderOf(state, p.id).name} feminine={leaderOf(state, p.id).feminine} color={p.color} size={52} title={`${leaderOf(state, p.id).name}, líder do ${p.sigla}`} />
                   <b>{p.sigla}</b> <span className="pn-hint" style={{ margin: 0 }}>{p.name}</span>
                   <span className="pn-party__seats">{p.seats} 🪑</span>
+                  <PartyLogo party={p.id} size={44} />
                 </div>
                 <div className="pn-hint" style={{ margin: '2px 0 6px' }}>👤 Líder: <b>{leaderOf(state, p.id).name}</b> ({LEADER_STYLE[leaderOf(state, p.id).style].icon} {LEADER_STYLE[leaderOf(state, p.id).style].label.toLowerCase()}). {own ? '⭐ Seu partido. ' : ''}{p.blurb}</div>
                 <div className="pn-party__stats">

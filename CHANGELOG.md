@@ -1,5 +1,10 @@
 # Novidades
 
+## 0.19.1
+- **Logos dos partidos**, desenhados pelo Douglas: aparecem na escolha do partido na posse, no topo do Painel (ao lado do nome do presidente), nos cartões dos partidos na Câmara, nas lideranças da votação, no gráfico "como cada bancada votou" e no cartão da oposição.
+- Cada partido ganhou o **número na urna** (POL 14, FPT 28, UCD 32, PSN 37, PVS 46, MRB 54, MDN 62, PRA 73, NRM 89), que aparece no topo do Painel.
+- O material de campanha (cartazes, posts, adesivos, bandeiras, caminhadas e o editor de cartazes) ficou guardado no repositório para a etapa da eleição; não entra no instalador por enquanto.
+
 ## 0.19.0
 - **A página inicial e o fluxo do dia (etapa 2B).** O fato do mês virou o centro da página, e mandar uma medida virou uma corrente de janelas, do anúncio à reação do país.
   - **Fato do mês em destaque**, logo abaixo dos passos, com **duas saídas para todo fato, bom ou ruim: Agir ou Deixar passar.** As opções prontas ("promover o governo", "dar crédito a quem fez", "ignorar") saíram. **Deixar passar** mostra antes o que acontece (e, no fato bom, que a oposição leva o crédito).

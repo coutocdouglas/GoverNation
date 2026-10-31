@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { PartyLogo } from './ui/PartyLogo'
 import { UpdateBanner } from './components/UpdateBanner'
 import { PLAYER_PARTY_CHOICES } from './game/data/parties'
 import { monthLabel, newGame } from './game/game'
@@ -230,6 +231,7 @@ function NewGame({ hasSave, onCancel, onStart }: {
                 <div className="choices">
                   {PLAYER_PARTY_CHOICES.map((p) => (
                     <button key={p.id} className={`choice ${party === p.id ? 'choice--selected' : ''}`} onClick={() => { setParty(p.id); setPromises([]) }}>
+                      <PartyLogo party={p.id} size={56} />
                       <strong>{p.label}</strong>
                       <small>{p.desc}</small>
                     </button>
