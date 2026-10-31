@@ -9,7 +9,9 @@
 
 ## Próximo passo
 
-**Antes da Etapa 3 (decisão pendente do Douglas):** o levantamento do Congresso (`docs/levantamento-congresso.md`, prints de 31/10) mostrou duas lacunas grandes: a **base como contrato por pasta** (cota por votação, fidelidade, "A base nesta votação", pacto sem ministério) e o **fluxo do dia em janelas encadeadas** (leitura, ficha, votação, resultado e país no mesmo dia, com o Supremo e o efeito na aprovação na hora). Proposta: uma **Etapa 2B** antes do Senado (seção F do levantamento). Faltam prints do Senado, da sanção e de uma derrota em plenário (seção G). Quando decidir, escrever o plano da 2B em `docs/DESIGN.md` (seção 27.6) e mostrar ao Douglas.
+**Antes da Etapa 3: etapas 2B e 2C (aprovadas em princípio pelo Douglas em 31/10; plano em `docs/DESIGN.md`, seção 27.6, aguardando os últimos ajustes).** O levantamento do Congresso (`docs/levantamento-congresso.md`) mostrou as lacunas: a página inicial (fato do mês com Agir ou Deixar passar, pendências por urgência), o fluxo do dia em janelas com o Supremo no mesmo dia (**2B, v0.19**) e a mesa de negociação com acordo valendo nas duas casas, cardápio de pedidos variado, as ruas, a base como contrato e o registro de votos dos partidos (**2C, v0.20**). Complexidade: média-alta (2B) e muito alta (2C). Modelo: Sonnet nas telas, **Opus nas regras da 2C e no Supremo da 2B**. Os logos dos partidos: o Douglas desenha em cima de placeholders e devolve; entram na 2C (`public/logos/<id>.webp`).
+
+Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdouglas/GoverNation. Leia CLAUDE.md, docs/ESTADO.md, docs/DESIGN.md (seção 27.6) e docs/levantamento-congresso.md. Quero fazer a etapa 2B."*
 
 **Etapa 3: Senado** (v0.19). Plano em `docs/DESIGN.md`, seção 27 (tabela): página própria, líderes de bancada, indecisos com preço, comissões do Senado, 27 estados com bancadas estaduais (3 senadores e os deputados de cada estado, fictícios e proporcionais), emendas por estado e por bancada. Antes de programar, escrever o plano da etapa no DESIGN.md (seção 27.6) e mostrar ao Douglas. Boa base pronta da Etapa 2: alas, conversa por tipos, contraoferta e concessões podem ser reaproveitadas no Senado.
 
@@ -87,7 +89,7 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 4C. ✅ **4C1** Senado votando (v0.12.0) · ✅ **4C2** Supremo julgando medidas (v0.13.0)
 4C3. ✅ **4C3** Supremo no caminho das medidas e abas (v0.14.0). As etapas 4D, 4E e 4F foram fundidas no plano novo (abaixo).
 
-**Plano novo (DESIGN.md, seção 27):** ✅ **0** a rodada (v0.15) · ✅ **1A** causa e consequência (v0.16) · ✅ **1B** o mês mais vivo (v0.17) · ✅ **2** Câmara e partidos (v0.18) · ⏭️ **3** Senado · **4** Supremo profundo · **5** oposição, escândalos e CPI · **6** vice e governo · **7** estados e governadores · **8** começo, sociedade e fim · **9** arte final
+**Plano novo (DESIGN.md, seção 27):** ✅ **0** a rodada (v0.15) · ✅ **1A** causa e consequência (v0.16) · ✅ **1B** o mês mais vivo (v0.17) · ✅ **2** Câmara e partidos (v0.18) · ⏭️ **2B** página inicial e fluxo do dia · **2C** mesa de negociação e base · **3** Senado · **4** Supremo profundo · **5** oposição, escândalos e CPI · **6** vice e governo · **7** estados e governadores · **8** começo, sociedade e fim · **9** arte final
 6. Depois: Senado com poderes próprios (impeachment), imprensa e pesquisas, orçamento anual, ícones próprios
 
 ## Decisões já tomadas (resumo; detalhes no DESIGN.md)
@@ -137,3 +139,4 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 | 31/10/2026 | v0.17.0 | Etapa 1B: post da assessoria (grátis, 1 por mês, com peso do discurso e cansaço), rua (7 crises e fala ao país), agenda limpa, fato bom com resposta escrita e perda de oportunidade (Normal e Difícil), "enquanto você decidia"; save 15 |
 | 31/10/2026 | v0.18.0 | Etapa 2: alas e lealdade, traidores no placar, líder indicável, eleições internas, eleição da Mesa (apoio e candidato próprio), conversa por tipos, contraoferta, emendas detalhadas, concessões no texto pela IA, janela da medida em 3 etapas com nota de freios e contrapesos, nome da medida, ministério e urgência na hora; 18 chefes de ala; save 16 |
 | 31/10/2026 | — | Levantamento do Congresso, da medida do dia e do Supremo (prints do jogo de referência) em `docs/levantamento-congresso.md`; proposta da Etapa 2B aguardando decisão |
+| 31/10/2026 | — | Plano das etapas 2B e 2C (DESIGN.md 27.6) com as decisões do Douglas; levantamento do Congresso ampliado (CPI, Senado por estado, Painel); placeholders dos logos dos partidos |
