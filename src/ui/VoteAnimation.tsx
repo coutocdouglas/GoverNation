@@ -1,4 +1,6 @@
 import { BancadasChart } from './PartidosPanels'
+import { ChainSteps } from './Chain'
+import type { ChainInfo } from './corrente'
 import { traitorsTotal } from '../game/partidos'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { BILL_BY_ID, INSTRUMENTS } from '../game/data/bills'
@@ -44,7 +46,9 @@ const DURATION = 4200
  * Painel eletrônico da Câmara (etapa 4B): os votos acendem um a um, o placar corre e,
  * no fim, o carimbo de aprovado ou rejeitado. Dá para pular.
  */
-export function VoteAnimation({ vote, index, total, onNext, nextLabel }: {
+export function VoteAnimation({ vote, index, total, onNext, nextLabel, chain }: {
+  /** Etapa 2B: posição na corrente de janelas do dia. */
+  chain?: ChainInfo | null
   vote: VoteRecord
   index: number
   total: number
@@ -94,6 +98,7 @@ export function VoteAnimation({ vote, index, total, onNext, nextLabel }: {
   return (
     <div className="pn-ov pn-ov--vote" role="dialog" aria-label={`Votação: ${name}`}>
       <div className="pn-vanim">
+        <ChainSteps chain={chain} />
         <div className="pn-vanim__top">
           <span className="pn-kicker">🏛️ Plenário {senado ? 'do Senado' : 'da Câmara'} · {veto ? 'Sessão do veto' : vote.kind === 'sabatina' ? 'Sabatina para o Supremo' : INSTRUMENTS[b?.instrument ?? 'lei'].label}{total > 1 ? ` · votação ${index + 1} de ${total}` : ''}</span>
           {!done && <button className="pn-btn pn-btn--ghost pn-btn--small" onClick={skip}>Pular ⏭</button>}

@@ -233,7 +233,7 @@ describe('save 15', () => {
     old.saveVersion = 14
     delete old.statementLog
     const m = migrate(old)!
-    expect(m.saveVersion).toBe(16)
+    expect(m.saveVersion).toBe(17)
     expect(m.statementLog).toEqual([])
     expect(() => advanceMonth(m, [], { statement: 'base' })).not.toThrow()
   })

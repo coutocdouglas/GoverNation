@@ -1,5 +1,20 @@
 # Novidades
 
+## 0.19.0
+- **A página inicial e o fluxo do dia (etapa 2B).** O fato do mês virou o centro da página, e mandar uma medida virou uma corrente de janelas, do anúncio à reação do país.
+  - **Fato do mês em destaque**, logo abaixo dos passos, com **duas saídas para todo fato, bom ou ruim: Agir ou Deixar passar.** As opções prontas ("promover o governo", "dar crédito a quem fez", "ignorar") saíram. **Deixar passar** mostra antes o que acontece (e, no fato bom, que a oposição leva o crédito).
+  - **Agir** abre: um **resumo curto da assessoria** (escrito pela IA, se ligada), **a opinião do ministro** com 2 ou 3 ordens (pela situação do país, pelo perfil dele e pelo partido dele), **acatar copia a ordem exatamente como ele escreveu**, e o campo para escrever. Post da assessoria e rua ficam aqui também. Os fatos do Supremo mantêm as escolhas próprias.
+  - **Central de pendências** no Painel, por urgência (vermelho, amarelo, verde), com o clique que leva ao lugar: cobranças dos grupos, sanção ou veto esperando, MP perto de caducar, vaga no Supremo, liminar, promessas a partidos, promessas de posse fora da meta (na reta final) e a fila do Congresso. Substitui os cartões de cobranças e "Esperando sua caneta".
+  - **"O que mudou no mês passado"** e **"Enquanto você decidia"** desceram para o fim da página, num cartão recolhido (o passo 1 abre o cartão).
+  - **A corrente de janelas, com "Etapa N de M":** Leitura → Ficha → Votação → Placar → Supremo → O país reage → Encerrar o mês. Decreto e MP também passam por ela (sem votação). A **leitura do gabinete virou janela**, com "o Presidente anunciou: ‘suas palavras’", o nome oficial, as condições, **quem sente antes → depois** e **quem vai reagir**.
+  - **Quem vai reagir:** reações previstas ao anúncio, cada uma com a **chance** e o **efeito** (carta aberta da indústria, dólar em alta, mercado aplaude, protestos, comemoração nas ruas, grupos de família inflamados, oposição nas redes, Câmara reclamando de governo por decreto). O sorteio acontece no envio e "O país reage" mostra o que aconteceu.
+  - **Ficha com duas notas, Congressual e Judicial** (0 a 10), cada uma com a razão numa frase, **risco jurídico em número** (0 a 100, com o limite de 45), **potencial de crescimento** e **resumo executivo** da Casa Civil (narrado pela IA, se ligada; sem ela, um resumo pronto).
+  - **O Supremo julga no mesmo dia:** quando a medida passa a valer (decreto e MP assinados, lei aprovada), a oposição pode ir ao Supremo na hora: **a ação, o relator sorteado, a liminar e o plenário** aparecem na corrente, voto a voto. Derrubada, a medida cai na hora e o mês seguinte traz o fato da derrubada. Sem ação no dia, a medida fica uns meses sem ser contestada.
+  - **O mercado precifica parte no envio:** um terço do choque de confiança de uma lei vale já no envio; o resto, na aprovação. Barrada, o mercado desfaz.
+  - **"O país reage"** ganhou **"já valeu no dia do anúncio"** (a aprovação antes → depois com o efeito da medida) e **"entra no fechamento do mês"** (resultado primário antes → depois), mais um botão para **encerrar o mês** dali.
+- Balanceamento (30 partidas simuladas): leis por mandato e notas das estratégias no mesmo nível; quem responde aos fatos com medidas arriscadas vê um pouco mais de derrubadas (a liminar agora vai ao plenário no mesmo dia, sem tempo de recuar).
+- Mandatos salvos continuam normalmente (save versão 17).
+
 ## 0.18.0
 - **Câmara e partidos (etapa 2).** Os partidos ganharam vida por dentro, e a negociação ficou uma mesa de verdade.
   - **3 alas em cada partido** (ex.: no UCD, cúpula, baixo clero e bancada do agro), cada uma com posição, chefe com retrato e **lealdade** de 0 a 100. Ala pouco leal vota pela própria cabeça. 18 personagens novos (os chefes de ala).

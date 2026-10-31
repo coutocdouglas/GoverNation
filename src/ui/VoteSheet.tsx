@@ -17,6 +17,8 @@ import { procedureBlockedReason, type MonthPlan } from '../game/game'
 import type { BillId, Deal, EmendaDestino, GameState, PartyId } from '../game/types'
 import { Portrait } from './Portrait'
 import { Art } from './Art'
+import { ChainSteps } from './Chain'
+import type { ChainInfo } from './corrente'
 import { num } from './format'
 
 export type ProcedureKind = 'hold' | 'urgent' | 'original' | 'symbolic'
@@ -35,7 +37,9 @@ const KIND_TAG: Record<Offer['kind'], { text: string; cls: string }> = {
  * Votação no Congresso (etapas 4 e 4C1): placar previsto se fosse votado agora, lideranças e negociação,
  * com uma aba para a Câmara e outra para o Senado. O presidente ouve até 3 lideranças por mês na Câmara e 2 no Senado.
  */
-export function VoteSheet({ state, bill, deals, listened, onListen, listenedSenate, onListenSenate, onDeal, onClose, plan, onProcedure, onVoteNow, voteBlocked, gaveta, onState }: {
+export function VoteSheet({ state, bill, deals, listened, onListen, listenedSenate, onListenSenate, onDeal, onClose, plan, onProcedure, onVoteNow, voteBlocked, gaveta, onState, chain }: {
+  /** Etapa 2B: posição na corrente de janelas do dia. */
+  chain?: ChainInfo | null
   state: GameState
   bill: BillId
   /** Acordos do mês (todos os projetos, nas duas casas). */
@@ -117,6 +121,7 @@ export function VoteSheet({ state, bill, deals, listened, onListen, listenedSena
       <div className="pn-sheet pn-sheet--wide" onClick={(e) => e.stopPropagation()}>
         <button className="detail__close" onClick={onClose}>×</button>
         <Art slot={senado ? 'senado-plenario' : 'camara-plenario'} height={76} />
+        <ChainSteps chain={chain} />
         <div className="pn-kicker">{senado ? 'Senado Federal' : 'Câmara dos Deputados'} · {INSTRUMENTS[b.instrument].label}</div>
         <h2>{b.name}</h2>
         <p className="pn-hint" style={{ marginTop: -6 }}>{b.summary}</p>

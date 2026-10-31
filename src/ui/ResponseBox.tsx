@@ -59,7 +59,6 @@ export function ResponseBox({ state, ev, response, plannedBill, onRespond, onAdd
   const [adviceError, setAdviceError] = useState<string | null>(null)
   const ai = aiReady()
   const catalog = measuresOfArea(ev.area)
-  const he = m.feminine ? 'a ministra' : 'o ministro'
   const doMinister = m.feminine ? 'da ministra' : 'do ministro'
 
   const read = async () => {
@@ -142,7 +141,7 @@ export function ResponseBox({ state, ev, response, plannedBill, onRespond, onAdd
         value={text}
         onChange={(e) => { setText(e.target.value); setPicked(null); setNoMatch(null) }}
         onKeyDown={(e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) read() }}
-        placeholder={`Diga a ${he} o que fazer. Ex.: “${catalog[0]?.name ?? 'Agir já'}”`}
+        placeholder={`Diga ${m.feminine ? 'à ministra' : 'ao ministro'} o que fazer. Ex.: “${catalog[0]?.name ?? 'Agir já'}”`}
         rows={text.length > 200 ? 8 : 3}
       />
       <p className="pn-hint">A resposta segue o trâmite normal (decreto, MP, lei ou PEC). Se precisar de lei, vai para a pauta da Câmara. Responder <b>não gasta a medida do mês</b>.</p>

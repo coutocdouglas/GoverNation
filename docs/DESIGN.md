@@ -696,8 +696,8 @@ Exposição a escândalo visível de 0 a 100 (item 20), CPIs (35), vice-presiden
 | **0 · A rodada** (v0.15) | Medida do mês e resposta ao fato votam na hora (Câmara → Senado), gavetas avisadas antes, CCJ na hora; "Pautar agora" para 1 projeto da fila por casa; MP caduca em 4 meses sem votação; Supremo julga no fechamento da mesma rodada; buffer da rodada no estado; fases visíveis; sistema de ilustrações placeholder | 4D (votar na hora) |
 | **1 · Causa e consequência** | Ficha de governo com marcas de reputação (medida enviada já marca), desdobramentos em 3 camadas, anti-repetição, capítulos da presidência com IA, exposição a escândalo visível, três caminhos para a crise (post, rua), agenda limpa, enquanto você decidia, fato bom com botão de agir | 4E, 4F, novo |
 | ✅ **2 · Câmara e partidos** (v0.18) | Líder do seu partido indicável, eleições internas e da Mesa, alas, conversa por tipos, emendas detalhadas, contraoferta, concessões no texto, traidores, janela da medida em etapas com nota de freios e contrapesos, nome da medida | 4D, 4E |
-| ⏭️ **2B · A página inicial e o fluxo do dia** (v0.19) | Fato do mês em destaque com Agir ou Deixar passar; pendências por urgência; corrente de janelas "etapa N de M"; Supremo no mesmo dia; "quem vai reagir"; notas Congressual e Judicial; "já valeu" | média-alta · Sonnet nas telas, Opus no Supremo e no "já valeu" |
-| **2C · A mesa de negociação e a base** (v0.20) | Acordo vale nas duas casas; cardápio de pedidos variado com votos convertidos; as ruas; pauta que esfria; base como contrato com fidelidade; pacto sem ministério; registro de votos dos partidos; logos | muito alta · Opus |
+| ✅ **2B · A página inicial e o fluxo do dia** (v0.19) | Fato do mês em destaque com Agir ou Deixar passar; pendências por urgência; corrente de janelas "etapa N de M"; Supremo no mesmo dia; "quem vai reagir"; notas Congressual e Judicial; "já valeu" | média-alta · Sonnet nas telas, Opus no Supremo e no "já valeu" |
+| ⏭️ **2C · A mesa de negociação e a base** (v0.20) | Acordo vale nas duas casas; cardápio de pedidos variado com votos convertidos; as ruas; pauta que esfria; base como contrato com fidelidade; pacto sem ministério; registro de votos dos partidos; logos | muito alta · Opus |
 | **3 · Senado** | Página própria, líderes de bancada, indecisos com preço, comissões do Senado, 27 estados com bancadas estaduais, emendas por estado | 4D, 5B (parte) |
 | **4 · Supremo profundo** | Sorteio do relator, validação que protege, crise pós-derrubada ampliada, reputação jurídica, pedido de vista | 4E, novo |
 | **5 · Oposição, escândalos e CPI** | Escândalos revelados, CPI, inteligência | levantamento |
@@ -791,7 +791,7 @@ Exposição a escândalo visível de 0 a 100 (item 20), CPIs (35), vice-presiden
 - **Telas:** `src/ui/PartidosPanels.tsx` (alas, conversa por tipos, líder, Mesa, gráfico das bancadas), oferta nova na `VoteSheet` (concessão, contraoferta, emendas), traidores na votação animada e no placar.
 - **Save 16** (`names`, alas, Mesa, nome do presidente da Câmara guardado). 232 testes.
 
-### 27.6 Etapas 2B e 2C (proposta de 31/10/2026 à noite, aguardando aprovação do Douglas)
+### 27.6 Etapas 2B e 2C (aprovadas em 31/10/2026; a 2B foi feita na v0.19, ver 27.7)
 
 **Origem:** `docs/levantamento-congresso.md` (prints do jogo de referência) e as decisões do Douglas da seção J do levantamento. A 2B e a 2C entram **antes do Senado** (Etapa 3). Cada uma fecha com o portão de sempre (testes, simulador, partida no navegador, CHANGELOG, DESIGN, ESTADO e versão publicada).
 
@@ -835,6 +835,30 @@ Exposição a escândalo visível de 0 a 100 (item 20), CPIs (35), vice-presiden
 - **Etapa 6:** líder do governo na Câmara e vice-líder.
 - **Etapa 7:** mapa por estado. **Etapa 8:** pessoas fictícias e jornais, partido do presidente por dentro, federação, incorporação, fusão, cláusula de barreira e janela partidária.
 - **Quando abrirem Economia e Programas:** impacto por setor ("o que muda nas empresas").
+
+### 27.7 Como ficou a Etapa 2B (v0.19)
+
+**Defaults mantidos** (27.6): post e rua dentro de Agir; os fatos do Supremo (`choiceOnly`) mantêm as escolhas próprias dentro de Agir; "já valeu" é só prévia (a aprovação muda de vez no fechamento); 2B e 2C em versões separadas.
+
+**Página inicial (P1 a P6):**
+- `src/ui/EventPanel.tsx`: o fato do mês é o cartão logo abaixo dos passos, com **Agir** e **Deixar passar** (que marca a opção padrão do fato e mostra os efeitos antes). As opções prontas saíram de todos os fatos, menos dos do Supremo. **Agir** = resumo da assessoria (`eventBriefPrompt`, IA; sem IA, vale o relato), `ResponseBox` (opinião do ministro com 2 ou 3 ordens; o prompt agora pede para seguir a situação real, o perfil e o alinhamento do partido; "Usar" copia a ordem exata) e `AssessoriaBox` (post e rua).
+- Central de pendências: `src/game/pendencias.ts` (motor, só lê o estado) e `PendenciasCard` em `src/ui/FluxoSheets.tsx`, no topo da coluna da direita. Ordem: vermelho (vence em 1 mês ou menos), amarelo (grave ou até 3 meses), verde; dentro da cor, pelo peso. Promessa de posse fora da meta só vira pendência nos últimos `FLUXO.promiseWindow` (18) meses; antes, fica no cartão de promessas. Saíram o `DemandsCard` e o cartão "Esperando sua caneta".
+- "O que mudou no mês passado" + "Enquanto você decidia" num cartão recolhido no fim da coluna da esquerda (o passo 1 abre e rola até ele).
+
+**Corrente de janelas (F1, F2):** `src/ui/corrente.ts` (`chainLabels`, `chainAt`) e `src/ui/Chain.tsx` (`ChainSteps`, "Etapa N de M"). Etiquetas: Leitura, Ficha, (Votação, Placar: só lei, LC e PEC), (Supremo: só se a medida tem risco jurídico), O país reage. Janelas: `MeasureSheet` (Leitura e Ficha), `VoteSheet` (Votação), `VoteAnimation` (Placar), `CourtSheet` (Supremo: ação, relator, liminar) e `RulingAnimation` (plenário), `ReactionSheet` (O país reage, com "Encerrar o mês"). A medida do mês abre a leitura em janela direto; a resposta ao fato passa pela leitura com o ministro (`ReadingSheet`) e cai na Ficha (`MeasureSheet startStep=2`). O nome da medida vale também para a resposta. Pautar projeto da fila não leva a corrente (só as janelas).
+
+**Motor:**
+- **Supremo no mesmo dia (F4):** `courtNow` em `supremo.ts`, chamado por `rodada.ts` quando a medida passa a valer (decreto e MP em `sendInto`; lei em `enactBill`). Chance = 1 − (1 − chance por mês)^`FLUXO.signingMonths` (2). Com ação: relator sorteado, liminar sorteada (mostrada), plenário julga na hora (`judge`), o julgamento vai para `supremo.rulings`. Derrubada aplica já o mesmo que o fechamento fazia (`applyStruckNow`: desfaz os efeitos, impulsos nos grupos, sai das leis, bloqueia por 6 meses, fato `stfDerrubada` no mês seguinte, oposição +3 via `round.rival`). Sem ação: `InForce.grace` = agora + `FLUXO.graceMonths` (3); o sorteio mensal do fechamento pula a medida até lá. As ações do fechamento (meses depois, projetos no Congresso) continuam como antes; o "Trabalhar o plenário" e o sorteio com doutrina ficam para a Etapa 4. Primeira tentativa com 3 meses na assinatura dava o mesmo total; ficou 2 meses (com 3 de folga) para a liminar no mesmo dia não aumentar demais as derrubadas.
+- **Mercado no envio (F5):** `PendingBill.priced` = confiança da lei × `FLUXO.pricedAtSend` (1/3), somado no envio; na aprovação, a lei soma o total menos o já precificado; barrada (`rejectBill`), desfaz. Passa da Câmara ao Senado junto com o projeto.
+- **Quem vai reagir (F2):** `src/game/fluxo.ts` (`reactionsFor`, `rollReactions`) e números em `data/fluxo.ts` (`REACOES`, `REACAO_CHANCE`): 8 reações (indústria, dólar, mercado aplaude, protesto do grupo que mais perde, comemoração do que mais ganha, grupos de família em pauta de costumes, oposição nas redes em medida impopular, Câmara reclama de decreto forte). Sorteadas no envio (todas as medidas), valem na rodada e ficam em `round.reactions` (com `fired` e `good`).
+- **Ficha (F3):** `notasFicha` (Congressual = 10 × chance na Câmara × chance no Senado, decreto = 10; Judicial = 10 × (1 − chance de ação no dia × chance de cair); risco jurídico em número = `legalRiskScore`, a chance de cair se fosse julgada, com o limite `FLUXO.riskLimit` 45; potencial de crescimento pelo `effects.potential`) e `resumoExecutivo` (texto pronto; com IA, `briefingPrompt` narra a partir dele).
+- **Já valeu (F6):** `approvalPreview` (aprovação geral com o efeito da medida nos grupos, sem o resto do mês) e `primaryPreview` (primário antes → depois pelo custo por ano), mostrados na Leitura e em "O país reage". Só prévia.
+
+**Save 17** (campos novos opcionais: `round.court`, `round.reactions`, `round.rival`, `InForce.grace`, `PendingBill.priced`). 242 testes (10 novos em `fluxo.test.ts`).
+
+**Balanceamento (simulador, 30 sementes):** notas iguais em passivo, populista, austero, equilibrado e só assessoria; responde aos fatos 615 → 607 e com assessoria 636 → 636; leis por mandato iguais (MDN 22, POL 20, FPT 12). Derrubadas no Supremo sobem um pouco (responde aos fatos 0,2 → 0,5 por mandato; medidas arriscadas 2,1 → 3,3 com o FPT), porque a liminar agora vai ao plenário no mesmo dia e não dá mais tempo de recuar. O simulador passou a pautar a fila antes de escolher os decretos (a derrubada na hora pode mudar o que é permitido).
+
+**Caixa de ideias desta etapa:** "Trabalhar o plenário" e aguardar o julgamento, sorteio do relator com a doutrina, acórdão com a frase de cada ministro (Etapa 4); "o que muda nas empresas" (quando abrirem Economia e Programas); aplicar o "já valeu" na hora (decisão de balanceamento, se o Douglas quiser).
 
 ### 27.1 Caixa de ideias por etapa
 - Etapa 1 (revisada ao fechar a 1B): conquistas como selos da Ficha vão para a Etapa 8 (já lista conquistas); nome da medida no telejornal e decreto também com janela de confirmação antes de assinar vão para a Etapa 2 (janela da medida em etapas).

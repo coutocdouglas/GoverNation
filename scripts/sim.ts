@@ -113,9 +113,11 @@ export function senateRun(seed: number, party: 'fpt' | 'mdn' | 'pol') {
   let camara = 0, barrado = 0, leis = 0, segurados = 0
   const risky = new Set<string>()
   while (!s.finished) {
+    // Etapa 2B: pautar a fila pode levar o Supremo a derrubar uma lei na hora; as escolhas vêm depois.
+    s = pautarFila(s)
     const pool = BILLS.filter((b) => b.instrument !== 'decreto' && !billBlockedReason(s, b.id) && forecastVote(s, b.id).chance > 0.45)
     const bill = pool.length && s.month % 2 === 0 ? pool[(s.month * 7 + seed) % pool.length].id : undefined
-    s = advanceMonth(pautarFila(s), STRATEGIES.equilibrado(s), bill ? { bill } : {})
+    s = advanceMonth(s, STRATEGIES.equilibrado(s), bill ? { bill } : {})
     for (const v of s.lastReport!.votes) {
       if (v.kind === 'veto') continue
       if (v.house === 'senado') { if (v.approved) leis++; else barrado++ } else if (v.approved && !BILLS.every((b) => b.id !== v.bill)) camara++
@@ -155,9 +157,10 @@ export function riskyRun(seed: number, party: 'fpt' | 'mdn' | 'pol') {
   let s = newGame('Teste', 'normal', seed, party, undefined, undefined, { promises: SIM_PROMISES })
   const n = { liminares: 0, ccjBarra: 0, ccjAdequa: 0, contestados: 0, travados: 0, arquivados: 0 }
   while (!s.finished) {
+    s = pautarFila(s)
     const pool = BILLS.filter((b) => legalRiskOf(b.id) !== 'baixo' && !billBlockedReason(s, b.id) && (b.instrument === 'decreto' || forecastVote(s, b.id).chance > 0.4))
     const bill = pool.length && s.month % 2 === 0 ? pool[(s.month * 7 + seed) % pool.length].id : undefined
-    s = advanceMonth(pautarFila(s), STRATEGIES.equilibrado(s), bill ? { bill } : {})
+    s = advanceMonth(s, STRATEGIES.equilibrado(s), bill ? { bill } : {})
     for (const h of s.lastReport!.headlines) {
       if (h.text.startsWith('Liminar:')) n.liminares++
       if (/^CCJ, presidida/.test(h.text)) n.ccjBarra++

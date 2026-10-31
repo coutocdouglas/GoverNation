@@ -25,14 +25,16 @@ import { CONCESSION_BY_ID, DESTINOS, TALK } from './data/negociacao'
 import { NOMINEE_BY_PARTY } from './data/camara'
 import { ministryBlockedReason, type MinistryChange } from './camara'
 import { resetMinistry } from './ministerios'
-import { ccjApplies, ccjRoll, dropInForce, isFrozen, noteInForce } from './supremo'
+import { ccjApplies, ccjRoll, courtNow, dropInForce, isFrozen, noteInForce, struckImpulses, struckOrigin, undoEffects, type Struck } from './supremo'
+import { rollReactions } from './fluxo'
+import { FLUXO } from './data/fluxo'
 import { SUPREMO } from './data/supremo'
 import { applyEffects } from './effects'
 import { addMark, markMeasure, noteRecord } from './reputacao'
 import { REPUTACAO } from './data/marks'
 import { Rng } from './rng'
 import type { MonthPlan } from './game'
-import type { Articulation, BillId, Deal, DealTerms, Economy, GameState, GroupId, Headline, Impulse, PendingBill, RoundBuffer, VoteRecord } from './types'
+import type { Articulation, BillId, Cause, CourtNow, Deal, DealTerms, Economy, GameState, GroupId, Headline, Impulse, PendingBill, RoundBuffer, ReactionRoll, VoteRecord } from './types'
 
 export type House = 'camara' | 'senado'
 
@@ -253,6 +255,8 @@ export function rejectBill(ctx: RoundCtx, p: PendingBill, house: House | 'caduco
   const bill = BILL_BY_ID[p.id]
   const senado = house === 'senado'
   c.blockedUntil[p.id] = s.month + RESUBMIT_COOLDOWN
+  // Etapa 2B: o mercado tinha precificado parte da lei no envio; barrada, desfaz.
+  if (p.priced) ctx.conf.v -= p.priced
   if (bill.instrument === 'mp') {
     const suspended = dropInForce(s, p.id)
     ctx.conf.v += applyEffects(e, impulses, suspended ? { ...bill.effects, spending: undefined, revenue: undefined, potential: undefined, confidence: undefined } : bill.effects, bill.name, 1, -1)
@@ -298,9 +302,12 @@ function enactBill(ctx: RoundCtx, p: PendingBill, placarS: string): void {
     const k = p.ccj === 'adequado' ? SUPREMO.ccj.adequaScale : 1
     const fx = concededEffects(coreEffects(bill, am), conc)
     ctx.conf.v += applyEffects(e, impulses, k === 1 ? fx : coreEffects({ ...bill, effects: fx }, { relator: s.playerParty, kind: 'desidrata', shift: 0, scale: k }), bill.name)
+    // Etapa 2B: a parte que o mercado já tinha precificado no envio não conta duas vezes.
+    if (p.priced) ctx.conf.v -= p.priced
     plantSeeds(s, p.id, bill.name, s.presidentName, s.playerParty, ctx.rng)
     const scale = (am?.scale ?? 1) * k * conc.reduce((x, d) => x * (d.concession ? CONCESSION_BY_ID[d.concession.type].scale : 1), 1)
     noteInForce(s, p.id, s.presidentName, scale !== 1 ? scale : undefined)
+    courtToday(ctx, p.id)
   }
   if (am?.kind === 'jabuti' && am.extra) {
     c.toSanction.push({ id: `jab-${p.id}-${absMonth(s)}`, kind: 'jabuti', bill: p.id, month: s.month, party: am.relator, amendment: am, vote: p.camara ? { yes: p.camara.yes, no: p.camara.no } : undefined })
@@ -312,6 +319,42 @@ function enactBill(ctx: RoundCtx, p: PendingBill, placarS: string): void {
   addBio(s, s.presidentName, `Sancionou: ${bill.name} (${placar}).`)
   addChronicle(s, `Lei aprovada: ${bill.name}, no governo ${s.presidentName} (${PARTY_BY_ID[s.playerParty].sigla})`, 'good')
   headlines.push({ text: `Senado aprova ${lowerFirst(bill.name)}: ${placarS}. ${bill.instrument === 'mp' ? 'A MP vira lei' : bill.instrument === 'pec' ? 'A emenda é promulgada' : 'Vira lei'}`, tone: 'good' })
+}
+
+// ─── Etapa 2B: o Supremo no mesmo dia e quem reage ───────────────────────────
+
+/** A medida acabou de valer: o Supremo age na hora (ação, relator, liminar, plenário). Derrubada, desfaz já. */
+function courtToday(ctx: RoundCtx, id: BillId): void {
+  const r = courtNow(ctx.s, id, ctx.rng, ctx.headlines)
+  if (!r) return
+  ;(ctx.round.court ??= []).push(r.entry)
+  if (r.struck) applyStruckNow(ctx, r.struck)
+}
+
+/** Mesmo efeito da derrubada no fechamento do mês (game.ts), aplicado na rodada. */
+function applyStruckNow(ctx: RoundCtx, st: Struck): void {
+  const { s, e, impulses } = ctx
+  const c = s.congress
+  const bill = BILL_BY_ID[st.bill]
+  ctx.conf.v += applyEffects(e, impulses, undoEffects(bill, st.scale), bill.name, 1, -1)
+  for (const x of struckImpulses(bill, st.scale)) impulses[x.group].push({ label: x.label, value: x.value })
+  c.laws = c.laws.filter((x) => x !== st.bill)
+  // MP derrubada perde o objeto também no Congresso.
+  c.pending = c.pending.filter((x) => x.id !== st.bill)
+  c.senate.pending = c.senate.pending.filter((x) => x.id !== st.bill)
+  c.blockedUntil[st.bill] = s.month + RESUBMIT_COOLDOWN
+  rivalOf(ctx).push({ label: 'Supremo derruba medida do governo', value: SUPREMO.rivalGain })
+  s.eventQueue.unshift({ id: 'stfDerrubada', origin: struckOrigin(s, st) })
+  ctx.mm.struck.push(bill.area)
+  noteRecord(s, { text: `O Supremo derrubou “${bill.name}” no mesmo dia`, tone: 'bad', kind: 'supremo', bill: st.bill })
+}
+
+const rivalOf = (ctx: RoundCtx): Cause[] => (ctx.round.rival ??= [])
+
+/** Reações ao anúncio da medida, sorteadas no envio (valem na rodada). */
+function reactToday(ctx: RoundCtx, id: BillId): void {
+  const rolls = rollReactions({ s: ctx.s, e: ctx.e, impulses: ctx.impulses, headlines: ctx.headlines, conf: ctx.conf, rival: rivalOf(ctx) }, id, ctx.rng)
+  ;(ctx.round.reactions ??= []).push(...rolls)
 }
 
 const placarOf = (v: VoteRecord, symbolic: boolean) => symbolic ? 'em votação simbólica' : v.needed > 0 ? `${pt(v.yes)} votos (precisava de ${pt(v.needed)})` : `${pt(v.yes)} a ${pt(v.no)}`
@@ -433,7 +476,7 @@ function floorCamara(ctx: RoundCtx, p: PendingBill, opts: FloorOptions): 'votado
       headlines.push({ text: `Relator do ${PARTY_BY_ID[am.relator].sigla} desidrata “${bill.name}”: o texto aprovado é mais fraco que o original`, tone: 'neutral' })
     }
     const conceded = (p.deals ?? []).filter((d) => d.kind === 'concessao')
-    const sp: PendingBill = { id: p.id, sentMonth: s.month, amendment: p.amendment, original: p.original, deals: p.senateDeals, camara: { yes: v.yes, no: v.no, symbolic: symbolic || undefined, month: s.month }, ccj: p.ccj, ...(conceded.length ? { conceded } : {}) }
+    const sp: PendingBill = { id: p.id, sentMonth: s.month, priced: p.priced, amendment: p.amendment, original: p.original, deals: p.senateDeals, camara: { yes: v.yes, no: v.no, symbolic: symbolic || undefined, month: s.month }, ccj: p.ccj, ...(conceded.length ? { conceded } : {}) }
     c.senate.pending.push(sp)
     addBio(s, s.presidentName, `Aprovou na Câmara: ${bill.name} (${placar}).`)
     headlines.push({ text: `Câmara aprova ${lowerFirst(bill.name)}: ${placar}${bill.instrument === 'pec' ? ', nos dois turnos' : ''}. Segue para o Senado`, tone: 'good' })
@@ -511,6 +554,10 @@ export interface RoundResult {
   headlines: Headline[]
   /** O projeto ficou parado na fila (gaveta, recesso, Supremo). */
   parked: boolean
+  /** Etapa 2B: o Supremo no mesmo dia (medidas que passaram a valer agora). */
+  court: CourtNow[]
+  /** Etapa 2B: reações ao anúncio (previstas e sorteadas agora). */
+  reactions: ReactionRoll[]
 }
 
 /** Manda a medida da rodada (ou a resposta ao fato do mês). Decreto vale na hora; MP vale na hora e entra na fila; o resto vota agora. */
@@ -526,6 +573,8 @@ export function sendInto(s: GameState, id: BillId, opts: FloorOptions = {}, resp
   const ctx = openCtx(s)
   const v0 = ctx.votes.length
   const h0 = ctx.headlines.length
+  const k0 = ctx.round.court?.length ?? 0
+  const r0 = ctx.round.reactions?.length ?? 0
   const c = s.congress
   const bill = BILL_BY_ID[id]
   const minister = ministerOf(s, bill.area)
@@ -550,6 +599,8 @@ export function sendInto(s: GameState, id: BillId, opts: FloorOptions = {}, resp
     addChronicle(s, `Decreto: ${bill.name}, no governo ${s.presidentName} (${PARTY_BY_ID[s.playerParty].sigla})`, 'neutral')
     if (!response) ctx.taken.push(`Assinou o decreto: ${bill.name}`)
     ctx.mm.enacted.push(bill.area)
+    reactToday(ctx, id)
+    courtToday(ctx, id)
   } else {
     const p: PendingBill = { id, sentMonth: s.month, stage: bill.instrument === 'mp' ? 'plenario' : 'comissao', amendment: amendmentFor(s, id) }
     if (opts.urgent && (bill.instrument === 'lei' || bill.instrument === 'complementar')) {
@@ -568,15 +619,21 @@ export function sendInto(s: GameState, id: BillId, opts: FloorOptions = {}, resp
       addBio(s, s.presidentName, `Editou a medida provisória: ${bill.name}.`)
       ctx.mm.enacted.push(bill.area)
       if (!response) ctx.taken.push(`Editou a MP: ${bill.name}`)
+      reactToday(ctx, id)
+      courtToday(ctx, id)
       parked = true
     } else {
       if (!response) ctx.taken.push(`Enviou ao Congresso: ${bill.name}`)
+      // Etapa 2B: o mercado precifica parte da lei já no envio; o anúncio provoca reações.
+      const shock = (bill.effects.confidence ?? 0) * FLUXO.pricedAtSend
+      if (shock) { p.priced = shock; ctx.conf.v += shock }
+      reactToday(ctx, id)
       parked = floorCamara(ctx, p, opts) === 'parado'
     }
   }
   if (minister) addBio(s, minister.name, `${minister.role}: ficou responsável por “${bill.name}”.`)
   closeCtx(ctx)
-  return { votes: ctx.votes.slice(v0), headlines: ctx.headlines.slice(h0), parked }
+  return { votes: ctx.votes.slice(v0), headlines: ctx.headlines.slice(h0), parked, court: (s.round?.court ?? []).slice(k0), reactions: (s.round?.reactions ?? []).slice(r0) }
 }
 
 // ─── Pautar agora (um projeto da fila por casa) ───────────────────────────────
@@ -634,6 +691,7 @@ export function voteNow(prev: GameState, id: BillId, opts: FloorOptions = {}): R
   const ctx = openCtx(s)
   const v0 = ctx.votes.length
   const h0 = ctx.headlines.length
+  const k0 = ctx.round.court?.length ?? 0
   const house = queueHouse(s, id)!
   ctx.round.pautou[house] = id
   const bill = BILL_BY_ID[id]
@@ -653,7 +711,7 @@ export function voteNow(prev: GameState, id: BillId, opts: FloorOptions = {}): R
     ? floorCamara(ctx, c.pending.find((x) => x.id === id)!, opts) === 'parado'
     : floorSenado(ctx, senatePending(s, id)!, opts) === 'parado'
   closeCtx(ctx)
-  return { state: s, votes: ctx.votes.slice(v0), headlines: ctx.headlines.slice(h0), parked }
+  return { state: s, votes: ctx.votes.slice(v0), headlines: ctx.headlines.slice(h0), parked, court: (s.round?.court ?? []).slice(k0), reactions: [] }
 }
 
 /** Fechamento do mês: MPs que passaram do prazo sem votação caducam. */

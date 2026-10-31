@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Art } from './Art'
+import { ChainSteps } from './Chain'
+import type { ChainInfo } from './corrente'
 import { BILL_BY_ID } from '../game/data/bills'
 import { PARTY_BY_ID } from '../game/data/parties'
 import { DOCTRINE_HINT, DOCTRINE_LABEL, NOMINEE_BY_ID, SUPREMO } from '../game/data/supremo'
 import { absMonth, yearOf } from '../game/memory'
 import {
   ccjApplies, ccjForecast, consultaOf, consultBlockedReason, fileChanceOf, forecastRuling, forecastSabatina, isCleared, justiceInfo, legalReasonIn,
-  legalRiskIn, liminarChanceOf, nominationBlockedReason, nomineePosition, nomineesOffered, RISK_LABEL, voteReasons,
+  courtChanceNow, legalRiskIn, liminarChanceOf, nominationBlockedReason, nomineePosition, nomineesOffered, RISK_LABEL, voteReasons,
 } from '../game/supremo'
 import type { BillId, GameState, JusticeSeat, Ruling } from '../game/types'
 import { Portrait } from './Portrait'
@@ -48,8 +50,8 @@ export function LegalRiskLine({ state, id, consult, onConsult }: { state: GameSt
             {cleared
               ? <>✅ <b className="up">Chancelada pelo Supremo</b>: imune a ações até {when(q!.until!)}.</>
               : risk === 'alto'
-                ? <>🚨 <b className="dn">O Supremo deve ser provocado</b>: cerca de {pct(file)} de chance de ação por mês em vigor, e {pct(liminarChanceOf(state, id))} de o relator suspender na hora (liminar).</>
-                : <>Em vigor, cerca de {pct(file)} de chance de ação por mês, nos {SUPREMO.window} meses seguintes; {pct(liminarChanceOf(state, id))} de liminar se houver ação.</>}
+                ? <>🚨 <b className="dn">O Supremo deve ser provocado</b>: {pct(courtChanceNow(state, id))} de chance de ação <b>no mesmo dia</b> (relator, liminar e plenário na hora), {pct(liminarChanceOf(state, id))} de liminar; depois, cerca de {pct(file)} por mês.</>
+                : <>No dia em que valer: {pct(courtChanceNow(state, id))} de chance de ação, julgada na hora; depois, cerca de {pct(file)} por mês, nos {SUPREMO.window} meses seguintes.</>}
           </div>
           {ccj && !cleared && (
             <div className="pn-hint" style={{ margin: '2px 0 0' }}>
@@ -278,7 +280,7 @@ function VacancyCard({ state, nominee, onNominee }: { state: GameState; nominee:
 }
 
 /** Depois do mês: os 11 votos do julgamento aparecendo um a um. */
-export function RulingAnimation({ ruling, onNext, nextLabel }: { ruling: Ruling; onNext: () => void; nextLabel: string }) {
+export function RulingAnimation({ ruling, onNext, nextLabel, chain }: { ruling: Ruling; onNext: () => void; nextLabel: string; chain?: ChainInfo | null }) {
   const [shown, setShown] = useState(0)
   const total = ruling.votes.length
   useEffect(() => {
@@ -294,6 +296,7 @@ export function RulingAnimation({ ruling, onNext, nextLabel }: { ruling: Ruling;
     <div className="pn-ov pn-ov--vote" role="dialog" aria-label={`Julgamento: ${ruling.name}`}>
       <div className="pn-vanim">
         <Art slot="supremo-plenario" height={70} />
+        <ChainSteps chain={chain} />
         <div className="pn-vanim__top">
           <span className="pn-kicker">⚖️ Plenário do Supremo · ação do {PARTY_BY_ID[ruling.party].sigla}</span>
           {!done && <button className="pn-btn pn-btn--ghost pn-btn--small" onClick={() => setShown(total)}>Pular ⏭</button>}

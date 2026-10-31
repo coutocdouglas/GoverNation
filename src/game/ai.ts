@@ -75,6 +75,7 @@ export function ministerAdvicePrompt(state: GameState, ev: EventDef): AiRequest 
       'Responda SOMENTE com JSON, sem texto fora dele, no formato:',
       '{"parecer":"...","opcoes":[{"ordem":"...","medida":"id_do_catalogo"}]}',
       'Ordene as opções da que você mais defende para a que menos defende.',
+      'As opções vêm da situação real do país (os números abaixo), do seu perfil e do alinhamento do seu partido com o presidente: um aliado de outro campo puxa para a linha do próprio partido.',
     ].join('\n'),
     user: `${countryContext(state)}\n\nFato do mês (${ev.title}): ${ev.text}\n\nCatálogo da sua área (id | nome):\n${catalog}`,
     maxTokens: 900,
@@ -275,4 +276,41 @@ export function parseConcession(raw: string): { ask: string; change: string } | 
   } catch {
     return null
   }
+}
+
+/**
+ * Etapa 2B (v0.19): texto curto que explica o fato do mês quando o presidente clica em "Agir".
+ * Só narra o que está no fato e nos números do país; não decide nada.
+ */
+export function eventBriefPrompt(state: GameState, ev: EventDef): AiRequest {
+  const m = ministerOf(state, ev.area)
+  return {
+    system: [
+      'Você é a assessoria do Palácio do Planalto num jogo de simulação política. Personagens e partidos são fictícios; não cite pessoas reais.',
+      'Explique ao presidente, em português do Brasil, o fato do mês em 3 ou 4 frases curtas: o que aconteceu, quem sente, o que está em jogo se o governo agir e se não agir.',
+      'Use só o que está no fato e nos números do país. Não invente números, nomes ou medidas. Sem listas, sem título.',
+    ].join('\n'),
+    user: `${countryContext(state)}\n\nFato do mês (${ev.title}): ${ev.text}\nÁrea: ${m.areaName}; responsável: ${m.name}.`,
+    maxTokens: 300,
+  }
+}
+
+/** Etapa 2B: resumo executivo da Casa Civil para a ficha da medida (os números vêm do motor, a IA só narra). */
+export function briefingPrompt(state: GameState, billId: BillId, facts: string): AiRequest {
+  const b = BILL_BY_ID[billId]
+  return {
+    system: [
+      'Você é a Casa Civil num jogo de simulação política. Personagens e partidos são fictícios.',
+      'Escreva o resumo executivo de uma medida do governo, em português do Brasil, em 2 ou 3 frases objetivas, no tom de um briefing oficial.',
+      'Use só os fatos informados. Não invente números, votos ou efeitos. Sem listas, sem título.',
+    ].join('\n'),
+    user: `${countryContext(state)}\n\nMedida: ${b?.name ?? billId} (${b ? INSTRUMENTS[b.instrument].label : ''}). ${b?.summary ?? ''}\nFatos do motor: ${facts}`,
+    maxTokens: 260,
+  }
+}
+
+/** Texto livre curto da IA (explicação do fato, resumo): limpa e corta. */
+export function parseShortText(raw: string, max = 700): string | null {
+  const t = raw.replace(/```[\s\S]*?```/g, '').replace(/^\s*[{[][\s\S]*$/, '').trim()
+  return t ? t.slice(0, max) : null
 }

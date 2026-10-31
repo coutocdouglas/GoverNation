@@ -82,7 +82,7 @@ export function newGame(
   const rngState = seed ?? Math.floor(Math.random() * 2 ** 31)
   const bonus = DIFFICULTY[difficulty].approvalBonus
   const state: GameState = {
-    saveVersion: 16,
+    saveVersion: 17,
     month: 0,
     presidentName: presidentName.trim() || 'Presidente',
     difficulty,
@@ -541,7 +541,8 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
   c.scandal *= DEALS.scandalDecay
 
   // 1d6. Supremo (etapas 4C2 e 4C3): sabatina, aposentadorias, consultas, julgamento, novas ações e liminares.
-  const rivalExtra: Cause[] = []
+  // Etapa 2B: o que a rodada já deu à oposição (derrubada no mesmo dia, reações ao anúncio).
+  const rivalExtra: Cause[] = [...(round?.rival ?? [])]
   if (plan.nominee) {
     const n = NOMINEE_BY_ID[plan.nominee]
     const v = runNomination(s, nominationBill(s, n), nominationLean(s, n), SUPREMO.sabatinaNeeded, court)

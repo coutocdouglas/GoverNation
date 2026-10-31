@@ -85,7 +85,7 @@ export function PromisesCard({ state }: { state: GameState }) {
   const items = state.promises.map((id) => PROMISE_BY_ID[id]).filter(Boolean).map((def) => ({ def, ...promiseStatus(state, def) }))
   const ok = items.filter((i) => i.status === 'rumo' || i.status === 'cumprida').length
   return (
-    <section className="pn-card">
+    <section className="pn-card" id="promessas">
       <h3>📜 Promessas de posse <span className="pn-badge">{ok} de {items.length} no rumo</span></h3>
       <ul className="pn-promises">
         {items.map((i) => (

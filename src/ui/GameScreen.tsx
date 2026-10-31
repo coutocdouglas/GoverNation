@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { billBlockedReason, isRecess } from '../game/congress'
-import { BILL_BY_ID, BILLS, GDP_BILLIONS, INSTRUMENTS, type BillDef } from '../game/data/bills'
+import { BILL_BY_ID, BILLS, type BillDef } from '../game/data/bills'
 import { addCustomBill } from '../game/custom'
-import { NewBadge, NewBillNotes } from './NewBill'
+import { NewBadge } from './NewBill'
 import { playerPortraitId, setPresidentPortrait } from '../game/data/cast'
 import { EVENT_BY_ID } from '../game/data/events'
 import { PARTY_BY_ID } from '../game/data/parties'
@@ -21,9 +21,12 @@ import { AiSettings } from './AiSettings'
 import { VoteSheet, type ProcedureKind } from './VoteSheet'
 import { MeasureSheet } from './MeasureSheet'
 import { aiReady } from '../lib/ai'
-import type { ActionId, Articulation, BillId, Cause, Deal, GameState, GroupId, IndicatorKey, PartyId, VoteRecord } from '../game/types'
+import type { ActionId, Articulation, BillId, Cause, CourtNow, Deal, GameState, GroupId, IndicatorKey, PartyId, VoteRecord } from '../game/types'
 import { CongressView, ForecastRow, Scoreboard } from './CongressView'
-import { DemandsCard, EventPanel } from './EventPanel'
+import { EventPanel } from './EventPanel'
+import { chainAt, chainLabels, type ChainInfo } from './corrente'
+import { CourtSheet, PendenciasCard } from './FluxoSheets'
+import type { PendingTarget } from '../game/pendencias'
 import type { StatementId } from '../game/data/assessoria'
 import { STATEMENT_BY_ID } from '../game/data/assessoria'
 import { streetOptions } from '../game/assessoria'
@@ -34,7 +37,7 @@ import { ACTION_ICON, GROUP_ICON, INDICATOR_ICON } from './icons'
 import { INDICATORS, lowerFirst, num, signed, type IndicatorMeta } from './format'
 import { Sparkline } from './Sparkline'
 import { PromisesCard, RivalCard } from './OppositionCards'
-import { LegalRiskLine, RulingAnimation, SupremoMini, SupremoView } from './SupremoView'
+import { RulingAnimation, SupremoMini, SupremoView } from './SupremoView'
 import { MinistriosView, SenadoView } from './GovTabs'
 import { ministriesInTrouble } from '../game/ministerios'
 import { absMonth } from '../game/memory'
@@ -44,7 +47,8 @@ import './painel.css'
 type Detail = { kind: 'indicator'; key: IndicatorKey } | { kind: 'group'; id: GroupId } | null
 type Step = 1 | 2 | 3 | 4
 /** Depois de encerrar o mês: painel de votação animado e página de reação de cada lei (etapa 4B). */
-type Post = { kind: 'vote'; v: VoteRecord; i?: number; n?: number } | { kind: 'reaction'; bill: BillId; month: number } | { kind: 'ruling'; id: string }
+/** Etapa 2B: cada janela da corrente do dia leva a posição ("Etapa N de M"); a última oferece encerrar o mês. */
+type Post = ({ kind: 'vote'; v: VoteRecord; i?: number; n?: number } | { kind: 'reaction'; bill: BillId; month: number; fresh?: boolean } | { kind: 'ruling'; id: string } | { kind: 'court'; entry: CourtNow }) & { chain?: ChainInfo | null }
 const NO_PROC: Record<ProcedureKind, BillId[]> = { hold: [], urgent: [], original: [], symbolic: [] }
 
 /** Seções do menu que ainda não existem, com a versão prevista. */
@@ -91,6 +95,11 @@ export function GameScreen({ state, onChange, onExit }: {
   const [consult, setConsult] = useState<BillId | null>(null)
   /** Etapa 2: nome que o presidente deu à medida na janela em etapas (vai junto quando votar ou assinar). */
   const [titles, setTitles] = useState<Record<BillId, string>>({})
+  /** Etapa 2B: resposta ao fato esperando a ficha (etapa 2 da corrente) antes de assinar ou votar. */
+  const [respSheet, setRespSheet] = useState<BillId | null>(null)
+  /** Etapa 2B: "O que mudou no mês passado" fica no fim da página, recolhido. */
+  const [lastOpen, setLastOpen] = useState(false)
+  const lastRef = useRef<HTMLElement>(null)
   setPresidentPortrait(playerPortraitId(state))
   const plan: MonthPlan = {
     bill: bill ?? undefined, articulations, eventChoice: eventChoice ?? undefined, eventResponse: eventResponse ?? undefined, deals,
@@ -147,7 +156,7 @@ export function GameScreen({ state, onChange, onExit }: {
   /** Votar agora: manda a medida do mês (ou a resposta ao fato) ou pauta um projeto da fila. */
   const runNow = (id: BillId, as: 'measure' | 'response' | 'queue' = roleOf(id), title?: string) => {
     const opts: FloorOptions = {
-      title: as === 'measure' ? (title ?? titles[id]) : undefined,
+      title: as !== 'queue' ? (title ?? titles[id]) : undefined,
       deals: deals.filter((d) => d.bill === id).map(({ bill: _b, ...terms }) => terms),
       urgent: proc.urgent.includes(id) || undefined,
       original: proc.original.includes(id) || undefined,
@@ -161,10 +170,19 @@ export function GameScreen({ state, onChange, onExit }: {
       setDeals((ds) => ds.filter((d) => d.bill !== id))
       setProc((cur) => Object.fromEntries(Object.entries(cur).map(([k, ids]) => [k, ids.filter((x) => x !== id)])) as Record<ProcedureKind, BillId[]>)
       setVoteSheet(null)
+      // Etapa 2B: a corrente de janelas: placar → Supremo (ação, relator, liminar, plenário) → o país reage.
+      const labels = as !== 'queue' ? chainLabels(state, id) : null
+      const at = (l: string) => (labels ? chainAt(labels, l) : null)
       const shown = r.votes.filter((v) => v.kind !== 'simbolica')
-      const q: Post[] = shown.map((v, i) => ({ kind: 'vote' as const, v, i, n: shown.length }))
+      const q: Post[] = shown.map((v, i) => ({ kind: 'vote' as const, v, i, n: shown.length, chain: at('Placar') }))
+      for (const entry of r.court) {
+        q.push({ kind: 'court', entry, chain: at('Supremo') })
+        if (entry.filed && entry.ruling) q.push({ kind: 'ruling', id: entry.ruling, chain: at('Supremo') })
+      }
       const before = new Set(round?.sanctioned ?? [])
-      for (const lid of r.state.round?.sanctioned ?? []) if (!before.has(lid)) q.push({ kind: 'reaction', bill: lid, month: state.month })
+      const struck = new Set(r.court.filter((c) => c.struck).map((c) => c.bill))
+      const fresh = [...(r.state.round?.sanctioned ?? []).filter((lid) => !before.has(lid)), ...(actsNowUi(id) && as !== 'queue' ? [id] : [])]
+      for (const lid of fresh) if (!struck.has(lid)) q.push({ kind: 'reaction', bill: lid, month: state.month, fresh: true, chain: lid === id ? at('O país reage') : null })
       setPost((p) => [...p, ...q])
       const ins = BILL_BY_ID[id].instrument
       if (r.votes.length === 0) toast(ins === 'decreto' ? `🖊️ Decreto assinado: ${BILL_BY_ID[id].name}. Os efeitos entram no fechamento do mês.` : ins === 'mp' && as !== 'queue' ? `📜 MP editada: ${BILL_BY_ID[id].name}. Vale já; pauta até a 4ª rodada ou ela caduca.` : `🗄️ ${r.headlines.at(-1)?.text ?? 'O projeto ficou na fila.'}`)
@@ -180,6 +198,7 @@ export function GameScreen({ state, onChange, onExit }: {
 
   const goStep = (s: Step) => {
     setStep(s)
+    if (s === 1) { setLastOpen(true); setTimeout(() => lastRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50) }
     if (s === 2) eventRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
     if (s === 3) medidaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
   }
@@ -235,6 +254,13 @@ export function GameScreen({ state, onChange, onExit }: {
   }
 
   const nextMonth = state.month + 1
+  /** Etapa 2B: o clique numa pendência leva ao lugar dela. */
+  const goPending = (t: PendingTarget) => {
+    if (t === 'camara' || t === 'senado' || t === 'supremo') { setTab('governo'); setGovTab(t); window.scrollTo({ top: 0, behavior: 'smooth' }); return }
+    const el = document.getElementById(t === 'promessas' ? 'promessas' : t === 'evento' ? 'fato-do-mes' : 'fato-do-mes')
+    if (t === 'cobrancas') { medidaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }); return }
+    el?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
 
   return (
     <div className="pn">
@@ -283,27 +309,32 @@ export function GameScreen({ state, onChange, onExit }: {
           voteBlocked={voteBlock(voteSheet)}
           gaveta={gavetaOf(voteSheet)}
           onState={onChange}
+          chain={voteSheet === bill || voteSheet === eventResponse ? chainAt(chainLabels(state, voteSheet), 'Votação') : null}
         />
       )}
       {post.length > 0 && (() => {
         const head = post[0]
         const rest = post.slice(1)
         const advance = () => setPost(rest)
+        if (head.kind === 'court') {
+          return <CourtSheet key={`court-${head.entry.bill}-${post.length}`} entry={head.entry} chain={head.chain} onNext={advance} nextLabel={head.entry.filed ? '⚖️ Ver o plenário votar →' : rest.length ? 'Continuar →' : 'Fechar'} />
+        }
         if (head.kind === 'ruling') {
           const r = state.supremo.rulings.find((x) => x.id === head.id)
           if (!r) { advance(); return null }
-          return <RulingAnimation key={head.id} ruling={r} onNext={advance} nextLabel={rest.length ? 'Continuar →' : 'Fechar'} />
+          return <RulingAnimation key={head.id} ruling={r} chain={head.chain} onNext={advance} nextLabel={rest.length ? (rest[0].kind === 'reaction' ? '📣 Ver como o país reage →' : 'Continuar →') : 'Fechar'} />
         }
         if (head.kind === 'vote') {
           const nextIsReaction = rest[0]?.kind === 'reaction' && rest[0].bill === head.v.bill
           const votesLeft = rest.filter((p) => p.kind === 'vote').length
           const total = head.n ?? state.lastReport?.votes.filter((v) => v.kind !== 'simbolica').length ?? 1
           const idx = head.i ?? Math.max(0, total - votesLeft - 1)
-          return <VoteAnimation key={`${head.v.bill}-${post.length}`} vote={head.v} index={idx} total={total}
-            nextLabel={nextIsReaction ? '📣 Ver a reação da sociedade →' : rest.length ? 'Continuar →' : 'Fechar'}
+          return <VoteAnimation key={`${head.v.bill}-${post.length}`} vote={head.v} index={idx} total={total} chain={head.chain}
+            nextLabel={nextIsReaction ? '📣 Ver a reação da sociedade →' : rest[0]?.kind === 'court' ? '⚖️ Ver o Supremo →' : rest.length ? 'Continuar →' : 'Fechar'}
             onNext={() => { if (head.v.approved && head.v.kind !== 'veto') confetti(); advance() }} />
         }
-        return <ReactionSheet key={`${head.bill}-${post.length}`} state={state} bill={head.bill} month={head.month} onClose={advance} nextLabel={rest.length ? 'Continuar →' : 'Fechar'} />
+        return <ReactionSheet key={`${head.bill}-${post.length}`} state={state} bill={head.bill} month={head.month} onClose={advance} nextLabel={rest.length ? 'Continuar →' : 'Voltar ao painel'}
+          chain={head.chain} fresh={head.fresh} onEndMonth={head.chain && rest.length === 0 ? endMonth : undefined} />
       })()}
       {reactionView && post.length === 0 && <ReactionSheet state={state} bill={reactionView} onClose={() => setReactionView(null)} />}
 
@@ -406,51 +437,9 @@ export function GameScreen({ state, onChange, onExit }: {
               </div>
 
               {step !== 4 && (
-                <div className="pn-pane" key={`p1-${state.month}`}>
-                  <div className="pn-news-head">
-                    <span className="pn-ill">🗞️</span>
-                    <div>
-                      <span className="pn-tag">Banca de jornal · {monthLabel(state.month)}</span>
-                      <h2>{report ? 'O que mudou no mês passado' : 'Bem-vindo ao Planalto'}</h2>
-                    </div>
-                  </div>
-                  {report && report.votes.length > 0 && report.votes.map((v, i) => <Scoreboard key={i} v={v} />)}
-                  {report ? (
-                    <ul className="pn-news">
-                      {report.actionsTaken.map((t, i) => (
-                        <li key={`a${i}`} className="neutral">🖊️ {t}</li>
-                      ))}
-                      {report.headlines.map((h, i) => (
-                        <li key={i} className={h.tone} style={{ animationDelay: `${i * 90}ms` }}>
-                          {h.tone === 'good' ? '🟢' : h.tone === 'bad' ? '🔴' : '📰'} {h.text}
-                        </li>
-                      ))}
-                      {report.headlines.length === 0 && report.actionsTaken.length === 0 && (
-                        <li className="neutral">☕ Mês tranquilo em Brasília.</li>
-                      )}
-                    </ul>
-                  ) : (
-                    <p className="pn-hint">
-                      A economia vem de juros altos e inflação acima da meta, e a dívida cresce. Todo mês você pode
-                      tomar até {ACTIONS_PER_MONTH} decisões por decreto. Escreva a medida do mês abaixo ou escolha no
-                      catálogo, e encerre o mês para ver o país reagir.
-                    </p>
-                  )}
-                  {report?.meanwhile && report.meanwhile.length > 0 && (
-                    <div className="pn-meanwhile">
-                      <h3>👀 Enquanto você decidia</h3>
-                      {report.meanwhile.map((m, i) => (
-                        <div key={i} className={`pn-meanwhile__row ${m.tone}`}>
-                          <span>{m.icon}</span>
-                          <div>{m.text}{m.why && <small>Por quê: {m.why}</small>}</div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  <div className="pn-row">
-                    <button className="pn-btn" onClick={() => goStep(state.event ? 2 : 3)}>{state.event ? 'Ver o fato do mês →' : 'Entendi, vamos decidir →'}</button>
-                  </div>
-                </div>
+                <p className="pn-hint pn-steps__hint">
+                  {report ? <>O resumo do mês passado está no fim da página. <a className="pn-link" onClick={() => goStep(1)}>Ver o que mudou ↓</a></> : 'Primeiro mês: comece pelo fato do mês logo abaixo.'}
+                </p>
               )}
 
               {step === 4 && (
@@ -494,6 +483,7 @@ export function GameScreen({ state, onChange, onExit }: {
 
             <div ref={eventRef}>
               <EventPanel
+                key={`${state.month}-${state.event?.id ?? 'calmo'}`}
                 state={state}
                 choice={eventChoice}
                 onChoose={(i) => { setEventChoice(i); if (i !== null) toast(`🔥 Decisão anotada: ${currentEventLabel(state, i)}`) }}
@@ -505,8 +495,20 @@ export function GameScreen({ state, onChange, onExit }: {
                 onStatement={(id) => { setStatement(id); if (id) toast(`📣 Post anotado: ${STATEMENT_BY_ID[id].label}. Sai ao encerrar o mês.`) }}
                 onStreet={(id) => { setStreet(id); if (id) toast(`🚶 Ação de rua anotada. Vale ao encerrar o mês.`) }}
                 onRespond={(id) => {
-                  if (eventResponse && eventResponse !== id) dropDeals(eventResponse)
-                  if (id && actsNowUi(id)) { runNow(id, 'response'); return }
+                  // Etapa 2B: a resposta passa pela ficha (etapa 2 da corrente) antes de assinar ou votar.
+                  if (id) { setRespSheet(id); return }
+                  if (eventResponse) dropDeals(eventResponse)
+                  setEventResponse(null)
+                }}
+              />
+              {respSheet && (
+                <MeasureSheet state={state} id={respSheet} request="" startStep={2} backLabel="Voltar"
+                  onClose={() => setRespSheet(null)}
+                  onConfirm={(id, title) => {
+                    setRespSheet(null)
+                    if (title) setTitles((t) => ({ ...t, [id]: title }))
+                    if (eventResponse && eventResponse !== id) dropDeals(eventResponse)
+                    if (actsNowUi(id)) { runNow(id, 'response', title); return }
                   setEventResponse(id)
                   if (id && goesToVote(id)) setVoteSheet(id)
                   if (id) {
@@ -514,8 +516,8 @@ export function GameScreen({ state, onChange, onExit }: {
                     if (bill === id) setBill(null)
                     toast(`✍️ Resposta anotada: ${BILL_BY_ID[id].name}`)
                   }
-                }}
-              />
+                }} />
+              )}
             </div>
 
             <section className="pn-card">
@@ -598,9 +600,55 @@ export function GameScreen({ state, onChange, onExit }: {
             ) : (
               <div className="pn-row"><button className="pn-btn" onClick={() => goStep(4)}>Pronto, ir para o encerramento →</button></div>
             )}
+
+            <section className={`pn-card pn-lastmonth ${lastOpen ? 'open' : ''}`} ref={lastRef}>
+              <h3 onClick={() => setLastOpen((v) => !v)} style={{ cursor: 'pointer' }}>
+                🗞️ {report ? 'O que mudou no mês passado' : 'Bem-vindo ao Planalto'}
+                <span className="pn-badge">{report ? `${report.headlines.length} notícias${report.meanwhile?.length ? ' · enquanto você decidia' : ''}` : 'primeiro mês'} · {lastOpen ? 'recolher ▲' : 'abrir ▼'}</span>
+              </h3>
+              {lastOpen && (
+                <div className="pn-pane" key={`p1-${state.month}`}>
+                  {report && report.votes.length > 0 && report.votes.map((v, i) => <Scoreboard key={i} v={v} />)}
+                  {report ? (
+                    <ul className="pn-news">
+                      {report.actionsTaken.map((t, i) => (
+                        <li key={`a${i}`} className="neutral">🖊️ {t}</li>
+                      ))}
+                      {report.headlines.map((h, i) => (
+                        <li key={i} className={h.tone} style={{ animationDelay: `${i * 90}ms` }}>
+                          {h.tone === 'good' ? '🟢' : h.tone === 'bad' ? '🔴' : '📰'} {h.text}
+                        </li>
+                      ))}
+                      {report.headlines.length === 0 && report.actionsTaken.length === 0 && (
+                        <li className="neutral">☕ Mês tranquilo em Brasília.</li>
+                      )}
+                    </ul>
+                  ) : (
+                    <p className="pn-hint">
+                      A economia vem de juros altos e inflação acima da meta, e a dívida cresce. Todo mês você pode
+                      tomar até {ACTIONS_PER_MONTH} decisões por decreto. Escreva a medida do mês abaixo ou escolha no
+                      catálogo, e encerre o mês para ver o país reagir.
+                    </p>
+                  )}
+                  {report?.meanwhile && report.meanwhile.length > 0 && (
+                    <div className="pn-meanwhile">
+                      <h3>👀 Enquanto você decidia</h3>
+                      {report.meanwhile.map((m, i) => (
+                        <div key={i} className={`pn-meanwhile__row ${m.tone}`}>
+                          <span>{m.icon}</span>
+                          <div>{m.text}{m.why && <small>Por quê: {m.why}</small>}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </section>
           </div>
 
           <div className="pn-col">
+            <PendenciasCard state={state} onGo={goPending} />
+
             <section className="pn-card">
               <h3>❤️ Aprovação do governo</h3>
               <ApprovalRing value={now.approval} />
@@ -611,8 +659,6 @@ export function GameScreen({ state, onChange, onExit }: {
             <RivalCard state={state} />
             <PromisesCard state={state} />
             <SupremoMini state={state} onOpen={() => { setTab('governo'); setGovTab('supremo') }} />
-
-            <DemandsCard state={state} plannedDecrees={selected} plannedBill={bill} />
 
             <section className="pn-card">
               <h3>👥 Grupos sociais</h3>
@@ -637,13 +683,6 @@ export function GameScreen({ state, onChange, onExit }: {
               </div>
             </section>
 
-            {state.congress.toSanction.length > 0 && (
-              <section className="pn-card pn-card--gold">
-                <h3>🖋️ Esperando sua caneta</h3>
-                {state.congress.toSanction.map((it) => <p key={it.id} className="pn-hint" style={{ margin: '4px 0' }}>{it.kind === 'bomba' ? '💣' : '🐢'} {it.kind === 'bomba' ? BILL_BY_ID[it.bill].name : `Jabuti em “${BILL_BY_ID[it.bill].name}”`} · <b>{sanctions[it.id] === 'vetar' ? 'vetar' : sanctions[it.id] ? 'sancionar' : 'sem decisão'}</b></p>)}
-                <div className="pn-row"><button className="pn-btn" onClick={() => setTab('governo')}>Sancionar ou vetar →</button></div>
-              </section>
-            )}
 
             <section className="pn-card">
               <h3>🏛️ Na Câmara</h3>
@@ -758,12 +797,7 @@ function ApprovalRing({ value }: { value: number }) {
   )
 }
 
-const billCost = (id: BillId) => {
-  const fx = BILL_BY_ID[id].effects
-  return ((fx.spending ?? 0) - (fx.revenue ?? 0)) / 100 * GDP_BILLIONS
-}
-
-function MeasureBox({ state, selected, bill, onSign, onSend, onAddBill, consult, setConsult }: {
+function MeasureBox({ state, selected, onSign, onSend, onAddBill, consult, setConsult }: {
   state: GameState
   consult: BillId | null
   setConsult: (id: BillId | null) => void
@@ -787,7 +821,11 @@ function MeasureBox({ state, selected, bill, onSign, onSend, onAddBill, consult,
     // Etapa 3C: nada do catálogo servia e a IA redigiu uma medida nova; ela entra no catálogo do mandato.
     if (r.draft) matches.push({ kind: 'bill', id: onAddBill(r.draft) })
     setResult({ matches, speech: r.speech, fallback: r.fallback, notes: r.notes, constraints: r.constraints })
+    // Etapa 2B: a leitura do gabinete abre em janela (etapa 1 da corrente do dia).
+    const first = matches.find((m) => m.kind === 'bill')
+    if (first && matches[0].kind === 'bill') setSheet(first.id as BillId)
   }
+  const billIds = (result?.matches ?? []).filter((m) => m.kind === 'bill').map((m) => m.id as BillId)
   return (
     <>
       <h3>✍️ Medida do mês <span className="pn-badge">escreva com suas palavras</span></h3>
@@ -805,7 +843,7 @@ function MeasureBox({ state, selected, bill, onSign, onSend, onAddBill, consult,
       <div className="pn-row">
         <button className="pn-btn" disabled={!text.trim() || busy} onClick={read}>{busy ? '⏳ Lendo…' : '📋 Pedir leitura do gabinete'}</button>
       </div>
-      {sheet && <MeasureSheet state={state} id={sheet} request={text} constraints={result?.constraints} onClose={() => setSheet(null)} onConfirm={(id, title) => { setSheet(null); onSend(id, title) }} />}
+      {sheet && <MeasureSheet state={state} id={sheet} ids={billIds} request={text} constraints={result?.constraints} speech={result?.speech} notes={result?.notes} consult={consult} onConsult={setConsult} onClose={() => setSheet(null)} onConfirm={(id, title) => { setSheet(null); onSend(id, title) }} />}
       {result && (
         <div className="pn-preview">
           {result.fallback && <p className="pn-hint">⚠️ {result.fallback} Lido por palavras-chave.</p>}
@@ -826,9 +864,12 @@ function MeasureBox({ state, selected, bill, onSign, onSend, onAddBill, consult,
                 m.kind === 'decree' ? (
                   <DecreeReading key={m.id} state={state} id={m.id} first={i === 0} selected={selected} onSign={onSign} />
                 ) : (
-                  <div key={m.id}>
-                    <BillReading state={state} id={m.id} first={i === 0} chosen={bill} onSend={setSheet} consult={consult} onConsult={setConsult} />
-                    {BILL_BY_ID[m.id].custom && <NewBillNotes id={m.id} notes={result.notes} />}
+                  <div key={m.id} className="pn-reading pn-reading--mini">
+                    <div className="pn-reading__head">
+                      <span className="pn-action__ic">📋</span>
+                      <div><strong>{i === 0 ? BILL_BY_ID[m.id].name : `Ou talvez: ${BILL_BY_ID[m.id].name}`} <NewBadge id={m.id} /></strong><div className="pn-hint">{BILL_BY_ID[m.id].summary}</div></div>
+                    </div>
+                    <div className="pn-row"><button className="pn-btn" disabled={!!billBlockedReason(state, m.id)} onClick={() => setSheet(m.id)}>📋 Abrir a leitura do gabinete</button>{billBlockedReason(state, m.id) && <span className="pn-action__blk">⏳ {billBlockedReason(state, m.id)}</span>}</div>
                   </div>
                 ),
               )}
@@ -869,43 +910,6 @@ function DecreeReading({ state, id, first, selected, onSign }: {
         </button>
         {blocked && <span className="pn-action__blk">⏳ {blocked}</span>}
         {!blocked && full && !taken && <span className="pn-action__blk">✋ Você já usou os {ACTIONS_PER_MONTH} decretos do mês.</span>}
-      </div>
-    </div>
-  )
-}
-
-function BillReading({ state, id, first, chosen, onSend, consult, onConsult }: {
-  state: GameState; id: BillId; first: boolean; chosen: BillId | null; onSend: (id: BillId) => void; consult?: BillId | null; onConsult?: (id: BillId | null) => void
-}) {
-  const b = BILL_BY_ID[id]
-  const blocked = billBlockedReason(state, id)
-  const cost = billCost(id)
-  const isChosen = chosen === id
-  return (
-    <div className="pn-reading">
-      <div className="pn-reading__head">
-        <span className="pn-action__ic">{b.instrument === 'pec' ? '📘' : b.instrument === 'mp' ? '⚡' : b.instrument === 'decreto' ? '🖊️' : '📜'}</span>
-        <div>
-          <strong>{first ? b.name : `Ou talvez: ${b.name}`} <NewBadge id={id} /></strong>
-          <div className="pn-hint">{b.summary}</div>
-        </div>
-      </div>
-      <div className="pn-pv">
-        <div>📜 Vira<b>{INSTRUMENTS[b.instrument].label}</b></div>
-        <div>💸 Contas públicas<b className={cost > 0 ? 'dn' : cost < 0 ? 'up' : ''}>{cost === 0 ? 'Neutro' : `${cost > 0 ? '−' : '+'}R$ ${num(Math.abs(cost), 0)} bi/ano`}</b></div>
-        <div>⏱️ Quando vale<b>{b.instrument === 'mp' || b.instrument === 'decreto' ? 'Na hora' : 'Se aprovada'}</b></div>
-      </div>
-      <p className="pn-hint" style={{ margin: '2px 0 4px' }}>{INSTRUMENTS[b.instrument].rule}</p>
-      <LegalRiskLine state={state} id={id} consult={consult === id} onConsult={onConsult} />
-      {!blocked && b.instrument !== 'decreto' && <ForecastRow state={state} id={id} />}
-      <div className="up">+ {b.pros}</div>
-      <div className="dn">− {b.cons}</div>
-      <div className="pn-row">
-        <button className="pn-btn" disabled={!!blocked || isChosen || consult === id} title={consult === id ? 'Você pediu parecer ao Supremo sobre esta medida: ela espera a resposta.' : ''} onClick={() => onSend(id)}>
-          {isChosen ? '✔ Será feito ao encerrar o mês' : b.instrument === 'decreto' ? '🖊️ Assinar o decreto' : b.instrument === 'mp' ? '⚡ Editar a medida provisória' : '📨 Enviar à Câmara'}
-        </button>
-        {blocked && <span className="pn-action__blk">⏳ {blocked}</span>}
-        {!blocked && chosen && !isChosen && <span className="pn-action__blk">Só uma medida do mês: isto troca “{BILL_BY_ID[chosen].name}”.</span>}
       </div>
     </div>
   )

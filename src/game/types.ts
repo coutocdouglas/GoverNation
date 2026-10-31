@@ -139,7 +139,7 @@ export interface Meanwhile {
 import type { ReputationState } from './reputacao'
 
 export interface GameState {
-  saveVersion: 16
+  saveVersion: 17
   /** Mês atual, de 0 (janeiro do 1º ano) a 47. Em 48 o mandato acabou. */
   month: number
   presidentName: string
@@ -229,7 +229,44 @@ export interface RoundBuffer {
   /** O presidente da Câmara e o do Senado já seguraram um projeto nesta rodada. */
   speakerHeld?: boolean
   senateHeld?: boolean
+  /** Etapa 2B: o Supremo no mesmo dia (uma entrada por medida que entrou em vigor na rodada). */
+  court?: CourtNow[]
+  /** Etapa 2B: reações previstas no envio de cada medida e quais aconteceram. */
+  reactions?: ReactionRoll[]
+  /** Etapa 2B: o que a rodada já deu de força à oposição (somado no fechamento). */
+  rival?: Cause[]
   rngState: number
+}
+
+/** Etapa 2B: o Supremo diante de uma medida, no dia em que ela passou a valer. */
+export interface CourtNow {
+  bill: BillId
+  /** Chance de a ação sair agora (0 a 1). */
+  chance: number
+  filed: boolean
+  party?: PartyId
+  relator?: string
+  liminar?: boolean
+  /** Id do julgamento (em supremo.rulings). */
+  ruling?: string
+  struck?: boolean
+  reason?: string
+  risk?: 'baixo' | 'medio' | 'alto'
+}
+
+/** Etapa 2B: uma reação prevista ao anúncio de uma medida. */
+export interface ReactionRoll {
+  bill: BillId
+  id: string
+  icon: string
+  label: string
+  /** Chance mostrada antes (0 a 1). */
+  chance: number
+  /** O efeito, em texto ("confiança −2, PIB potencial −0,02"). */
+  effect: string
+  fired: boolean
+  /** Boa ou má notícia para o governo, se acontecer. */
+  good?: boolean
 }
 
 /** Etapa 4C3: situação de um ministério. */
@@ -311,6 +348,8 @@ export interface InForce {
   author: string
   /** Texto desidratado pelo relator: fração dos efeitos que ficou. */
   scale?: number
+  /** Etapa 2B: já passou pelo Supremo no dia (sem ação); não leva ação nova antes deste mês absoluto. */
+  grace?: number
 }
 
 export interface SupremoState {
@@ -420,6 +459,8 @@ export interface PendingBill {
   ccj?: 'aprovado' | 'adequado'
   /** Etapa 2 (só no Senado): concessões no texto acordadas na Câmara (o texto chega mais fraco). */
   conceded?: DealTerms[]
+  /** Etapa 2B: parte do choque de confiança que o mercado já precificou no envio (desfeita se o projeto cair). */
+  priced?: number
 }
 
 /** Etapa 4C1: o Senado. Os partidos são os mesmos da Câmara (a relação com o governo é a mesma, mais um bônus). */

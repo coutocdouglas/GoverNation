@@ -11,7 +11,8 @@ import { MATTERS, RANK, register } from './custom'
 import { affinity, clamp } from './ideology'
 import { absMonth, addBio, addChronicle, yearOf } from './memory'
 import type { Rng } from './rng'
-import type { BillId, Cause, Consulta, CourtCase, EventOrigin, GameState, GroupId, Headline, Impulse, Instrument, JusticeSeat, PartyId, PendingBill, Ruling, SupremoState } from './types'
+import { FLUXO } from './data/fluxo'
+import type { BillId, Cause, Consulta, CourtCase, CourtNow, EventOrigin, GameState, GroupId, Headline, Impulse, Instrument, JusticeSeat, PartyId, PendingBill, Ruling, SupremoState } from './types'
 
 const lowerFirst = (t: string) => (/^[A-ZÀ-Ú]{2}/.test(t) ? t : t.charAt(0).toLowerCase() + t.slice(1))
 
@@ -429,6 +430,8 @@ export function stepSupremo(s: GameState, rng: Rng, headlines: Headline[]): Supr
   if (sup.cases.length < SUPREMO.maxOpen && sup.justices.length) {
     for (const w of [...sup.watch].sort((a, b) => a.since - b.since)) {
       if (sup.cases.some((x) => x.bill === w.bill) || sup.rulings.some((r) => r.bill === w.bill)) continue
+      // Etapa 2B: passou pelo Supremo no dia em que entrou em vigor; os primeiros meses já foram sorteados ali.
+      if (w.grace !== undefined && now < w.grace) continue
       if (rng.next() >= fileChanceOf(s, w.bill)) continue
       const party = challengerOf(s, w.bill)
       if (!party) continue
@@ -538,6 +541,81 @@ export function stepSupremo(s: GameState, rng: Rng, headlines: Headline[]): Supr
   }
 
   return out
+}
+
+// ─── Etapa 2B: o Supremo no mesmo dia ─────────────────────────────────────────
+
+/**
+ * Chance de a oposição ir ao Supremo no dia em que a medida passa a valer: junta os primeiros meses de mira.
+ * Sem quem conteste (nenhum partido contra e de mal com o governo), zero.
+ */
+export function courtChanceNow(s: GameState, id: BillId): number {
+  const p = fileChanceOf(s, id)
+  if (p <= 0 || !s.supremo.justices.length || !challengerOf(s, id)) return 0
+  return 1 - Math.pow(1 - Math.min(1, p), FLUXO.signingMonths)
+}
+
+export interface CourtNowResult { entry: CourtNow; struck: Struck | null }
+
+/**
+ * Etapa 2B: a medida acabou de valer (decreto e MP assinados, lei aprovada). A ação é sorteada agora; se sair,
+ * o relator é sorteado, a liminar é decidida e o plenário julga na mesma hora (acórdão). Sem ação, a medida
+ * fica `FLUXO.graceMonths` sem ação nova (os primeiros meses já foram sorteados aqui).
+ * Devolve a entrada para a corrente de janelas e, se a medida caiu, o que o motor precisa desfazer.
+ */
+export function courtNow(s: GameState, id: BillId, rng: Rng, headlines: Headline[]): CourtNowResult | null {
+  const sup = s.supremo
+  const bill = BILL_BY_ID[id]
+  if (!bill || legalRiskIn(s, id) === 'baixo') return null
+  const w = sup.watch.find((x) => x.bill === id)
+  if (!w) return null
+  const now = absMonth(s)
+  const chance = courtChanceNow(s, id)
+  const risk = legalRiskIn(s, id)
+  const reason = legalReasonIn(s, id)
+  if (sup.cases.some((x) => x.bill === id) || rng.next() >= chance) {
+    w.grace = now + FLUXO.graceMonths
+    return { entry: { bill: id, chance, filed: false, risk, reason }, struck: null }
+  }
+  const party = challengerOf(s, id)!
+  const relator = sup.justices[Math.floor(rng.next() * sup.justices.length)]
+  const liminar = rng.next() < SUPREMO.liminarFactor[risk] * strikeProb(relator, bill, risk)
+  const x: CourtCase = { id: `stf-${id}-${now}`, bill: id, party, relator: relator.id, filedAt: now, judgeAt: now, reason, risk }
+  const sigla = PARTY_BY_ID[party].sigla
+  headlines.push({ text: `${sigla} vai ao Supremo contra ${lowerFirst(bill.name)} no mesmo dia; relator: ${minister(relator.id)}`, tone: 'bad' })
+  addBio(s, PARTY_BY_ID[party].leader.name, `Levou ao Supremo uma ação do ${sigla} contra “${bill.name}”.`)
+  addBio(s, justiceInfo(relator).name, `Sorteado relator da ação do ${sigla} contra “${bill.name}”.`)
+  if (liminar) {
+    headlines.push({ text: `Liminar: ${minister(relator.id)} suspende ${lowerFirst(bill.name)} e leva o caso ao plenário na hora`, tone: 'bad' })
+    addBio(s, justiceInfo(relator).name, `Deu liminar contra “${bill.name}”, do governo ${s.presidentName}.`)
+  }
+  const ruling = judge(s, x, bill, rng)
+  pushRuling(sup, ruling)
+  sup.watch = sup.watch.filter((y) => y.bill !== id)
+  const placar = placarOf(ruling)
+  const entry: CourtNow = { bill: id, chance, filed: true, party, relator: relator.id, liminar, ruling: ruling.id, struck: ruling.struck, reason, risk }
+  if (ruling.struck) {
+    headlines.push({ text: `Supremo derruba ${lowerFirst(bill.name)} por ${placar}, a pedido do ${sigla}. A medida deixa de valer`, tone: 'bad' })
+    addBio(s, s.presidentName, `Teve uma medida derrubada no Supremo no mesmo dia: ${bill.name} (${placar}).`)
+    addBio(s, justiceInfo(relator).name, `Relatou no Supremo a ação do ${sigla} contra “${bill.name}”: a medida caiu (${placar}).`)
+    addBio(s, PARTY_BY_ID[party].leader.name, `Levou o ${sigla} ao Supremo contra “${bill.name}” e venceu (${placar}).`)
+    addChronicle(s, `Supremo derruba ${lowerFirst(bill.name)} (${placar}), do governo ${s.presidentName}`, 'bad')
+    return { entry, struck: { bill: id, author: w.author, scale: w.scale, ruling } }
+  }
+  headlines.push({ text: `Supremo mantém ${lowerFirst(bill.name)} por ${placar}: o ${sigla} perde a ação${liminar ? ' e a liminar cai' : ''}`, tone: 'good' })
+  addBio(s, s.presidentName, `Viu o Supremo manter ${lowerFirst(bill.name)} (${placar}).`)
+  addBio(s, justiceInfo(relator).name, `Relatou no Supremo a ação do ${sigla} contra “${bill.name}”: a medida foi mantida (${placar}).`)
+  addBio(s, PARTY_BY_ID[party].leader.name, `Perdeu no Supremo a ação contra “${bill.name}” (${placar}).`)
+  addChronicle(s, `Supremo mantém ${lowerFirst(bill.name)} (${placar}), do governo ${s.presidentName}`, 'good')
+  return { entry, struck: null }
+}
+
+/** Etapa 2B: risco jurídico em número (0 a 100) = chance de cair se for julgada, pela previsão do plenário de hoje. */
+export function legalRiskScore(s: GameState, id: BillId): number {
+  if (isCleared(s, id)) return 0
+  const risk = legalRiskIn(s, id)
+  const fc = forecastRuling(s, id, risk).chance
+  return Math.round(100 * (risk === 'baixo' ? Math.min(fc, 0.3) : fc))
 }
 
 function pushRuling(sup: SupremoState, r: Ruling) {

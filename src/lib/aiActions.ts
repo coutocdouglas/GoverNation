@@ -1,4 +1,4 @@
-import { concessionPrompt, interpretPrompt, ministerAdvicePrompt, ministerReviewPrompt, parseAdvice, parseConcession, parseInterpretation, parseReview, type Advice, type Review } from '../game/ai'
+import { briefingPrompt, eventBriefPrompt, parseShortText, concessionPrompt, interpretPrompt, ministerAdvicePrompt, ministerReviewPrompt, parseAdvice, parseConcession, parseInterpretation, parseReview, type Advice, type Review } from '../game/ai'
 import type { BillId } from '../game/types'
 import type { EventDef } from '../game/data/events'
 import type { AreaId } from '../game/data/ministers'
@@ -72,6 +72,26 @@ export async function askConcession(state: GameState, party: string, leader: str
   if (!aiReady()) return null
   try {
     return parseConcession(await callAi('fala', concessionPrompt(state, party, leader, bill, type)))
+  } catch {
+    return null
+  }
+}
+
+/** Etapa 2B: a assessoria explica o fato do mês em poucas frases. Null = mostrar o texto do próprio fato. */
+export async function askEventBrief(state: GameState, ev: EventDef): Promise<string | null> {
+  if (!aiReady()) return null
+  try {
+    return parseShortText(await callAi('fala', eventBriefPrompt(state, ev)))
+  } catch {
+    return null
+  }
+}
+
+/** Etapa 2B: resumo executivo narrado pela IA. Null = usar o resumo pronto do motor. */
+export async function askBriefing(state: GameState, bill: BillId, facts: string): Promise<string | null> {
+  if (!aiReady()) return null
+  try {
+    return parseShortText(await callAi('fala', briefingPrompt(state, bill, facts)), 500)
   } catch {
     return null
   }

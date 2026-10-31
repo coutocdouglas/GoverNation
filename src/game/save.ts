@@ -147,7 +147,11 @@ export function migrate(raw: unknown): GameState | null {
       s.saveVersion = 16
       openMesa(s as GameState)
     }
-    if (s.saveVersion !== 16) return null
+    if (s.saveVersion === 16) {
+      // v0.18 → v0.19 (etapa 2B): Supremo no mesmo dia, mercado no envio e reações; campos novos são opcionais.
+      s.saveVersion = 17
+    }
+    if (s.saveVersion !== 17) return null
     syncCustomBills(s as GameState)
     return s as GameState
   } catch {
