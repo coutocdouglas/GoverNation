@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ART, type ArtId } from './art'
+import { ART, type ArtId } from './artSlots'
 
 /** Ilustração de um slot (etapa 0). Sem arquivo em public/art, mostra o placeholder com ícone e descrição. */
 export function Art({ slot, height = 90, caption }: { slot: ArtId; height?: number; caption?: string }) {

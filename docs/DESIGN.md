@@ -711,7 +711,7 @@ Exposição a escândalo visível de 0 a 100 (item 20), CPIs (35), vice-presiden
 - **Regras:** lei, LC e PEC votam na hora (Câmara → Senado; PEC com os dois turnos juntos). MP vale na hora e fica na fila; caduca se não for pautada até a 4ª rodada. Gaveta (comissão, presidente da Câmara, presidente do Senado) e CCJ na hora; recesso e projeto travado pelo Supremo ficam na fila. O fechamento não vota plenário; continuam lá vetos, sanções, pautas-bomba e o Supremo.
 - **Supremo:** prazos de julgamento zerados (`data/supremo.ts`); no fechamento, primeiro as novas ações, depois os julgamentos (um contra medida em vigor e um contra projeto por mês). Liminar julgada na rodada seguinte; consulta responde em 1 rodada.
 - **Telas:** botão "Votar agora" na janela de votação (com o aviso da gaveta), "Negociar e pautar agora" nas filas, faixa da rodada, medida enviada no lugar da caixa de texto, articulação na hora, animações das votações na hora (sem repetir no fechamento).
-- **Ilustrações:** `src/ui/art.ts` (slots) e `src/ui/Art.tsx` (placeholder até existir `public/art/<slot>.webp`).
+- **Ilustrações:** `src/ui/artSlots.ts` (slots) e `src/ui/Art.tsx` (placeholder até existir `public/art/<slot>.webp`).
 - **Balanceamento:** simulador com `pautarFila` (pauta o que estiver livre na fila). Ordem das estratégias igual; leis por mandato no mesmo nível de antes (16 a 22 com um projeto a cada 2 meses).
 - **Save versão 13.**
 

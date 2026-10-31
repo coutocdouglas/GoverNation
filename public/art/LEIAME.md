@@ -1,7 +1,7 @@
 # Ilustrações do GoverNation
 
 Cada arquivo aqui substitui um placeholder do jogo. O nome do arquivo é o nome do slot + `.webp`.
-A lista de slots, com a descrição e a proporção de cada um, está em `src/ui/art.ts`.
+A lista de slots, com a descrição e a proporção de cada um, está em `src/ui/artSlots.ts`.
 
 | Arquivo | Proporção | O que mostrar |
 |---|---|---|

@@ -28,7 +28,7 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 
 **Jogabilidade**
 - Mandato de 48 meses (jan/2027 a dez/2030), com o mês em 4 passos: notícias, fato do mês, decisões e encerrar.
-- **A rodada (v0.15):** uma medida nova por rodada; ela vota na hora (Câmara e Senado), decreto e MP valem na hora, um projeto da fila por casa pode ser pautado, articulação vale na hora, gaveta avisada antes, MP caduca em 4 rodadas sem votação, Supremo julga no fechamento da mesma rodada. Faixa da rodada no Painel e ilustrações provisórias (slots em `src/ui/art.ts`, arte em `public/art`).
+- **A rodada (v0.15):** uma medida nova por rodada; ela vota na hora (Câmara e Senado), decreto e MP valem na hora, um projeto da fila por casa pode ser pautado, articulação vale na hora, gaveta avisada antes, MP caduca em 4 rodadas sem votação, Supremo julga no fechamento da mesma rodada. Faixa da rodada no Painel e ilustrações provisórias (slots em `src/ui/artSlots.ts`, arte em `public/art`).
 - **Economia** com causa e efeito: PIB, inflação, Selic (Banco Central independente, 8 reuniões do Copom por ano), desemprego, dívida, contas públicas, confiança do mercado, dólar e choques externos.
 - **7 grupos sociais** com memória: ganhos são esquecidos em cerca de 9 meses e perdas em cerca de 2 anos.
 - **Medida do mês em texto livre**, lida por palavras-chave. Leva aos 7 decretos rápidos ou a um catálogo de 91 medidas em 13 áreas (decreto, MP, lei, lei complementar ou PEC) e mostra o instrumento, o custo e o placar previsto.
