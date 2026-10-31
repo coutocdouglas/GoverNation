@@ -122,8 +122,10 @@ export interface MonthReport {
   sanctioned?: BillId[]
 }
 
+import type { ReputationState } from './reputacao'
+
 export interface GameState {
-  saveVersion: 13
+  saveVersion: 14
   /** Mês atual, de 0 (janeiro do 1º ano) a 47. Em 48 o mandato acabou. */
   month: number
   presidentName: string
@@ -178,6 +180,8 @@ export interface GameState {
    * (medida enviada e votada na hora, projeto pautado da fila, articulações). O fechamento do mês aplica e zera.
    */
   round?: RoundBuffer
+  /** Etapa 1 (v0.16): Ficha de governo, marcas de reputação e capítulos da presidência. */
+  reputation: ReputationState
 }
 
 /** Etapa 0: efeitos acumulados na rodada, aplicados no fechamento do mês. */

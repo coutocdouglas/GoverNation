@@ -32,6 +32,12 @@ export const CAST: CastMember[] = [
   { name: 'Neusa Galvão', role: 'Ministra dos Transportes', gender: 'f', portrait: 15 },
   { name: 'Heitor Valadares', role: 'Governador do Sul', gender: 'm', portrait: 53 },
   { name: 'Vera Toledo', role: 'Chefe da Controladoria', gender: 'f', portrait: 36 },
+  // Etapa 1 (v0.16): desdobramentos da reputação. Retratos provisórios (111+), a melhorar.
+  { name: 'Rogério Albuquerque', role: 'Economista-chefe da agência de risco Atlas', gender: 'm', portrait: 111 },
+  { name: 'Sílvia Mattoso', role: 'Colunista política', gender: 'f', portrait: 112 },
+  { name: 'Dr. Fausto Lemos', role: 'Presidente da Ordem dos Juristas', gender: 'm', portrait: 113 },
+  { name: 'Lúcia Arantes', role: 'Diretora do instituto de pesquisa Pulso', gender: 'f', portrait: 114 },
+  { name: 'Joel Brandão', role: 'Coordenador do movimento Basta', gender: 'm', portrait: 115 },
   { name: 'Iara Couto', role: 'Líder do sindicato docente', gender: 'f', portrait: 40 },
   { name: 'Glória Matos', role: 'Ministra do Meio Ambiente', gender: 'f', portrait: 13 },
   { name: 'Severino Cunha', role: 'Ministro da Agricultura', gender: 'm', portrait: 37 },
@@ -107,7 +113,7 @@ export const castPortrait = (name: string) => {
 const taken = new Set([...CAST.map((c) => c.portrait), ...RESERVED])
 
 /** Retratos que o jogador pode escolher para o presidente. */
-export const PLAYER_POOL: number[] = PORTRAITS.filter((p) => !taken.has(p.id)).map((p) => p.id)
+export const PLAYER_POOL: number[] = PORTRAITS.filter((p) => !taken.has(p.id) && !p.tags.includes('provisorio')).map((p) => p.id)
 
 /** Retrato do presidente quando o save não guardou uma escolha (saves antigos): sorteio fixo pela semente. */
 export function fallbackPortrait(seed: string): number {

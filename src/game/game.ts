@@ -22,6 +22,8 @@ import { PROMISE_BY_ID } from './data/promises'
 import { RIVAL_BY_PARTY } from './data/rival'
 import { Rng } from './rng'
 import { applyEffects } from './effects'
+import { addMark, initialReputation, maybeCloseChapter, noteRecord, stepReputation } from './reputacao'
+import { REPUTACAO } from './data/marks'
 import { applyPlanToRound, expireMps, peekRound, roundOf, type RoundCtx } from './rodada'
 import { DEALS } from './data/deals'
 import { dealBlockedReason } from './deals'
@@ -75,7 +77,7 @@ export function newGame(
   const rngState = seed ?? Math.floor(Math.random() * 2 ** 31)
   const bonus = DIFFICULTY[difficulty].approvalBonus
   const state: GameState = {
-    saveVersion: 13,
+    saveVersion: 14,
     month: 0,
     presidentName: presidentName.trim() || 'Presidente',
     difficulty,
@@ -108,9 +110,11 @@ export function newGame(
     // Preenchido logo abaixo (a relação dos ministros depende do partido do presidente).
     supremo: undefined as unknown as GameState['supremo'],
     ministries: undefined as unknown as GameState['ministries'],
+    reputation: initialReputation(),
   }
   state.supremo = initialSupremo(state)
   state.ministries = initialMinistries(state)
+  state.reputation = initialReputation()
   syncCustomBills(state)
   for (const b of promiseSideBoosts(promises, playerParty)) {
     const g = state.groups[b.group]
@@ -525,10 +529,12 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
     const kept = c.laws.includes(pr.bill) || c.pending.some((x) => x.id === pr.bill) || c.senate.pending.some((x) => x.id === pr.bill) || votes.some((v) => v.bill === pr.bill)
     if (kept) {
       c.parties[pr.party].relation = Math.min(100, c.parties[pr.party].relation + DEALS.promiseKept)
+      addMark(s, 'palavra', REPUTACAO.pts.palavra, `Cumpriu a promessa ao ${party.sigla}: pautou “${BILL_BY_ID[pr.bill].name}”`, 'acordo', pr.bill)
       c.promises = c.promises.filter((x) => x !== pr)
       addBio(s, party.leader.name, `Viu o governo cumprir a promessa de pautar “${BILL_BY_ID[pr.bill].name}”.`)
     } else if (s.month >= pr.due) {
       c.parties[pr.party].relation = Math.max(0, c.parties[pr.party].relation + DEALS.promiseBroken)
+      addMark(s, 'fura', REPUTACAO.pts.fura, `Não cumpriu a promessa ao ${party.sigla}: “${BILL_BY_ID[pr.bill].name}” não foi pautado`, 'acordo', pr.bill)
       c.promises = c.promises.filter((x) => x !== pr)
       headlines.push({ text: `${party.sigla} acusa o governo de não cumprir acordo: “${BILL_BY_ID[pr.bill].name}” não foi pautado`, tone: 'bad' })
       addBio(s, party.leader.name, `Rompeu com o governo depois de uma promessa não cumprida (“${BILL_BY_ID[pr.bill].name}”).`)
@@ -572,6 +578,7 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
     rivalExtra.push({ label: 'Supremo derruba medida do governo', value: SUPREMO.rivalGain })
     s.eventQueue.unshift({ id: 'stfDerrubada', origin: struckOrigin(s, struck) })
     mm.struck.push(bill.area)
+    noteRecord(s, { text: `O Supremo derrubou “${bill.name}”`, tone: 'bad', kind: 'supremo', bill: struck.bill })
   }
   if (suspended) {
     // Etapa 4C3: liminar. O dinheiro e a confiança param até o plenário; vem um fato do mês.
@@ -622,6 +629,7 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
           addBio(s, s.presidentName, `${title}: respondeu com ${lowerFirst(name)}.`)
           addBio(s, minister.name, `${minister.role}: conduziu a resposta a “${title}” (${lowerFirst(name)}).`)
           s.eventLog.push({ id: def.id, month: s.month })
+          if (def.kind !== 'bom') addMark(s, 'enfrenta', def.importance * REPUTACAO.pts.crisePer, `${title}: respondeu com “${name}”`, 'crise', resp)
           if (origin) addChronicle(s, `${title} (consequência de ${origin.label}, ${origin.author}, ${origin.year}): resolvido com ${lowerFirst(name)}`, 'good')
           eventReport = { id: def.id, option: -1, chosen: true, response: resp, resolved: true }
           if (!def.choiceOnly && def.kind !== 'bom') mm.event = { area: def.area, kind: 'resolvido' }
@@ -637,6 +645,7 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
           actionConfidence += applyEffects(e, impulses, opt.effects, title)
           headlines.push({ text: opt.outcome, tone: opt.tone })
           addBio(s, minister.name, `${minister.role}: viu a resposta a “${title}” travar no Congresso.`)
+          noteRecord(s, { text: `${title}: a resposta (“${name}”) travou no Congresso`, tone: 'bad', kind: 'crise', bill: resp })
           s.eventLog.push({ id: def.id, month: s.month })
           eventReport = { id: def.id, option: idx, chosen: true, response: resp, resolved: false }
           if (!def.choiceOnly && def.kind !== 'bom') mm.event = { area: def.area, kind: 'falhou' }
@@ -675,6 +684,13 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
       if (opt.stf) rivalExtra.push(...applyStfChoice(s, opt.stf, origin, impulses, headlines, taken))
       headlines.push({ text: outcome, tone })
       taken.push(`Fato do mês: ${opt.label}`)
+      // Etapa 1: como o presidente lidou com o fato entra na Ficha e na reputação.
+      const crisis = def.kind !== 'bom' && !def.choiceOnly
+      const ignored = plan.eventChoice === undefined || !!opt.default
+      if (crisis && ignored && def.importance >= 3) addMark(s, 'omisso', def.importance * REPUTACAO.pts.crisePer, `${title}: deixou passar`, 'crise')
+      else if (crisis && !ignored) addMark(s, 'enfrenta', def.importance * REPUTACAO.pts.crisePer * 0.5, `${title}: ${lowerFirst(opt.label)}`, 'crise')
+      else noteRecord(s, { text: `${title}: ${lowerFirst(opt.label)}`, tone: tone === 'good' ? 'good' : tone === 'bad' ? 'bad' : 'neutral', kind: 'crise' })
+      if (opt.stf === 'criticar') addMark(s, 'confronto', REPUTACAO.pts.confronto, `Atacou o Supremo em público (${title.toLowerCase()})`, 'supremo')
       s.eventLog.push({ id: def.id, month: s.month })
       addBio(s, def.presenter.name, `${def.presenter.role}: levou ao presidente “${title}”. Decisão: ${lowerFirst(opt.label)}.`)
       if (def.importance >= 3 || def.kind !== 'crise') addBio(s, s.presidentName, `${title}: ${lowerFirst(opt.label)}.`)
@@ -710,6 +726,11 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
 
   // 1g. Etapa 4C3: desgaste dos ministros.
   stepMinistries(s, mm, impulses, headlines)
+
+  // 1h. Etapa 1: as marcas de reputação pesam (causa visível em cada grupo) e os pontos caem.
+  const repMonth = stepReputation(s, impulses, headlines)
+  actionConfidence += repMonth.confidence
+  rivalExtra.push(...repMonth.rival)
 
   // 2. Copom (antes da economia andar, com os dados do mês anterior)
   const selicCauses: Cause[] = []
@@ -773,6 +794,10 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
     event: eventReport,
     sanctioned,
   }
+
+  // Etapa 1: a cada 6 meses, um capítulo da presidência.
+  const chapter = maybeCloseChapter(s, approvalAfter)
+  if (chapter) headlines.push({ text: `📖 ${chapter.title}. Leia na Ficha de governo`, tone: 'neutral' })
 
   s.month += 1
   s.lastReport = report

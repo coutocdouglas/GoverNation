@@ -228,3 +228,15 @@ export function parseReview(raw: string): Review | null {
   const suggestions = Array.isArray(data.sugestoes) ? data.sugestoes.map((x) => cleanText(x, 250)).filter(Boolean).slice(0, 3) : []
   return speech ? { stance, speech, suggestions } : null
 }
+
+/**
+ * Etapa 1 (v0.16): a IA reescreve um capítulo da presidência como crônica de jornal.
+ * Só narra: os fatos e números vêm do capítulo calculado pelo motor (regras decidem, IA narra).
+ */
+export function chapterRequest(s: Pick<GameState, 'presidentName'>, ch: { title: string; text: string }): AiRequest {
+  return {
+    system: 'Você é um cronista político brasileiro. Reescreva o resumo de um período de governo fictício como uma crônica curta de jornal, em português do Brasil, em 1 parágrafo de 4 a 6 frases. Use só os fatos e números do resumo; não invente fatos, nomes ou números. Tom: jornalístico, vivo, sem tomar partido. Sem título, sem listas.',
+    user: `Presidente: ${s.presidentName}\n${ch.title}\nResumo: ${ch.text}`,
+    maxTokens: 400,
+  }
+}

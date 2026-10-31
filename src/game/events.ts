@@ -1,5 +1,6 @@
 import { DEMANDS, DEMANDS_MAX, DEMAND_CHANCE, type DemandDef } from './data/demands'
 import { ALL_EVENTS, EVENT_BY_ID, EVENT_CHANCE, EVENT_REPEAT, type EventDef } from './data/events'
+import { reputationEvent } from './reputacao'
 import { BILL_BY_ID } from './data/bills'
 import type { Rng } from './rng'
 import type { BillId, GameState } from './types'
@@ -20,6 +21,9 @@ export function drawEvent(s: GameState, rng: Rng): GameState['event'] {
   // Consequências que brotaram têm prioridade sobre o sorteio.
   const queued = s.eventQueue.shift()
   if (queued && EVENT_BY_ID[queued.id]) return { id: queued.id, month: s.month, origin: queued.origin }
+  // Etapa 1: desdobramento da reputação (o que você fez volta como fato do mês).
+  const rep = reputationEvent(s, rng)
+  if (rep) return rep
   if (rng.next() >= EVENT_CHANCE) return null
   const recent = new Set(s.eventLog.filter((e) => s.month - e.month < EVENT_REPEAT).map((e) => e.id))
   const pool = ALL_EVENTS.filter((e) => e.random !== false && !recent.has(e.id) && (!e.when || e.when(s)))

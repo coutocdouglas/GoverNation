@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { GovernmentRecord } from './ReputationView'
 import { CAST, castPortrait, playerPortraitId } from '../game/data/cast'
 import { PROFILE_BY_ID } from '../game/data/profile'
 import { RIVALS } from '../game/data/rival'
@@ -11,7 +12,7 @@ const MONTHS = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', '
 const when = (at: number) => `${MONTHS[at % 12]}/${yearOf(at)}`
 
 /** Fichas dos personagens (biografia acumulada) e memória do país. */
-export function FichasView({ state }: { state: GameState }) {
+export function FichasView({ state, onChange }: { state: GameState; onChange: (s: GameState) => void }) {
   const people = [
     { name: state.presidentName, role: `Presidente da República (${PARTY_BY_ID[state.playerParty].sigla})`, portrait: playerPortraitId(state), color: PARTY_BY_ID[state.playerParty].color },
     // Só o rival deste mandato aparece; o outro líder de oposição fica de fora.
@@ -27,6 +28,7 @@ export function FichasView({ state }: { state: GameState }) {
   return (
     <div className="pn-grid">
       <div className="pn-col">
+        <GovernmentRecord state={state} onChange={onChange} />
         <section className="pn-card">
           <h3>📇 Ficha de {person.name}</h3>
           <div className="pn-ficha__head">

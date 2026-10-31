@@ -715,6 +715,11 @@ Exposição a escândalo visível de 0 a 100 (item 20), CPIs (35), vice-presiden
 - **Balanceamento:** simulador com `pautarFila` (pauta o que estiver livre na fila). Ordem das estratégias igual; leis por mandato no mesmo nível de antes (16 a 22 com um projeto a cada 2 meses).
 - **Save versão 13.**
 
+### 27.3 Etapa 1 dividida: 1A feita (v0.16), 1B a seguir
+- **1A (v0.16), causa e consequência:** `src/game/reputacao.ts` e `data/marks.ts`. Ficha de governo (`GameState.reputation.record`), 10 marcas (0 a 100, caem 5%/mês, pesam acima de 15, viram desdobramento acima de 35 com 45% de chance por mês e intervalo de 12 meses), 10 desdobramentos em `data/repEvents.ts` (o {lei} é a decisão mais recente que puxou a marca), capítulos a cada 6 meses com narração opcional pela IA (`chapterRequest` em `game/ai.ts`), cartão de reputação e exposição a escândalo no Painel, Ficha na aba Fichas. Gatilhos: envio da medida (impopular se a popularidade ≤ -0,8; gasto/ajuste pelo efeito líquido; decreto), derrota, crise respondida/ignorada (importância ≥ 3), promessa a partido cumprida/quebrada, crítica ao Supremo. Balanceamento: ignorar crises pesa mais (passivo 460 → 443; responder aos fatos 594 → 620), ordem das estratégias igual. Save 14.
+- **Retratos provisórios:** 111 a 140 (`tags: ['provisorio']`), fora da escolha do presidente; gerados por `scripts/retratos-provisorios.py`. O Douglas melhora e devolve com o mesmo nome de arquivo.
+- **1B (próxima, v0.17):** três caminhos para a crise (medida, post da assessoria, tratar com quem está na rua), "sua agenda está limpa" em mês sem crise, "enquanto você decidia" no Painel, fato bom com botão de agir (médio e difícil).
+
 ### 27.1 Caixa de ideias por etapa
 - Etapa 1: conquistas como selos da Ficha; nome da medida no telejornal; decreto também com janela de confirmação antes de assinar.
 - Etapa 2: ministério cedido valendo na hora (hoje vale no fechamento do mês); urgência como ação da rodada.

@@ -143,7 +143,7 @@ describe('pautas-bomba', () => {
   it('aparecem com a Câmara hostil e vão à sanção; sancionar custa, vetar irrita', () => {
     let s = edit(feb('fpt'), (x) => { x.month = 4; x.congress.speaker.relation = 0 })
     let item = null
-    for (let i = 0; i < 12 && !item; i++) {
+    for (let i = 0; i < 30 && !item; i++) {
       s = advanceMonth(edit(s, (x) => { x.congress.speaker.relation = 0 }), [])
       item = s.congress.toSanction.find((x) => x.kind === 'bomba') ?? null
     }
@@ -216,7 +216,7 @@ describe('save e mandato inteiro', () => {
     delete old.congress.bombLog
     old.saveVersion = 7
     const m = migrate(JSON.parse(JSON.stringify(old)))!
-    expect(m.saveVersion).toBe(13)
+    expect(m.saveVersion).toBe(14)
     expect(m.cabinet).toEqual({})
     expect(m.congress.speaker.relation).toBeGreaterThan(0)
     expect(() => advanceMonth(m, [])).not.toThrow()

@@ -207,7 +207,7 @@ describe('Supremo (etapa 4C2)', () => {
     delete raw.supremo
     raw.saveVersion = 10
     const m = migrate(raw)!
-    expect(m.saveVersion).toBe(13)
+    expect(m.saveVersion).toBe(14)
     expect(m.supremo.justices).toHaveLength(11)
     expect(m.supremo.cases).toEqual([])
     expect(m.supremo.watch).toEqual([])

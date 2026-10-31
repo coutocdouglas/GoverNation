@@ -5,6 +5,7 @@ import { createRival } from './rival'
 import { initialSupremo } from './supremo'
 import { initialMinistries } from './ministerios'
 import { addBio } from './memory'
+import { initialReputation } from './reputacao'
 import type { GameState } from './types'
 
 // O jogo instalado guarda o localStorage na pasta de dados do usuário no Windows
@@ -120,7 +121,12 @@ export function migrate(raw: unknown): GameState | null {
       delete (s as Partial<GameState>).round
       s.saveVersion = 13
     }
-    if (s.saveVersion !== 13) return null
+    if (s.saveVersion === 13) {
+      // v0.15 → v0.16 (etapa 1): Ficha de governo começa vazia; nenhuma marca herdada.
+      s.reputation ??= initialReputation()
+      s.saveVersion = 14
+    }
+    if (s.saveVersion !== 14) return null
     syncCustomBills(s as GameState)
     return s as GameState
   } catch {

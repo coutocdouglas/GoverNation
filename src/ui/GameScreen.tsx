@@ -24,6 +24,7 @@ import type { ActionId, Articulation, BillId, Cause, Deal, GameState, GroupId, I
 import { CongressView, ForecastRow, Scoreboard } from './CongressView'
 import { DemandsCard, EventPanel } from './EventPanel'
 import { FichasView } from './FichasView'
+import { ReputationCard } from './ReputationView'
 import { Portrait } from './Portrait'
 import { ACTION_ICON, GROUP_ICON, INDICATOR_ICON } from './icons'
 import { INDICATORS, lowerFirst, num, signed, type IndicatorMeta } from './format'
@@ -330,7 +331,7 @@ export function GameScreen({ state, onChange, onExit }: {
         </section>
 
         {tab === 'fichas' ? (
-          <FichasView state={state} />
+          <FichasView state={state} onChange={onChange} />
         ) : tab === 'governo' ? (
           <>
           <div className="pn-subnav">
@@ -565,6 +566,7 @@ export function GameScreen({ state, onChange, onExit }: {
               <p className="pn-hint">É a média dos grupos abaixo, pesada pelo tamanho de cada um.</p>
             </section>
 
+            <ReputationCard state={state} onOpen={() => setTab('fichas')} />
             <RivalCard state={state} />
             <PromisesCard state={state} />
             <SupremoMini state={state} onOpen={() => { setTab('governo'); setGovTab('supremo') }} />

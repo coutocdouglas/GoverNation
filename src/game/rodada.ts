@@ -21,6 +21,8 @@ import { dealBlockedReason, emendasAmount, flagshipOf } from './deals'
 import { ccjApplies, ccjRoll, dropInForce, isFrozen, noteInForce } from './supremo'
 import { SUPREMO } from './data/supremo'
 import { applyEffects } from './effects'
+import { addMark, markMeasure, noteRecord } from './reputacao'
+import { REPUTACAO } from './data/marks'
 import { Rng } from './rng'
 import type { MonthPlan } from './game'
 import type { Articulation, BillId, Deal, DealKind, Economy, GameState, GroupId, Headline, Impulse, PartyId, PendingBill, RoundBuffer, VoteRecord } from './types'
@@ -212,11 +214,13 @@ export function rejectBill(ctx: RoundCtx, p: PendingBill, house: House | 'caduco
     for (const g of GROUPS) impulses[g.id].push({ label: 'MP caducou sem votação', value: -0.5 })
     addBio(s, s.presidentName, `Deixou caducar a medida provisória: ${bill.name}.`)
     addChronicle(s, `MP caduca sem votação: ${bill.name}, no governo ${s.presidentName}`, 'bad')
+    noteRecord(s, { text: `Deixou caducar a MP “${bill.name}”`, tone: 'bad', kind: 'derrota', bill: p.id })
     headlines.push({ text: `MP caduca: ${lowerFirst(bill.name)} não foi votada em ${CAMARA.mpDeadline} meses e perde a validade`, tone: 'bad' })
     return
   }
   for (const g of GROUPS) impulses[g.id].push({ label: `Derrota do governo ${senado ? 'no Senado' : 'na Câmara'}`, value: senado ? SENADO.defeatHit : -0.8 })
   addBio(s, s.presidentName, `Derrotado ${senado ? 'no Senado' : 'na Câmara'}: ${bill.name} (${placar}).`)
+  addMark(s, 'derrotado', REPUTACAO.pts.derrotado, `Derrota ${senado ? 'no Senado' : 'na Câmara'}: “${bill.name}” (${placar})`, 'derrota', p.id)
   if (senado) {
     addBio(s, SENADO.president.name, `Viu o Senado rejeitar “${bill.name}”, do governo ${s.presidentName}.`)
     addChronicle(s, `Senado barra ${lowerFirst(bill.name)}, aprovado antes pela Câmara, no governo ${s.presidentName}`, 'bad')
@@ -234,6 +238,7 @@ function enactBill(ctx: RoundCtx, p: PendingBill, placarS: string): void {
   const am = p.original ? undefined : p.amendment
   c.laws.push(p.id)
   ctx.sanctioned.push(p.id)
+  noteRecord(s, { text: `Lei aprovada: ${bill.name}`, tone: 'good', kind: 'lei', bill: p.id })
   ctx.enacted.push(p.id)
   ctx.mm.enacted.push(bill.area)
   if (bill.instrument !== 'mp') {
@@ -470,6 +475,8 @@ export function sendInto(s: GameState, id: BillId, opts: FloorOptions = {}, resp
   const minister = ministerOf(s, bill.area)
   if (response) ctx.round.response = id
   else ctx.round.measure = id
+  // Etapa 1: a marca vem no envio, passe ou não.
+  markMeasure(s, bill, response)
   let parked = false
   if (bill.instrument === 'decreto') {
     ctx.conf.v += applyEffects(ctx.e, ctx.impulses, bill.effects, bill.name)

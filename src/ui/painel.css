@@ -562,3 +562,21 @@
 .pn-vote-now { display: flex; flex-direction: column; gap: 6px; }
 .pn-gaveta { border: 1px dashed var(--pn-gold); border-radius: 10px; padding: 8px 10px; color: var(--pn-gold); font-size: 13px; }
 @media (max-width: 720px) { .pn-round { grid-template-columns: repeat(2, 1fr); } }
+
+/* Etapa 1 (v0.16): reputação, Ficha de governo e capítulos. */
+.pn-marks { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; }
+.pn-mark { background: var(--pn-panel2); border: 1px solid var(--pn-line); border-radius: 10px; padding: 8px 10px; }
+.pn-mark__head { display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; }
+.pn-mark__bar { height: 5px; background: var(--pn-line); border-radius: 3px; margin-top: 6px; overflow: hidden; }
+.pn-mark__bar i { display: block; height: 100%; background: var(--pn-mut); }
+.pn-mark--good .pn-mark__bar i { background: var(--pn-green); } .pn-mark--bad .pn-mark__bar i { background: var(--pn-red); } .pn-mark--neutral .pn-mark__bar i { background: var(--pn-gold); }
+.pn-mark small { display: block; color: var(--pn-mut); font-size: 12px; margin-top: 6px; }
+.pn-chip-mini.pn-mark--good { color: var(--pn-green); } .pn-chip-mini.pn-mark--bad { color: var(--pn-red); } .pn-chip-mini.pn-mark--neutral { color: var(--pn-gold); }
+.pn-leak { margin-top: 10px; display: flex; flex-direction: column; gap: 2px; font-size: 13px; }
+.pn-leak small { color: var(--pn-mut); }
+.pn-sub-h { margin: 14px 0 8px; font-size: 13px; text-transform: uppercase; letter-spacing: .5px; color: var(--pn-mut); }
+.pn-chapter { background: var(--pn-panel2); border: 1px solid var(--pn-line); border-left: 3px solid var(--pn-gold); border-radius: 10px; padding: 10px 14px; margin-bottom: 10px; }
+.pn-chapter h4 { margin: 0 0 6px; font-size: 15px; }
+.pn-chapter p { margin: 0 0 8px; line-height: 1.5; font-size: 14px; }
+.pn-chapter__foot { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.pn-rec .pn-chip-mini { margin-left: 6px; }

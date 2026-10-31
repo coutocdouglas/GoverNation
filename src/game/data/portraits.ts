@@ -1,5 +1,5 @@
 /**
- * Os 110 retratos do jogo (public/portraits/001.webp a 110.webp).
+ * Os retratos do jogo (public/portraits/001.webp em diante): 110 fotos e, a partir do 111, retratos provisórios.
  * Cada retrato pertence a uma só pessoa: nenhum se repete entre personagens.
  * gender: f/m · age: j (jovem), m (meia-idade), o (idoso).
  */
@@ -121,6 +121,37 @@ export const PORTRAITS: Portrait[] = [
   { id: 108, gender: 'm', age: 'o', tags: ['farda'] },
   { id: 109, gender: 'f', age: 'm', tags: ['toga'] },
   { id: 110, gender: 'm', age: 'm', tags: ['cocar'] },
+  // Etapa 1 (v0.16): retratos provisórios gerados por scripts/retratos-provisorios.py (o Douglas melhora e devolve com o mesmo nome).
+  { id: 111, gender: 'm', age: 'j', tags: ['provisorio'] },
+  { id: 112, gender: 'f', age: 'm', tags: ['provisorio'] },
+  { id: 113, gender: 'm', age: 'm', tags: ['provisorio'] },
+  { id: 114, gender: 'f', age: 'o', tags: ['provisorio'] },
+  { id: 115, gender: 'm', age: 'j', tags: ['provisorio'] },
+  { id: 116, gender: 'f', age: 'm', tags: ['provisorio'] },
+  { id: 117, gender: 'm', age: 'm', tags: ['provisorio'] },
+  { id: 118, gender: 'f', age: 'o', tags: ['provisorio'] },
+  { id: 119, gender: 'm', age: 'j', tags: ['provisorio'] },
+  { id: 120, gender: 'f', age: 'm', tags: ['provisorio'] },
+  { id: 121, gender: 'm', age: 'm', tags: ['provisorio'] },
+  { id: 122, gender: 'f', age: 'o', tags: ['provisorio'] },
+  { id: 123, gender: 'm', age: 'j', tags: ['provisorio'] },
+  { id: 124, gender: 'f', age: 'm', tags: ['provisorio'] },
+  { id: 125, gender: 'm', age: 'm', tags: ['provisorio'] },
+  { id: 126, gender: 'f', age: 'o', tags: ['provisorio'] },
+  { id: 127, gender: 'm', age: 'j', tags: ['provisorio'] },
+  { id: 128, gender: 'f', age: 'm', tags: ['provisorio'] },
+  { id: 129, gender: 'm', age: 'm', tags: ['provisorio'] },
+  { id: 130, gender: 'f', age: 'o', tags: ['provisorio'] },
+  { id: 131, gender: 'm', age: 'j', tags: ['provisorio'] },
+  { id: 132, gender: 'f', age: 'm', tags: ['provisorio'] },
+  { id: 133, gender: 'm', age: 'm', tags: ['provisorio'] },
+  { id: 134, gender: 'f', age: 'o', tags: ['provisorio'] },
+  { id: 135, gender: 'm', age: 'j', tags: ['provisorio'] },
+  { id: 136, gender: 'f', age: 'm', tags: ['provisorio'] },
+  { id: 137, gender: 'm', age: 'm', tags: ['provisorio'] },
+  { id: 138, gender: 'f', age: 'o', tags: ['provisorio'] },
+  { id: 139, gender: 'm', age: 'j', tags: ['provisorio'] },
+  { id: 140, gender: 'f', age: 'm', tags: ['provisorio'] },
 ]
 
 export const PORTRAIT_COUNT = PORTRAITS.length

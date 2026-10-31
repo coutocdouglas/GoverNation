@@ -1,6 +1,7 @@
 import type { ActionEffects } from '../actions'
 import type { GameState, PartyId } from '../types'
 import type { AreaId } from './ministers'
+import { REP_EVENTS } from './repEvents'
 
 /**
  * Fatos do mês: situações que chegam à mesa do presidente e pedem uma resposta.
@@ -218,7 +219,7 @@ import { CONSEQUENCE_EVENTS } from './consequences'
 import { STF_EVENT, STF_LIMINAR_EVENT } from './supremo'
 
 /** Todos os fatos: os sorteáveis e os que só nascem de sementes. */
-export const ALL_EVENTS: EventDef[] = [...EVENTS, ...CONSEQUENCE_EVENTS, STF_EVENT, STF_LIMINAR_EVENT]
+export const ALL_EVENTS: EventDef[] = [...EVENTS, ...CONSEQUENCE_EVENTS, STF_EVENT, STF_LIMINAR_EVENT, ...REP_EVENTS]
 
 export const EVENT_BY_ID = Object.fromEntries(ALL_EVENTS.map((e) => [e.id, e])) as Record<string, EventDef>
 

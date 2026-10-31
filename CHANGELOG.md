@@ -1,5 +1,16 @@
 # Novidades
 
+## 0.16.0
+- **Causa e consequência (etapa 1A).** Tudo o que você faz fica marcado e volta depois.
+  - **Ficha de governo** (aba Fichas): a linha do tempo do mandato. Cada medida enviada, lei aprovada, derrota, crise respondida ou ignorada, acordo cumprido ou furado e decisão do Supremo vira uma entrada.
+  - **Marcas de reputação:** 10 marcas de 0 a 100: insiste no impopular, gastador, responsável com as contas, governa por decreto, cumpre a palavra, fura acordos, foge das crises, enfrenta as crises, perde no Congresso, briga com o Supremo. **A medida impopular marca já no envio, mesmo que não passe.** Os pontos caem 5% por mês.
+  - **As marcas pesam todo mês:** nos grupos sociais (a causa aparece como "Reputação: ..."), no mercado, na relação com os partidos e com o Supremo e na força da oposição.
+  - **Desdobramentos:** marca forte vira fato do mês ligado ao que você fez (ex.: "Protestos contra <a sua medida> tomam as capitais", "Agência de risco ameaça rebaixar o país depois de <a sua medida>", "Centrão cobra a fatura", "Onde está o presidente?"). São 10 desdobramentos novos, com 5 personagens novos.
+  - **Capítulos da presidência:** a cada 6 meses o jogo fecha um capítulo com título (pela marca mais forte do período), leis, derrotas, momentos e aprovação. Com a IA ligada, o botão "Narrar com a IA" reescreve como crônica, sem inventar fatos.
+  - **Reputação no Painel:** cartão com as marcas fortes, a **exposição a escândalo** (0 a 100) e a chance de algo vazar neste mês.
+- **Retratos provisórios:** 30 retratos ilustrados novos (111 a 140), marcados como provisórios, para personagens novos sem gastar as fotos. Não entram na escolha de rosto do presidente. O script `scripts/retratos-provisorios.py` gera de novo se precisar.
+- Mandatos salvos continuam normalmente (save versão 14): a Ficha começa vazia.
+
 ## 0.15.0
 - **A rodada (etapa 0 do plano novo).** O tempo do jogo ficou mais "jogo": só a medida nova é limitada (uma por rodada). Câmara, Senado e Supremo agem na mesma rodada.
   - **Votar agora:** a medida do mês vai à Câmara na hora em que você manda e, se passar, ao Senado logo em seguida, com o painel animado ("votação 1 de 2"). A lei aprovada já conta na rodada (resolve o fato do mês, atende cobranças) e os efeitos entram no fechamento. PEC vota os dois turnos de uma vez. A resposta ao fato do mês também vota na hora e continua sem gastar a medida do mês.

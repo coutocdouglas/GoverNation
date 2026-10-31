@@ -1,16 +1,18 @@
 import { describe, expect, it } from 'vitest'
 import { CAST, castMember, castPortrait, fallbackPortrait, PLAYER_POOL, RESERVED, setPresidentPortrait } from './data/cast'
 import { EVENTS } from './data/events'
+import { REP_EVENTS } from './data/repEvents'
 import { PARTIES } from './data/parties'
 import { PORTRAIT_COUNT, PORTRAITS } from './data/portraits'
 import { newGame } from './game'
 
 describe('elenco e retratos', () => {
-  it('há 110 retratos, todos com arquivo', () => {
-    expect(PORTRAIT_COUNT).toBe(110)
-    expect(PORTRAITS.map((p) => p.id)).toEqual(Array.from({ length: 110 }, (_, i) => i + 1))
+  it('há 110 fotos e 30 retratos provisórios, todos com arquivo', () => {
+    expect(PORTRAIT_COUNT).toBe(140)
+    expect(PORTRAITS.map((p) => p.id)).toEqual(Array.from({ length: 140 }, (_, i) => i + 1))
+    expect(PORTRAITS.filter((p) => p.tags.includes('provisorio')).map((p) => p.id)).toEqual(Array.from({ length: 30 }, (_, i) => i + 111))
     const files = import.meta.glob('/public/portraits/*.webp', { eager: false })
-    expect(Object.keys(files)).toHaveLength(110)
+    expect(Object.keys(files)).toHaveLength(140)
   })
 
   it('nenhum retrato é usado por duas pessoas', () => {
@@ -31,7 +33,7 @@ describe('elenco e retratos', () => {
       expect(m, p.leader.name).toBeDefined()
       expect(m!.gender === 'f').toBe(p.leader.feminine)
     }
-    for (const e of EVENTS) {
+    for (const e of [...EVENTS, ...REP_EVENTS]) {
       const m = castMember(e.presenter.name)
       expect(m, e.presenter.name).toBeDefined()
       expect(m!.gender === 'f').toBe(e.presenter.feminine)
