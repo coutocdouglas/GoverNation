@@ -8,6 +8,7 @@ import { responseBlockedReason, type MonthPlan } from '../src/game/game'
 import { billBlockedReason, forecastVote } from '../src/game/congress'
 import { legalRiskOf } from '../src/game/supremo'
 import { gavetaReason, queueHouse, voteNow, voteNowBlockedReason } from '../src/game/rodada'
+import { monthKind, statementBlockedReason, statementsFor, streetBlockedReason, streetOptions } from '../src/game/assessoria'
 import type { ActionId, GameState } from '../src/game/types'
 
 /** Responde ao fato do mês com o decreto mais barato da área (etapa 3A). */
@@ -17,6 +18,14 @@ const respond = (s: GameState): MonthPlan => {
   const cost = (b: (typeof BILLS)[number]) => (b.effects.spending ?? 0) - (b.effects.revenue ?? 0) + (b.effects.temp ? b.effects.temp.amount * b.effects.temp.months / 12 : 0)
   const pick = BILLS.filter((b) => b.area === ev.area && (b.instrument === 'decreto' || b.instrument === 'mp') && !responseBlockedReason(s, b.id)).sort((a, b) => cost(a) - cost(b))[0]
   return pick ? { eventResponse: pick.id } : {}
+}
+
+/** Etapa 1B: todo mês o post da vez (gira entre os disponíveis) e a primeira ação de rua que valer. */
+const assess = (s: GameState): MonthPlan => {
+  if (monthKind(s) === 'travado') return {}
+  const posts = statementsFor(s).filter((p) => !statementBlockedReason(s, p.id))
+  const street = streetOptions(s).find((x) => !streetBlockedReason(s, x.id))
+  return { statement: posts.length ? posts[s.month % posts.length].id : undefined, street: street?.id }
 }
 
 /** Promessas fixas do simulador: as cinco de "qualquer governo". */
@@ -34,6 +43,11 @@ export const STRATEGIES: Record<string, Strategy> = {
     s.economy.gap < -0.5 ? pick(s, ['anteciparObras', 'pronunciamento']) : pick(s, ['cortarGastos', 'pronunciamento']),
   equilibrado: (s) =>
     s.economy.gap < -0.5 ? pick(s, ['anteciparObras', 'pronunciamento']) : pick(s, ['cortarGastos', 'pronunciamento']),
+  // Etapa 1B: as mesmas decisões de respondeFatos, mais um post e uma ação de rua todo mês.
+  comAssessoria: (s) =>
+    s.economy.gap < -0.5 ? pick(s, ['anteciparObras', 'pronunciamento']) : pick(s, ['cortarGastos', 'pronunciamento']),
+  // Etapa 1B: ninguém governa, só posta (o teste de que a assessoria não vira atalho).
+  soAssessoria: () => [],
 }
 
 /** Etapa 0: pauta na hora um projeto da fila em cada casa (o que não estiver na gaveta). */
@@ -61,7 +75,7 @@ export function run(name: string, seed: number, verbose: boolean) {
   if (verbose) line(s)
   while (!s.finished) {
     s = pautarFila(s)
-    s = advanceMonth(s, STRATEGIES[name](s), name === 'respondeFatos' ? respond(s) : {})
+    s = advanceMonth(s, STRATEGIES[name](s), name === 'respondeFatos' ? respond(s) : name === 'comAssessoria' ? { ...respond(s), ...assess(s) } : name === 'soAssessoria' ? assess(s) : {})
     if (verbose && (s.month % 6 === 0 || s.month === 48)) line(s)
     if (verbose && s.lastReport) for (const h of s.lastReport.headlines.filter((h) => !h.text.startsWith('Copom'))) {
       if (/Crise|Petróleo|Seca|Safra|commodities|Agência|estrangeiras/.test(h.text)) console.log(`        > ${shortMonthLabel(s.lastReport.month)}: ${h.text}`)

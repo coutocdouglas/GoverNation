@@ -126,7 +126,12 @@ export function migrate(raw: unknown): GameState | null {
       s.reputation ??= initialReputation()
       s.saveVersion = 14
     }
-    if (s.saveVersion !== 14) return null
+    if (s.saveVersion === 14) {
+      // v0.16 → v0.17 (etapa 1B): posts e falas ao país começam sem histórico.
+      s.statementLog ??= []
+      s.saveVersion = 15
+    }
+    if (s.saveVersion !== 15) return null
     syncCustomBills(s as GameState)
     return s as GameState
   } catch {

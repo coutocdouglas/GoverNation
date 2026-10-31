@@ -12,10 +12,17 @@ import { ResponseBox } from './ResponseBox'
 import { MINISTER_BY_AREA } from '../game/data/ministers'
 import { ministerOf } from '../game/camara'
 import { aiReady } from '../lib/ai'
+import type { StatementId } from '../game/data/assessoria'
+import { AssessoriaBox } from './AssessoriaBox'
 
 /** Painel do fato do mês: quem traz o problema, o que aconteceu e as escolhas. */
-export function EventPanel({ state, choice, onChoose, response, onRespond, plannedBill, onAddBill }: {
+export function EventPanel({ state, choice, onChoose, response, onRespond, plannedBill, onAddBill, statement, street, onStatement, onStreet }: {
   state: GameState
+  /** Etapa 1B: post da assessoria e ação de rua escolhidos para o mês. */
+  statement: StatementId | null
+  street: string | null
+  onStatement: (id: StatementId | null) => void
+  onStreet: (id: string | null) => void
   /** Põe no catálogo do mandato uma medida nova montada pela IA (etapa 3C). */
   onAddBill: (b: BillDef) => BillId
   choice: number | null
@@ -28,14 +35,15 @@ export function EventPanel({ state, choice, onChoose, response, onRespond, plann
   if (!ev) {
     return (
       <section className="pn-card pn-event pn-event--calm">
-        <h3>🔥 Fato do mês</h3>
+        <h3>☕ Sua agenda está limpa</h3>
         <div className="pn-event__calm">
-          <span className="pn-ill">☕</span>
+          <span className="pn-ill">🗓️</span>
           <div>
             <h2>Nenhuma crise na mesa este mês</h2>
-            <p className="pn-hint">Aproveite para governar: escreva a medida do mês ou articule com os partidos.</p>
+            <p className="pn-hint">É a chance de liderar nos seus termos: escreva a medida do mês, articule com os partidos ou escolha o assunto do dia com a assessoria.</p>
           </div>
         </div>
+        <AssessoriaBox state={state} statement={statement} street={street} onStatement={onStatement} onStreet={onStreet} />
       </section>
     )
   }
@@ -47,7 +55,7 @@ export function EventPanel({ state, choice, onChoose, response, onRespond, plann
   const kind = ev.kind ?? 'crise'
   return (
     <section className={`pn-card pn-event ${kind === 'bom' ? 'pn-event--good' : ''}`} id="fato-do-mes">
-      <h3>🔥 Fato do mês <span className="pn-badge">{response ? '✔ resposta escrita' : choice === null ? `se você não decidir: ${ev.options[def].label.toLowerCase()}` : '✔ decidido'}</span></h3>
+      <h3>🔥 Fato do mês <span className="pn-badge">{response ? '✔ resposta escrita' : choice === null ? `se você não decidir: ${ev.options[def].label.toLowerCase()}` : '✔ decidido'}{statement || street ? ' · + assessoria' : ''}</span></h3>
       <div className="pn-event__head">
         <div className="pn-event__who">
           <Portrait name={p.name} feminine={p.feminine} color={p.color} size={96} title={p.name} />
@@ -90,7 +98,8 @@ export function EventPanel({ state, choice, onChoose, response, onRespond, plann
         ))}
       </div>
       )}
-      {kind !== 'bom' && !ev.choiceOnly && <ResponseBox key={`${state.month}-${ev.id}`} state={state} ev={ev} response={response} plannedBill={plannedBill} onRespond={onRespond} onAddBill={onAddBill} />}
+      {!ev.choiceOnly && <ResponseBox key={`${state.month}-${ev.id}`} state={state} ev={ev} response={response} plannedBill={plannedBill} onRespond={onRespond} onAddBill={onAddBill} />}
+      <AssessoriaBox state={state} statement={statement} street={street} onStatement={onStatement} onStreet={onStreet} />
     </section>
   )
 }

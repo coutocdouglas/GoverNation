@@ -580,3 +580,15 @@
 .pn-chapter p { margin: 0 0 8px; line-height: 1.5; font-size: 14px; }
 .pn-chapter__foot { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .pn-rec .pn-chip-mini { margin-left: 6px; }
+
+/* Etapa 1B: assessoria, rua e "Enquanto você decidia" */
+.pn-assess { margin-top: 16px; padding: 14px; border: 1px dashed var(--pn-line); border-radius: 12px; display: flex; flex-direction: column; gap: 10px; }
+.pn-assess__lane { display: flex; flex-direction: column; gap: 6px; }
+.pn-assess__lane > small { font-weight: 600; opacity: .85; }
+.pn-meanwhile { margin-top: 14px; display: flex; flex-direction: column; gap: 6px; }
+.pn-meanwhile h3 { margin: 0 0 2px; font-size: 15px; }
+.pn-meanwhile__row { display: flex; gap: 10px; padding: 9px 12px; border-radius: 10px; background: var(--pn-panel2); border-left: 3px solid var(--pn-line); font-size: 14px; }
+.pn-meanwhile__row.good { border-left-color: var(--pn-green); }
+.pn-meanwhile__row.bad { border-left-color: var(--pn-red); }
+.pn-meanwhile__row > span { font-size: 20px; line-height: 1.2; }
+.pn-meanwhile__row small { display: block; opacity: .7; margin-top: 2px; }

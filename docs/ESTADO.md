@@ -3,17 +3,19 @@
 > **Leia este arquivo primeiro.** Ele diz onde o projeto está e qual é o próximo passo.
 > Atualize-o a cada mudança: seção "Estado atual", "Próximo passo" e uma linha no "Histórico".
 
-**Última atualização:** 31/10/2026 · **Versão publicada:** v0.16.1
+**Última atualização:** 31/10/2026 · **Versão publicada:** v0.17.0
 
 ---
 
 ## Próximo passo
 
-**Etapa 1B: o mês mais vivo** (v0.17). Plano em `docs/DESIGN.md`, seção 27.3: três caminhos para a crise (medida, post, tratar com a rua), agenda limpa, "enquanto você decidia", fato bom com botão de agir. Depois, a Etapa 2 (Câmara e partidos).
+**Etapa 2: Câmara e partidos** (v0.18). Plano em `docs/DESIGN.md`, seção 27 (tabela) e no doc do projeto: líder do seu partido indicável, eleições internas e da Mesa, alas, conversa por tipos com chance, emendas detalhadas, contraoferta, concessões que mudam o texto, traidores no placar, janela da medida em etapas com nota de freios e contrapesos, nome da medida. Antes de programar, escrever o plano da etapa no DESIGN.md (seção 27.5) e mostrar ao Douglas.
 
-Complexidade: **média-alta**. Opus no desenho das regras do post e da rua; Sonnet nas telas.
+Complexidade: **alta**. Opus para as regras que se cruzam (alas, traidores, concessões) e para o balanceamento; Sonnet nas telas e nos dados.
 
-Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdouglas/GoverNation. Leia CLAUDE.md, docs/ESTADO.md e docs/DESIGN.md (seção 27). Quero fazer a etapa 1B."*
+Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdouglas/GoverNation. Leia CLAUDE.md, docs/ESTADO.md e docs/DESIGN.md (seção 27). Quero fazer a etapa 2."*
+
+**Sugestão (opcional, 1B):** pedir a um Opus uma revisão final dos números da assessoria (`data/assessoria.ts`: `postScale`, `omissoShare`, `fatigueFactor`, `softenMax`; e `data/rua.ts`). O simulador mostra que ficou equilibrado (DESIGN.md 27.4), mas é a primeira etapa balanceada fora do Opus.
 
 **Pendência do Douglas:** mandar as ilustrações dos slots (`public/art/LEIAME.md`) quando quiser. Retratos: 198 no total, 124 livres; para gerar provisórios de quem ainda não tem rosto, `scripts/retratos-provisorios.py` (sai em `scripts/retratos-provisorios/`, a partir do 199).
 
@@ -24,7 +26,7 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 **Base técnica**
 - App de Windows (Tauri 2 + React + TypeScript). O instalador é gerado pelo GitHub Actions e o jogo se atualiza sozinho, com atualização assinada.
 - O motor do jogo (`src/game/`) fica separado das telas (`src/ui/`). Os números de balanceamento ficam em `src/game/data/`.
-- 192 testes automáticos. Saves antigos são migrados (versão atual do save: 14).
+- 215 testes automáticos. Saves antigos são migrados (versão atual do save: 15).
 
 **Jogabilidade**
 - Mandato de 48 meses (jan/2027 a dez/2030), com o mês em 4 passos: notícias, fato do mês, decisões e encerrar.
@@ -57,13 +59,14 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 - **Memória do mundo:** leis, MPs e obras plantam consequências que brotam meses ou anos depois. Há herança do governo anterior e o tempo é absoluto, pronto para vários mandatos.
 - **Fichas:** biografia acumulada de cada personagem e memória do país.
 - **Causa e consequência (v0.16):** Ficha de governo, 10 marcas de reputação (medida impopular marca no envio), marcas pesando todo mês, 10 desdobramentos ligados ao que você fez, capítulos da presidência a cada 6 meses (narração opcional pela IA), reputação e exposição a escândalo no Painel.
+- **O mês mais vivo (v0.17):** três caminhos para a crise (medida, post da assessoria grátis 1 por mês, rua), com peso do discurso, cansaço e penalidade de deixar passar amenizada; cartão "Sua agenda está limpa" com posts de agenda em mês sem crise; fato bom com resposta escrita e, no Normal e no Difícil, perda de oportunidade (a oposição leva o crédito); "Enquanto você decidia" (oposição, empresariado e Câmara, com o porquê) no passo 1 do mês seguinte.
 - **Retratos:** 110 fotos, cada uma usada por uma pessoa só, e 88 retratos ilustrados (111 a 198) feitos pelo Douglas. 124 rostos livres para personagens novos e para o presidente. O presidente escolhe o rosto na posse (41 livres) e 15 retratos ficam reservados para Defesa, povos indígenas, campo e tradições.
 
 **Telas:** Posse em 3 passos, Painel (com cara de jogo, animações, plantão de notícias, cartões de Oposição, Promessas e Supremo), Governo com quatro abas: **Câmara** (mesa de sanção, presidente da Câmara, pauta com a chance nas duas casas, partidos e articulação, frentes, leis com reação), **Senado** (casa, presidente, pauta e votações), **Supremo** (ministros, ações, liminares, projetos travados, consultas, decisões, vaga) e **Ministérios** (desgaste, meta e reforma), e Fichas. Nação, Economia, Diplomacia, Programas e Vida pessoal aparecem bloqueadas.
 
 **Onde está cada coisa**
 - `CLAUDE.md`: regras do projeto e quando abrir uma conversa nova.
-- `docs/DESIGN.md`: decisões de desenho, seções 1 a 26 (Supremo em 24.2, 24.2.1 e 26; como ficou a 4C3 em 26.8; plano das etapas 4D a 4F na seção 25).
+- `docs/DESIGN.md`: decisões de desenho, seções 1 a 27 (Supremo em 24.2, 24.2.1 e 26; como ficou a 4C3 em 26.8; plano novo por etapas na seção 27, com a 1A em 27.3 e a 1B em 27.4).
 - `docs/levantamento-video-1.md`: o que o jogo de referência tem e nós não (vídeo 1).
 - `CHANGELOG.md`: novidades de cada versão.
 - `docs/RELEASES.md`: como publicar.
@@ -80,7 +83,7 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 4C. ✅ **4C1** Senado votando (v0.12.0) · ✅ **4C2** Supremo julgando medidas (v0.13.0)
 4C3. ✅ **4C3** Supremo no caminho das medidas e abas (v0.14.0). As etapas 4D, 4E e 4F foram fundidas no plano novo (abaixo).
 
-**Plano novo (DESIGN.md, seção 27):** ✅ **0** a rodada (v0.15) · ✅ **1A** causa e consequência (v0.16) · ⏭️ **1B** o mês mais vivo · **2** Câmara e partidos · **3** Senado · **4** Supremo profundo · **5** oposição, escândalos e CPI · **6** vice e governo · **7** estados e governadores · **8** começo, sociedade e fim · **9** arte final
+**Plano novo (DESIGN.md, seção 27):** ✅ **0** a rodada (v0.15) · ✅ **1A** causa e consequência (v0.16) · ✅ **1B** o mês mais vivo (v0.17) · ⏭️ **2** Câmara e partidos · **3** Senado · **4** Supremo profundo · **5** oposição, escândalos e CPI · **6** vice e governo · **7** estados e governadores · **8** começo, sociedade e fim · **9** arte final
 6. Depois: Senado com poderes próprios (impeachment), imprensa e pesquisas, orçamento anual, ícones próprios
 
 ## Decisões já tomadas (resumo; detalhes no DESIGN.md)
@@ -127,3 +130,4 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 | 31/10/2026 | v0.15.0 | Etapa 0: a rodada. Votar agora (Câmara → Senado), pautar da fila, articulação na hora, gaveta avisada, MP caduca, Supremo na mesma rodada, faixa da rodada, ilustrações provisórias; save 13 |
 | 31/10/2026 | v0.16.0 | Etapa 1A: Ficha de governo, 10 marcas de reputação, desdobramentos, capítulos da presidência com narração pela IA, reputação e escândalo no Painel; 30 retratos provisórios; save 14 |
 | 31/10/2026 | v0.16.1 | 88 retratos ilustrados do Douglas (111 a 198) no lugar dos 30 provisórios |
+| 31/10/2026 | v0.17.0 | Etapa 1B: post da assessoria (grátis, 1 por mês, com peso do discurso e cansaço), rua (7 crises e fala ao país), agenda limpa, fato bom com resposta escrita e perda de oportunidade (Normal e Difícil), "enquanto você decidia"; save 15 |

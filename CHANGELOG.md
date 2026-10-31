@@ -1,5 +1,16 @@
 # Novidades
 
+## 0.17.0
+- **O mês mais vivo (etapa 1B).** A crise do mês agora tem três caminhos, que podem ser combinados, e o mês sem crise ganhou vida.
+  - **Post da assessoria** (grátis, 1 por mês): em crise, *nota de solidariedade*, *apontar o culpado* e *chamar a base*; em mês limpo, *pauta positiva*, *prestar contas* e *chamar a base*. O post **não resolve o problema material**: o efeito depende do **peso do discurso** da crise (dengue e apagão pesam pouco; escândalo e polêmica pesam muito), aparece no cartão antes de você decidir e **cansa** se você postar dois meses seguidos (metade do efeito). Apontar o culpado agrada a base, abre briga com a oposição e, se a crise nasceu de uma lei sua, pode ser desmentido.
+  - **Rua:** em 7 crises (dengue, caminhoneiros, enchentes, professores, desemprego, terra e comida) há 2 ações de presença cada (visitar, receber, mandar desobstruir...) e, em qualquer crise grave (importância 4+), **falar ao país** (1 a cada 4 meses). Uma ação de rua por crise.
+  - **Só com post ou rua** (sem medida nem opção pronta), a penalidade de deixar passar fica menor (até 60%), mas "Foge das crises" ainda pesa 70% e a marca "Enfrenta as crises" não vem: nota em vez de medida pesa menos que ignorar, não mais que agir.
+  - **Sua agenda está limpa:** o mês sem crise virou um cartão de liderança, com posts de agenda (pauta positiva, prestar contas, chamar a base).
+  - **Fato bom com ação:** a boa notícia agora aceita **resposta escrita** (como a crise): com uma medida da área, a oportunidade é aproveitada (rende mais que "promover" e não corre risco de desmentido). **No Normal e no Difícil, deixar passar entrega o crédito à oposição** (ela ganha força) e a Ficha anota a oportunidade perdida. No Fácil continua sem custo.
+  - **Enquanto você decidia:** no começo de cada mês, três linhas com o que a oposição, o empresariado e a Câmara fizeram, cada uma com o porquê.
+- Balanceamento (30 partidas simuladas): quem só posta e vai à rua ganha cerca de 4 pontos de aprovação sobre não fazer nada e dá mais força à oposição; governar com medidas continua rendendo muito mais.
+- Mandatos salvos continuam normalmente (save versão 15): histórico de posts começa vazio.
+
 ## 0.16.1
 - **88 retratos ilustrados novos** (111 a 198), feitos pelo Douglas: substituem os 30 provisórios. Os 5 personagens dos desdobramentos (economista da agência, colunista, presidente da Ordem dos Juristas, diretora do instituto de pesquisa e líder dos protestos) ganham rosto de verdade, e os outros entram para os personagens das próximas etapas e para a escolha do rosto do presidente (agora 124 rostos livres).
 - Entre os novos há rostos para personagens especiais: liderança indígena (dois), produtor rural de chapéu (dois), militar fardado e mulheres de turbante e lenço.

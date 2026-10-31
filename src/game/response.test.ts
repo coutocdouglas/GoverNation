@@ -70,13 +70,14 @@ describe('resposta escrita ao fato do mês', () => {
     expect(answered.bios['Dra. Ângela Pires'].some((b) => b.text.includes('conduziu a resposta'))).toBe(true)
   })
 
-  it('não aceita medida de outra área, boa notícia nem opção pronta junto', () => {
+  it('não aceita medida de outra área nem opção pronta junto (a boa notícia aceita, desde a 1B)', () => {
     const s = withEvent(feb(), 'dengue')
     expect(responseBlockedReason(s, 'planoSafra')).toMatch(/outra área/)
     expect(validatePlan(s, { eventResponse: 'planoSafra' })).toMatch(/outra área/)
     expect(validatePlan(s, { eventResponse: 'hospitaisCampanha', eventChoice: 0 })).toMatch(/não as duas/)
     expect(validatePlan(s, { eventResponse: 'maisMedicos', bill: 'maisMedicos' })).toMatch(/mesma medida/)
-    expect(responseBlockedReason(withEvent(s, 'safraRecorde'), 'planoSafra')).toMatch(/Boa notícia/)
+    expect(responseBlockedReason(withEvent(s, 'safraRecorde'), 'planoSafra')).toBeNull()
+    expect(responseBlockedReason(withEvent(s, 'safraRecorde'), 'maisMedicos')).toMatch(/outra área/)
   })
 
   it('lei em recesso fica parada e o problema segue (vale o padrão)', () => {
@@ -113,7 +114,7 @@ describe('resposta escrita ao fato do mês', () => {
     const s = advanceMonth(newGame('T', 'normal', 5), [])
     const old = { ...structuredClone(s), saveVersion: 4 } as unknown
     const m = migrate(old)!
-    expect(m.saveVersion).toBe(14)
+    expect(m.saveVersion).toBe(15)
     expect(m.month).toBe(s.month)
     expect(() => advanceMonth(m, [])).not.toThrow()
     expect(BILL_BY_ID.hospitaisCampanha.instrument).toBe('decreto')

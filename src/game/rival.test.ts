@@ -186,7 +186,7 @@ describe('save versão 9', () => {
     delete old.promises
     old.saveVersion = 8
     const m = migrate(old)!
-    expect(m.saveVersion).toBe(14)
+    expect(m.saveVersion).toBe(15)
     expect(m.rival.polls).toHaveLength(m.history.length)
     expect(m.rival.polls.map((p) => p.month)).toEqual(m.history.map((h) => h.month))
     expect(m.profile).toEqual({ traits: [], habits: [] })

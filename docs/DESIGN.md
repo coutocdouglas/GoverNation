@@ -718,10 +718,38 @@ Exposição a escândalo visível de 0 a 100 (item 20), CPIs (35), vice-presiden
 ### 27.3 Etapa 1 dividida: 1A feita (v0.16), 1B a seguir
 - **1A (v0.16), causa e consequência:** `src/game/reputacao.ts` e `data/marks.ts`. Ficha de governo (`GameState.reputation.record`), 10 marcas (0 a 100, caem 5%/mês, pesam acima de 15, viram desdobramento acima de 35 com 45% de chance por mês e intervalo de 12 meses), 10 desdobramentos em `data/repEvents.ts` (o {lei} é a decisão mais recente que puxou a marca), capítulos a cada 6 meses com narração opcional pela IA (`chapterRequest` em `game/ai.ts`), cartão de reputação e exposição a escândalo no Painel, Ficha na aba Fichas. Gatilhos: envio da medida (impopular se a popularidade ≤ -0,8; gasto/ajuste pelo efeito líquido; decreto), derrota, crise respondida/ignorada (importância ≥ 3), promessa a partido cumprida/quebrada, crítica ao Supremo. Balanceamento: ignorar crises pesa mais (passivo 460 → 443; responder aos fatos 594 → 620), ordem das estratégias igual. Save 14.
 - **Retratos:** na v0.16.1 os provisórios deram lugar a 88 retratos ilustrados do Douglas (111 a 198, recortados de uma grade). O script `scripts/retratos-provisorios.py` agora gera provisórios a partir do 199, fora de `public/portraits`; a tag `provisorio` continua fora da escolha do presidente.
-- **1B (próxima, v0.17):** três caminhos para a crise (medida, post da assessoria, tratar com quem está na rua), "sua agenda está limpa" em mês sem crise, "enquanto você decidia" no Painel, fato bom com botão de agir (médio e difícil).
+- **1B (v0.17, feita):** três caminhos para a crise, agenda limpa, "enquanto você decidia", fato bom com resposta escrita e perda de oportunidade. Detalhes em 27.4.
+
+### 27.4 Etapa 1B: o mês mais vivo (v0.17, decidido e feito em 30/10/2026)
+
+**Respostas do Douglas:** o post é grátis, 1 por mês, soma com a medida; a rua só aparece onde há rua de verdade (mais "falar ao país" nas crises graves); o fato bom pode se perder no Normal e no Difícil **e** aceita resposta escrita como o fato ruim.
+
+**Três caminhos para a crise** (podem ser combinados; tudo vale no fechamento do mês, como as opções prontas):
+1. **Medida** (já existia): opção pronta ou resposta escrita.
+2. **Post da assessoria** (`data/assessoria.ts`, 1 por mês, grátis): 3 tons de crise (nota de solidariedade, apontar o culpado, chamar a base) e, em mês sem crise, 3 de agenda (pauta positiva, prestar contas, chamar a base). O efeito é multiplicado pelo **peso do discurso** da crise (`SPEECH_WEIGHT` em `data/assessoria.ts`, 0 a 1: crise material como dengue ou apagão quase não se resolve falando; escândalo e polêmica sim; fórmula `0,3 + 0,7 × peso`; fato sem peso cadastrado vale 0,5). Dois freios contra spam: repetir o mesmo tom em 3 meses vale a metade, e **postar dois meses seguidos cansa** (metade; um mês de intervalo volta ao cheio). Os dois se acumulam. Ajuste geral `postScale` 0,7 e bônus de mês limpo ×1,15.
+3. **Rua** (`data/rua.ts`): ações de presença em 7 crises (dengue, caminhoneiros, enchentes, professores, desemprego, terra, comida), 2 por crise, e "falar ao país" em qualquer crise de importância 4+ (1 a cada 4 meses; usa o peso do discurso). Uma ação de rua por crise.
+
+**Se o jogador deixa a crise passar, mas posta ou vai à rua:** a penalidade da opção padrão é **amenizada** (`soften`, no máximo 60%), e a marca "Foge das crises" pesa 70% do normal (nota em vez de medida: pesa menos que ignorar, mas **não** vira "Enfrenta as crises"). Começou em 40%, mas o simulador mostrou que isso fazia a nota virar atalho (só postar valia +11% de nota e +10 pontos de aprovação); com 70%, cai para cerca de +4 pontos. Quem responde com medida ou opção pronta não recebe esse desconto, só os efeitos do post e da rua.
+
+**Apontar o culpado** tem risco: se a crise nasceu de uma lei do próprio governo, 50% de chance de desmentido (a base não vem e os grupos se irritam).
+
+**Agenda limpa:** mês sem crise vira um cartão "Sua agenda está limpa" com os posts de agenda (efeito cheio, sem peso do discurso, ×1,3).
+
+**Fato bom:** (a) aceita resposta escrita (ministro da área, medida do catálogo): se vale no mês, a oportunidade é aproveitada (efeitos de "promover" ×1,25, sem risco de desmentido); (b) no Normal e no Difícil, deixar passar faz a oposição levar o crédito (rival ganha força: 1,2 no Normal, 2,4 no Difícil, × importância/3) e a Ficha anota a oportunidade perdida; no Fácil continua sem custo.
+
+**Enquanto você decidia:** `MonthReport.meanwhile` (oposição, empresariado e Câmara) aparece no passo 1 do mês seguinte, com a causa de cada linha.
+
+**Save 15:** `statementLog` (posts e falas ao país dos últimos 12 meses, para a repetição, o cansaço e o intervalo da fala) e `MonthReport.meanwhile` e `MonthReport.assessoria`.
+
+**Como ficou (código):** `src/game/assessoria.ts` (efeitos, bloqueios, `applyAssessoria`, `softenEffects`), `src/game/entretanto.ts` ("enquanto você decidia"), dados em `data/assessoria.ts` e `data/rua.ts`, tela em `src/ui/AssessoriaBox.tsx` (usada no `EventPanel` para crise, fato bom e mês limpo). `MonthPlan.statement` e `MonthPlan.street` valem no fechamento (como `eventChoice`), em `advanceMonth` 1d7, antes do fato do mês. Fato do Supremo (`choiceOnly`) não aceita post nem rua. O fato bom passa a aceitar `eventResponse` (`responseBlockedReason` e `sendBlockedReason` deixaram de bloquear).
+
+**Balanceamento (simulador, 30 sementes, Normal, mesmas sementes):** nada: aprovação 33,8, nota 435 · só post: 35,6 / 450 · só rua: 36,7 / 455 · post e rua: 38,3 / 469 (força do rival 67 → 76) · responde fatos: 50,2 / 616 · responde fatos + assessoria: 51,8 / 636 (força do rival 55 → 66). Ou seja: a assessoria dá uns 2 a 4 pontos de aprovação e custa força à oposição ("a briga"), sem substituir governar. **Revisão de números por Opus fica sugerida** (a nota de quem posta e vai à rua todo mês).
+
+**Caixa de ideias desta etapa:** "precisa de você" (alertas) e cenas de transição ficam para a Etapa 8; post com texto livre escrito pela IA fica para a Etapa 9 (polimento).
 
 ### 27.1 Caixa de ideias por etapa
-- Etapa 1: conquistas como selos da Ficha; nome da medida no telejornal; decreto também com janela de confirmação antes de assinar.
+- Etapa 1 (revisada ao fechar a 1B): conquistas como selos da Ficha vão para a Etapa 8 (já lista conquistas); nome da medida no telejornal e decreto também com janela de confirmação antes de assinar vão para a Etapa 2 (janela da medida em etapas).
+- Etapa 2 (da 1B): o post de agenda com texto livre escrito pela IA fica para a Etapa 9 (polimento); "precisa de você" (alertas) e cenas de transição, para a Etapa 8.
 - Etapa 2: ministério cedido valendo na hora (hoje vale no fechamento do mês); urgência como ação da rodada.
 - Etapa 2: vice-líder do governo; orçamento paralelo como escândalo (vai para a 5).
 - Etapa 3: governador puxando a bancada (vai para a 7).

@@ -31,6 +31,9 @@ import { syncCustomBills } from './custom'
 import { applyStfChoice, appointJustice, askConsulta, consultBlockedReason, initialSupremo, nominationBill, nominationBlockedReason, nominationLean, rejectNominee, stepSupremo, struckImpulses, struckOrigin, undoEffects } from './supremo'
 import { initialMinistries, resetMinistry, stepMinistries, type MinistryMonth } from './ministerios'
 import { NOMINEE_BY_ID, SUPREMO } from './data/supremo'
+import { ASSESSORIA, type StatementId } from './data/assessoria'
+import { applyAssessoria, lostCreditValue, softenEffects, statementBlockedReason, streetBlockedReason } from './assessoria'
+import { buildMeanwhile } from './entretanto'
 
 import type { ActionId, Deal, Articulation, BillId, Cause, GameState, GroupId, Headline, Impulse, MonthReport, PartyId, SanctionItem, Snapshot, VetoItem, VoteRecord } from './types'
 
@@ -77,7 +80,7 @@ export function newGame(
   const rngState = seed ?? Math.floor(Math.random() * 2 ** 31)
   const bonus = DIFFICULTY[difficulty].approvalBonus
   const state: GameState = {
-    saveVersion: 14,
+    saveVersion: 15,
     month: 0,
     presidentName: presidentName.trim() || 'Presidente',
     difficulty,
@@ -111,6 +114,7 @@ export function newGame(
     supremo: undefined as unknown as GameState['supremo'],
     ministries: undefined as unknown as GameState['ministries'],
     reputation: initialReputation(),
+    statementLog: [],
   }
   state.supremo = initialSupremo(state)
   state.ministries = initialMinistries(state)
@@ -195,6 +199,10 @@ export interface MonthPlan {
   nominee?: string
   /** Etapa 4C3: pedir ao Supremo um parecer sobre a medida antes de enviá-la (não gasta a medida do mês). */
   consult?: BillId
+  /** Etapa 1B: post da assessoria (grátis, um por mês; vale em mês de crise ou sem crise). */
+  statement?: StatementId
+  /** Etapa 1B: ação de rua na crise (id de data/rua.ts, ou 'cadeia'). */
+  street?: string
 }
 
 /** Ficha do que foi aprovado e espera sanção ou veto (pauta-bomba inteira ou o jabuti enxertado). */
@@ -249,7 +257,6 @@ export function procedureBlockedReason(s: GameState, plan: MonthPlan, kind: 'hol
 export function responseBlockedReason(s: GameState, id: BillId): string | null {
   const ev = s.event ? EVENT_BY_ID[s.event.id] : null
   if (!ev) return 'Não há fato do mês para responder.'
-  if (ev.kind === 'bom') return 'Boa notícia não pede resposta: escolha como usar.'
   if (ev.choiceOnly) return 'Este fato pede uma das escolhas prontas.'
   const bill = BILL_BY_ID[id]
   if (!bill) return 'Medida desconhecida.'
@@ -311,6 +318,14 @@ export function validatePlan(s: GameState, plan: MonthPlan): string | null {
   }
   for (const id of Object.keys(plan.sanctions ?? {})) {
     if (!s.congress.toSanction.some((x) => x.id === id)) return 'Não há esse projeto para sancionar.'
+  }
+  if (plan.statement !== undefined) {
+    const r = statementBlockedReason(s, plan.statement)
+    if (r) return `Post da assessoria: ${r}`
+  }
+  if (plan.street !== undefined) {
+    const r = streetBlockedReason(s, plan.street)
+    if (r) return `Rua: ${r}`
   }
   const arts = plan.articulations ?? []
   if (arts.length + (rd?.articulations.length ?? 0) > CONGRESS.articulationsPerMonth) return `No máximo ${CONGRESS.articulationsPerMonth} articulações por mês.`
@@ -607,6 +622,11 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
     taken.push(`Pediu parecer ao Supremo: ${BILL_BY_ID[plan.consult].name}`)
   }
 
+  // 1d7. Etapa 1B: post da assessoria e ação de rua (valem junto com a medida ou a opção pronta).
+  const evNow = s.event ? EVENT_BY_ID[s.event.id] : null
+  const assess = applyAssessoria(s, plan, evNow ? fillText(evNow.title, s.event?.origin) : '', e, impulses, headlines, taken, rivalExtra, rng)
+  actionConfidence += assess.confidence
+
   // 1e. Fato do mês
   let eventReport: MonthReport['event']
   if (s.event) {
@@ -624,8 +644,14 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
       if (resp) {
         const name = BILL_BY_ID[resp].name
         if (resolved) {
-          headlines.push({ text: `${title}: governo responde com ${lowerFirst(name)}`, tone: 'good' })
-          taken.push(`Respondeu ao fato do mês: ${name}`)
+          if (def.kind === 'bom') {
+            // Etapa 1B: boa notícia aproveitada com uma medida de verdade (sem risco de desmentido).
+            const promo = def.options.find((o) => o.promote)
+            if (promo) actionConfidence += applyEffects(e, impulses, promo.effects, title, ASSESSORIA.seizeFactor)
+            noteRecord(s, { text: `${title}: aproveitou a oportunidade com “${name}”`, tone: 'good', kind: 'crise', bill: resp })
+          }
+          headlines.push({ text: def.kind === 'bom' ? `${title}: governo aproveita a boa notícia com ${lowerFirst(name)}` : `${title}: governo responde com ${lowerFirst(name)}`, tone: 'good' })
+          taken.push(`${def.kind === 'bom' ? 'Aproveitou a boa notícia' : 'Respondeu ao fato do mês'}: ${name}`)
           addBio(s, s.presidentName, `${title}: respondeu com ${lowerFirst(name)}.`)
           addBio(s, minister.name, `${minister.role}: conduziu a resposta a “${title}” (${lowerFirst(name)}).`)
           s.eventLog.push({ id: def.id, month: s.month })
@@ -640,7 +666,7 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
           const pending = inSenate || c.pending.some((p) => p.id === resp)
           const house = inSenate ? 'no Senado' : 'na Câmara'
           const barred = votes.some((v) => v.bill === resp && v.house === 'senado') ? 'no Senado' : 'na Câmara'
-          headlines.push({ text: `${title}: ${lowerFirst(name)} ${pending ? `fica parada ${house}` : `é barrada ${barred}`} e o problema continua`, tone: 'bad' })
+          headlines.push({ text: `${title}: ${lowerFirst(name)} ${pending ? `fica parada ${house}` : `é barrada ${barred}`} e ${def.kind === 'bom' ? 'a oportunidade passa sem proveito' : 'o problema continua'}`, tone: 'bad' })
           taken.push(`Respondeu ao fato do mês: ${name} (${pending ? (inSenate ? 'aguardando o Senado' : 'aguardando a Câmara') : 'rejeitada'})`)
           actionConfidence += applyEffects(e, impulses, opt.effects, title)
           headlines.push({ text: opt.outcome, tone: opt.tone })
@@ -661,7 +687,9 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
       const title = fillText(def.title, origin)
       const idx = plan.eventChoice ?? defaultOption(def)
       const opt = def.options[idx]
-      actionConfidence += applyEffects(e, impulses, opt.effects, title)
+      // Etapa 1B: quem posta ou vai à rua sente menos a penalidade de deixar a crise passar.
+      const letPass = plan.eventChoice === undefined || !!opt.default
+      actionConfidence += applyEffects(e, impulses, def.kind !== 'bom' && letPass ? softenEffects(opt.effects, assess.soften) : opt.effects, title)
       for (const [pid, dv] of Object.entries(opt.parties ?? {}) as [PartyId, number][]) {
         const ps = c.parties[pid]
         ps.relation = Math.min(100, Math.max(0, ps.relation + dv))
@@ -687,9 +715,18 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
       // Etapa 1: como o presidente lidou com o fato entra na Ficha e na reputação.
       const crisis = def.kind !== 'bom' && !def.choiceOnly
       const ignored = plan.eventChoice === undefined || !!opt.default
-      if (crisis && ignored && def.importance >= 3) addMark(s, 'omisso', def.importance * REPUTACAO.pts.crisePer, `${title}: deixou passar`, 'crise')
+      if (crisis && ignored && def.importance >= 3) addMark(s, 'omisso', def.importance * REPUTACAO.pts.crisePer * (assess.used ? ASSESSORIA.omissoShare : 1), assess.used ? `${title}: só com nota e presença, sem medida` : `${title}: deixou passar`, 'crise')
       else if (crisis && !ignored) addMark(s, 'enfrenta', def.importance * REPUTACAO.pts.crisePer * 0.5, `${title}: ${lowerFirst(opt.label)}`, 'crise')
       else noteRecord(s, { text: `${title}: ${lowerFirst(opt.label)}`, tone: tone === 'good' ? 'good' : tone === 'bad' ? 'bad' : 'neutral', kind: 'crise' })
+      // Etapa 1B: boa notícia que passa sem ação (Normal e Difícil) entrega o crédito à oposição.
+      if (def.kind === 'bom' && !def.choiceOnly && ignored) {
+        const lost = lostCreditValue(s, def)
+        if (lost > 0) {
+          rivalExtra.push({ label: `Oposição leva o crédito de “${origin?.label ?? title}”`, value: lost })
+          headlines.push({ text: `Oportunidade perdida: a oposição fica com o crédito de “${origin?.label ?? title}”`, tone: 'bad' })
+          noteRecord(s, { text: `${title}: boa notícia desperdiçada`, tone: 'bad', kind: 'crise' })
+        }
+      }
       if (opt.stf === 'criticar') addMark(s, 'confronto', REPUTACAO.pts.confronto, `Atacou o Supremo em público (${title.toLowerCase()})`, 'supremo')
       s.eventLog.push({ id: def.id, month: s.month })
       addBio(s, def.presenter.name, `${def.presenter.role}: levou ao presidente “${title}”. Decisão: ${lowerFirst(opt.label)}.`)
@@ -754,7 +791,9 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
   const after = indicators(e)
 
   // 4b. Etapa 5A: ataque do líder da oposição (desgaste ou obstrução).
+  const nBeforeAttack = headlines.length
   rivalAttack(s, rng, impulses, headlines)
+  const attackLines = headlines.slice(nBeforeAttack)
 
   // 5. Grupos sociais (com o ajuste permanente do perfil do presidente)
   const bonus = DIFFICULTY[s.difficulty].approvalBonus
@@ -768,6 +807,7 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
   driftRelations(c, approvalAfter, s.playerParty)
 
   // 5b. Etapa 5A: força, postura e pesquisa do rival.
+  const nBeforeRival = headlines.length
   updateRival(s, {
     approval: approvalAfter,
     ind: after,
@@ -776,6 +816,7 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
     overrides: votes.filter((v) => v.kind === 'veto' && v.approved).length,
     extra: rivalExtra,
   }, s.month + 1, rng, headlines)
+  const rivalLines = [...attackLines, ...headlines.slice(nBeforeRival)]
 
   // 6. Fecha o mês
   for (const id of Object.keys(s.cooldowns)) {
@@ -793,6 +834,14 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
     votes,
     event: eventReport,
     sanctioned,
+    assessoria: assess.used ? { statement: assess.statement, street: assess.street, softened: assess.soften } : undefined,
+    meanwhile: buildMeanwhile(s, {
+      rivalLines,
+      confidenceCauses: causes.confidence,
+      confidenceDelta: after.confidence - before.confidence,
+      empresarios: impulses.empresarios,
+      votes: votes.slice(round?.votes.length ?? 0),
+    }),
   }
 
   // Etapa 1: a cada 6 meses, um capítulo da presidência.

@@ -216,7 +216,7 @@ describe('save e mandato inteiro', () => {
     delete old.congress.bombLog
     old.saveVersion = 7
     const m = migrate(JSON.parse(JSON.stringify(old)))!
-    expect(m.saveVersion).toBe(14)
+    expect(m.saveVersion).toBe(15)
     expect(m.cabinet).toEqual({})
     expect(m.congress.speaker.relation).toBeGreaterThan(0)
     expect(() => advanceMonth(m, [])).not.toThrow()

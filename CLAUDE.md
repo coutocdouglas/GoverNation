@@ -41,7 +41,7 @@ Continue na mesma conversa quando estiver no meio de uma etapa, corrigindo algo 
 Etapas com portão: a próxima só abre quando a anterior fecha; ideia fora de hora vai para a Caixa de ideias da etapa certa (DESIGN.md 27.1).
 
 0. ✅ A rodada (v0.15)
-1. ✅ 1A Causa e consequência (v0.16) · ⏭️ 1B O mês mais vivo
-2. Câmara e partidos · 3. Senado · 4. Supremo profundo · 5. Oposição, escândalos e CPI · 6. Vice e governo · 7. Estados e governadores · 8. Começo, sociedade e fim · 9. Arte final
+1. ✅ 1A Causa e consequência (v0.16) · ✅ 1B O mês mais vivo (v0.17)
+⏭️ 2. Câmara e partidos · 3. Senado · 4. Supremo profundo · 5. Oposição, escândalos e CPI · 6. Vice e governo · 7. Estados e governadores · 8. Começo, sociedade e fim · 9. Arte final
 
 Antes disso (já feito): retratos, memória do mundo, IA, Congresso 2.0, rival e promessas, Senado votando, Supremo (v0.4 a v0.14).

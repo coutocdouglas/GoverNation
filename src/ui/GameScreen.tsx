@@ -23,6 +23,9 @@ import { aiReady } from '../lib/ai'
 import type { ActionId, Articulation, BillId, Cause, Deal, GameState, GroupId, IndicatorKey, PartyId, VoteRecord } from '../game/types'
 import { CongressView, ForecastRow, Scoreboard } from './CongressView'
 import { DemandsCard, EventPanel } from './EventPanel'
+import type { StatementId } from '../game/data/assessoria'
+import { STATEMENT_BY_ID } from '../game/data/assessoria'
+import { streetOptions } from '../game/assessoria'
 import { FichasView } from './FichasView'
 import { ReputationCard } from './ReputationView'
 import { Portrait } from './Portrait'
@@ -69,6 +72,9 @@ export function GameScreen({ state, onChange, onExit }: {
   const [tab, setTab] = useState<'painel' | 'governo' | 'fichas'>('painel')
   const [eventChoice, setEventChoice] = useState<number | null>(null)
   const [eventResponse, setEventResponse] = useState<BillId | null>(null)
+  /** Etapa 1B: post da assessoria e ação de rua do mês. */
+  const [statement, setStatement] = useState<StatementId | null>(null)
+  const [street, setStreet] = useState<string | null>(null)
   const [showAi, setShowAi] = useState(false)
   const [deals, setDeals] = useState<Deal[]>([])
   const [listened, setListened] = useState<PartyId[]>([])
@@ -86,6 +92,7 @@ export function GameScreen({ state, onChange, onExit }: {
   const plan: MonthPlan = {
     bill: bill ?? undefined, articulations, eventChoice: eventChoice ?? undefined, eventResponse: eventResponse ?? undefined, deals,
     hold: proc.hold, urgent: proc.urgent, original: proc.original, symbolic: proc.symbolic, sanctions, ministry: ministry ?? undefined, nominee: nominee ?? undefined, consult: consult ?? undefined,
+    statement: statement ?? undefined, street: street ?? undefined,
   }
   const onProcedure = (kind: ProcedureKind, id: BillId, on: boolean) => setProc((cur) => {
     const next = { ...cur }
@@ -180,6 +187,8 @@ export function GameScreen({ state, onChange, onExit }: {
       setBill(null)
       setEventChoice(null)
       setEventResponse(null)
+      setStatement(null)
+      setStreet(null)
       setDeals([])
       setListened([])
       setListenedSenate([])
@@ -413,6 +422,17 @@ export function GameScreen({ state, onChange, onExit }: {
                       catálogo, e encerre o mês para ver o país reagir.
                     </p>
                   )}
+                  {report?.meanwhile && report.meanwhile.length > 0 && (
+                    <div className="pn-meanwhile">
+                      <h3>👀 Enquanto você decidia</h3>
+                      {report.meanwhile.map((m, i) => (
+                        <div key={i} className={`pn-meanwhile__row ${m.tone}`}>
+                          <span>{m.icon}</span>
+                          <div>{m.text}{m.why && <small>Por quê: {m.why}</small>}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                   <div className="pn-row">
                     <button className="pn-btn" onClick={() => goStep(state.event ? 2 : 3)}>{state.event ? 'Ver o fato do mês →' : 'Entendi, vamos decidir →'}</button>
                   </div>
@@ -426,7 +446,7 @@ export function GameScreen({ state, onChange, onExit }: {
                     <div>
                       <h2>Tudo pronto para virar o mês?</h2>
                       <p className="pn-hint">
-                        {selected.length === 0 && !bill && !eventResponse && !round && (peekRound(state)?.articulations ?? []).length === 0 && !nominee && !consult && !ministry
+                        {selected.length === 0 && !bill && !eventResponse && !statement && !street && !round && (peekRound(state)?.articulations ?? []).length === 0 && !nominee && !consult && !ministry
                           ? 'Você não tomou nenhuma decisão. O país segue sozinho este mês.'
                           : [
                               selected.length ? `Decretos: ${selected.map((id) => lowerFirst(ACTION_BY_ID[id].name)).join(' e ')}.` : '',
@@ -437,9 +457,11 @@ export function GameScreen({ state, onChange, onExit }: {
                               nominee ? `Supremo: indicar ${NOMINEE_BY_ID[nominee].name} (sabatina no Senado).` : '',
                               ministry ? (ministry.party ? `Ministério: ${state.cabinet[ministry.area] ? 'trocar' : 'ceder'} ${ministry.area} ${state.cabinet[ministry.area] ? 'pelo' : 'ao'} ${PARTY_BY_ID[ministry.party].sigla}.` : `Ministério: retomar ${ministry.area}.`) : '',
                               consult ? `Supremo: pedir parecer sobre ${lowerFirst(BILL_BY_ID[consult].name)}.` : '',
+                              statement ? `Post da assessoria: ${lowerFirst(STATEMENT_BY_ID[statement].label)}.` : '',
+                              street ? `Rua: ${lowerFirst(streetOptions(state).find((x) => x.id === street)?.label ?? street)}.` : '',
                               Object.values(sanctions).some((d) => d === 'vetar') ? `Vetos: ${Object.values(sanctions).filter((d) => d === 'vetar').length}.` : '',
                             ].filter(Boolean).join(' ')}
-                        {state.event && eventChoice === null && eventResponse === null ? ' ⚠️ Você não respondeu o fato do mês: vale a opção padrão.' : ''}
+                        {state.event && eventChoice === null && eventResponse === null ? ` ⚠️ Você não respondeu o fato do mês: vale a opção padrão${statement || street ? ', amenizada pelo post e pela rua' : ''}.` : ''}
                         {state.congress.toSanction.some((x) => !sanctions[x.id]) ? ' 🖋️ Há projeto da Câmara esperando sanção ou veto (aba Governo): sem decisão, vale a sanção tácita.' : ''}
                         {isRecess(state.month) && (bill || eventResponse || state.congress.pending.length > 0) ? ' O Congresso está em recesso: a votação fica para o mês que vem.' : ''}
                         {isCopomMonth(state.month) ? ' O Banco Central decide os juros no fim do mês.' : ''}
@@ -464,6 +486,10 @@ export function GameScreen({ state, onChange, onExit }: {
                 response={eventResponse ?? round?.response ?? null}
                 plannedBill={bill}
                 onAddBill={addBill}
+                statement={statement}
+                street={street}
+                onStatement={(id) => { setStatement(id); if (id) toast(`📣 Post anotado: ${STATEMENT_BY_ID[id].label}. Sai ao encerrar o mês.`) }}
+                onStreet={(id) => { setStreet(id); if (id) toast(`🚶 Ação de rua anotada. Vale ao encerrar o mês.`) }}
                 onRespond={(id) => {
                   if (eventResponse && eventResponse !== id) dropDeals(eventResponse)
                   if (id && actsNowUi(id)) { runNow(id, 'response'); return }

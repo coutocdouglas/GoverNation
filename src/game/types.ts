@@ -120,12 +120,26 @@ export interface MonthReport {
   event?: { id: string; option: number; chosen: boolean; response?: BillId; resolved?: boolean }
   /** Leis que entraram em vigor no mês (aprovadas pela Câmara ou sancionadas), para a página de reação (etapa 4B). */
   sanctioned?: BillId[]
+  /** Etapa 1B: o que a oposição, o empresariado e a Câmara fizeram enquanto o presidente decidia. */
+  meanwhile?: Meanwhile[]
+  /** Etapa 1B: post e ação de rua do mês, com o que renderam. */
+  assessoria?: { statement?: string; street?: string; softened?: number }
+}
+
+/** Uma linha de "Enquanto você decidia". */
+export interface Meanwhile {
+  who: 'oposicao' | 'empresariado' | 'camara'
+  icon: string
+  text: string
+  /** A causa, para o jogador entender por que aconteceu. */
+  why?: string
+  tone: 'good' | 'bad' | 'neutral'
 }
 
 import type { ReputationState } from './reputacao'
 
 export interface GameState {
-  saveVersion: 14
+  saveVersion: 15
   /** Mês atual, de 0 (janeiro do 1º ano) a 47. Em 48 o mandato acabou. */
   month: number
   presidentName: string
@@ -182,6 +196,8 @@ export interface GameState {
   round?: RoundBuffer
   /** Etapa 1 (v0.16): Ficha de governo, marcas de reputação e capítulos da presidência. */
   reputation: ReputationState
+  /** Etapa 1B (v0.17): posts da assessoria e falas ao país dos últimos meses (para a repetição e o intervalo). */
+  statementLog: { id: string; month: number }[]
 }
 
 /** Etapa 0: efeitos acumulados na rodada, aplicados no fechamento do mês. */

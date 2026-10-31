@@ -437,7 +437,6 @@ export function sendBlockedReason(s: GameState, id: BillId, response = false): s
     if (r?.measure === id) return 'A resposta ao fato do mês não pode ser a mesma medida do mês.'
     const ev = s.event ? EVENT_BY_ID[s.event.id] : null
     if (!ev) return 'Não há fato do mês para responder.'
-    if (ev.kind === 'bom') return 'Boa notícia não pede resposta: escolha como usar.'
     if (ev.choiceOnly) return 'Este fato pede uma das escolhas prontas.'
     if (bill.area !== ev.area) return `${ministerOf(s, ev.area).name} responde por ${MINISTER_BY_AREA[ev.area].areaName.toLowerCase()}: esta medida é de outra área.`
   } else {

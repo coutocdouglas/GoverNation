@@ -92,7 +92,7 @@ export function ResponseBox({ state, ev, response, plannedBill, onRespond, onAdd
       <div className="pn-respond" id="agir">
         <div className="pn-preview">
           <b>✅ Ordem dada: {BILL_BY_ID[response].name}</b>
-          <p className="pn-hint">{m.name} cuida disso ao encerrar o mês. {BILL_BY_ID[response].instrument === 'decreto' || BILL_BY_ID[response].instrument === 'mp' ? 'Vale na hora e resolve o problema.' : 'Resolve o problema se a Câmara e o Senado aprovarem ainda este mês (PEC leva mais tempo).'}</p>
+          <p className="pn-hint">{m.name} cuida disso ao encerrar o mês. {BILL_BY_ID[response].instrument === 'decreto' || BILL_BY_ID[response].instrument === 'mp' ? (ev.kind === 'bom' ? 'Vale na hora e aproveita a boa notícia.' : 'Vale na hora e resolve o problema.') : (ev.kind === 'bom' ? 'Aproveita a boa notícia se a Câmara e o Senado aprovarem ainda este mês (PEC leva mais tempo).' : 'Resolve o problema se a Câmara e o Senado aprovarem ainda este mês (PEC leva mais tempo).')}</p>
           <button className="pn-btn pn-btn--ghost" onClick={() => onRespond(null)}>Desfazer</button>
         </div>
       </div>
@@ -135,7 +135,8 @@ export function ResponseBox({ state, ev, response, plannedBill, onRespond, onAdd
         </div>
       )}
 
-      <div className="pn-label">A sua resposta</div>
+      <div className="pn-label">{ev.kind === 'bom' ? 'Aproveitar a oportunidade com uma medida' : 'A sua resposta'}</div>
+      {ev.kind === 'bom' && <p className="pn-hint">Boa notícia vira ponto quando o governo age em cima dela: uma medida de verdade rende mais que a propaganda e não corre o risco de desmentido. {state.difficulty === 'facil' ? '' : 'Sem agir, a oposição fica com o crédito.'}</p>}
       <textarea
         className="pn-textarea"
         value={text}
