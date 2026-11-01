@@ -22,7 +22,7 @@ import { AiSettings } from './AiSettings'
 import { VoteSheet, type ProcedureKind } from './VoteSheet'
 import { MeasureSheet } from './MeasureSheet'
 import { aiReady } from '../lib/ai'
-import type { ActionId, Articulation, BillId, Cause, CourtNow, Deal, GameState, GroupId, IndicatorKey, PartyId, VoteRecord } from '../game/types'
+import type { ActionId, Articulation, BillId, Cause, CourtNow, Deal, GameState, GroupId, IndicatorKey, PartyId, SenatorBuy, VoteRecord } from '../game/types'
 import { CongressView, ForecastRow, Scoreboard } from './CongressView'
 import { EventPanel } from './EventPanel'
 import { chainAt, chainLabels, type ChainInfo } from './corrente'
@@ -83,6 +83,8 @@ export function GameScreen({ state, onChange, onExit }: {
   const [street, setStreet] = useState<string | null>(null)
   const [showAi, setShowAi] = useState(false)
   const [deals, setDeals] = useState<Deal[]>([])
+  /** Etapa 3: senadores indecisos comprados por projeto (pagos ao votar). */
+  const [buys, setBuys] = useState<Record<BillId, SenatorBuy[]>>({})
   const [listened, setListened] = useState<PartyId[]>([])
   const [listenedSenate, setListenedSenate] = useState<PartyId[]>([])
   const [voteSheet, setVoteSheet] = useState<BillId | null>(null)
@@ -162,6 +164,7 @@ export function GameScreen({ state, onChange, onExit }: {
       urgent: proc.urgent.includes(id) || undefined,
       original: proc.original.includes(id) || undefined,
       symbolic: proc.symbolic.includes(id) || undefined,
+      senadores: buys[id]?.length ? buys[id] : undefined,
     }
     try {
       const r = as === 'queue' ? voteNow(state, id, opts) : sendMeasure(state, id, opts, as === 'response')
@@ -169,6 +172,7 @@ export function GameScreen({ state, onChange, onExit }: {
       if (as === 'measure') setBill(null)
       if (as === 'response') { setEventResponse(null); setEventChoice(null) }
       setDeals((ds) => ds.filter((d) => d.bill !== id))
+      setBuys((cur) => { const n = { ...cur }; delete n[id]; return n })
       setProc((cur) => Object.fromEntries(Object.entries(cur).map(([k, ids]) => [k, ids.filter((x) => x !== id)])) as Record<ProcedureKind, BillId[]>)
       setVoteSheet(null)
       // Etapa 2B: a corrente de janelas: placar → Supremo (ação, relator, liminar, plenário) → o país reage.
@@ -216,6 +220,7 @@ export function GameScreen({ state, onChange, onExit }: {
       setStatement(null)
       setStreet(null)
       setDeals([])
+      setBuys({})
       setListened([])
       setListenedSenate([])
       setVoteSheet(null)
@@ -304,6 +309,11 @@ export function GameScreen({ state, onChange, onExit }: {
             if (add) toast(`🤝 Acordo com o ${PARTY_BY_ID[d.party].sigla}${d.house === 'senado' ? ' no Senado' : ': vale na Câmara e no Senado'}.`)
           }}
           onClose={() => setVoteSheet(null)}
+          buys={buys[voteSheet] ?? []}
+          onBuy={(b, add) => setBuys((cur) => {
+            const list = (cur[voteSheet] ?? []).filter((x) => x.index !== b.index)
+            return { ...cur, [voteSheet]: add ? [...list, b] : list }
+          })}
           plan={plan}
           onProcedure={onProcedure}
           onVoteNow={(id) => runNow(id)}
@@ -400,7 +410,7 @@ export function GameScreen({ state, onChange, onExit }: {
           {govTab === 'supremo' ? (
             <SupremoView state={state} nominee={nominee} onNominee={(id) => { setNominee(id); if (id) toast(`📨 ${NOMINEE_BY_ID[id].name} vai à sabatina no Senado ao encerrar o mês.`) }} />
           ) : govTab === 'senado' ? (
-            <SenadoView state={state} articulations={peekRound(state)?.articulations ?? []} onToggle={toggleArticulation} onNegotiate={setVoteSheet} deals={deals} plan={plan} />
+            <SenadoView state={state} articulations={peekRound(state)?.articulations ?? []} onToggle={toggleArticulation} onNegotiate={setVoteSheet} deals={deals} plan={plan} onState={onChange} onToast={toast} />
           ) : govTab === 'ministerios' ? (
             <MinistriosView state={state} change={ministry} done={!!peekRound(state)?.ministryDone} onChange={(ch) => {
               // Etapa 2: ceder, trocar ou retomar vale na hora.

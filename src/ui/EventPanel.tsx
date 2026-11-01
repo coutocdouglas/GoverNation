@@ -1,3 +1,4 @@
+import { forecastImpeach } from '../game/impeachment'
 import { useState } from 'react'
 import type { BillDef } from '../game/data/bills'
 import { defaultOption, currentEvent } from '../game/events'
@@ -96,7 +97,7 @@ export function EventPanel({ state, choice, onChoose, response, onRespond, plann
           <h2>{fillText(ev.title, origin)}</h2>
           {resp.name !== p.name && <p className="pn-hint" style={{ margin: '0 0 4px' }}>{resp.icon} Área: {resp.areaName} · responsável: <b>{resp.name}</b></p>}
           <p>{fillText(ev.text, origin)}</p>
-          {origin && <p className="pn-event__origin">🌱 Consequência de <b>{origin.label}</b> · {origin.author} · {origin.year}</p>}
+          {origin && ev.id !== 'impeachMinistro' && <p className="pn-event__origin">🌱 Consequência de <b>{origin.label}</b> · {origin.author} · {origin.year}</p>}
           <p className="pn-event__ask">{kind === 'bom' ? '“Presidente, temos uma boa notícia. Vamos agir em cima dela?”' : '“Presidente, precisamos de uma decisão.”'}</p>
         </div>
       </div>
@@ -133,6 +134,11 @@ export function EventPanel({ state, choice, onChoose, response, onRespond, plann
             </div>
           )}
           {ev.choiceOnly ? (
+            <>
+            {ev.id === 'impeachMinistro' && (() => {
+              const f = forecastImpeach(state)
+              return f ? <p className="pn-hint warn">⚖️ Hoje: {f.yes} votos para afastar (precisa de {f.needed}, em voto secreto) · chance de cair se você defender: <b>{Math.round(f.chance * 100)}%</b>. Na aba Governo › Senado, atender as bancadas estaduais antes de encerrar o mês muda a conta.</p> : null
+            })()}
             <div className="pn-event__options">
               {ev.options.map((o, i) => (
                 <button key={i} className={`pn-option ${choice === i ? 'sel' : ''} ${o.default ? 'is-default' : ''}`} onClick={() => onChoose(choice === i ? null : i)}>
@@ -146,6 +152,7 @@ export function EventPanel({ state, choice, onChoose, response, onRespond, plann
                 </button>
               ))}
             </div>
+            </>
           ) : (
             <>
               <ResponseBox key={`${state.month}-${ev.id}`} state={state} ev={ev} response={response} plannedBill={plannedBill} onRespond={onRespond} onAddBill={onAddBill} />

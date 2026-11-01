@@ -83,6 +83,12 @@ export function pendencias(s: GameState): Pendencia[] {
     out.push({ id: 'stf-vaga', icon: '⚖️', target: 'supremo', title: 'Vaga no Supremo: indicar um ministro', detail: 'A sabatina é no Senado (41 votos). Quem senta ali julga as suas medidas por anos.', urgency: 'yellow', weight: 40 })
   }
 
+  // Etapa 3: pedido de impeachment de ministro no Senado (vota no fechamento deste mês).
+  const imp = c.senate.impeach
+  if (imp) {
+    out.push({ id: 'impeach', icon: '⚖️', target: 'senado', left: 0, title: `Impeachment de ${imp.minister} no Senado`, detail: 'Vota no fechamento do mês (54 afastam). Defender, demitir antes ou deixar o Senado decidir: no fato do mês.', urgency: 'red', weight: 60 })
+  }
+
   // Liminar segurando uma medida.
   for (const k of s.supremo.cases.filter((x) => x.suspended)) {
     const name = BILL_BY_ID[k.bill]?.name ?? k.bill

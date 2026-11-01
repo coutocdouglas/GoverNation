@@ -79,7 +79,7 @@ export function SenateCard({ state, articulations, onToggle, onNegotiate, hidePe
       </div>
       <p className="pn-hint">
         Partidos simpáticos ou aliados somam <b>{allies}</b> senadores. Lei comum e MP passam com a maioria dos presentes; lei complementar precisa de <b>{SENADO.complementar}</b>; emenda constitucional, de <b>{SENADO.pec}</b> em dois turnos.
-        Lei e MP aprovadas na Câmara são votadas no Senado no mesmo encerramento do mês; PEC, no mês seguinte. Se o Senado rejeitar, o projeto só volta em 6 meses.
+        O que a Câmara aprova vai ao Senado na mesma rodada (PEC com os dois turnos juntos). Se o Senado rejeitar, o projeto só volta em 6 meses.
       </p>
       <div className="pn-speaker__body" style={{ marginTop: 10 }}>
         <Portrait name={SENADO.president.name} color={party.color} size={72} title={SENADO.president.name} />

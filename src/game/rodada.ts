@@ -6,11 +6,12 @@
  * em cada casa; as articulações valem na hora. Os efeitos na economia e nos grupos ficam guardados em
  * `GameState.round` e são aplicados no fechamento do mês (advanceMonth), junto com o resto.
  */
-import { statesOnMeasure } from './estados'
+import { attendBlockedReason, attendState, statesOnMeasure } from './estados'
+import type { UfId } from './data/estados'
 import { buysBlockedReason, meiaSessaoBlocks, payBuys, runSenadoComissoes, senadoComissoes, senadoScale } from './senado'
 import { affinity, articulationBlockedReason, billBlockedReason, CONGRESS, forecastSenate, forecastVote, isRecess, runSenateVote, runVote, senatePending, symbolicBlockedReason } from './congress'
 import { SENADO } from './data/senado'
-import { actsNow, BILL_BY_ID, RESUBMIT_COOLDOWN } from './data/bills'
+import { actsNow, BILL_BY_ID, GDP_BILLIONS, RESUBMIT_COOLDOWN } from './data/bills'
 import { EVENT_BY_ID } from './data/events'
 import { MINISTER_BY_AREA } from './data/ministers'
 import { absMonth, addBio, addChronicle, plantSeeds } from './memory'
@@ -1049,4 +1050,25 @@ export function applyPlanToRound(s: GameState, plan: MonthPlan): void {
     applyDeals(ctx, rest)
     closeCtx(ctx)
   }
+}
+
+// ─── Etapa 3: bancadas estaduais no Senado ────────────────────────────────────
+
+/** Atende agora o pedido de uma ou mais bancadas estaduais ("pagar as N obras"). Vale na hora. */
+export function attendNow(prev: GameState, ufs: UfId[]): GameState {
+  if (prev.finished) throw new Error('O mandato já terminou.')
+  const ok = ufs.filter((u) => !attendBlockedReason(prev, u))
+  if (!ok.length) throw new Error(ufs.length === 1 ? attendBlockedReason(prev, ufs[0])! : 'Nenhuma bancada com pedido para atender.')
+  const s = structuredClone(prev)
+  const ctx = openCtx(s)
+  let money = 0
+  for (const u of ok) {
+    const r = attendState(s, u, ctx.headlines)
+    money += r.money
+    ctx.taken.push(r.text)
+  }
+  // O mercado vê o gasto das obras na hora.
+  if (money) ctx.conf.v -= (money / GDP_BILLIONS) * 100 * 40 / 100
+  closeCtx(ctx)
+  return s
 }

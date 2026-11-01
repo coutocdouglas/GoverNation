@@ -5,7 +5,8 @@ import { committeeOf, frenteSummary } from '../game/camara'
 import { BILL_BY_ID, GDP_BILLIONS, INSTRUMENTS } from '../game/data/bills'
 import { CAMARA } from '../game/data/camara'
 import { DEALS } from '../game/data/deals'
-import { SENADO } from '../game/data/senado'
+import { LIDERES_SENADO, SENADO } from '../game/data/senado'
+import { buysBlockedReason, indecisos, isMeiaSessao, senadoComissoes } from '../game/senado'
 import { PARTIES, PARTY_BY_ID } from '../game/data/parties'
 import { COUNTERABLE, emendasAmount, emendasFactor, emendasMoney, offerFor, type AskOption, type DealScope, type Offer } from '../game/deals'
 import { ASK_BY_KIND, ESFRIA, LINHA_VERMELHA, MENU } from '../game/data/base'
@@ -21,7 +22,7 @@ import { GROUP_BY_ID } from '../game/data/groups'
 import { aiReady } from '../lib/ai'
 import { askConcession } from '../lib/aiActions'
 import { procedureBlockedReason, type MonthPlan } from '../game/game'
-import type { BillId, Deal, EmendaDestino, GameState, PartyId } from '../game/types'
+import type { BillId, Deal, EmendaDestino, GameState, PartyId, SenatorBuy } from '../game/types'
 import { Portrait } from './Portrait'
 import { Art } from './Art'
 import { ChainSteps } from './Chain'
@@ -41,7 +42,10 @@ const KIND_TAG: Record<Offer['kind'], { text: string; cls: string }> = {
  * Votação no Congresso (etapas 4 e 4C1): placar previsto se fosse votado agora, lideranças e negociação,
  * com uma aba para a Câmara e outra para o Senado. O presidente ouve até 3 lideranças por mês na Câmara e 2 no Senado.
  */
-export function VoteSheet({ state, bill, deals, listened, onListen, listenedSenate, onListenSenate, onDeal, onClose, plan, onProcedure, onVoteNow, voteBlocked, gaveta, onState, chain }: {
+export function VoteSheet({ state, bill, deals, listened, onListen, listenedSenate, onListenSenate, onDeal, onClose, plan, onProcedure, onVoteNow, voteBlocked, gaveta, onState, chain, buys = [], onBuy }: {
+  /** Etapa 3: senadores indecisos comprados para este projeto (pagos ao votar) e como marcar/desmarcar. */
+  buys?: SenatorBuy[]
+  onBuy?: (b: SenatorBuy, add: boolean) => void
   /** Etapa 2B: posição na corrente de janelas do dia. */
   chain?: ChainInfo | null
   state: GameState
@@ -77,7 +81,8 @@ export function VoteSheet({ state, bill, deals, listened, onListen, listenedSena
   const original = has('original')
   const fcCamara = forecastVote(state, bill, deals.filter((d) => d.bill === bill && d.house !== 'senado'), { original })
   // Etapa 2C: o acordo fechado com o projeto na Câmara vale também no Senado.
-  const fcSenado = forecastSenate(state, bill, deals.filter((d) => d.bill === bill && (d.house === 'senado' || !inSenate)), { original })
+  const senDeals = deals.filter((d) => d.bill === bill && (d.house === 'senado' || !inSenate))
+  const fcSenado = forecastSenate(state, bill, senDeals, { original, senadores: buys })
   const fc = senado ? fcSenado : fcCamara
   const [open, setOpen] = useState<PartyId | null>(null)
   const recess = isRecess(state.month)
@@ -185,8 +190,15 @@ export function VoteSheet({ state, bill, deals, listened, onListen, listenedSena
                 <b>{inSenate ? 'Aprovado' : 'Ainda não votado'}</b>
                 <span>{inSenate?.camara ? (inSenate.camara.symbolic ? 'Passou em votação simbólica.' : `Passou por ${inSenate.camara.yes} a ${inSenate.camara.no}.`) : 'O Senado só vota o que a Câmara aprovar, com o texto que ela aprovar.'}</span>
               </div>
+              {senadoComissoes(state, bill, inSenate).map((c, k) => (
+                <div key={c.id} className={`pn-tram__step ${c.holds ? 'risk' : c.dehydrate >= 0.3 && !c.done ? 'warn' : ''}`}>
+                  <small>{2 + k} · Comissão</small>
+                  <b>{c.name}</b>
+                  <span>Presidida pelo <b style={{ color: PARTY_BY_ID[c.chair].color }}>{PARTY_BY_ID[c.chair].sigla}</b> (relação {Math.round(state.congress.parties[c.chair].relation)}). {c.why} {c.done === 'aprovado' ? 'Já aprovou.' : c.done === 'desidratado' ? 'Já desidratou o texto.' : c.holds ? '⚠️ De mal com o governo: segura o projeto uma rodada.' : `Chance de desidratar: ${Math.round(c.dehydrate * 100)}% (o texto fica com ${Math.round(SENADO.comissoes.scale * 100)}% da força e não volta à Câmara).`}</span>
+                </div>
+              ))}
               <div className={`pn-tram__step ${senateRisk ? 'risk' : ''}`}>
-                <small>2 · Plenário do Senado</small>
+                <small>{2 + senadoComissoes(state, bill, inSenate).length} · Plenário do Senado</small>
                 <b>{SENADO.president.name}, presidente do Senado</b>
                 <span>Relação com o governo: <b className={sn.relation >= 50 ? 'up' : sn.relation >= SENADO.president.holdBelow ? 'warn' : 'dn'}>{Math.round(sn.relation)}</b> · <span style={{ color: snParty.color }}>{snParty.sigla}</span>. {b.instrument === 'mp' ? 'MP tranca a pauta: ela não consegue segurar.' : senateRisk ? '⚠️ De mal com o governo: pode segurar o projeto na gaveta.' : 'Deve pautar a votação.'}</span>
               </div>
@@ -197,6 +209,8 @@ export function VoteSheet({ state, bill, deals, listened, onListen, listenedSena
               </div>
             )}
             {!inSenate && has('symbolic') && <p className="pn-hint">🔨 A votação simbólica pedida vale também no Senado, se lá a maioria também for esmagadora.</p>}
+            {isMeiaSessao(state.month) && <p className="pn-hint warn">🌗 Meia sessão antes do recesso: mais senadores ausentes e só uma votação no Senado nesta rodada.</p>}
+            <IndecisosBox state={state} bill={bill} deals={senDeals} buys={buys} onBuy={onBuy} />
           </>
         )}
 
@@ -275,8 +289,8 @@ export function VoteSheet({ state, bill, deals, listened, onListen, listenedSena
             return (
               <button key={p.id} className={`pn-leader ${open === p.id ? 'on' : ''}`} disabled={!canListen} onClick={() => { if (!heard) (senado ? onListenSenate : onListen)(p.id); setOpen(p.id) }} title={own ? '' : heard ? 'Ver de novo a proposta' : listenLeft > 0 ? 'Chamar para conversar' : `Você já ouviu ${listenMax} lideranças ${senado ? 'no Senado' : 'na Câmara'} este mês`}>
                 <div className="pn-leader__top">
-                  <Portrait name={leaderOf(state, p.id).name} feminine={leaderOf(state, p.id).feminine} color={p.color} size={36} title={leaderOf(state, p.id).name} />
-                  <div><PartyLogo party={p.id} size={20} /> <b style={{ color: p.color }}>{p.sigla}</b> · {n}<small>{leaderOf(state, p.id).name}</small></div>
+                  <Portrait name={(senado ? LIDERES_SENADO[p.id] : leaderOf(state, p.id)).name} feminine={(senado ? LIDERES_SENADO[p.id] : leaderOf(state, p.id)).feminine} color={p.color} size={36} title={(senado ? LIDERES_SENADO[p.id] : leaderOf(state, p.id)).name} />
+                  <div><PartyLogo party={p.id} size={20} /> <b style={{ color: p.color }}>{p.sigla}</b> · {n}<small>{(senado ? LIDERES_SENADO[p.id] : leaderOf(state, p.id)).name}</small></div>
                   <span className={`pn-chip-mini ${tag.c}`}>{tag.t}</span>
                 </div>
                 {deal && <span className="pn-chip-mini up">Acordo: {KIND_TAG[deal.kind].text}</span>}
@@ -472,5 +486,48 @@ function ProcButton({ label, on, reason, onClick, hint }: { label: string; on: b
       <b>{on ? `✔ ${label.replace(/^\S+ /, '')}` : label}</b>
       <small>{blocked ? reason : hint}</small>
     </button>
+  )
+}
+
+/** Etapa 3: senadores indecisos, cada um com o preço (obra ou cargo no estado, ou emenda). Até 3 por rodada; pagos ao votar. */
+function IndecisosBox({ state, bill, deals, buys, onBuy }: { state: GameState; bill: BillId; deals: Deal[]; buys: SenatorBuy[]; onBuy?: (b: SenatorBuy, add: boolean) => void }) {
+  const list = indecisos(state, bill, deals, buys)
+  const chosen = buys.map((x) => ({ x, d: state.congress.senate.senators[x.index] }))
+  const used = (peekRound(state)?.indecisos ?? 0) + buys.length
+  const max = SENADO.indeciso.perRound
+  if (!list.length && !chosen.length) return null
+  return (
+    <>
+      <div className="pn-vote__head" style={{ marginTop: 16 }}><b>🎯 Senadores indecisos</b><span className="pn-badge">{used} de {max} nesta rodada · pagos ao votar</span></div>
+      <p className="pn-hint">Senador vota pelo estado: os que estão no meio do caminho dizem o preço. Obra ou cargo no estado contam como o pedido da bancada atendido (ajudam os outros dois senadores do estado também). Cumprem {Math.round(SENADO.indeciso.reliability * 100)}% das vezes.</p>
+      {chosen.length > 0 && (
+        <div className="pn-indecisos">
+          {chosen.map(({ x, d }) => (
+            <div key={x.index} className="pn-indeciso on">
+              <span><b>{d.name}</b> <small style={{ color: PARTY_BY_ID[d.party].color }}>{PARTY_BY_ID[d.party].sigla}-{d.uf?.toUpperCase()}</small></span>
+              <small>✔ {x.kind === 'obra' ? 'Obra no estado' : x.kind === 'cargo' ? 'Cargo no estado' : 'Emenda'}</small>
+              {onBuy && <button className="pn-btn pn-btn--ghost pn-btn--small" onClick={() => onBuy(x, false)}>Desfazer</button>}
+            </div>
+          ))}
+        </div>
+      )}
+      <div className="pn-indecisos">
+        {list.slice(0, 8).map((i) => {
+          const buy: SenatorBuy | null = i.price ? { index: i.index, kind: i.price.kind } : null
+          const why = buy ? buysBlockedReason(state, bill, [...buys, buy]) : 'Não tem preço.'
+          return (
+            <div key={i.index} className="pn-indeciso">
+              <span><b>{i.name}</b> <small style={{ color: PARTY_BY_ID[i.party].color }}>{PARTY_BY_ID[i.party].sigla}-{i.uf}</small> <span className="mono">{Math.round(i.chance * 100)}% sim</span></span>
+              <small>{i.why}</small>
+              {i.price && onBuy ? (
+                <button className="pn-btn pn-btn--small" disabled={!!why} title={why ?? ''} onClick={() => onBuy(buy!, true)}>
+                  {i.price.kind === 'obra' ? '🏗️' : i.price.kind === 'cargo' ? '🪪' : '💰'} {i.price.label}{i.price.money ? ` · R$ ${num(i.price.money, 1)} bi` : ''}{i.price.scandal >= 1 ? ` · escândalo +${num(i.price.scandal, 0)}` : ''}
+                </button>
+              ) : <small className="dn">✋ não tem preço</small>}
+            </div>
+          )
+        })}
+      </div>
+    </>
   )
 }

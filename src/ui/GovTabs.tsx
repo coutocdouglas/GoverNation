@@ -13,6 +13,7 @@ import { STATUS_LABEL } from '../game/promises'
 import type { Articulation, BillId, Deal, GameState } from '../game/types'
 import type { MonthPlan } from '../game/game'
 import { SenateCard } from './CamaraPanels'
+import { BancadasEstaduaisCard, LideresSenadoCard, SenadoHojeCard } from './SenadoPanels'
 import { ForecastRow, Scoreboard } from './CongressView'
 import { Portrait } from './Portrait'
 import { num } from './format'
@@ -21,8 +22,9 @@ const MONTHS = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', '
 const when = (at: number) => `${MONTHS[at % 12]}/${yearOf(at)}`
 
 /** Aba Senado: a casa, a presidente, o que espera votação e as votações do mandato no Senado. */
-export function SenadoView({ state, articulations, onToggle, onNegotiate, deals, plan }: {
+export function SenadoView({ state, articulations, onToggle, onNegotiate, deals, plan, onState, onToast }: {
   state: GameState; articulations: Articulation[]; onToggle: (a: Articulation) => void; onNegotiate?: (id: BillId) => void; deals?: Deal[]; plan?: MonthPlan
+  onState?: (s: GameState) => void; onToast?: (t: string) => void
 }) {
   const c = state.congress
   const coming = c.pending.filter((p) => BILL_BY_ID[p.id]?.instrument !== 'decreto')
@@ -30,6 +32,7 @@ export function SenadoView({ state, articulations, onToggle, onNegotiate, deals,
   return (
     <div className="pn-col">
       <SenateCard state={state} articulations={articulations} onToggle={onToggle} hidePending />
+      <SenadoHojeCard state={state} />
       {c.senate.pending.length > 0 && (
         <section className="pn-card pn-card--gold">
           <h3>🗳️ Na pauta do Senado <span className="pn-badge">placar previsto hoje</span></h3>
@@ -48,6 +51,8 @@ export function SenadoView({ state, articulations, onToggle, onNegotiate, deals,
           {coming.map((p) => <p key={p.id} className="pn-hint" style={{ margin: '4px 0' }}>📜 {BILL_BY_ID[p.id].name}</p>)}
         </section>
       )}
+      {onState && onToast && <BancadasEstaduaisCard state={state} onState={onState} onToast={onToast} />}
+      <LideresSenadoCard state={state} />
       {votes.length > 0 && (
         <section className="pn-card">
           <h3>📜 Votações no Senado</h3>

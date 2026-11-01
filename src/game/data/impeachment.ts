@@ -8,7 +8,7 @@ import type { EventDef } from './events'
 export const IMPEACH_EVENT: EventDef = {
   id: 'impeachMinistro', area: 'politica', tag: 'Senado · impeachment', icon: '⚖️', weight: 0, importance: 4, kind: 'consequencia', random: false, choiceOnly: true,
   title: 'Oposição pede no Senado o impeachment de {autor}',
-  text: 'O pedido acusa {autor} ({lei}) de crime de responsabilidade. A presidente do Senado aceitou e o plenário vota no fechamento do mês, em voto secreto: com 54 votos, o ministro é afastado.',
+  text: 'O pedido acusa {autor} de crime de responsabilidade. A presidente do Senado aceitou e o plenário vota no fechamento do mês, em voto secreto: com 54 votos, o ministro é afastado.',
   presenter: { name: 'Hermínia Valença', role: 'Presidente do Senado Federal', feminine: true, color: '#2bb3a3' },
   options: [
     { icon: '🛡️', label: 'Defender no plenário', text: 'O governo vai para a briga. Ganhando, sai mais forte; perdendo, o custo é maior que deixar passar. Atender bancadas estaduais antes ajuda.', effects: {}, outcome: 'Governo decide defender o ministro no plenário do Senado', tone: 'neutral', impeach: 'defender' },

@@ -753,3 +753,27 @@
 .pn-partyrec { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
 .pn-partyrec__card { border: 1px solid var(--pn-line); border-radius: 8px; padding: 10px; background: #0e141c; font-size: 12.5px; display: flex; flex-direction: column; gap: 4px; }
 .pn-partyrec__card small { color: var(--pn-mut); }
+
+/* Etapa 3 (v0.21): o Senado por estado */
+.pn-senbar { display: flex; height: 26px; border-radius: 6px; overflow: hidden; margin: 6px 0 8px; font: 700 12px/26px var(--pn-mono, monospace); text-align: center; }
+.pn-senbar span { min-width: 22px; color: #0b0f14; }
+.pn-senbar .up { background: #2fd07a; } .pn-senbar .warn { background: #f5c542; } .pn-senbar .dn { background: #ff6b6b; }
+.pn-sencom { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 8px; margin-top: 8px; }
+.pn-sencom > div { display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border: 1px solid var(--pn-line); border-radius: 8px; background: #0e141c; }
+.pn-sencom small { color: var(--pn-mut); font-size: 11.5px; }
+.pn-senleaders { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
+.pn-senleader { display: flex; gap: 8px; align-items: center; padding: 6px 8px; border: 1px solid var(--pn-line); border-radius: 8px; background: #0e141c; }
+.pn-senleader div { display: flex; flex-direction: column; }
+.pn-senleader small { color: var(--pn-mut); font-size: 11.5px; }
+.pn-ufs { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px; margin-top: 10px; }
+.pn-uf { display: flex; flex-direction: column; gap: 5px; padding: 8px 10px; border: 1px solid var(--pn-line); border-radius: 8px; background: #0e141c; }
+.pn-uf__head { display: flex; flex-wrap: wrap; gap: 4px 6px; align-items: baseline; }
+.pn-uf__head b { font-size: 15px; } .pn-uf__head small { width: 100%; color: var(--pn-mut); font-size: 11px; }
+.pn-uf__rel { display: grid; grid-template-columns: 34px 1fr; gap: 6px; align-items: center; }
+.pn-uf__rel .pn-fid { grid-column: auto; }
+.pn-uf__sen { display: flex; flex-direction: column; font-size: 11.5px; }
+.pn-indecisos { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 8px; margin-top: 6px; }
+.pn-indeciso { display: flex; flex-direction: column; gap: 4px; padding: 8px 10px; border: 1px solid var(--pn-line); border-radius: 8px; background: #0e141c; }
+.pn-indeciso.on { border-color: #2fd07a; }
+.pn-indeciso small { color: var(--pn-mut); font-size: 11.5px; }
+.pn-indeciso .mono { margin-left: 4px; font-size: 11.5px; color: var(--pn-mut); }

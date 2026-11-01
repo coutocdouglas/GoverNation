@@ -1,5 +1,18 @@
 # Novidades
 
+## 0.21.0
+- **O Senado por estado (etapa 3).** O Senado ganhou página própria e cada senador agora tem nome, partido e estado.
+  - **Os 27 estados** (nomes reais): cada um com 3 senadores fictícios e os deputados na proporção da Câmara. Cada bancada estadual tem uma **relação com o governo** (de −50 a +50) e pede uma coisa: **obra** (dinheiro por 12 meses), **cargo no estado** (sem dinheiro, com risco de escândalo), **não negocia** ou já está **com você**. O pedido se renova a cada 6 meses; ignorado, a bancada se afasta um pouco.
+  - **Senador vota pelo estado:** a relação do estado pesa no voto dos 3 senadores, e no Senado o partido orienta menos que na Câmara. Lei que agrada o grupo que mais pesa num estado (agro, famílias de baixa renda, empresários...) aproxima aquela bancada; lei que machuca afasta.
+  - **Página do Senado** (Governo › Senado): **"Como o Senado está hoje"** (com você, no meio do caminho, contra), **"Com você: X de 81"**, as 27 bancadas com filtros (Todas, Obra, Cargo, Não negociam, Com você), o botão **"Pagar as N obras"** com o custo total e os **líderes de bancada no Senado** (9 personagens novos, com retrato).
+  - **Senadores indecisos com preço:** na janela de votação, aba Senado, os senadores divididos aparecem pelo nome com a chance de votar sim e o que pedem (obra ou cargo no estado, ou uma emenda). Até 3 por rodada, além das 3 conversas com os partidos; cumprem 85% das vezes.
+  - **Comissões do Senado:** a **CCJ** (PEC e risco jurídico alto) e a **CAE** (projeto caro) podem **desidratar** o texto, que fica mais fraco mas não volta à Câmara. A CAE de mal com o governo segura o projeto uma rodada. Aparecem na tramitação antes de votar.
+  - **Meia sessão** em junho e dezembro: mais senadores ausentes e só uma votação no Senado na rodada.
+  - **Impeachment de ministro:** ministro muito desgastado, com escândalo no ar ou oposição forte, pode virar pedido de impeachment no Senado (54 votos, voto secreto). Vira fato do mês: **defender no plenário** (com a chance de cair mostrada antes), **demitir antes** ou **deixar o Senado decidir**.
+- **Pacto de base mais exigente:** agora o partido olha também a aprovação do governo e quantos pactos já existem. A sondagem diz quanto falta. No simulador, quem negocia assina cerca de metade dos pactos de antes.
+- Balanceamento (30 partidas simuladas): sem mexer nos estados, o Senado barra o mesmo de antes; notas e leis das estratégias iguais. Comprar 3 indecisos rende cerca de 1,5 voto; pagar todas as obras e cargos de uma vez, cerca de 4 votos por R$ 15 a 20 bi (mais caro que na Câmara, mas a relação fica). Quem deixa ministros desgastados enfrenta perto de 1 impeachment por mandato.
+- Mandatos salvos continuam normalmente (save versão 19): deputados e senadores ganham estado, os senadores ganham nome e as bancadas estaduais começam pela relação dos partidos.
+
 ## 0.20.0
 - **A mesa de negociação e a base (etapa 2C).** Negociar votos ficou parecido com a política de verdade: cada partido pede coisas diferentes, a base tem contrato e cada voto fica registrado.
   - **Um acordo vale nas duas casas:** fechado com o projeto ainda na Câmara, ele vale também no Senado. Cada pedido mostra "Câmara 0 → 78 · Senado 0 → 10". São **3 conversas por rodada no total**, somando Câmara e Senado. A liderança só diz o que quer depois que você abre a conversa.
