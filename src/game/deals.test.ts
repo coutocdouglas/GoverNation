@@ -31,9 +31,10 @@ describe('negociação de votos (etapa 4)', () => {
 
   it('acordo fechado sobe a previsão e entra no projeto da Câmara', () => {
     const s = withPending(lei)
-    const o = PARTIES.map((p) => offerFor(s, p.id, lei)).find((x) => x.kind === 'emendas' || x.kind === 'cargos' || x.kind === 'pauta')!
+    const simple = (k: string) => ['emendas', 'cargos', 'pauta', 'obra', 'favor', 'relatoria'].includes(k)
+    const o = PARTIES.map((p) => offerFor(s, p.id, lei)).find((x) => x.options.some((k) => simple(k.kind)))!
     const before = forecastVote(s, lei).yes
-    const deal = { party: o.party, kind: o.kind as 'emendas', bill: lei }
+    const deal = { party: o.party, kind: o.options.find((k) => simple(k.kind))!.kind as 'emendas', bill: lei }
     expect(validatePlan(s, { deals: [deal] })).toBeNull()
     expect(forecastVote(s, lei, [deal]).yes).toBeGreaterThan(before)
     const next = advanceMonth(s, [], { deals: [deal] })
@@ -65,7 +66,7 @@ describe('negociação de votos (etapa 4)', () => {
     delete c.promises; delete c.scandal
     s.saveVersion = 5
     const m = migrate(JSON.parse(JSON.stringify(s)))!
-    expect(m.saveVersion).toBe(17)
+    expect(m.saveVersion).toBe(18)
     expect(m.congress.promises).toEqual([])
     expect(m.congress.scandal).toBe(0)
   })

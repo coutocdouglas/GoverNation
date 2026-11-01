@@ -10,6 +10,13 @@ import { talkBlockedReason, talkChance } from '../game/negociacao'
 import { articulateBlockedReason } from '../game/rodada'
 import type { Articulation, GameState, PartyId, VoteRecord } from '../game/types'
 import { Portrait } from './Portrait'
+import { activePacts, baseCounts, baseMembers, fidelityOf, sondar } from '../game/base'
+import { BASE, LINHA_VERMELHA, PACTO } from '../game/data/base'
+import { BILL_BY_ID } from '../game/data/bills'
+import { MINISTER_BY_AREA } from '../game/data/ministers'
+import { flagshipOf } from '../game/deals'
+import { pactBlocked, signPact } from '../game/mesa'
+import { num } from './format'
 
 const pct = (x: number) => `${Math.round(x * 100)}%`
 
@@ -196,5 +203,78 @@ export function BancadasChart({ v }: { v: VoteRecord }) {
         )
       })}
     </div>
+  )
+}
+
+/**
+ * Etapa 2C: a base como contrato. Seu partido mais os partidos com pasta ou pacto, a fidelidade de cada um,
+ * "sondar é de graça" e o pacto de base sem ministério.
+ */
+export function BaseCard({ state, onState, onToast }: { state: GameState; onState: (s: GameState) => void; onToast: (t: string) => void }) {
+  const [sonda, setSonda] = useState<PartyId | null>(null)
+  const cam = baseCounts(state, 'camara')
+  const sen = baseCounts(state, 'senado')
+  const members = baseMembers(state)
+  const outside = PARTIES.filter((p) => p.id !== state.playerParty && !members.some((m) => m.party === p.id))
+  const pacts = activePacts(state)
+  return (
+    <section className="pn-card">
+      <h3>🧱 A base do governo <span className="pn-badge">Câmara: base {cam.base} de 513 · fiel {cam.fiel} · Senado: {sen.base} de 81</span></h3>
+      <p className="pn-hint">
+        Partido com pasta (ou com pacto) entra na base e assina um contrato: em cada votação do governo, o acordo pede {Math.round(BASE.quota * 100)}% dos presentes da bancada.
+        Entregou, a fidelidade sobe; traiu, cai. A fidelidade pesa nos votos. Se a medida cruza a linha vermelha do partido, ele fica liberado.
+      </p>
+      <div className="pn-basecard">
+        {members.length === 0 && <p className="pn-hint">Ninguém na base além do seu partido. Ceda uma pasta (aba Ministérios ou num acordo) ou assine um pacto.</p>}
+        {members.map((m) => {
+          const p = PARTY_BY_ID[m.party]
+          const fid = Math.round(fidelityOf(state, m.party))
+          const color = fid >= 60 ? '#2fd07a' : fid >= BASE.warnAt ? '#f5c542' : '#ff6b6b'
+          return (
+            <div key={m.party} className="pn-basecard__row" style={{ borderLeft: `3px solid ${p.color}` }}>
+              <div>
+                <PartyLogo party={m.party} size={18} /> <b style={{ color: p.color }}>{p.sigla}</b> · {p.seats} deputados
+                <br /><small>{m.via === 'pasta' ? `Pasta: ${MINISTER_BY_AREA[m.area!].areaName}` : `Pacto (${m.pact!.kind === 'emendas' ? 'emendas por mês' : 'relatoria'}) até ${monthLabel(m.pact!.until - 1)}`} · linha vermelha: {LINHA_VERMELHA[m.party]}</small>
+              </div>
+              <span className="mono" style={{ color }}>fidelidade {fid}</span>
+              <div className="pn-fid"><span style={{ width: `${fid}%`, background: color }} /></div>
+            </div>
+          )
+        })}
+      </div>
+
+      <h4 style={{ margin: '14px 0 6px' }}>📜 Pacto de base sem ministério <span className="pn-badge">{pacts.length} de {PACTO.maxActive} · um novo por rodada</span></h4>
+      <p className="pn-hint">O partido vota com o governo por {PACTO.months} meses, sem cargo, pesando como uma pasta. Em troca de emendas por mês ou de pautar o projeto dele em {PACTO.relatoriaMonths} meses. Sondar é de graça: o partido diz o que quer e se topa.</p>
+      <div className="pn-basecard">
+        {outside.map((p) => {
+          const open = sonda === p.id
+          const sd = open ? sondar(state, p.id, flagshipOf) : null
+          return (
+            <div key={p.id} className="pn-basecard__row" style={{ borderLeft: `3px solid ${p.color}` }}>
+              <div><PartyLogo party={p.id} size={18} /> <b style={{ color: p.color }}>{p.sigla}</b> · {p.seats} deputados <small>· relação {Math.round(state.congress.parties[p.id].relation)}</small></div>
+              <button className="pn-btn pn-btn--ghost pn-btn--small" onClick={() => setSonda(open ? null : p.id)}>{open ? 'Fechar' : '🔎 Sondar (grátis)'}</button>
+              {sd && (
+                <div className="pn-sonda">
+                  <span>🏛️ Pastas que quer: {sd.pastas.length ? sd.pastas.map((a) => MINISTER_BY_AREA[a].areaName).join(', ') : 'não indica nomes para o governo'}</span>
+                  <span>⛔ Linha vermelha: {sd.linha}</span>
+                  <span>📌 Projeto que quer pautado: {sd.projeto ? BILL_BY_ID[sd.projeto].name : 'nenhum agora'}</span>
+                  <span className={sd.willing ? 'up' : 'dn'}>{sd.willing ? '🤝' : '✋'} {sd.why}</span>
+                  <div className="pn-row">
+                    {(['emendas', 'relatoria'] as const).map((k) => {
+                      const why = pactBlocked(state, p.id, k)
+                      return (
+                        <button key={k} className="pn-btn pn-btn--small" disabled={!!why} title={why ?? ''} onClick={() => {
+                          try { onState(signPact(state, p.id, k)); setSonda(null); onToast(`📜 Pacto de base com o ${p.sigla} por ${PACTO.months} meses.`) } catch { /* bloqueado */ }
+                        }}>{k === 'emendas' ? `Pacto por emendas (R$ ${num(sd.emendasMes, 1)} bi/mês)` : 'Pacto por relatoria (pautar o projeto dele)'}</button>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+    </section>
   )
 }

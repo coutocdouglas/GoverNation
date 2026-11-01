@@ -139,7 +139,7 @@ export interface Meanwhile {
 import type { ReputationState } from './reputacao'
 
 export interface GameState {
-  saveVersion: 17
+  saveVersion: 18
   /** Mês atual, de 0 (janeiro do 1º ano) a 47. Em 48 o mandato acabou. */
   month: number
   presidentName: string
@@ -235,6 +235,10 @@ export interface RoundBuffer {
   reactions?: ReactionRoll[]
   /** Etapa 2B: o que a rodada já deu de força à oposição (somado no fechamento). */
   rival?: Cause[]
+  /** Etapa 2C: acordos fechados na rodada (3 no total, nas duas casas), mobilização feita e pacto assinado. */
+  dealsDone?: number
+  rua?: RuaResult
+  pactDone?: boolean
   rngState: number
 }
 
@@ -433,6 +437,8 @@ export interface PartyState {
   alas?: number[]
   /** Etapa 2: ala do líder atual (0 = o líder de partida). */
   leader?: number
+  /** Etapa 2C: fidelidade à base do governo (0 a 100), criada quando o partido entra na base (pasta ou pacto). */
+  fidelity?: number
 }
 
 export interface PendingBill {
@@ -461,6 +467,53 @@ export interface PendingBill {
   conceded?: DealTerms[]
   /** Etapa 2B: parte do choque de confiança que o mercado já precificou no envio (desfeita se o projeto cair). */
   priced?: number
+  /** Etapa 2C: as ruas a favor ou contra (reforço em todas as bancadas, nas duas casas). */
+  rua?: RuaResult
+  /** Etapa 2C: acordo "adiar a votação": não vai a plenário antes deste mês. */
+  waitUntil?: number
+}
+
+/** Etapa 2C: resultado de uma mobilização (ato nacional ou greve geral). */
+export interface RuaResult {
+  bill: BillId
+  kind: 'ato' | 'greve'
+  filled: boolean
+  clash: boolean
+  /** Reforço em todas as bancadas (negativo se esvaziou). */
+  boost: number
+}
+
+/** Etapa 2C: pacto de base sem ministério (6 meses). */
+export interface Pact {
+  party: PartyId
+  since: number
+  until: number
+  kind: 'emendas' | 'relatoria'
+}
+
+/** Etapa 2C: como um partido da base cumpriu o contrato numa votação. */
+export interface BaseCheck {
+  party: PartyId
+  /** 'pasta' ou 'pacto'. */
+  via: 'pasta' | 'pacto'
+  yes: number
+  present: number
+  quota: number
+  /** entregou, traiu ou liberado (a medida cruza a linha vermelha do partido). */
+  result: 'entregou' | 'traiu' | 'liberado'
+  before: number
+  after: number
+}
+
+/** Etapa 2C: como um partido votou uma medida do governo e quem isso agradou ou desagradou. */
+export interface PartyVote {
+  at: number
+  bill: BillId
+  house?: 'senado'
+  side: 1 | -1 | 0
+  approved: boolean
+  up: GroupId[]
+  down: GroupId[]
 }
 
 /** Etapa 4C1: o Senado. Os partidos são os mesmos da Câmara (a relação com o governo é a mesma, mais um bônus). */
@@ -511,6 +564,8 @@ export interface VetoItem {
 
 /** Preço que um partido cobra pelo voto (etapa 4). Etapa 2: concessão = mudança no texto. */
 export type DealKind = 'emendas' | 'pauta' | 'cargos' | 'concessao'
+  // Etapa 2C: o cardápio de pedidos (data/base.ts, ASKS).
+  | 'obra' | 'estatal' | 'pasta' | 'relatoria' | 'compensacao' | 'sancionar' | 'favor' | 'divida' | 'palanque' | 'adiar'
 
 /** Etapa 2: destino das emendas (agrada o grupo ligado a ele). */
 export type EmendaDestino = 'saude' | 'estradas' | 'saneamento' | 'seguranca'
@@ -529,6 +584,8 @@ export interface DealTerms {
   destino?: EmendaDestino
   /** Concessão no texto: o tipo e as frases (escritas pela IA ou da lista pronta). */
   concession?: { type: ConcessionType; ask: string; change: string }
+  /** Etapa 2C: pasta pedida (tipo "pasta"). */
+  area?: AreaId
 }
 
 /** Acordo fechado no mês: o partido vota com o governo neste projeto em troca do preço. */
@@ -544,8 +601,9 @@ export interface Promise_ {
   bill: BillId
   made: number
   due: number
-  /** Etapa 2: promessa de espaço no governo (conversa "oferecer espaço"): cumpre cedendo ministério ou cargos ao partido. */
-  kind?: 'espaco'
+  /** Etapa 2: promessa de espaço no governo (conversa "oferecer espaço"): cumpre cedendo ministério ou cargos ao partido.
+   * Etapa 2C: "favor" (o governo fica devendo: cumpre com um novo acordo pago ao partido) e "sancionar" (não vetar nada do partido até o prazo). */
+  kind?: 'espaco' | 'favor' | 'sancionar'
 }
 
 export interface VoteRecord {
@@ -571,6 +629,8 @@ export interface VoteRecord {
   scale?: number
   /** Etapa 4C1: votação no Senado (sem isso, é na Câmara). */
   house?: 'senado'
+  /** Etapa 2C: a base nesta votação (partidos com pasta ou pacto). */
+  base?: BaseCheck[]
 }
 
 /** 'presidente' = conversar com o presidente da Câmara; 'senado' = com a presidente do Senado (party é o partido de quem preside). */
@@ -631,6 +691,14 @@ export interface CongressState {
   bombLog: { id: BillId; month: number }[]
   /** Etapa 4C1: o Senado. */
   senate: SenateState
+  /** Etapa 2C: pactos de base sem ministério em vigor. */
+  pacts?: Pact[]
+  /** Etapa 2C: acordos fechados (para o cardápio não repetir o mesmo pedido). */
+  dealLog?: { party: PartyId; kind: DealKind; month: number }[]
+  /** Etapa 2C: relatoria prometida: o próximo projeto do governo é relatado por este partido. */
+  relatoria?: { party: PartyId; until: number }
+  /** Etapa 2C: como cada partido votou as medidas do governo (matéria-prima da eleição). */
+  record?: Partial<Record<PartyId, PartyVote[]>>
 }
 
 /** De onde veio um fato do mês: a lei, o autor e o ano. */

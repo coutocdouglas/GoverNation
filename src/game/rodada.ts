@@ -17,7 +17,10 @@ import { CAMARA, CCJ } from './data/camara'
 import { PARTY_BY_ID } from './data/parties'
 import { GROUPS } from './data/groups'
 import { DEALS } from './data/deals'
-import { dealBlockedReason, emendasAmount, emendasFactor, flagshipOf } from './deals'
+import { askSpending, dealBlockedReason, emendasAmount, emendasFactor, flagshipOf, hurtGroup } from './deals'
+import { afterGovVote, billGroups, joinBase, noteBarred, supportersOf } from './base'
+import { ASK_BY_KIND, ESFRIA, MENU, PARTY_GROUP } from './data/base'
+import { billPopularity } from './congress'
 import { leaderOf, noteTraitors, speakerOf } from './partidos'
 import { rollTalk, talkBlockedReason } from './negociacao'
 import { concededEffects, concessionSafer } from './concessoes'
@@ -90,7 +93,7 @@ export function peekRound(s: GameState): RoundBuffer | null {
   return s.round && s.round.month === s.month ? s.round : null
 }
 
-function openCtx(s: GameState): RoundCtx {
+export function openCtx(s: GameState): RoundCtx {
   const round = roundOf(s)
   const impulses = Object.fromEntries(GROUPS.map((g) => [g.id, [...(round.impulses[g.id] ?? [])]])) as unknown as Record<GroupId, Impulse[]>
   return {
@@ -99,7 +102,7 @@ function openCtx(s: GameState): RoundCtx {
   }
 }
 
-function closeCtx(ctx: RoundCtx): void {
+export function closeCtx(ctx: RoundCtx): void {
   const r = ctx.round
   r.impulses = Object.fromEntries(Object.entries(ctx.impulses).filter(([, v]) => v.length)) as RoundBuffer['impulses']
   r.confidence = ctx.conf.v
@@ -183,6 +186,7 @@ export function applyDeals(ctx: RoundCtx, deals: Deal[]): void {
     if (d.tipo) terms.tipo = d.tipo
     if (d.destino) terms.destino = d.destino
     if (d.concession) terms.concession = d.concession
+    if (d.area) terms.area = d.area
     if (senado) {
       const sp = senatePending(s, d.bill)
       const pc = c.pending.find((x) => x.id === d.bill)
@@ -199,8 +203,20 @@ export function applyDeals(ctx: RoundCtx, deals: Deal[]): void {
     const name = BILL_BY_ID[d.bill].name
     const cut = d.counter ? ' (contraoferta aceita)' : ''
     c.scandal = Math.min(100, c.scandal + DEALS.scandal[d.kind] * (d.counter ? DEALS.counter.scandal : 1))
+    // Etapa 2C: o cardápio lembra o que já foi pedido; acordo pago quita o favor devido; 3 acordos por rodada.
+    c.dealLog = [...(c.dealLog ?? []), { party: d.party, kind: d.kind, month: s.month }].slice(-60)
+    ctx.round.dealsDone = (ctx.round.dealsDone ?? 0) + 1
+    if (['emendas', 'obra', 'cargos', 'estatal', 'pasta', 'divida', 'compensacao'].includes(d.kind)) payFavor(s, d.party, ctx.headlines)
+    // Etapa 2C: projeto ainda na Câmara: o acordo vale nas duas casas (as emendas cobrem as duas bancadas).
+    const both = !senado && !senatePending(s, d.bill)
+    const spend = askSpending(d.kind, d.counter)
+    if (spend) {
+      const label = `${ASK_BY_KIND[d.kind].label} (${party.sigla})`
+      e.tempSpending.push({ label, amount: spend.pib, monthsLeft: spend.months })
+      ctx.conf.v += spend.pib * DEALS.emendasConfidence / 100
+    }
     if (d.kind === 'emendas') {
-      const amount = emendasAmount(d.party, senado ? 'senado' : 'camara') * emendasFactor(d)
+      const amount = emendasAmount(d.party, senado ? 'senado' : both ? 'ambas' : 'camara') * emendasFactor(d)
       e.tempSpending.push({ label: `Emendas para o ${party.sigla}${where}`, amount, monthsLeft: DEALS.emendasMonths })
       // Etapa 2: o mercado vê o gasto na hora; o destino agrada o grupo ligado a ele.
       ctx.conf.v += amount * DEALS.emendasConfidence / 100
@@ -222,6 +238,8 @@ export function applyDeals(ctx: RoundCtx, deals: Deal[]): void {
       const def = d.concession ? CONCESSION_BY_ID[d.concession.type] : null
       taken.push(`Concessão ao ${party.sigla}${where} em “${name}”: ${d.concession?.change ?? def?.label ?? 'mudança no texto'}${cut}`)
       addBio(s, lead, `Arrancou do governo uma mudança no texto de “${name}”${def ? ` (${def.label.toLowerCase()})` : ''}.`)
+    } else if (d.kind !== 'pauta') {
+      applyAsk(ctx, d, name, where, cut)
     } else {
       const flag = flagshipOf(s, d.party, d.bill)
       if (flag) {
@@ -244,6 +262,81 @@ export function keepEspaco(s: GameState, party: GameState['playerParty'], hl: He
   c.parties[party].relation = Math.min(100, c.parties[party].relation + TALK.espacoKept)
   addMark(s, 'palavra', REPUTACAO.pts.palavra, `Cumpriu a promessa de espaço ao ${PARTY_BY_ID[party].sigla}`, 'acordo')
   hl.push({ text: `Governo cumpre a promessa e abre espaço para o ${PARTY_BY_ID[party].sigla}`, tone: 'good' })
+}
+
+/** Etapa 2C: o governo pagou algo ao partido a quem devia um favor: favor quitado. */
+function payFavor(s: GameState, party: GameState['playerParty'], hl: Headline[]): void {
+  const c = s.congress
+  const pr = c.promises.find((p) => p.kind === 'favor' && p.party === party && p.made < s.month)
+  if (!pr) return
+  c.promises = c.promises.filter((x) => x !== pr)
+  addMark(s, 'palavra', REPUTACAO.pts.palavra, `Pagou o favor que devia ao ${PARTY_BY_ID[party].sigla}`, 'acordo')
+  hl.push({ text: `Governo paga o favor que devia ao ${PARTY_BY_ID[party].sigla}`, tone: 'good' })
+}
+
+/** Etapa 2C: efeito de cada pedido novo do cardápio (obra, estatal, pasta, relatoria, compensação, não vetar, favor, dívida, palanque, adiar). */
+function applyAsk(ctx: RoundCtx, d: Deal, name: string, where: string, cut: string): void {
+  const { s, taken } = ctx
+  const c = s.congress
+  const party = PARTY_BY_ID[d.party]
+  const lead = leaderOf(s, d.party).name
+  const grp = (g: GroupId, v: number, why: string) => ctx.impulses[g].push({ label: why, value: v })
+  switch (d.kind) {
+    case 'obra':
+      grp(PARTY_GROUP[d.party], MENU.obraGroup * (d.counter ? 0.5 : 1), `Obra no estado de ${lead}`)
+      addBio(s, lead, `Levou para o estado uma obra grande, em troca de votos${where} em “${name}”.`)
+      break
+    case 'divida':
+      grp(PARTY_GROUP[d.party], MENU.obraGroup * 0.5, `Dívida do estado renegociada`)
+      addBio(s, lead, `Conseguiu renegociar a dívida do estado em troca de votos${where} em “${name}”.`)
+      break
+    case 'compensacao': {
+      const h = hurtGroup(d.bill)
+      if (h) grp(h.group, Math.abs(h.value) * MENU.compensaShare * (d.counter ? 0.5 : 1), `Compensação: ${name}`)
+      addBio(s, lead, `Arrancou do governo uma compensação para quem perde com “${name}”.`)
+      break
+    }
+    case 'estatal': {
+      const own = c.parties[s.playerParty]
+      own.relation = Math.max(0, own.relation + DEALS.ownPartyCargos)
+      addBio(s, lead, `Indicou um diretor de estatal em troca de votos${where} em “${name}”.`)
+      keepEspaco(s, d.party, ctx.headlines)
+      break
+    }
+    case 'pasta': {
+      const area = d.area
+      if (area && !ministryBlockedReason(s, { area, party: d.party })) {
+        applyMinistryChange(s, { area, party: d.party }, ctx.headlines, taken)
+        addBio(s, lead, `Levou uma pasta para o ${party.sigla} em troca de votos${where} em “${name}”.`)
+      }
+      break
+    }
+    case 'relatoria':
+      c.relatoria = { party: d.party, until: s.month + MENU.relatoriaMonths }
+      addBio(s, lead, `Ganhou do governo a relatoria do próximo projeto, em troca de votos em “${name}”.`)
+      break
+    case 'sancionar':
+      c.promises.push({ party: d.party, bill: '', made: s.month, due: s.month + MENU.sancionarMonths, kind: 'sancionar' })
+      addBio(s, lead, `Arrancou do presidente ${s.presidentName} o compromisso de não vetar nada do ${party.sigla}.`)
+      break
+    case 'favor':
+      c.promises.push({ party: d.party, bill: '', made: s.month, due: s.month + MENU.favorMonths, kind: 'favor' })
+      addBio(s, lead, `Deixou o presidente ${s.presidentName} devendo um favor.`)
+      break
+    case 'palanque': {
+      const own = c.parties[s.playerParty]
+      own.relation = Math.max(0, own.relation + MENU.palanqueOwnHit)
+      addBio(s, lead, `Garantiu o presidente ${s.presidentName} no palanque do ${party.sigla}.`)
+      break
+    }
+    case 'adiar': {
+      const pb = c.pending.find((x) => x.id === d.bill) ?? senatePending(s, d.bill)
+      if (pb) pb.waitUntil = s.month + 1
+      addBio(s, lead, `Topou votar “${name}”, mas só no mês seguinte.`)
+      break
+    }
+  }
+  taken.push(`${ASK_BY_KIND[d.kind].label} para o ${party.sigla}${where} em troca de votos em “${name}”${cut}`)
 }
 
 // ─── Rejeição e aprovação ─────────────────────────────────────────────────────
@@ -273,6 +366,8 @@ export function rejectBill(ctx: RoundCtx, p: PendingBill, house: House | 'caduco
     return
   }
   for (const g of GROUPS) impulses[g.id].push({ label: `Derrota do governo ${senado ? 'no Senado' : 'na Câmara'}`, value: senado ? SENADO.defeatHit : -0.8 })
+  // Etapa 2C: a Ficha guarda quem a medida barrada agradava e desagradava (e se era impopular).
+  noteBarred(s, p.id, senado ? 'o Senado' : 'a Câmara', placar, billPopularity(bill))
   addBio(s, s.presidentName, `Derrotado ${senado ? 'no Senado' : 'na Câmara'}: ${bill.name} (${placar}).`)
   addMark(s, 'derrotado', REPUTACAO.pts.derrotado, `Derrota ${senado ? 'no Senado' : 'na Câmara'}: “${bill.name}” (${placar})`, 'derrota', p.id)
   if (senado) {
@@ -292,11 +387,13 @@ function enactBill(ctx: RoundCtx, p: PendingBill, placarS: string): void {
   const am = p.original ? undefined : p.amendment
   c.laws.push(p.id)
   ctx.sanctioned.push(p.id)
-  noteRecord(s, { text: `Lei aprovada: ${bill.name}`, tone: 'good', kind: 'lei', bill: p.id })
+  // Etapa 2C: a Ficha guarda com os votos de quem a lei passou.
+  const sup = supportersOf([...ctx.votes].reverse().find((x) => x.bill === p.id && x.house !== 'senado') ?? [...s.congress.votes].reverse().find((x) => x.bill === p.id && x.house !== 'senado'))
+  noteRecord(s, { text: `Lei aprovada: ${bill.name}${sup.length ? `, com os votos de ${sup.map((x) => PARTY_BY_ID[x].sigla).join(', ')}` : ''}`, tone: 'good', kind: 'lei', bill: p.id, groups: billGroups(p.id) })
   ctx.enacted.push(p.id)
   ctx.mm.enacted.push(bill.area)
   // Etapa 2: concessões no texto (da Câmara e do Senado) enfraquecem os efeitos; a do TCU deixa o texto mais seguro.
-  const conc = [...(p.conceded ?? []), ...(p.deals ?? [])].filter((d) => d.kind === 'concessao')
+  const conc = [...(p.conceded ?? []), ...(p.deals ?? [])].filter((d, i, arr) => d.kind === 'concessao' && arr.findIndex((x) => x.kind === 'concessao' && x.party === d.party && x.concession?.type === d.concession?.type) === i)
   if (concessionSafer(conc) && !s.supremo.adjusted[p.id]) s.supremo.adjusted[p.id] = 'baixo'
   if (bill.instrument !== 'mp') {
     const k = p.ccj === 'adequado' ? SUPREMO.ccj.adequaScale : 1
@@ -372,6 +469,9 @@ export function gavetaReason(s: GameState, id: BillId, house: House, opts: Floor
   if (isFrozen(s, id)) return 'O Supremo travou a votação até o plenário julgar.'
   const round = peekRound(s)
   const c = s.congress
+  // Etapa 2C: acordo "adiar um mês".
+  const waiting = (house === 'camara' ? c.pending.find((x) => x.id === id) : senatePending(s, id))?.waitUntil
+  if (waiting !== undefined && waiting > s.month) return 'Combinado com a liderança: a votação fica para a próxima rodada.'
   if (house === 'camara') {
     if (bill.instrument === 'mp') return null
     const pb = c.pending.find((x) => x.id === id)
@@ -410,6 +510,10 @@ function floorCamara(ctx: RoundCtx, p: PendingBill, opts: FloorOptions): 'votado
   const bill = BILL_BY_ID[p.id]
   if (isRecess(s.month) || isFrozen(s, p.id)) {
     headlines.push({ text: `“${bill.name}” fica na fila: ${isRecess(s.month) ? 'o Congresso está em recesso' : 'o Supremo travou a votação'}`, tone: 'neutral' })
+    return 'parado'
+  }
+  if (p.waitUntil !== undefined && p.waitUntil > s.month) {
+    headlines.push({ text: `“${bill.name}” fica para a próxima rodada, como combinado com a liderança`, tone: 'neutral' })
     return 'parado'
   }
   // Etapa 4C3: projeto de risco alto passa pelo filtro da CCJ, na hora.
@@ -465,6 +569,8 @@ function floorCamara(ctx: RoundCtx, p: PendingBill, opts: FloorOptions): 'votado
     }
     noteTraitors(s, v, byAla, headlines, bill.name)
   }
+  // Etapa 2C: o contrato da base e o registro de votos dos partidos.
+  afterGovVote(s, v, symbolic, headlines)
   ctx.votes.push(v)
   s.congress.votes.push(v)
   c.pending = c.pending.filter((x) => x.id !== p.id)
@@ -476,7 +582,9 @@ function floorCamara(ctx: RoundCtx, p: PendingBill, opts: FloorOptions): 'votado
       headlines.push({ text: `Relator do ${PARTY_BY_ID[am.relator].sigla} desidrata “${bill.name}”: o texto aprovado é mais fraco que o original`, tone: 'neutral' })
     }
     const conceded = (p.deals ?? []).filter((d) => d.kind === 'concessao')
-    const sp: PendingBill = { id: p.id, sentMonth: s.month, priced: p.priced, amendment: p.amendment, original: p.original, deals: p.senateDeals, camara: { yes: v.yes, no: v.no, symbolic: symbolic || undefined, month: s.month }, ccj: p.ccj, ...(conceded.length ? { conceded } : {}) }
+    // Etapa 2C: os acordos fechados na Câmara valem também no Senado; as ruas seguem o projeto.
+    const senDeals = [...(p.deals ?? []).filter((d) => d.kind !== 'adiar'), ...(p.senateDeals ?? [])]
+    const sp: PendingBill = { id: p.id, sentMonth: s.month, priced: p.priced, amendment: p.amendment, original: p.original, deals: senDeals.length ? senDeals : undefined, ...(p.rua ? { rua: p.rua } : {}), camara: { yes: v.yes, no: v.no, symbolic: symbolic || undefined, month: s.month }, ccj: p.ccj, ...(conceded.length ? { conceded } : {}) }
     c.senate.pending.push(sp)
     addBio(s, s.presidentName, `Aprovou na Câmara: ${bill.name} (${placar}).`)
     headlines.push({ text: `Câmara aprova ${lowerFirst(bill.name)}: ${placar}${bill.instrument === 'pec' ? ', nos dois turnos' : ''}. Segue para o Senado`, tone: 'good' })
@@ -492,7 +600,8 @@ function floorSenado(ctx: RoundCtx, p: PendingBill, opts: FloorOptions): 'votado
   const bill = BILL_BY_ID[p.id]
   const hold = gavetaReason(s, p.id, 'senado', opts)
   if (hold) {
-    if (!isRecess(s.month) && !isFrozen(s, p.id)) {
+    if (p.waitUntil !== undefined && p.waitUntil > s.month) headlines.push({ text: `“${bill.name}” fica para a próxima rodada no Senado, como combinado com a liderança`, tone: 'neutral' })
+    else if (!isRecess(s.month) && !isFrozen(s, p.id)) {
       p.holds = (p.holds ?? 0) + 1
       ctx.round.senateHeld = true
       headlines.push({ text: `${SENADO.president.name}, presidente do Senado, segura “${bill.name}” e não pauta a votação`, tone: 'bad' })
@@ -515,6 +624,7 @@ function floorSenado(ctx: RoundCtx, p: PendingBill, opts: FloorOptions): 'votado
     }
   }
   if (p.camara?.month === s.month) v.scale = ctx.votes.find((x) => x.bill === p.id && x.house !== 'senado')?.scale
+  afterGovVote(s, v, symbolic, headlines)
   ctx.votes.push(v)
   s.congress.votes.push(v)
   c.senate.pending = c.senate.pending.filter((x) => x.id !== p.id)
@@ -603,6 +713,10 @@ export function sendInto(s: GameState, id: BillId, opts: FloorOptions = {}, resp
     courtToday(ctx, id)
   } else {
     const p: PendingBill = { id, sentMonth: s.month, stage: bill.instrument === 'mp' ? 'plenario' : 'comissao', amendment: amendmentFor(s, id) }
+    // Etapa 2C: a relatoria prometida vale para este projeto (e acaba).
+    if (c.relatoria) delete c.relatoria
+    // Etapa 2C: as ruas convocadas antes de mandar seguem o projeto.
+    if (ctx.round.rua?.bill === id) p.rua = ctx.round.rua
     if (opts.urgent && (bill.instrument === 'lei' || bill.instrument === 'complementar')) {
       p.urgent = true
       c.speaker.relation = Math.max(0, c.speaker.relation - CAMARA.speaker.urgencyCost)
@@ -669,10 +783,9 @@ function floorOptionsBlocked(s: GameState, id: BillId, opts: FloorOptions, sendi
     if (!sending && queueHouse(s, id) !== 'camara') return 'Urgência só vale na Câmara.'
   }
   const deals = opts.deals ?? []
-  const cam = deals.filter((d) => d.house !== 'senado')
-  const sen = deals.filter((d) => d.house === 'senado')
-  if (cam.length > DEALS.listenPerMonth) return `No máximo ${DEALS.listenPerMonth} acordos por votação na Câmara.`
-  if (sen.length > SENADO.listenPerMonth) return `No máximo ${SENADO.listenPerMonth} acordos por votação no Senado.`
+  // Etapa 2C: 3 acordos por rodada no total, somando Câmara e Senado (o da Câmara já vale no Senado).
+  const done = peekRound(s)?.dealsDone ?? 0
+  if (done + deals.length > MENU.perRound) return `No máximo ${MENU.perRound} acordos por rodada (já fechou ${done}).`
   for (const d of deals) {
     const full: Deal = { ...d, bill: id }
     const same = deals.filter((x) => x !== d && (x.house ?? 'camara') === (d.house ?? 'camara')).map((x) => ({ ...x, bill: id }))
@@ -724,6 +837,28 @@ export function expireMps(ctx: RoundCtx): void {
     c.pending = c.pending.filter((x) => x !== p)
     c.senate.pending = c.senate.pending.filter((x) => x !== p)
     rejectBill(ctx, p, 'caducou', '')
+  }
+}
+
+/**
+ * Etapa 2C: a pauta que esfria. Projeto que passou `ESFRIA.archiveAfter` rodadas na fila sem ser votado é arquivado
+ * (MP não: caduca antes). Pode voltar em `ESFRIA.resubmit` meses.
+ */
+export function archiveStale(ctx: RoundCtx): void {
+  const { s, headlines } = ctx
+  const c = s.congress
+  for (const p of [...c.pending, ...c.senate.pending]) {
+    const bill = BILL_BY_ID[p.id]
+    if (!bill || bill.instrument === 'mp') continue
+    if (s.month - p.sentMonth < ESFRIA.archiveAfter - 1) continue
+    const senado = c.senate.pending.includes(p)
+    c.pending = c.pending.filter((x) => x !== p)
+    c.senate.pending = c.senate.pending.filter((x) => x !== p)
+    c.blockedUntil[p.id] = s.month + ESFRIA.resubmit
+    if (p.priced) ctx.conf.v -= p.priced
+    headlines.push({ text: `${senado ? 'Senado' : 'Câmara'} arquiva “${bill.name}”: ${ESFRIA.archiveAfter} meses na fila sem votação. Pode voltar em ${ESFRIA.resubmit} meses`, tone: 'bad' })
+    noteRecord(s, { text: `${senado ? 'O Senado' : 'A Câmara'} arquivou “${bill.name}” depois de ${ESFRIA.archiveAfter} meses parado na fila`, tone: 'bad', kind: 'derrota', bill: p.id, groups: billGroups(p.id) })
+    addBio(s, s.presidentName, `Viu “${bill.name}” ser arquivado ${senado ? 'no Senado' : 'na Câmara'} sem votação.`)
   }
 }
 
@@ -795,6 +930,7 @@ export function applyMinistryChange(s: GameState, ch: MinistryChange, headlines:
     const p = PARTY_BY_ID[party]
     const nominee = NOMINEE_BY_PARTY[party]!
     s.cabinet[area] = { party, since: s.month }
+    joinBase(s, party)
     const ps = c.parties[party]
     ps.relation = Math.min(100, ps.relation + CAMARA.ministry.relationGain)
     ps.baseRelation = Math.min(95, ps.baseRelation + CAMARA.ministry.baseGain)

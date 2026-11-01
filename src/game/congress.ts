@@ -9,6 +9,7 @@ import { SENADO, SENATE_SEATS } from './data/senado'
 import { affinity, clamp } from './ideology'
 import { amendmentFor, cabinetBoost, effectiveBill, frenteBonuses } from './camara'
 import { ALAS } from './data/alas'
+import { ESFRIA } from './data/base'
 import { alaByIndex, memberMods, orientSign, speakerOf } from './partidos'
 import { withConcessions } from './concessoes'
 import type {
@@ -240,9 +241,16 @@ function boosts(deals: DealList, broken?: Set<PartyId>): Partial<Record<PartyId,
 /** Acordos já fechados para um projeto que está na Câmara. */
 export const dealsOf = (s: GameState, id: BillId): DealList => s.congress.pending.find((p) => p.id === id)?.deals ?? []
 
-/** Etapa 4C1: acordos já fechados no Senado (com o projeto no Senado ou ainda na Câmara). */
-export const senateDealsOf = (s: GameState, id: BillId): DealList =>
-  s.congress.senate.pending.find((p) => p.id === id)?.deals ?? s.congress.pending.find((p) => p.id === id)?.senateDeals ?? []
+/**
+ * Etapa 4C1: acordos que valem no Senado. Etapa 2C: com o projeto ainda na Câmara, o acordo fechado lá
+ * vale também no Senado (mais os antigos, fechados só para o Senado).
+ */
+export function senateDealsOf(s: GameState, id: BillId): DealList {
+  const sp = s.congress.senate.pending.find((p) => p.id === id)
+  if (sp) return sp.deals ?? []
+  const pc = s.congress.pending.find((p) => p.id === id)
+  return pc ? [...(pc.deals ?? []), ...(pc.senateDeals ?? [])] : []
+}
 
 /** Projeto esperando o Senado. */
 export const senatePending = (s: GameState, id: BillId): PendingBill | undefined => s.congress.senate.pending.find((p) => p.id === id)
@@ -250,6 +258,20 @@ export const senatePending = (s: GameState, id: BillId): PendingBill | undefined
 export interface VoteOptions {
   /** Votar o texto original, contra o parecer do relator. */
   original?: boolean
+  /** Etapa 2C: reforço extra em todas as bancadas (prévia das ruas). */
+  allBoost?: number
+}
+
+/**
+ * Etapa 2C: pressão que vale para todas as bancadas: as ruas (a favor ou contra) e a pauta que esfria
+ * (cada rodada na fila tira um pouco de apoio; MP não esfria, caduca).
+ */
+export function floorPressure(s: GameState, billId: BillId): { rua: number; esfria: number; age: number } {
+  const pb = s.congress.pending.find((p) => p.id === billId) ?? senatePending(s, billId)
+  const r = s.round && s.round.month === s.month && s.round.rua?.bill === billId ? s.round.rua : undefined
+  const rua = pb?.rua?.boost ?? r?.boost ?? 0
+  const age = pb && BILL_BY_ID[billId]?.instrument !== 'mp' ? Math.max(0, s.month - pb.sentMonth) : 0
+  return { rua, esfria: Math.min(ESFRIA.max, age * ESFRIA.perRound), age }
 }
 
 /** Parecer que vale para o projeto: o guardado na tramitação ou, se ainda não foi enviado, o que o relator faria hoje. */
@@ -267,7 +289,14 @@ function voteSetup(s: GameState, billId: BillId, deals: DealList, opts: VoteOpti
   const conc = [...(pb?.conceded ?? []), ...(pb?.deals ?? []), ...deals].filter((d, i, arr) => d.kind === 'concessao' && arr.findIndex((x) => x.kind === 'concessao' && x.party === d.party && x.concession?.type === d.concession?.type) === i)
   const bill = withConcessions(effectiveBill(BILL_BY_ID[billId], am, original), conc)
   const boost = boosts(deals, broken)
-  for (const [pid, v] of Object.entries(govBoost(s)) as [PartyId, number][]) boost[pid] = (boost[pid] ?? 0) + v
+  const gb = govBoost(s)
+  for (const [pid, v] of Object.entries(gb) as [PartyId, number][]) boost[pid] = (boost[pid] ?? 0) + v
+  // Etapa 2C: a pasta acordada já entrou no gabinete: o reforço da pasta não conta duas vezes.
+  for (const d of deals) if (d.kind === 'pasta' && gb[d.party]) boost[d.party] = (boost[d.party] ?? 0) - (cabinetBoost(s)[d.party] ?? 0)
+  // Etapa 2C: as ruas e a pauta que esfria pesam em todas as bancadas.
+  const fp = floorPressure(s, billId)
+  const all = fp.rua - fp.esfria + (opts.allBoost ?? 0)
+  if (all) for (const p of PARTIES) boost[p.id] = (boost[p.id] ?? 0) + all
   // O relator contrariado é da Câmara; no Senado o texto já chega fechado.
   if (house === 'camara' && original && am && am.kind !== 'mantem') boost[am.relator] = (boost[am.relator] ?? 0) + CAMARA.amendment.keepOriginalPenalty
   return { bill, boost }

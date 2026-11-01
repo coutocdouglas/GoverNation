@@ -29,6 +29,8 @@ export interface RecordEntry {
   mark?: MarkId
   pts?: number
   bill?: BillId
+  /** Etapa 2C: grupos que a medida agradava e desagradava (matéria-prima da eleição). */
+  groups?: { up: GroupId[]; down: GroupId[] }
 }
 
 export interface Chapter {

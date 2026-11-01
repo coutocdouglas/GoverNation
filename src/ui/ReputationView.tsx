@@ -1,3 +1,4 @@
+import { GROUP_BY_ID } from '../game/data/groups'
 import { useState } from 'react'
 import { MARK_BY_ID, REPUTACAO } from '../game/data/marks'
 import { chapterRequest } from '../game/ai'
@@ -100,6 +101,13 @@ export function GovernmentRecord({ state, onChange }: { state: GameState; onChan
               <span className="pn-bio__when">{when(e.at)}</span>
               {e.text}
               {e.mark && <span className={`pn-chip-mini pn-mark--${MARK_BY_ID[e.mark].tone}`} title={MARK_BY_ID[e.mark].desc}>{MARK_BY_ID[e.mark].icon} +{e.pts}</span>}
+              {e.groups && (e.groups.up.length > 0 || e.groups.down.length > 0) && (
+                <small className="pn-hint" style={{ display: 'block', margin: '2px 0 0' }}>
+                  {e.groups.up.length > 0 && <>agradava {e.groups.up.map((g) => GROUP_BY_ID[g].name.toLowerCase()).join(', ')}</>}
+                  {e.groups.up.length > 0 && e.groups.down.length > 0 && ' · '}
+                  {e.groups.down.length > 0 && <>desagradava {e.groups.down.map((g) => GROUP_BY_ID[g].name.toLowerCase()).join(', ')}</>}
+                </small>
+              )}
             </li>
           ))}
         </ol>

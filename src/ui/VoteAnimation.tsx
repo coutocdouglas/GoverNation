@@ -134,12 +134,34 @@ export function VoteAnimation({ vote, index, total, onNext, nextLabel, chain }: 
             <span className={`pn-vanim__stamp ${good ? 'ok' : 'ko'}`}>{vote.approved ? okText : koText}</span>
             <p className="pn-hint">{vote.yes} sim · {vote.no} não · {vote.abstain} abstenções · {vote.absent} ausentes{vote.traitors ? ` · 🗡️ ${traitorsTotal(vote)} traíram a própria liderança` : ''}</p>
             {vote.orient && <BancadasChart v={vote} />}
+            {vote.base && vote.base.length > 0 && <BaseNaVotacao v={vote} />}
             <button className="pn-btn pn-btn--big" onClick={onNext} autoFocus>{nextLabel}</button>
           </div>
         ) : (
           <p className={`pn-hint pn-vanim__live ${reached ? 'up' : ''}`}>{reached ? (veto ? '⚠️ Já há votos para derrubar o veto…' : '✅ O piso foi alcançado…') : '⏳ Votação em andamento…'}</p>
         )}
       </div>
+    </div>
+  )
+}
+
+/** Etapa 2C: "A base nesta votação": cada partido com pasta ou pacto, a cota que o contrato pedia e a fidelidade. */
+function BaseNaVotacao({ v }: { v: VoteRecord }) {
+  const tag = { entregou: { t: 'ENTREGOU', c: 'up' }, traiu: { t: 'TRAIU', c: 'dn' }, liberado: { t: 'LIBERADO', c: '' } } as const
+  return (
+    <div className="pn-basevote">
+      <b>A base nesta votação</b>
+      {v.base!.map((x) => {
+        const p = PARTY_BY_ID[x.party]
+        return (
+          <div key={x.party} className="pn-basevote__row">
+            <span><i style={{ background: p.color }} />{p.sigla}</span>
+            <small>{x.via === 'pasta' ? 'tem 1 pasta' : 'tem pacto'} e deu <b>{x.yes}</b> de {x.present} · o acordo pedia {x.quota}{x.result === 'liberado' ? ' (a medida cruza a linha vermelha do partido)' : ''}</small>
+            <small className="mono">fidelidade {x.before} → <b className={x.after > x.before ? 'up' : x.after < x.before ? 'dn' : ''}>{x.after}</b></small>
+            <span className={`pn-chip-mini ${tag[x.result].c}`}>{tag[x.result].t}</span>
+          </div>
+        )
+      })}
     </div>
   )
 }

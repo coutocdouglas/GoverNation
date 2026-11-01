@@ -697,7 +697,7 @@ Exposição a escândalo visível de 0 a 100 (item 20), CPIs (35), vice-presiden
 | **1 · Causa e consequência** | Ficha de governo com marcas de reputação (medida enviada já marca), desdobramentos em 3 camadas, anti-repetição, capítulos da presidência com IA, exposição a escândalo visível, três caminhos para a crise (post, rua), agenda limpa, enquanto você decidia, fato bom com botão de agir | 4E, 4F, novo |
 | ✅ **2 · Câmara e partidos** (v0.18) | Líder do seu partido indicável, eleições internas e da Mesa, alas, conversa por tipos, emendas detalhadas, contraoferta, concessões no texto, traidores, janela da medida em etapas com nota de freios e contrapesos, nome da medida | 4D, 4E |
 | ✅ **2B · A página inicial e o fluxo do dia** (v0.19) | Fato do mês em destaque com Agir ou Deixar passar; pendências por urgência; corrente de janelas "etapa N de M"; Supremo no mesmo dia; "quem vai reagir"; notas Congressual e Judicial; "já valeu" | média-alta · Sonnet nas telas, Opus no Supremo e no "já valeu" |
-| ⏭️ **2C · A mesa de negociação e a base** (v0.20) | Acordo vale nas duas casas; cardápio de pedidos variado com votos convertidos; as ruas; pauta que esfria; base como contrato com fidelidade; pacto sem ministério; registro de votos dos partidos; logos | muito alta · Opus |
+| ✅ **2C · A mesa de negociação e a base** (v0.20) | Acordo vale nas duas casas; cardápio de pedidos variado com votos convertidos; as ruas; pauta que esfria; base como contrato com fidelidade; pacto sem ministério; registro de votos dos partidos; logos | muito alta · Opus |
 | **3 · Senado** | Página própria, líderes de bancada, indecisos com preço, comissões do Senado, 27 estados com bancadas estaduais, emendas por estado | 4D, 5B (parte) |
 | **4 · Supremo profundo** | Sorteio do relator, validação que protege, crise pós-derrubada ampliada, reputação jurídica, pedido de vista | 4E, novo |
 | **5 · Oposição, escândalos e CPI** | Escândalos revelados, CPI, inteligência | levantamento |
@@ -791,7 +791,7 @@ Exposição a escândalo visível de 0 a 100 (item 20), CPIs (35), vice-presiden
 - **Telas:** `src/ui/PartidosPanels.tsx` (alas, conversa por tipos, líder, Mesa, gráfico das bancadas), oferta nova na `VoteSheet` (concessão, contraoferta, emendas), traidores na votação animada e no placar.
 - **Save 16** (`names`, alas, Mesa, nome do presidente da Câmara guardado). 232 testes.
 
-### 27.6 Etapas 2B e 2C (aprovadas em 31/10/2026; a 2B foi feita na v0.19, ver 27.7)
+### 27.6 Etapas 2B e 2C (aprovadas em 31/10/2026; a 2B foi feita na v0.19, ver 27.7; a 2C na v0.20, ver 27.8)
 
 **Origem:** `docs/levantamento-congresso.md` (prints do jogo de referência) e as decisões do Douglas da seção J do levantamento. A 2B e a 2C entram **antes do Senado** (Etapa 3). Cada uma fecha com o portão de sempre (testes, simulador, partida no navegador, CHANGELOG, DESIGN, ESTADO e versão publicada).
 
@@ -816,7 +816,7 @@ Exposição a escândalo visível de 0 a 100 (item 20), CPIs (35), vice-presiden
 - **F5.** **O mercado precifica parte no envio** (cerca de 1/3 do choque de confiança; o resto na aprovação; barrada, desfaz).
 - **F6.** **"O país reage"** ganha **"já valeu no dia do anúncio"** (prévia da aprovação) e **"entra no fechamento do mês"** (resultado primário antes → depois).
 
-#### 2C · A mesa de negociação e a base (v0.20)
+#### 2C · A mesa de negociação e a base (v0.20, feita: ver 27.8)
 **Complexidade: muito alta. Modelo: Opus (regras e balanceamento); Sonnet nas telas.**
 
 - **N1.** **Um acordo com um partido vale nas duas casas:** a oferta mostra "converte X na Câmara e Y no Senado" e entra na contagem das duas. **3 conversas por rodada no total** (hoje 3 na Câmara + 2 no Senado). Mantém só a revelação ao clicar: o partido só mostra o que quer depois de aberto.
@@ -859,6 +859,25 @@ Exposição a escândalo visível de 0 a 100 (item 20), CPIs (35), vice-presiden
 **Balanceamento (simulador, 30 sementes):** notas iguais em passivo, populista, austero, equilibrado e só assessoria; responde aos fatos 615 → 607 e com assessoria 636 → 636; leis por mandato iguais (MDN 22, POL 20, FPT 12). Derrubadas no Supremo sobem um pouco (responde aos fatos 0,2 → 0,5 por mandato; medidas arriscadas 2,1 → 3,3 com o FPT), porque a liminar agora vai ao plenário no mesmo dia e não dá mais tempo de recuar. O simulador passou a pautar a fila antes de escolher os decretos (a derrubada na hora pode mudar o que é permitido).
 
 **Caixa de ideias desta etapa:** "Trabalhar o plenário" e aguardar o julgamento, sorteio do relator com a doutrina, acórdão com a frase de cada ministro (Etapa 4); "o que muda nas empresas" (quando abrirem Economia e Programas); aplicar o "já valeu" na hora (decisão de balanceamento, se o Douglas quiser).
+
+### 27.8 Como ficou a Etapa 2C (v0.20)
+
+**Motor** (números todos em `src/game/data/base.ts`):
+- **Cardápio (N2):** `menuKinds` em `deals.ts` pontua os 14 tipos (`ASKS`) pelo fisiologismo, tamanho da bancada, tema da medida (obra em área de obra, pasta desejada na área), caixa apertado (`MENU.tightPrimary`: pedidos de dinheiro × 0,6), exposição a escândalo (`MENU.exposedAt` 45: pedidos arriscados × 0,45), pastas que o partido já tem e pedidos repetidos nos últimos 6 meses (`dealLog`, −0,7 cada), mais um sorteio fixo por partido, medida e mês. Fica com 3 (2 para bancada pequena ou partido muito ideológico). `offerFor` devolve `options` (cada uma com `yesWith` e, se o projeto está na Câmara, `senado`); a primeira vira a oferta padrão (compatível com o código antigo). Efeitos dos pedidos novos em `applyAsk` (`rodada.ts`): obra e dívida agradam o grupo do partido (`PARTY_GROUP`), compensação devolve metade da perda ao grupo prejudicado, estatal irrita o seu partido, pasta muda o ministério na hora, relatoria vale para o próximo projeto enviado, "não vetar" e "favor" viram promessas (`Promise_.kind`; favor quitado por um acordo pago ao partido; quebrados custam relação e a marca de palavra), palanque irrita o seu partido, adiar põe `waitUntil` no projeto.
+- **Duas casas (N1):** acordo fechado com o projeto na Câmara entra em `deals` e segue para o Senado (`floorCamara` copia, menos "adiar"); emendas cobrem as duas bancadas (`emendasAmount(…, 'ambas')`). `round.dealsDone` conta os acordos da rodada (limite `MENU.perRound` 3, as duas casas juntas).
+- **Ruas (N3):** `mesa.ts` (`ruaPreview`, `mobilize`). Reforço em todas as bancadas: ato 0,022 e greve 0,042, **calibrados no simulador** (cerca de 290 votos na Câmara por ponto: ato ≈ +6, greve ≈ +12; esvaziado tira metade). Chance de encher pela popularidade da medida e pela aprovação (greve: mais a aprovação dos trabalhadores e o partido sindical); confronto mais provável em medida impopular. O resultado fica em `round.rua` e no projeto (`PendingBill.rua`, segue para o Senado). Medido em 40 partidas: ato enche 45% das vezes, greve 38%, confronto 17% e 35%.
+- **Pauta que esfria (N4):** `ESFRIA` (−0,04 de apoio por rodada, até −0,2); `archiveStale` arquiva no fechamento da 6ª rodada contando a do envio (MP fica de fora: tem o prazo próprio de 4 rodadas).
+- **Base (B1):** `base.ts`. `baseMembers` = pastas cedidas + pactos em vigor. `baseBoost` substitui o reforço fixo da pasta: reforço × (0,4 + fidelidade/117, até 1,2). `afterGovVote` confere a cota (80% dos presentes) em cada votação da Câmara e do Senado: entregou +2; traiu −(6 + 0,6 × votos faltando, até 18) e −3 de relação; linha vermelha (afinidade < −0,45) libera. Abaixo de 30 vira manchete de racha. Bancada grande (60+) com uma pasta só perde 1 de fidelidade por mês sem acordo recente. Guardado em `VoteRecord.base` e mostrado em `VoteAnimation`.
+- **Pacto (B2):** `signPact` (`mesa.ts`); topa quem tem relação + 30 × fisiologismo ≥ 50. Emendas: 0,0004% do PIB ao ano por deputado durante 6 meses; relatoria: promessa de pautar o projeto do partido em 3 meses. Fidelidade de partida 65 (pasta: 70).
+- **Registro (H1):** `notePartyVotes` guarda em `congress.record[partido]` (até 80 por partido) o lado do voto e os grupos agradados e desagradados (efeito da medida ≥ 0,6 × lado). `noteBarred` marca a Ficha do presidente (medida com popularidade ≤ −1 vira "medida impopular barrada"); lei aprovada anota os partidos que mais deram votos.
+
+**Telas:** `VoteSheet` (cardápio com os votos nas duas casas, selo de base e de linha vermelha, contador de conversas, as ruas, aviso da pauta esfriando, "Base X · Fiel Y" e quem orienta), `VoteAnimation` ("A base nesta votação"), `PartidosPanels` (cartão "A base do governo" com fidelidade, pactos e "Sondar (grátis)"), `FichasView` ("Como os partidos votaram"), `pendencias.ts` (pauta esfriando, favor e "não vetar" devidos).
+
+**Save 18:** quem tinha pasta entra com fidelidade 70; `pacts`, `dealLog` e `record` começam vazios. 258 testes (16 novos, 15 deles em `mesa.test.ts`).
+
+**Balanceamento (simuladores, 30 sementes):** `npm run sim`: notas e leis iguais às da 2B (responde aos fatos 607, com assessoria 636; MDN 22, POL 20, FPT 11 leis). `npm run sim2c` (novo; uma lei difícil a cada 2 meses, chance entre 25% e 60%): sem acordo, 1 a 2 leis por mandato; negociando (pasta no começo, pactos, até 3 acordos por rodada), cerca de 5, com R$ 4 a 10 bi em acordos, escândalo +2 a +3,5 e a base entregando cerca de 75% das vezes (fidelidade final perto de 60). Pedidos mais escolhidos: mudar o texto, compensação, pasta, pauta, favor e relatoria. **Ponto para o Douglas decidir:** o pacto quase sempre é aceito, então dá para manter 3 pactos o mandato inteiro (subir `PACTO.willingRelation` deixaria mais difícil).
+
+**Caixa de ideias desta etapa:** a fala de cada pedido escrita pela IA (hoje são frases prontas por tipo; fica para a Etapa 9, polimento); "a pasta está em jogo" virar um fato do mês com escolha (renegociar ou tirar a pasta) na Etapa 6 (governo); diretoria de estatal alimentando os esquemas na Etapa 5; palanque e registro de votos usados nas campanhas e debates na Etapa 8; reaproveitar o cardápio nas bancadas estaduais do Senado na Etapa 3.
 
 ### 27.1 Caixa de ideias por etapa
 - Etapa 1 (revisada ao fechar a 1B): conquistas como selos da Ficha vão para a Etapa 8 (já lista conquistas); nome da medida no telejornal e decreto também com janela de confirmação antes de assinar vão para a Etapa 2 (janela da medida em etapas).

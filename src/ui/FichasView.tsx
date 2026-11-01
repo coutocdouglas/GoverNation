@@ -9,6 +9,10 @@ import { PARTIES, PARTY_BY_ID } from '../game/data/parties'
 import { yearOf } from '../game/memory'
 import type { GameState } from '../game/types'
 import { Portrait } from './Portrait'
+import { PartyLogo } from './PartyLogo'
+import { partyBalance } from '../game/base'
+import { BILL_BY_ID } from '../game/data/bills'
+import { GROUP_BY_ID } from '../game/data/groups'
 
 const MONTHS = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez']
 const when = (at: number) => `${MONTHS[at % 12]}/${yearOf(at)}`
@@ -66,6 +70,7 @@ export function FichasView({ state, onChange }: { state: GameState; onChange: (s
         </section>
       </div>
       <div className="pn-col">
+        <PartyRecords state={state} />
         <section className="pn-card">
           <h3>👥 Personagens</h3>
           <div className="pn-people">
@@ -89,5 +94,45 @@ export function FichasView({ state, onChange }: { state: GameState; onChange: (s
         </section>
       </div>
     </div>
+  )
+}
+
+/**
+ * Etapa 2C: como cada partido votou as medidas do governo e quem isso agradou ou desagradou.
+ * É a matéria-prima das campanhas e dos debates na eleição.
+ */
+function PartyRecords({ state }: { state: GameState }) {
+  const [open, setOpen] = useState<string | null>(null)
+  const rows = PARTIES.map((p) => ({ p, bal: partyBalance(state, p.id) })).filter((x) => x.bal.votes > 0)
+  return (
+    <section className="pn-card">
+      <h3>🗳️ Como os partidos votaram <span className="pn-badge">matéria-prima da eleição</span></h3>
+      {rows.length === 0 ? <p className="pn-hint">Nenhuma medida do governo foi a voto ainda.</p> : (
+        <div className="pn-partyrec">
+          {rows.map(({ p, bal }) => {
+            const list = [...(state.congress.record?.[p.id] ?? [])].reverse()
+            return (
+              <div key={p.id} className="pn-partyrec__card" style={{ borderLeft: `3px solid ${p.color}` }}>
+                <b><PartyLogo party={p.id} size={18} /> {p.sigla}</b>
+                <small>{bal.votes} votações · {bal.sim} a favor do governo · {bal.nao} contra</small>
+                {bal.groups.filter((g) => g.net > 0).slice(0, 3).map((g) => <small key={g.group} className="up">👍 agradou {GROUP_BY_ID[g.group].name.toLowerCase()} (+{g.net})</small>)}
+                {bal.groups.filter((g) => g.net < 0).slice(-2).map((g) => <small key={g.group} className="dn">👎 desagradou {GROUP_BY_ID[g.group].name.toLowerCase()} ({g.net})</small>)}
+                <button className="pn-btn pn-btn--ghost pn-btn--small" onClick={() => setOpen(open === p.id ? null : p.id)}>{open === p.id ? 'Fechar' : 'Ver os votos'}</button>
+                {open === p.id && (
+                  <ol className="pn-bio">
+                    {list.slice(0, 12).map((e, i) => (
+                      <li key={i} className={e.side === 1 ? 'good' : e.side === -1 ? 'bad' : 'neutral'}>
+                        <span className="pn-bio__when">{when(e.at)}</span>
+                        {e.side === 1 ? 'Votou a favor' : e.side === -1 ? 'Votou contra' : 'Dividiu-se em'} “{BILL_BY_ID[e.bill]?.name ?? e.bill}”{e.house ? ' no Senado' : ''} ({e.approved ? 'aprovada' : 'barrada'})
+                      </li>
+                    ))}
+                  </ol>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </section>
   )
 }

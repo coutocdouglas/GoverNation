@@ -14,6 +14,8 @@ import { PROMISE_BY_ID } from './data/promises'
 import { absMonth } from './memory'
 import { promiseStatus } from './promises'
 import { TERM_MONTHS } from './game'
+import { baseMembers, fidelityOf } from './base'
+import { BASE, ESFRIA } from './data/base'
 import type { GameState } from './types'
 
 export type Urgency = 'red' | 'yellow' | 'green'
@@ -92,8 +94,14 @@ export function pendencias(s: GameState): Pendencia[] {
     const left = p.due - s.month
     out.push({
       id: `prom-${p.party}-${p.bill}`, icon: '🤝', target: 'camara', left,
-      title: p.kind === 'espaco' ? `Espaço prometido ao ${PARTY_BY_ID[p.party].sigla}` : `Pautar ${BILL_BY_ID[p.bill]?.name ?? p.bill} (promessa ao ${PARTY_BY_ID[p.party].sigla})`,
-      detail: `${leftText(left)} · quebrar custa relação e reputação.`, urgency: urgencyOf(left, false), weight: 42 - left * 5,
+      title: p.kind === 'espaco' ? `Espaço prometido ao ${PARTY_BY_ID[p.party].sigla}`
+        : p.kind === 'favor' ? `Favor devido ao ${PARTY_BY_ID[p.party].sigla}`
+          : p.kind === 'sancionar' ? `Não vetar nada do ${PARTY_BY_ID[p.party].sigla}`
+            : `Pautar ${BILL_BY_ID[p.bill]?.name ?? p.bill} (promessa ao ${PARTY_BY_ID[p.party].sigla})`,
+      detail: p.kind === 'favor' ? `${leftText(left)} · paga com um acordo de dinheiro, cargo ou pasta para o partido.`
+        : p.kind === 'sancionar' ? `${leftText(left)} · vetar algo do partido quebra o acordo.`
+          : `${leftText(left)} · quebrar custa relação e reputação.`,
+      urgency: p.kind === 'sancionar' ? 'green' : urgencyOf(left, false), weight: 42 - left * 5,
     })
   }
 
@@ -112,6 +120,30 @@ export function pendencias(s: GameState): Pendencia[] {
       detail: `Cobrada no fim do mandato (faltam ${monthsLeft} meses).`,
       urgency: st.status === 'longe' && monthsLeft <= 12 ? 'red' : 'yellow', weight: (st.status === 'longe' ? 30 : 22) + Math.max(0, 12 - monthsLeft),
     })
+  }
+
+  // Etapa 2C: a base rachando (fidelidade baixa) e pactos que acabam.
+  for (const m of baseMembers(s)) {
+    const fid = fidelityOf(s, m.party)
+    const sigla = PARTY_BY_ID[m.party].sigla
+    if (fid < BASE.warnAt) {
+      out.push({
+        id: `base-${m.party}`, icon: '🧱', target: 'camara',
+        title: fid < BASE.dropAt ? `${sigla} rachou com o governo (fidelidade ${Math.round(fid)})` : `${sigla} está rachando (fidelidade ${Math.round(fid)})`,
+        detail: m.via === 'pasta' ? 'Renegocie (acordos, conversa) ou retome a pasta na aba Ministérios.' : 'O pacto não segura a bancada: converse ou deixe o pacto acabar.',
+        urgency: fid < BASE.dropAt ? 'red' : 'yellow', weight: 45 - fid / 3,
+      })
+    }
+    if (m.pact && m.pact.until - s.month <= 1) {
+      out.push({ id: `pacto-${m.party}`, icon: '📜', target: 'camara', left: m.pact.until - s.month - 1, title: `Pacto com o ${sigla} acaba`, detail: 'Dá para assinar outro na aba Câmara, se o partido topar.', urgency: 'green', weight: 12 })
+    }
+  }
+  // Etapa 2C: projetos que esfriam na fila (arquivados depois de 6 rodadas).
+  for (const p of [...c.pending, ...c.senate.pending]) {
+    if (BILL_BY_ID[p.id]?.instrument === 'mp') continue
+    const left = ESFRIA.archiveAfter - 1 - (s.month - p.sentMonth)
+    if (left > 2) continue
+    out.push({ id: `esfria-${p.id}`, icon: '🧊', target: c.pending.includes(p) ? 'camara' : 'senado', left, title: `Esfriando na fila: ${BILL_BY_ID[p.id]?.name ?? p.id}`, detail: left <= 0 ? 'É arquivado no fim deste mês se não for votado.' : `Arquivado em ${leftText(left)} sem votação.`, urgency: urgencyOf(left, false), weight: 36 - left * 6 })
   }
 
   // Fila do Congresso (projetos esperando pauta).

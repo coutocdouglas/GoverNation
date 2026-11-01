@@ -86,7 +86,7 @@ describe('Etapa 0: a rodada', () => {
     const old = structuredClone(feb()) as unknown as Record<string, unknown>
     old.saveVersion = 12
     const m = migrate(old)!
-    expect(m.saveVersion).toBe(17)
+    expect(m.saveVersion).toBe(18)
     expect(m.round).toBeUndefined()
     expect(() => advanceMonth(m, [])).not.toThrow()
   })

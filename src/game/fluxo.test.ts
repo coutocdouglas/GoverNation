@@ -133,7 +133,7 @@ describe('Etapa 2B: save', () => {
     const old = feb() as unknown as { saveVersion: number }
     old.saveVersion = 16
     const m = migrate(old)!
-    expect(m.saveVersion).toBe(17)
+    expect(m.saveVersion).toBe(18)
   })
 })
 

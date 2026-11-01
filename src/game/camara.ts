@@ -1,3 +1,4 @@
+import { baseBoost } from './base'
 import type { ActionEffects } from './actions'
 import { BILL_BY_ID, type BillDef } from './data/bills'
 import { CAMARA, CCJ, COMMITTEES, FRENTES, JABUTIS, NOMINEE_BY_PARTY, type FrenteDef, type FrenteId } from './data/camara'
@@ -65,6 +66,9 @@ const CENTRAO: PartyId[] = ['ucd', 'psn', 'pra', 'mdn']
 
 /** Quem o presidente da Câmara escolhe para relatar: aliado se a relação é boa, adversário se é ruim. */
 export function relatorFor(s: GameState, bill: BillDef): PartyId {
+  // Etapa 2C: relatoria prometida num acordo vale para o próximo projeto do governo.
+  const r = s.congress.relatoria
+  if (r && r.until >= s.month && r.party !== s.playerParty) return r.party
   const rel = s.congress.speaker.relation
   const aff = (p: PartyId) => affinity(PARTY_BY_ID[p].econ, PARTY_BY_ID[p].costumes, bill)
   const best = (list: PartyId[], dir: 1 | -1) => list.reduce((a, b) => (aff(b) * dir > aff(a) * dir ? b : a))
@@ -167,11 +171,9 @@ export function ministerOf(s: Pick<GameState, 'cabinet'> | null | undefined, are
   return { ...base, name: n.name, role, feminine: n.feminine, party: n.party, style: n.style, color: PARTY_BY_ID[n.party].color }
 }
 
-/** Partidos com ministério cedido votam mais com o governo. */
+/** Partidos com ministério cedido (ou, desde a 2C, com pacto) votam mais com o governo, conforme a fidelidade. */
 export function cabinetBoost(s: GameState): Partial<Record<PartyId, number>> {
-  const out: Partial<Record<PartyId, number>> = {}
-  for (const seat of Object.values(s.cabinet ?? {})) if (seat) out[seat.party] = CAMARA.ministry.boost
-  return out
+  return baseBoost(s)
 }
 
 /** Área ocupada por um partido, se houver. */

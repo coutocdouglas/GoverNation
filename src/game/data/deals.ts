@@ -1,30 +1,28 @@
 import type { DealKind } from '../types'
+import { ASKS, MENU } from './base'
+
+const byKind = <T,>(f: (a: (typeof ASKS)[number]) => T) => Object.fromEntries(ASKS.map((a) => [a.kind, f(a)])) as Record<DealKind, T>
 
 /**
  * Negociação de votos na Câmara (etapa 4). Cada partido cobra numa moeda diferente:
  * emendas (dinheiro), pauta (pautar o projeto-bandeira dele) ou cargos (segundo escalão, risco de escândalo).
  */
 export const DEALS = {
-  /** Partidos que o presidente pode ouvir por mês (rodada). */
-  listenPerMonth: 3,
-  /** Reforço na orientação do partido quando o acordo é cumprido. */
-  boost: { emendas: 0.7, pauta: 0.55, cargos: 1.0, concessao: 0.75 } as Record<DealKind, number>,
+  /** Partidos que o presidente pode ouvir por rodada (Etapa 2C: somando Câmara e Senado). */
+  listenPerMonth: MENU.perRound,
+  /** Reforço na orientação do partido quando o acordo é cumprido (Etapa 2C: do cardápio, data/base.ts). */
+  boost: byKind((a) => a.boost),
   /** Parte do reforço que chega a cada deputado (além da orientação). */
   deputyShare: 0.5,
   /** Parte do reforço que sobra quando a bancada não entrega. */
   brokenShare: 0.25,
   /** Confiabilidade = base + disciplina do partido × peso. */
-  reliability: {
-    emendas: { base: 0.45, discipline: 0.45 },
-    pauta: { base: 0.5, discipline: 0.4 },
-    cargos: { base: 0.3, discipline: 0.5 },
-    concessao: { base: 0.55, discipline: 0.4 },
-  } as Record<DealKind, { base: number; discipline: number }>,
+  reliability: byKind((a) => a.reliability),
   /** Emendas: % do PIB ao ano por deputado da bancada, durante `emendasMonths` meses. */
   emendasPerSeat: 0.0006,
   emendasMonths: 3,
   /** Risco de escândalo somado ao fechar o acordo (0 a 100). */
-  scandal: { emendas: 3, pauta: 0, cargos: 9, concessao: 0 } as Record<DealKind, number>,
+  scandal: byKind((a) => a.scandal),
   /** Etapa 2: emendas individuais (mais baratas, menos votos) ou de bancada (mais caras, mais votos). */
   emendaTipo: {
     individual: { money: 0.6, boost: 0.8, reliability: -0.05, label: 'Individuais', desc: 'Cada deputado indica a sua obra. Mais barato, mas a bancada vem menos unida.' },

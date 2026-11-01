@@ -301,7 +301,7 @@ export function GameScreen({ state, onChange, onExit }: {
           onDeal={(d, add) => {
             const same = (x: Deal) => x.bill === d.bill && x.party === d.party && (x.house ?? 'camara') === (d.house ?? 'camara')
             setDeals((ds) => (add ? [...ds.filter((x) => !same(x)), d] : ds.filter((x) => !same(x))))
-            if (add) toast(`🤝 Acordo com o ${PARTY_BY_ID[d.party].sigla}${d.house === 'senado' ? ' no Senado' : ''}: vale na votação.`)
+            if (add) toast(`🤝 Acordo com o ${PARTY_BY_ID[d.party].sigla}${d.house === 'senado' ? ' no Senado' : ': vale na Câmara e no Senado'}.`)
           }}
           onClose={() => setVoteSheet(null)}
           plan={plan}

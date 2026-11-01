@@ -1,6 +1,5 @@
 import { ACTION_BY_ID, ACTIONS_PER_MONTH, blockedReason, effectMultiplier } from './actions'
 import { articulationBlockedReason, billBlockedReason, runNomination, CONGRESS, driftRelations, initialCongress, isRecess, runChamberVote, runOverrideVote, senatePending, symbolicBlockedReason } from './congress'
-import { SENADO } from './data/senado'
 import { actsNow, BILL_BY_ID, RESUBMIT_COOLDOWN } from './data/bills'
 import { MINISTER_BY_AREA } from './data/ministers'
 import { DEMAND_BY_ID } from './data/demands'
@@ -24,7 +23,9 @@ import { Rng } from './rng'
 import { applyEffects } from './effects'
 import { addMark, initialReputation, maybeCloseChapter, noteRecord, stepReputation } from './reputacao'
 import { REPUTACAO } from './data/marks'
-import { applyMinistryChange, applyPlanToRound, expireMps, peekRound, roundOf, type RoundCtx } from './rodada'
+import { applyMinistryChange, applyPlanToRound, archiveStale, expireMps, peekRound, roundOf, type RoundCtx } from './rodada'
+import { stepBase } from './base'
+import { MENU } from './data/base'
 import { DEALS } from './data/deals'
 import { dealBlockedReason } from './deals'
 import { syncCustomBills } from './custom'
@@ -82,7 +83,7 @@ export function newGame(
   const rngState = seed ?? Math.floor(Math.random() * 2 ** 31)
   const bonus = DIFFICULTY[difficulty].approvalBonus
   const state: GameState = {
-    saveVersion: 17,
+    saveVersion: 18,
     month: 0,
     presidentName: presidentName.trim() || 'Presidente',
     difficulty,
@@ -291,8 +292,8 @@ export function validatePlan(s: GameState, plan: MonthPlan): string | null {
   }
   const deals = plan.deals ?? []
   const sameHouse = (a: Deal, b: Deal) => (a.house ?? 'camara') === (b.house ?? 'camara')
-  if (deals.filter((d) => d.house !== 'senado').length > DEALS.listenPerMonth) return `No máximo ${DEALS.listenPerMonth} acordos por mês na Câmara.`
-  if (deals.filter((d) => d.house === 'senado').length > SENADO.listenPerMonth) return `No máximo ${SENADO.listenPerMonth} acordos por mês no Senado.`
+  // Etapa 2C: 3 acordos por rodada no total (o acordo fechado com o projeto na Câmara já vale no Senado).
+  if (deals.length + (peekRound(s)?.dealsDone ?? 0) > DEALS.listenPerMonth) return `No máximo ${DEALS.listenPerMonth} acordos por rodada, somando Câmara e Senado.`
   const planBills = [plan.bill, plan.eventResponse].filter((x): x is BillId => !!x)
   for (const d of deals) {
     if (deals.filter((x) => x.party === d.party && x.bill === d.bill && sameHouse(x, d)).length > 1) return 'Acordo repetido.'
@@ -443,6 +444,14 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
       addBio(s, leaderOf(s, it.party).name, `Viu o presidente sancionar ${lowerFirst(vb.name)}.`)
     } else {
       c.vetoes.push({ id: it.id, kind: it.kind, bill: it.bill, month: s.month, party: it.party, amendment: it.amendment })
+      // Etapa 2C: vetar algo de um partido a quem prometeu não vetar quebra o acordo.
+      const promised = c.promises.find((x) => x.kind === 'sancionar' && x.party === it.party)
+      if (promised) {
+        c.promises = c.promises.filter((x) => x !== promised)
+        c.parties[it.party].relation = Math.max(0, c.parties[it.party].relation + MENU.sancionarBroken)
+        addMark(s, 'fura', REPUTACAO.pts.fura, `Vetou ${lowerFirst(vb.name)} depois de prometer ao ${PARTY_BY_ID[it.party].sigla} que não vetaria`, 'acordo')
+        headlines.push({ text: `${PARTY_BY_ID[it.party].sigla} acusa o presidente de quebrar a palavra: tinha prometido não vetar`, tone: 'bad' })
+      }
       c.parties[it.party].relation = Math.max(0, c.parties[it.party].relation + CAMARA.veto.partyHit)
       if (it.kind === 'bomba') sp.relation = Math.max(0, sp.relation + CAMARA.speaker.vetoHit)
       for (const [gid, val] of Object.entries(vb.effects.groups ?? {}) as [GroupId, number][]) {
@@ -460,6 +469,8 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
   {
     const ctx: RoundCtx = { s, e, impulses, headlines, taken, votes, enacted, sanctioned, mm, rng, conf: { v: 0 }, round: roundOf(s) }
     expireMps(ctx)
+    // Etapa 2C: projeto parado na fila há 6 rodadas é arquivado.
+    archiveStale(ctx)
     actionConfidence += ctx.conf.v
     delete s.round
   }
@@ -504,6 +515,22 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
   // 1d5. Promessas a partidos e risco de escândalo.
   for (const pr of [...c.promises]) {
     const party = PARTY_BY_ID[pr.party]
+    // Etapa 2C: favor devido (pago na hora, com um acordo pago ao partido) e "não vetar" (cumprido se vencer sem veto).
+    if (pr.kind === 'favor' || pr.kind === 'sancionar') {
+      if (s.month >= pr.due) {
+        c.promises = c.promises.filter((x) => x !== pr)
+        if (pr.kind === 'favor') {
+          c.parties[pr.party].relation = Math.max(0, c.parties[pr.party].relation + MENU.favorBroken)
+          addMark(s, 'fura', REPUTACAO.pts.fura, `Não pagou o favor que devia ao ${party.sigla}`, 'acordo')
+          headlines.push({ text: `${party.sigla} cobra o favor que o governo ficou devendo, e não recebe`, tone: 'bad' })
+          addBio(s, leaderOf(s, pr.party).name, 'Cobrou um favor do governo e não recebeu.')
+        } else {
+          c.parties[pr.party].relation = Math.min(100, c.parties[pr.party].relation + DEALS.promiseKept)
+          addMark(s, 'palavra', REPUTACAO.pts.palavra, `Cumpriu o compromisso de não vetar nada do ${party.sigla}`, 'acordo')
+        }
+      }
+      continue
+    }
     // Etapa 2: promessa de espaço no governo (cumprida na hora, ao ceder ministério ou cargos; aqui só vence).
     if (pr.kind === 'espaco') {
       if (s.month >= pr.due) {
@@ -539,6 +566,8 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
     c.scandal *= DEALS.scandalAfter
   }
   c.scandal *= DEALS.scandalDecay
+  // Etapa 2C: pactos que vencem e bancadas grandes que pedem mais.
+  stepBase(s, headlines)
 
   // 1d6. Supremo (etapas 4C2 e 4C3): sabatina, aposentadorias, consultas, julgamento, novas ações e liminares.
   // Etapa 2B: o que a rodada já deu à oposição (derrubada no mesmo dia, reações ao anúncio).

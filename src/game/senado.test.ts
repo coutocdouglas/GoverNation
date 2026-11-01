@@ -144,14 +144,15 @@ describe('Senado (etapa 4C1)', () => {
     expect(articulationBlockedReason(s, a)).toMatch(/conversaram/)
   })
 
-  it('negociação no Senado: até 2 lideranças por mês, além das 3 da Câmara, e o acordo segue o projeto', () => {
+  it('negociação no Senado (2C): 3 acordos por rodada no total, e o acordo segue o projeto', () => {
     let s = newGame('T', 'normal', 5, 'mdn')
     s = advanceMonth(s, [])
     s = toSenate(s, 'privatizar')
-    const priced = PARTIES.map((p) => offerFor(s, p.id, 'privatizar', [], 'senado')).filter((o) => o.kind === 'emendas' || o.kind === 'cargos' || o.kind === 'pauta')
+    const simple = (k: string) => ['emendas', 'cargos', 'obra', 'favor', 'divida', 'estatal'].includes(k)
+    const priced = PARTIES.map((p) => offerFor(s, p.id, 'privatizar', [], 'senado')).filter((o) => o.options.some((x) => simple(x.kind)))
     expect(priced.length).toBeGreaterThanOrEqual(3)
-    const deals = priced.slice(0, 3).map((o) => ({ party: o.party, kind: o.kind as 'emendas', bill: 'privatizar', house: 'senado' as const }))
-    expect(validatePlan(s, { deals })).toMatch(/No máximo 2 acordos por mês no Senado/)
+    const deals = priced.slice(0, 4).map((o) => ({ party: o.party, kind: o.options.find((x) => simple(x.kind))!.kind as 'emendas', bill: 'privatizar', house: 'senado' as const }))
+    if (deals.length === 4) expect(validatePlan(s, { deals })).toMatch(/No máximo 3 acordos por rodada/)
     expect(validatePlan(s, { deals: deals.slice(0, 2) })).toBeNull()
     // Na Câmara o projeto já passou.
     expect(validatePlan(s, { deals: [{ ...deals[0], house: undefined }] })).toMatch(/já passou na Câmara/)
@@ -160,6 +161,18 @@ describe('Senado (etapa 4C1)', () => {
     expect(after).toBeGreaterThan(before)
     const r = advanceMonth(s, [], { deals: deals.slice(0, 2) })
     expect(r.lastReport!.actionsTaken.some((t) => t.includes('no Senado'))).toBe(true)
+  })
+
+  it('acordo fechado com o projeto na Câmara vale também no Senado (2C)', () => {
+    let s = newGame('T', 'normal', 11, 'mdn')
+    s = advanceMonth(s, [])
+    const o = PARTIES.map((p) => offerFor(s, p.id, 'isencaoIR')).find((x) => x.options.length > 0 && x.senado && x.options[0].senado)
+    if (!o) return
+    const opt = o.options[0]
+    expect(opt.senado!.yesWith).toBeGreaterThanOrEqual(opt.senado!.yesNow)
+    const d = { party: o.party, kind: opt.kind, bill: 'isencaoIR', ...(opt.concession ? { concession: { type: opt.concession.type, ask: opt.concession.ask, change: opt.concession.change } } : {}), ...(opt.area ? { area: opt.area } : {}) }
+    expect(forecastSenate(s, 'isencaoIR', [d]).yes).toBeGreaterThanOrEqual(forecastSenate(s, 'isencaoIR').yes)
+    expect(validatePlan(s, { bill: 'isencaoIR', deals: [d] })).toBeNull()
   })
 
   it('acordo no Senado fechado com o projeto ainda na Câmara acompanha o projeto', () => {
@@ -180,7 +193,7 @@ describe('Senado (etapa 4C1)', () => {
     delete raw.congress.senate
     raw.saveVersion = 9
     const m = migrate(raw)!
-    expect(m.saveVersion).toBe(17)
+    expect(m.saveVersion).toBe(18)
     expect(m.congress.senate.senators).toHaveLength(81)
     expect(m.congress.senate.pending).toEqual([])
     const next = advanceMonth(m, [], { bill: 'isencaoIR' })

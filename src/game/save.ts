@@ -8,6 +8,7 @@ import { addBio } from './memory'
 import { initialReputation } from './reputacao'
 import { ensureAlas, openMesa } from './partidos'
 import { CAMARA } from './data/camara'
+import { BASE } from './data/base'
 import type { GameState } from './types'
 
 // O jogo instalado guarda o localStorage na pasta de dados do usuário no Windows
@@ -151,7 +152,19 @@ export function migrate(raw: unknown): GameState | null {
       // v0.18 → v0.19 (etapa 2B): Supremo no mesmo dia, mercado no envio e reações; campos novos são opcionais.
       s.saveVersion = 17
     }
-    if (s.saveVersion !== 17) return null
+    if (s.saveVersion === 17) {
+      // v0.19 → v0.20 (etapa 2C): a base vira contrato. Quem já tem pasta entra com a fidelidade de partida;
+      // pactos, registro de votos e cardápio começam vazios.
+      for (const seat of Object.values(s.cabinet ?? {})) {
+        const ps = seat ? s.congress.parties[seat.party] : undefined
+        if (ps && ps.fidelity === undefined) ps.fidelity = BASE.startFidelity
+      }
+      s.congress.pacts ??= []
+      s.congress.dealLog ??= []
+      s.congress.record ??= {}
+      s.saveVersion = 18
+    }
+    if (s.saveVersion !== 18) return null
     syncCustomBills(s as GameState)
     return s as GameState
   } catch {

@@ -10,7 +10,7 @@ import { FrentesCard, SanctionCard, SpeakerCard } from './CamaraPanels'
 import { ccjApplies, isFrozen } from '../game/supremo'
 import { Portrait } from './Portrait'
 import { num } from './format'
-import { AlasList, BancadasChart, MesaCard, OwnLeaderPicker, TalkButtons } from './PartidosPanels'
+import { AlasList, BancadasChart, BaseCard, MesaCard, OwnLeaderPicker, TalkButtons } from './PartidosPanels'
 import { leaderOf } from '../game/partidos'
 import { urgencyNow, urgencyNowBlockedReason } from '../game/rodada'
 import { LEADER_STYLE } from '../game/data/alas'
@@ -100,6 +100,8 @@ export function CongressView({ state, articulations, onToggle, bill, extraBill, 
       <SpeakerCard state={state} articulations={articulations} onToggle={onToggle} />
 
       {onState && <MesaCard state={state} onState={onState} onToast={toast} />}
+
+      {onState && <BaseCard state={state} onState={onState} onToast={toast} />}
 
       {watching.length > 0 && (
         <section className="pn-card pn-card--gold">
