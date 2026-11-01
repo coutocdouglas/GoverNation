@@ -3,13 +3,13 @@ import { BILL_BY_ID } from './data/bills'
 import { CAST } from './data/cast'
 import { ESTADO, ESTADOS, UFS } from './data/estados'
 import { PARTIES } from './data/parties'
-import { LIDERES_SENADO, SENADO } from './data/senado'
+import { LIDERES_SENADO, PRESIDENTE_SENADO, SENADO } from './data/senado'
 import { forecastSenate, senatorOdds } from './congress'
 import { askNow, attendBlockedReason, attendState, senadoHoje, statesOnMeasure } from './estados'
 import { advanceMonth, newGame } from './game'
 import { applyImpeachChoice, forecastImpeach, maybeImpeach } from './impeachment'
-import { voteNow } from './rodada'
-import { buysBlockedReason, indecisos, senadoComissoes } from './senado'
+import { mesaNow, voteNow } from './rodada'
+import { buysBlockedReason, favorToStates, indecisos, mesaBlockedReason, senadoComissoes } from './senado'
 import { migrate } from './save'
 import { Rng } from './rng'
 import type { GameState, GroupId, Impulse } from './types'
@@ -56,7 +56,7 @@ describe('Etapa 3: os 27 estados', () => {
     delete s.congress.senate.states
     ;(s as { saveVersion: number }).saveVersion = 18
     const m = migrate(JSON.parse(JSON.stringify(s)))!
-    expect(m.saveVersion).toBe(19)
+    expect(m.saveVersion).toBe(20)
     expect(m.congress.senate.senators.every((d) => d.uf && d.name)).toBe(true)
     expect(m.congress.deputies.every((d) => d.uf)).toBe(true)
     expect(Object.keys(m.congress.senate.states!)).toHaveLength(27)
@@ -175,5 +175,57 @@ describe('Etapa 3: impeachment de ministro', () => {
       expect(u.ministries.saude.wear).toBeLessThan(90)
     }
     expect(hit).toBe(true)
+  })
+})
+
+describe('v0.21.1: ficha dos senadores, Mesa do Senado e valor dos favores', () => {
+  it('todo senador tem ficha; a votação anota quem votou com o governo; acordo individual entra na ficha', () => {
+    const s = toSenate(feb(), 'isencaoIR')
+    expect(s.congress.senate.senators.every((d) => d.rep)).toBe(true)
+    const ind = indecisos(s, 'isencaoIR').filter((x) => x.price)
+    const buys = ind.length ? [{ index: ind[0].index, kind: ind[0].price!.kind }] : []
+    const r = voteNow(s, 'isencaoIR', { senadores: buys })
+    const reps = r.state.congress.senate.senators.map((d) => d.rep!)
+    expect(reps.reduce((a, x) => a + x.gov + x.contra, 0)).toBeGreaterThan(40)
+    if (buys.length) expect(reps[buys[0].index].acordos).toBe(1)
+    expect(r.state.congress.votes.at(-1)).not.toHaveProperty('cast')
+  })
+
+  it('a presidente do Senado libera opções pela relação menos a cobrança; pedir soma cobrança', () => {
+    const s = feb()
+    s.congress.senate.president.relation = 70
+    s.congress.senate.president.wear = 0
+    expect(mesaBlockedReason(s, 'pautar')).toBeNull()
+    expect(mesaBlockedReason(s, 'relatoria')).toBeNull()
+    s.congress.senate.president.wear = 40
+    expect(mesaBlockedReason(s, 'relatoria')).toMatch(/cobrança/)
+    s.congress.senate.president.wear = 0
+    const t = mesaNow(s, 'pautar')
+    expect(t.congress.senate.president.wear).toBe(PRESIDENTE_SENADO.acoes.pautar.wear)
+    expect(mesaBlockedReason(t, 'pautar')).toMatch(/Já pedido/)
+    // Atender o pedido dela baixa a cobrança e sobe a relação.
+    const u = mesaNow(t, 'pedido')
+    expect(u.congress.senate.president.wear).toBeLessThan(t.congress.senate.president.wear!)
+    expect(u.congress.senate.president.relation).toBeGreaterThan(70)
+  })
+
+  it('ministério vale mais que pacto nas bancadas estaduais', () => {
+    const s = feb()
+    const sum = (x: GameState) => UFS.reduce((a, u) => a + x.congress.senate.states![u].relation, 0)
+    const a = structuredClone(s); favorToStates(a, 'ucd', 'pasta')
+    const b = structuredClone(s); favorToStates(b, 'ucd', 'pacto')
+    expect(sum(a) - sum(s)).toBeGreaterThan(sum(b) - sum(s))
+    expect(sum(b)).toBeGreaterThan(sum(s))
+  })
+
+  it('save 19 migra para 20: fichas e cobrança', () => {
+    const s = newGame('T', 'normal', 5, 'mdn') as GameState
+    for (const d of s.congress.senate.senators) delete d.rep
+    delete s.congress.senate.president.wear
+    ;(s as { saveVersion: number }).saveVersion = 19
+    const m = migrate(JSON.parse(JSON.stringify(s)))!
+    expect(m.saveVersion).toBe(20)
+    expect(m.congress.senate.senators.every((d) => d.rep)).toBe(true)
+    expect(m.congress.senate.president.wear).toBe(0)
   })
 })

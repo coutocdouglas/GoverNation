@@ -3,13 +3,13 @@ import { affinity, isMeiaSessao, senatorOdds, type DealList } from './congress'
 import { BILL_BY_ID, GDP_BILLIONS } from './data/bills'
 import { ESTADO_BY_ID } from './data/estados'
 import { PARTY_BY_ID } from './data/parties'
-import { SENADO } from './data/senado'
-import { askNow, attendState, obraCost } from './estados'
+import { FAVOR_SENADO, LIDERES_SENADO, PRESIDENTE_SENADO, REP_SENADOR, SENADO } from './data/senado'
+import { askNow, attendState, moveState, obraCost } from './estados'
 import { clamp } from './ideology'
 import { addBio } from './memory'
 import { Rng } from './rng'
 import { legalRiskIn } from './supremo'
-import type { BillId, GameState, Headline, PartyId, PendingBill, SenatorBuy } from './types'
+import type { BillId, GameState, Headline, MesaSenadoAcao, PartyId, PendingBill, SenatorBuy, SenatorRep } from './types'
 
 const C = SENADO.comissoes
 const R = SENADO.indeciso
@@ -34,7 +34,7 @@ const netCost = (id: BillId) => {
   return (fx?.spending ?? 0) - (fx?.revenue ?? 0)
 }
 
-const dehydrateChance = (s: GameState, chair: PartyId) => clamp(C.dehydrateBase - (s.congress.parties[chair].relation - 50) * C.dehydrateRel, 0.05, 0.7)
+const dehydrateChance = (s: GameState, chair: PartyId) => mesaDone(s, 'relatoria') ? 0.05 : clamp(C.dehydrateBase - (s.congress.parties[chair].relation - 50) * C.dehydrateRel, 0.05, 0.7)
 
 /** Comissões do Senado que vão olhar o projeto (antes de votar), com a chance de desidratar. */
 export function senadoComissoes(s: GameState, id: BillId, p?: Pick<PendingBill, 'senadoCom'>): ComissaoPreview[] {
@@ -47,7 +47,7 @@ export function senadoComissoes(s: GameState, id: BillId, p?: Pick<PendingBill, 
   }
   if (netCost(id) >= C.caeCost) {
     const rel = s.congress.parties[C.cae.chair].relation
-    const holds = rel < C.holdBelow && done?.cae !== 'segurou'
+    const holds = rel < C.holdBelow && done?.cae !== 'segurou' && !mesaDone(s, 'pautar')
     const custo = ((netCost(id) / 100) * GDP_BILLIONS).toFixed(0)
     out.push({ id: 'cae', name: C.cae.name, chair: C.cae.chair, dehydrate: dehydrateChance(s, C.cae.chair), holds, why: `Custa cerca de R$ ${custo} bi por ano: a CAE examina o impacto nas contas.`, done: done?.cae })
   }
@@ -167,6 +167,8 @@ export function payBuys(s: GameState, billId: BillId, buys: SenatorBuy[], headli
     }
     taken.push(`${x.kind === 'obra' ? 'Obra' : x.kind === 'cargo' ? 'Cargo' : 'Emenda'} para ${d.name} (${PARTY_BY_ID[d.party].sigla}-${ESTADO_BY_ID[uf].sigla}) votar “${name}” no Senado`)
     if (d.name) addBio(s, d.name, `Negociou o voto com o governo ${s.presidentName} em “${name}” (${x.kind === 'obra' ? 'obra no estado' : x.kind === 'cargo' ? 'cargo no estado' : 'emenda'}).`)
+    noteSenatorDeal(s, x.index, x.kind)
+    addMesaWear(s, PRESIDENTE_SENADO.wear.indeciso)
   }
   pb.senadores = [...(pb.senadores ?? []), ...buys]
   if (s.round && s.round.month === s.month) s.round.indecisos = (s.round.indecisos ?? 0) + buys.length
@@ -175,5 +177,129 @@ export function payBuys(s: GameState, billId: BillId, buys: SenatorBuy[], headli
 
 /** Meia sessão: já houve votação no Senado nesta rodada? */
 export function meiaSessaoBlocks(s: GameState): boolean {
-  return isMeiaSessao(s.month) && !!(s.round?.month === s.month && s.round.senadoVoted)
+  return isMeiaSessao(s.month) && !mesaDone(s, 'sessao') && !!(s.round?.month === s.month && s.round.senadoVoted)
+}
+
+/** v0.21.1: favor de partido (pasta ou pacto) chega às bancadas estaduais onde o partido tem senadores. */
+export function favorToStates(s: GameState, party: PartyId, kind: 'pasta' | 'pacto', sign: 1 | -1 = 1): void {
+  const st = s.congress.senate.states
+  if (!st) return
+  const v = FAVOR_SENADO[kind] * sign
+  for (const u of Object.keys(st) as (keyof typeof st)[]) {
+    const n = s.congress.senate.senators.filter((d) => d.uf === u && d.party === party).length
+    if (n) moveState(s, u, (v * n) / 3)
+  }
+}
+
+// ─── v0.21.1: ficha de cada senador (para a eleição) ──────────────────────────
+
+const RS = REP_SENADOR
+
+/** Ficha do senador (cria se não existir: saves antigos e senadores novos). */
+export function repOf(s: GameState, index: number): SenatorRep {
+  const d = s.congress.senate.senators[index]
+  if (!d.rep) {
+    const lider = !!d.name && Object.values(LIDERES_SENADO).some((l) => l.name === d.name)
+    d.rep = { gov: 0, contra: 0, acordos: 0, traiu: 0, fama: lider ? RS.famaStart.lider : RS.famaStart.comum, imagem: 0 }
+  }
+  return d.rep
+}
+
+const bumpImg = (r: SenatorRep, v: number) => { r.imagem = Math.round(clamp(r.imagem + v, -50, 50) * 10) / 10 }
+const bumpFama = (r: SenatorRep, v: number) => { r.fama = Math.round(clamp(r.fama + v, 0, 100) * 10) / 10 }
+
+/**
+ * Depois de uma votação nominal do governo no Senado: cada senador anota se votou com o governo ou contra,
+ * e a imagem no estado muda pelo efeito da lei no grupo que mais pesa lá (votar sim numa lei que o estado gosta ajuda).
+ */
+export function noteSenatorVotes(s: GameState, billId: BillId, cast: number[], approved: boolean): void {
+  const bill = BILL_BY_ID[billId]
+  s.congress.senate.senators.forEach((d, i) => {
+    const v = cast[i]
+    if (v === undefined || v === 2) return
+    const r = repOf(s, i)
+    if (v === 1) r.gov++
+    else if (v === -1) r.contra++
+    if (bill && d.uf && v !== 0) {
+      const g = (bill.effects.groups?.[ESTADO_BY_ID[d.uf].group] ?? 0) * v
+      if (g) bumpImg(r, clamp(g * RS.votoPeso, -RS.votoMax, RS.votoMax) * (approved || v === -1 ? 1 : 0.5))
+    }
+  })
+}
+
+/** Acordo individual com o senador (obra, cargo ou emenda) e se ele cumpriu no dia. */
+export function noteSenatorDeal(s: GameState, index: number, kind: SenatorBuy['kind']): void {
+  const r = repOf(s, index)
+  r.acordos++
+  bumpFama(r, RS.fama.acordo)
+  bumpImg(r, RS.imagem[kind])
+}
+
+export function noteSenatorBroke(s: GameState, index: number, broke: boolean): void {
+  const r = repOf(s, index)
+  if (broke) { r.traiu++; bumpFama(r, RS.fama.traiu); bumpImg(r, RS.imagem.traiu) } else bumpImg(r, RS.imagem.cumpriu)
+}
+
+/** Fechamento do mês: a fama cai devagar. */
+export function stepSenatorReps(s: GameState): void {
+  for (const d of s.congress.senate.senators) if (d.rep) d.rep.fama = Math.round(d.rep.fama * RS.famaKeep * 10) / 10
+}
+
+/** Os senadores mais conhecidos (candidatos naturais numa eleição). */
+export function topSenators(s: GameState, n = 5): { index: number; name: string; party: PartyId; uf: string; rep: SenatorRep }[] {
+  return s.congress.senate.senators
+    .map((d, i) => ({ index: i, name: d.name ?? '', party: d.party, uf: d.uf ? ESTADO_BY_ID[d.uf].sigla : '', rep: repOf(s, i) }))
+    .sort((a, b) => b.rep.fama + b.rep.imagem * 0.5 - (a.rep.fama + a.rep.imagem * 0.5))
+    .slice(0, n)
+}
+
+// ─── v0.21.1: a presidente do Senado com mais opções ──────────────────────────
+
+const PS = PRESIDENTE_SENADO
+
+export const mesaWear = (s: GameState) => s.congress.senate.president.wear ?? 0
+/** Relação efetiva com a presidente do Senado: a relação menos a cobrança acumulada. */
+export const mesaEffective = (s: GameState) => s.congress.senate.president.relation - mesaWear(s) * PS.wearWeight
+
+/** Soma cobrança na Mesa do Senado (acordos no Senado, senadores comprados, favores pedidos). */
+export function addMesaWear(s: GameState, v: number): void {
+  const p = s.congress.senate.president
+  p.wear = Math.round(clamp((p.wear ?? 0) + v, 0, 100) * 10) / 10
+}
+
+export const mesaDone = (s: GameState, a: MesaSenadoAcao) => !!(s.round?.month === s.month && s.round.mesaSenado?.includes(a))
+
+/** Custo do pedido da presidente (R$ bi no total). */
+export const mesaPedidoCost = () => (PS.pedido.pib / 100) * GDP_BILLIONS * (PS.pedido.months / 12)
+
+/** Motivo pelo qual a opção com a presidente do Senado não está liberada agora, ou null. */
+export function mesaBlockedReason(s: GameState, a: MesaSenadoAcao): string | null {
+  if (s.finished) return 'O mandato já terminou.'
+  if (mesaDone(s, a)) return 'Já pedido nesta rodada.'
+  const def = PS.acoes[a]
+  if (a === 'pedido') {
+    const last = s.congress.senate.president.askDone
+    if (last !== undefined && s.month - last < PS.pedido.every) return `Ela só volta a pedir em ${PS.pedido.every - (s.month - last)} meses.`
+    return null
+  }
+  if (a === 'sessao' && !isMeiaSessao(s.month)) return 'Só em mês de meia sessão (junho e dezembro).'
+  const eff = mesaEffective(s)
+  if (eff < def.min) return `Relação efetiva ${Math.round(eff)}: ela só faz isso a partir de ${def.min}. ${mesaWear(s) >= 10 ? 'A cobrança acumulada pesa: o governo já pediu muito.' : 'Converse ou atenda o pedido dela.'}`
+  return null
+}
+
+/** Pede à presidente do Senado (mexe no estado recebido). Vale nesta rodada. */
+export function applyMesa(s: GameState, a: MesaSenadoAcao, headlines: Headline[], taken: string[]): void {
+  const def = PS.acoes[a]
+  const p = s.congress.senate.president
+  if (s.round && s.round.month === s.month) s.round.mesaSenado = [...(s.round.mesaSenado ?? []), a]
+  addMesaWear(s, def.wear)
+  if (a === 'pedido') {
+    s.economy.tempSpending.push({ label: `Obra no estado da presidente do Senado (${ESTADO_BY_ID[PS.uf].sigla})`, amount: PS.pedido.pib, monthsLeft: PS.pedido.months })
+    p.relation = clamp(p.relation + PS.pedido.relation, 0, 100)
+    p.askDone = s.month
+    headlines.push({ text: `${SENADO.president.name} anuncia obra federal em ${ESTADO_BY_ID[PS.uf].name}, com apoio do governo`, tone: 'neutral' })
+    addBio(s, SENADO.president.name, `Conseguiu do governo ${s.presidentName} uma obra para ${ESTADO_BY_ID[PS.uf].name}.`)
+  }
+  taken.push(`Presidente do Senado: ${def.label.toLowerCase()}`)
 }

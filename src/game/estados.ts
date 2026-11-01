@@ -4,7 +4,7 @@ import { GDP_BILLIONS, type BillDef } from './data/bills'
 import { CAST } from './data/cast'
 import { ESTADO, ESTADOS, ESTADO_BY_ID, NOMES_F, NOMES_M, SOBRENOMES, UFS, type UfId } from './data/estados'
 import { PARTY_BY_ID } from './data/parties'
-import { LIDERES_SENADO, SENADO } from './data/senado'
+import { LIDERES_SENADO, REP_SENADOR, SENADO } from './data/senado'
 import { clamp } from './ideology'
 import { addBio } from './memory'
 import { Rng } from './rng'
@@ -86,8 +86,11 @@ export function assignSenateStates(sen: SenateState, parties: Record<PartyId, Pa
   const taken = new Set<string>([...CAST.map((c) => c.name), ...Object.values(LIDERES_SENADO).map((l) => l.name)])
   const seen = new Set<PartyId>()
   for (const d of sen.senators) {
-    if (!seen.has(d.party)) { seen.add(d.party); d.name = LIDERES_SENADO[d.party].name; continue }
-    d.name ??= senatorName(rng, taken, rng.next() < 0.28)
+    if (!seen.has(d.party)) { seen.add(d.party); d.name = LIDERES_SENADO[d.party].name }
+    else d.name ??= senatorName(rng, taken, rng.next() < 0.28)
+    // v0.21.1: ficha do senador.
+    const lider = d.name === LIDERES_SENADO[d.party].name
+    d.rep ??= { gov: 0, contra: 0, acordos: 0, traiu: 0, fama: lider ? REP_SENADOR.famaStart.lider : REP_SENADOR.famaStart.comum, imagem: 0 }
   }
   if (!sen.states) sen.states = initialStates(sen.senators, parties, player, rng, gauss)
 }

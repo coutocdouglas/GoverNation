@@ -47,10 +47,9 @@ export function EventPanel({ state, choice, onChoose, response, onRespond, plann
           <span className="pn-ill">🗓️</span>
           <div>
             <h2>Nenhuma crise na mesa este mês</h2>
-            <p className="pn-hint">É a chance de liderar nos seus termos: escreva a medida do mês, articule com os partidos ou escolha o assunto do dia com a assessoria.</p>
+            <p className="pn-hint">É a chance de liderar nos seus termos: escreva a medida do mês ou articule com os partidos e com o Senado.</p>
           </div>
         </div>
-        <AssessoriaBox state={state} statement={statement} street={street} onStatement={onStatement} onStreet={onStreet} />
       </section>
     )
   }

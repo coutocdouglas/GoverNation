@@ -3,7 +3,7 @@
 > **Leia este arquivo primeiro.** Ele diz onde o projeto está e qual é o próximo passo.
 > Atualize-o a cada mudança: seção "Estado atual", "Próximo passo" e uma linha no "Histórico".
 
-**Última atualização:** 01/11/2026 · **Versão publicada:** v0.21.0
+**Última atualização:** 01/11/2026 · **Versão publicada:** v0.21.1
 
 ---
 
@@ -13,7 +13,7 @@
 
 Complexidade: **muito alta**. Opus para as regras e o balanceamento; Sonnet nas telas.
 
-Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdouglas/GoverNation. Leia CLAUDE.md, docs/ESTADO.md e docs/DESIGN.md (seções 26, 27.7 e 27.10). Quero fazer a etapa 4."*
+Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdouglas/GoverNation. Leia CLAUDE.md, docs/ESTADO.md e docs/DESIGN.md (seções 26, 27.7, 27.10 e 27.11). Quero fazer a etapa 4."*
 
 **Sugestão (opcional, 1B):** pedir a um Opus uma revisão final dos números da assessoria (`data/assessoria.ts`: `postScale`, `omissoShare`, `fatigueFactor`, `softenMax`; e `data/rua.ts`). O simulador mostra que ficou equilibrado (DESIGN.md 27.4), mas é a primeira etapa balanceada fora do Opus.
 
@@ -28,7 +28,7 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 **Base técnica**
 - App de Windows (Tauri 2 + React + TypeScript). O instalador é gerado pelo GitHub Actions e o jogo se atualiza sozinho, com atualização assinada.
 - O motor do jogo (`src/game/`) fica separado das telas (`src/ui/`). Os números de balanceamento ficam em `src/game/data/`.
-- 269 testes automáticos. Saves antigos são migrados (versão atual do save: 19).
+- 273 testes automáticos. Saves antigos são migrados (versão atual do save: 20).
 
 **Jogabilidade**
 - Mandato de 48 meses (jan/2027 a dez/2030), com o mês em 4 passos: notícias, fato do mês, decisões e encerrar.
@@ -65,7 +65,7 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 - **Câmara e partidos (v0.18):** cada partido tem 3 alas com chefe e lealdade (ala pouco leal trai a orientação); placar com orientação das bancadas, traidores, abstenções, ausentes e piso; líder do seu partido indicável (articulador, disciplinador ou popular); eleições internas todo fevereiro; eleição da Mesa em fev/2027 e fev/2029 (apoiar com moeda ou lançar candidato próprio); conversa por tipos com chance (pedir apoio, apelar à base, oferecer espaço, endurecer); contraoferta; emendas individuais ou de bancada com destino; concessões no texto (escritas pela IA, se ligada); janela da medida em 3 etapas com nota de freios e contrapesos; nome da medida; ministério e urgência valendo na hora.
 - **Página inicial e fluxo do dia (v0.19):** fato do mês em destaque com **Agir** (resumo da assessoria, opinião do ministro com 2 ou 3 ordens, campo de escrever, post e rua) ou **Deixar passar** (sem opções prontas, menos nos fatos do Supremo); central de pendências por urgência; "o que mudou no mês passado" recolhido no fim; corrente de janelas "Etapa N de M" (Leitura → Ficha → Votação → Placar → Supremo → O país reage → Encerrar o mês), também para decreto e MP; quem vai reagir (8 reações com chance e efeito, sorteadas no envio); notas Congressual e Judicial, risco jurídico em número, potencial de crescimento e resumo executivo; **o Supremo julga no mesmo dia** (ação, relator, liminar e plenário); mercado precifica 1/3 da lei no envio; "já valeu" (prévia da aprovação) e primário antes → depois.
 - **Mesa de negociação e base (v0.20):** acordo vale na Câmara e no Senado (3 conversas por rodada no total); cardápio de 2 ou 3 pedidos por liderança (14 tipos, de emendas e obra a pasta, relatoria, favor e palanque), cada um com os votos que converte nas duas casas; as ruas (ato nacional ≈ +6 votos, greve geral ≈ +12, com chance de esvaziar e de confronto); pauta que esfria e é arquivada em 6 rodadas; base como contrato (cota de 80% dos presentes, linha vermelha, fidelidade 0 a 100, "A base nesta votação", "Base X · Fiel Y"); pacto de base sem ministério (6 meses, sondar de graça, até 3); registro de como cada partido votou e quem isso agradou ou desagradou ("Como os partidos votaram" nas Fichas), medida barrada e "com os votos de quem" na Ficha de governo.
-- **Senado por estado (v0.21):** 27 estados (nomes reais) com 3 senadores fictícios cada e os deputados proporcionais; relação de cada bancada estadual com o governo e pedido (obra, cargo, não negocia, com você); senador vota pelo estado; página do Senado com "Como o Senado está hoje", bancadas com filtros, "Pagar as N obras" e 9 líderes de bancada; indecisos com preço na votação (até 3 por rodada); comissões do Senado (CCJ e CAE) que desidratam sem devolver à Câmara; meia sessão em junho e dezembro; impeachment de ministro (54 votos, fato do mês); pacto de base mais exigente.
+- **Senado por estado (v0.21):** 27 estados (nomes reais) com 3 senadores fictícios cada e os deputados proporcionais; relação de cada bancada estadual com o governo e pedido (obra, cargo, não negocia, com você); senador vota pelo estado; página do Senado com "Como o Senado está hoje", bancadas com filtros, "Pagar as N obras" e 9 líderes de bancada; indecisos com preço na votação (até 3 por rodada); comissões do Senado (CCJ e CAE) que desidratam sem devolver à Câmara; meia sessão em junho e dezembro; impeachment de ministro (54 votos, fato do mês); pacto de base mais exigente. **v0.21.1:** plenário em semicírculo, ficha de cada senador (fama, imagem no estado, votos, acordos), presidente do Senado com opções liberadas pela relação menos a cobrança, falar direto com um senador, valor diferente de cada favor nos estados, cartões dos estados com logos, votações resumidas; post da assessoria fora da página inicial.
 - **Logos dos partidos (v0.19.1):** arte do Douglas em `public/logos/`, na posse, no Painel, na Câmara, nas lideranças e no cartão da oposição; número na urna de cada partido.
 - **Retratos:** 110 fotos, cada uma usada por uma pessoa só, e 88 retratos ilustrados (111 a 198) feitos pelo Douglas. 97 rostos livres para personagens novos e para o presidente (18 foram para os chefes de ala na v0.18 e 9 para os líderes de bancada do Senado na v0.21). O presidente escolhe o rosto na posse (41 livres) e 15 retratos ficam reservados para Defesa, povos indígenas, campo e tradições.
 
@@ -73,7 +73,7 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 
 **Onde está cada coisa**
 - `CLAUDE.md`: regras do projeto e quando abrir uma conversa nova.
-- `docs/DESIGN.md`: decisões de desenho, seções 1 a 27 (Supremo em 24.2, 24.2.1 e 26; como ficou a 4C3 em 26.8; plano novo por etapas na seção 27, com a 1A em 27.3, a 1B em 27.4, a 2 em 27.5, o plano da 2B e da 2C em 27.6, como ficou a 2B em 27.7 e a 2C em 27.8; plano da Etapa 3 em 27.9 e como ficou em 27.10).
+- `docs/DESIGN.md`: decisões de desenho, seções 1 a 27 (Supremo em 24.2, 24.2.1 e 26; como ficou a 4C3 em 26.8; plano novo por etapas na seção 27, com a 1A em 27.3, a 1B em 27.4, a 2 em 27.5, o plano da 2B e da 2C em 27.6, como ficou a 2B em 27.7 e a 2C em 27.8; plano da Etapa 3 em 27.9, como ficou em 27.10 e os ajustes em 27.11).
 - `docs/levantamento-video-1.md`: o que o jogo de referência tem e nós não (vídeo 1).
 - `docs/levantamento-congresso.md`: o mesmo para o Congresso, a medida do dia e o Supremo (prints de 31/10), com a proposta da Etapa 2B.
 - `CHANGELOG.md`: novidades de cada versão.
@@ -148,3 +148,4 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 | 01/11/2026 | — | Decisão: pacto de base sem ministério mais exigente (ajuste no começo da Etapa 3) |
 | 01/11/2026 | — | Pacto de base mais exigente (aprovação e pactos em vigor pesam; 24 → 11 a 16 pactos por mandato no simulador) e plano da Etapa 3 (Senado) no DESIGN.md 27.9, aguardando as respostas do Douglas |
 | 01/11/2026 | v0.21.0 | Etapa 3: 27 estados com bancadas estaduais, senador vota pelo estado, página do Senado, indecisos com preço, comissões do Senado, meia sessão, impeachment de ministro, 9 líderes de bancada no Senado; save 19 |
+| 01/11/2026 | v0.21.1 | Senado revisto: semicírculo, ficha dos senadores, opções da presidente do Senado com cobrança, falar direto com um senador, valor dos favores, cartões dos estados com logos, votações resumidas; post da assessoria fora da página inicial; save 20 |

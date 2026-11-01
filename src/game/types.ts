@@ -140,7 +140,7 @@ export interface Meanwhile {
 import type { ReputationState } from './reputacao'
 
 export interface GameState {
-  saveVersion: 19
+  saveVersion: 20
   /** Mês atual, de 0 (janeiro do 1º ano) a 47. Em 48 o mandato acabou. */
   month: number
   presidentName: string
@@ -243,6 +243,8 @@ export interface RoundBuffer {
   /** Etapa 3: senadores indecisos comprados na rodada (até 3) e se o Senado já votou (meia sessão). */
   indecisos?: number
   senadoVoted?: boolean
+  /** v0.21.1: o que a presidente do Senado fez a pedido do governo nesta rodada. */
+  mesaSenado?: MesaSenadoAcao[]
   rngState: number
 }
 
@@ -428,6 +430,21 @@ export interface Deputy {
   /** Etapa 3: estado (deputados e senadores) e nome (só senadores, fictícios). */
   uf?: UfId
   name?: string
+  /** v0.21.1: ficha do senador (votos, acordos, fama e imagem no estado), para a eleição. */
+  rep?: SenatorRep
+}
+
+/** v0.21.1: ficha de um senador. */
+export interface SenatorRep {
+  /** Votações nominais do governo: votou com o governo, contra, ausente ou abstenção. */
+  gov: number
+  contra: number
+  /** Acordos individuais com o governo (obra, cargo, emenda) e quantos não cumpriu. */
+  acordos: number
+  traiu: number
+  /** Fama (0 a 100) e imagem com o eleitor do estado (−50 a +50). */
+  fama: number
+  imagem: number
 }
 
 export interface PartyState {
@@ -530,8 +547,8 @@ export interface PartyVote {
 /** Etapa 4C1: o Senado. Os partidos são os mesmos da Câmara (a relação com o governo é a mesma, mais um bônus). */
 export interface SenateState {
   senators: Deputy[]
-  /** Relação com a presidente do Senado (0 a 100) e última conversa. */
-  president: { relation: number; lastTalk: number }
+  /** Relação com a presidente do Senado (0 a 100) e última conversa. v0.21.1: cobrança acumulada e último pedido atendido. */
+  president: { relation: number; lastTalk: number; wear?: number; askDone?: number }
   /** Projetos aprovados na Câmara que esperam o Senado. `sentMonth` = mês em que chegaram. */
   pending: PendingBill[]
   /** Etapa 3: a bancada de cada estado (relação com o governo e o que pede). */
@@ -552,6 +569,9 @@ export interface EstadoState {
   /** Pedido atendido: não pede de novo até este mês. */
   doneUntil?: number
 }
+
+/** v0.21.1: opções da presidente do Senado. */
+export type MesaSenadoAcao = 'pautar' | 'relatoria' | 'sessao' | 'pedido'
 
 /** Etapa 3: um senador indeciso comprado para uma votação (índice em `senate.senators`). */
 export interface SenatorBuy {

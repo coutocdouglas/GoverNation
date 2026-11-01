@@ -6,6 +6,7 @@ import { billPopularity, forecastSenate, forecastVote, senatePending } from './c
 import { BILL_BY_ID } from './data/bills'
 import { GROUPS } from './data/groups'
 import { PACTO, RUAS } from './data/base'
+import { favorToStates } from './senado'
 import { PARTY_BY_ID } from './data/parties'
 import { clamp } from './ideology'
 import { addBio, addChronicle } from './memory'
@@ -136,6 +137,7 @@ export function signPact(prev: GameState, party: PartyId, kind: Pact['kind']): G
   const sigla = PARTY_BY_ID[party].sigla
   c.pacts = [...(c.pacts ?? []), { party, since: s.month, until: s.month + PACTO.months, kind }]
   joinBase(s, party, BASE.pactFidelity)
+  favorToStates(s, party, 'pacto')
   c.parties[party].relation = clamp(c.parties[party].relation + PACTO.signGain, 0, 100)
   if (kind === 'emendas') {
     ctx.e.tempSpending.push({ label: `Pacto com o ${sigla}`, amount: pactEmendas(party), monthsLeft: PACTO.months })

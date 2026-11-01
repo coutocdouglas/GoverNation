@@ -8,7 +8,8 @@
  */
 import { attendBlockedReason, attendState, statesOnMeasure } from './estados'
 import type { UfId } from './data/estados'
-import { buysBlockedReason, meiaSessaoBlocks, payBuys, runSenadoComissoes, senadoComissoes, senadoScale } from './senado'
+import { addMesaWear, applyMesa, buysBlockedReason, favorToStates, meiaSessaoBlocks, mesaBlockedReason, mesaDone, noteSenatorBroke, noteSenatorVotes, payBuys, runSenadoComissoes, senadoComissoes, senadoScale } from './senado'
+import { PRESIDENTE_SENADO } from './data/senado'
 import { affinity, articulationBlockedReason, billBlockedReason, CONGRESS, forecastSenate, forecastVote, isRecess, runSenateVote, runVote, senatePending, symbolicBlockedReason } from './congress'
 import { SENADO } from './data/senado'
 import { actsNow, BILL_BY_ID, GDP_BILLIONS, RESUBMIT_COOLDOWN } from './data/bills'
@@ -40,7 +41,7 @@ import { addMark, markMeasure, noteRecord } from './reputacao'
 import { REPUTACAO } from './data/marks'
 import { Rng } from './rng'
 import type { MonthPlan } from './game'
-import type { Articulation, BillId, Cause, CourtNow, Deal, DealTerms, Economy, GameState, GroupId, Headline, Impulse, PendingBill, RoundBuffer, ReactionRoll, SenatorBuy, VoteRecord } from './types'
+import type { Articulation, BillId, Cause, CourtNow, Deal, DealTerms, Economy, GameState, GroupId, Headline, Impulse, PendingBill, RoundBuffer, ReactionRoll, MesaSenadoAcao, SenatorBuy, VoteRecord } from './types'
 
 export type House = 'camara' | 'senado'
 
@@ -192,6 +193,8 @@ export function applyDeals(ctx: RoundCtx, deals: Deal[]): void {
     if (d.destino) terms.destino = d.destino
     if (d.concession) terms.concession = d.concession
     if (d.area) terms.area = d.area
+    // v0.21.1: acordo no Senado soma cobrança na Mesa do Senado (o da bancada inteira pesa mais que o individual).
+    addMesaWear(s, senado ? PRESIDENTE_SENADO.wear.acordoSenado : PRESIDENTE_SENADO.wear.acordoAmbas)
     if (senado) {
       const sp = senatePending(s, d.bill)
       const pc = c.pending.find((x) => x.id === d.bill)
@@ -513,6 +516,7 @@ export function gavetaReason(s: GameState, id: BillId, house: House, opts: Floor
 
 /** A presidente do Senado segura o projeto nesta rodada? */
 function senatePresidentHolds(s: GameState, id: BillId): boolean {
+  if (mesaDone(s, 'pautar')) return false
   const round = peekRound(s)
   const sp = senatePending(s, id)
   return !round?.senateHeld && s.congress.senate.president.relation < SENADO.president.holdBelow && (sp?.holds ?? 0) < SENADO.president.maxHold
@@ -641,8 +645,11 @@ function floorSenado(ctx: RoundCtx, p: PendingBill, opts: FloorOptions): 'votado
     const byParty = Object.fromEntries(f.byParty.map((r) => [r.party, { yes: r.yes, no: r.no }])) as VoteRecord['byParty']
     v = { month: s.month, bill: p.id, yes: f.yes, no: f.no, abstain: f.abstain, absent: Math.max(0, SENADO.seats - f.yes - f.no - f.abstain), needed: 0, approved: true, byParty, kind: 'simbolica', house: 'senado' }
   } else {
-    const { broken, brokenSen, ...rest } = runSenateVote(s, p.id, ctx.rng)
+    const { broken, brokenSen, cast, ...rest } = runSenateVote(s, p.id, ctx.rng)
     v = rest
+    // v0.21.1: a ficha de cada senador (como votou, se cumpriu o acordo).
+    noteSenatorVotes(s, p.id, cast, rest.approved)
+    for (const b of p.senadores ?? []) noteSenatorBroke(s, b.index, brokenSen.includes(b.index))
     for (const pid of broken) {
       headlines.push({ text: `${PARTY_BY_ID[pid].sigla} não entrega todos os votos prometidos no Senado em “${bill.name}”`, tone: 'bad' })
       addBio(s, leaderOf(s, pid).name, `Prometeu votos no Senado em “${bill.name}” e não entregou tudo.`)
@@ -959,6 +966,7 @@ export function applyMinistryChange(s: GameState, ch: MinistryChange, headlines:
     const ops = c.parties[swapped.party]
     ops.relation = Math.max(0, ops.relation + CAMARA.ministry.dismissHit)
     ops.baseRelation = Math.max(5, ops.baseRelation - CAMARA.ministry.baseGain)
+    favorToStates(s, swapped.party, 'pasta', -1)
     delete s.cabinet[area]
     addBio(s, before.name, `Foi demitido pelo presidente ${s.presidentName} numa reforma ministerial.`)
     headlines.push({ text: `Reforma ministerial: ${before.name} (${old.sigla}) sai do governo`, tone: 'neutral' })
@@ -969,6 +977,8 @@ export function applyMinistryChange(s: GameState, ch: MinistryChange, headlines:
     const nominee = NOMINEE_BY_PARTY[party]!
     s.cabinet[area] = { party, since: s.month }
     joinBase(s, party)
+    // v0.21.1: ministério é o favor que mais vale nas bancadas estaduais do Senado.
+    favorToStates(s, party, 'pasta')
     const ps = c.parties[party]
     ps.relation = Math.min(100, ps.relation + CAMARA.ministry.relationGain)
     ps.baseRelation = Math.min(95, ps.baseRelation + CAMARA.ministry.baseGain)
@@ -1069,6 +1079,17 @@ export function attendNow(prev: GameState, ufs: UfId[]): GameState {
   }
   // O mercado vê o gasto das obras na hora.
   if (money) ctx.conf.v -= (money / GDP_BILLIONS) * 100 * 40 / 100
+  closeCtx(ctx)
+  return s
+}
+
+/** v0.21.1: pede algo à presidente do Senado (pautar já, relatoria amiga, sessão extra ou atender o pedido dela). Vale na hora. */
+export function mesaNow(prev: GameState, a: MesaSenadoAcao): GameState {
+  const err = mesaBlockedReason(prev, a)
+  if (err) throw new Error(err)
+  const s = structuredClone(prev)
+  const ctx = openCtx(s)
+  applyMesa(s, a, ctx.headlines, ctx.taken)
   closeCtx(ctx)
   return s
 }

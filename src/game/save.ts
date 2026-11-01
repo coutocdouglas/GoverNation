@@ -171,7 +171,13 @@ export function migrate(raw: unknown): GameState | null {
       s.congress.senate.impeach ??= null
       s.saveVersion = 19
     }
-    if (s.saveVersion !== 19) return null
+    if (s.saveVersion === 19) {
+      // v0.21 → v0.21.1: ficha de cada senador e cobrança na Mesa do Senado.
+      ensureStates(s as GameState, s.rngState)
+      s.congress.senate.president.wear ??= 0
+      s.saveVersion = 20
+    }
+    if (s.saveVersion !== 20) return null
     syncCustomBills(s as GameState)
     return s as GameState
   } catch {

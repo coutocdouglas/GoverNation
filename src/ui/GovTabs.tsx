@@ -12,9 +12,8 @@ import { ministriesInTrouble, ministryGoal, wearLabel } from '../game/ministerio
 import { STATUS_LABEL } from '../game/promises'
 import type { Articulation, BillId, Deal, GameState } from '../game/types'
 import type { MonthPlan } from '../game/game'
-import { SenateCard } from './CamaraPanels'
-import { BancadasEstaduaisCard, LideresSenadoCard, SenadoHojeCard } from './SenadoPanels'
-import { ForecastRow, Scoreboard } from './CongressView'
+import { BancadasEstaduaisCard, LideresSenadoCard, SenadoHojeCard, SenadoVotosCard, SenateCard } from './SenadoPanels'
+import { ForecastRow } from './CongressView'
 import { Portrait } from './Portrait'
 import { num } from './format'
 
@@ -28,10 +27,9 @@ export function SenadoView({ state, articulations, onToggle, onNegotiate, deals,
 }) {
   const c = state.congress
   const coming = c.pending.filter((p) => BILL_BY_ID[p.id]?.instrument !== 'decreto')
-  const votes = c.votes.filter((v) => v.house === 'senado')
   return (
     <div className="pn-col">
-      <SenateCard state={state} articulations={articulations} onToggle={onToggle} hidePending />
+      <SenateCard state={state} articulations={articulations} onToggle={onToggle} onState={onState} onToast={onToast} />
       <SenadoHojeCard state={state} />
       {c.senate.pending.length > 0 && (
         <section className="pn-card pn-card--gold">
@@ -53,12 +51,7 @@ export function SenadoView({ state, articulations, onToggle, onNegotiate, deals,
       )}
       {onState && onToast && <BancadasEstaduaisCard state={state} onState={onState} onToast={onToast} />}
       <LideresSenadoCard state={state} />
-      {votes.length > 0 && (
-        <section className="pn-card">
-          <h3>📜 Votações no Senado</h3>
-          {[...votes].reverse().map((v, i) => <Scoreboard key={i} v={v} compact />)}
-        </section>
-      )}
+      <SenadoVotosCard state={state} />
     </div>
   )
 }

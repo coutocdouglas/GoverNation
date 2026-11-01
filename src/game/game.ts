@@ -1,5 +1,7 @@
 import { ACTION_BY_ID, ACTIONS_PER_MONTH, blockedReason, effectMultiplier } from './actions'
 import { stepStates } from './estados'
+import { stepSenatorReps } from './senado'
+import { PRESIDENTE_SENADO } from './data/senado'
 import { applyImpeachChoice, maybeImpeach } from './impeachment'
 import { articulationBlockedReason, billBlockedReason, runNomination, CONGRESS, driftRelations, initialCongress, isRecess, runChamberVote, runOverrideVote, senatePending, symbolicBlockedReason } from './congress'
 import { actsNow, BILL_BY_ID, RESUBMIT_COOLDOWN } from './data/bills'
@@ -85,7 +87,7 @@ export function newGame(
   const rngState = seed ?? Math.floor(Math.random() * 2 ** 31)
   const bonus = DIFFICULTY[difficulty].approvalBonus
   const state: GameState = {
-    saveVersion: 19,
+    saveVersion: 20,
     month: 0,
     presidentName: presidentName.trim() || 'Presidente',
     difficulty,
@@ -572,6 +574,9 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
   stepBase(s, headlines)
   // Etapa 3: bancadas estaduais no Senado (relação volta aos poucos; pedidos se renovam). Sorteio próprio do mês.
   stepStates(s, new Rng((absMonth(s) * 40503) ^ s.rngState ^ 0x57a7e5))
+  // v0.21.1: a fama dos senadores cai devagar; a cobrança na Mesa do Senado também.
+  stepSenatorReps(s)
+  c.senate.president.wear = Math.round((c.senate.president.wear ?? 0) * PRESIDENTE_SENADO.wearKeep * 10) / 10
 
   // 1d6. Supremo (etapas 4C2 e 4C3): sabatina, aposentadorias, consultas, julgamento, novas ações e liminares.
   // Etapa 2B: o que a rodada já deu à oposição (derrubada no mesmo dia, reações ao anúncio).

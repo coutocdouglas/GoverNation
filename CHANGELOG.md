@@ -1,5 +1,17 @@
 # Novidades
 
+## 0.21.1
+- **Senado revisto (pedidos do Douglas):**
+  - **Plenário em semicírculo**, como o do Congresso, com as cadeiras por partido da esquerda para a direita; contorno verde em quem está com você e vermelho em quem está contra. Clicar numa cadeira abre a **ficha do senador**.
+  - **Ficha de cada senador** (para as eleições): fama, imagem com o eleitor do estado, quanto vota com o governo e os acordos feitos (e os que não cumpriu). Votar a favor de uma lei que o estado dele gosta melhora a imagem; levar obra para o estado também; cargo e acordo descumprido pioram. O cartão **"Senadores em alta"** mostra os nomes mais conhecidos.
+  - **A presidente do Senado com mais opções**: além de conversar, **pautar já** (sem gaveta e sem a CAE segurar), **relatoria amiga** (as comissões quase não desidratam o texto), **sessão extra** (em mês de meia sessão) e **atender o pedido dela** (uma obra no estado dela). O que ela libera depende da relação **menos a cobrança**: cada favor pedido e cada acordo fechado no Senado somam cobrança, que cai devagar a cada mês.
+  - **Falar direto com um senador**: a negociação individual (que já existia como "senadores indecisos") ficou mais visível e mais ampla, com o logo do partido. Gasta menos cobrança que um acordo com a bancada inteira (1 contra 4) e não usa as conversas com as lideranças.
+  - **Cada favor vale diferente nos estados**: ministério +30, obra +18, pacto +14, cargo +11, emenda +4 (só o senador). Ministério e pacto chegam aos estados onde o partido tem senadores; tirar a pasta de um partido faz o contrário.
+  - **Cartões dos estados mais limpos**, com o logo do partido de cada senador e o pedido num botão só; ordenados da melhor relação para a pior.
+  - **Votações no Senado resumidas**: uma linha por votação (as 5 últimas, com "ver todas").
+- **O post da assessoria saiu da página inicial** em mês sem crise. Nas crises ele continua dentro de "Agir".
+- Mandatos salvos continuam normalmente (save versão 20): todos os senadores ganham ficha.
+
 ## 0.21.0
 - **O Senado por estado (etapa 3).** O Senado ganhou página própria e cada senador agora tem nome, partido e estado.
   - **Os 27 estados** (nomes reais): cada um com 3 senadores fictícios e os deputados na proporção da Câmara. Cada bancada estadual tem uma **relação com o governo** (de −50 a +50) e pede uma coisa: **obra** (dinheiro por 12 meses), **cargo no estado** (sem dinheiro, com risco de escândalo), **não negocia** ou já está **com você**. O pedido se renova a cada 6 meses; ignorado, a bancada se afasta um pouco.

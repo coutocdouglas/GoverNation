@@ -1,7 +1,5 @@
 import { frentesOfDeputies } from '../game/camara'
 import { articulationBlockedReason, CONGRESS, forecastOverride } from '../game/congress'
-import { SENADO, SENATE_SEATS } from '../game/data/senado'
-import { PARTIES } from '../game/data/parties'
 import { BILL_BY_ID, GDP_BILLIONS } from '../game/data/bills'
 import { BOMB_BY_ID, CAMARA, FRENTES } from '../game/data/camara'
 import { GROUP_BY_ID } from '../game/data/groups'
@@ -50,63 +48,6 @@ export function SpeakerCard({ state, articulations, onToggle }: {
           {blocked && <small className="pn-hint" style={{ marginLeft: 8 }}>{blocked}</small>}
         </div>
       </div>
-    </section>
-  )
-}
-
-/** Senado Federal (etapa 4C1): bancadas, presidente da casa e o que espera votação lá. */
-export function SenateCard({ state, articulations, onToggle, onNegotiate, hidePending }: {
-  state: GameState; articulations: Articulation[]; onToggle: (a: Articulation) => void; onNegotiate?: (id: string) => void; hidePending?: boolean
-}) {
-  const sn = state.congress.senate.president
-  const party = PARTY_BY_ID[SENADO.president.party]
-  const a: Articulation = { kind: 'senado', party: SENADO.president.party }
-  const on = articulations.some((x) => x.kind === 'senado')
-  const blocked = articulationBlockedReason(state, a)
-  const full = !on && articulations.length >= CONGRESS.articulationsPerMonth
-  const mood = sn.relation >= 60 ? { t: 'Aliada: pauta o que o governo pede', c: 'up' } : sn.relation >= SENADO.president.holdBelow ? { t: 'Neutra: pauta no ritmo dela', c: 'warn' } : { t: 'Hostil: segura um projeto do governo por mês', c: 'dn' }
-  const order = [...PARTIES].sort((x, y) => x.econ - y.econ)
-  const allies = PARTIES.filter((p) => state.congress.parties[p.id].relation >= 50).reduce((acc, p) => acc + SENATE_SEATS[p.id], 0)
-  const pending = state.congress.senate.pending
-  return (
-    <section className="pn-card pn-speaker">
-      <h3>🏛️ Senado Federal <span className="pn-badge">81 senadores · vota depois da Câmara</span></h3>
-      <div className="pn-senate__seats" role="img" aria-label="81 cadeiras do Senado por partido">
-        {order.flatMap((p) => Array.from({ length: SENATE_SEATS[p.id] }, (_, i) => <i key={`${p.id}-${i}`} style={{ background: p.color }} title={p.sigla} />))}
-      </div>
-      <div className="pn-legend">
-        {order.filter((p) => SENATE_SEATS[p.id] > 0).map((p) => <span key={p.id}><i style={{ background: p.color }} />{p.sigla} {SENATE_SEATS[p.id]}</span>)}
-      </div>
-      <p className="pn-hint">
-        Partidos simpáticos ou aliados somam <b>{allies}</b> senadores. Lei comum e MP passam com a maioria dos presentes; lei complementar precisa de <b>{SENADO.complementar}</b>; emenda constitucional, de <b>{SENADO.pec}</b> em dois turnos.
-        O que a Câmara aprova vai ao Senado na mesma rodada (PEC com os dois turnos juntos). Se o Senado rejeitar, o projeto só volta em 6 meses.
-      </p>
-      <div className="pn-speaker__body" style={{ marginTop: 10 }}>
-        <Portrait name={SENADO.president.name} color={party.color} size={72} title={SENADO.president.name} />
-        <div>
-          <b>{SENADO.president.name}</b> <span className="pn-hint" style={{ margin: 0 }}>· presidente do Senado · {party.sigla}</span>
-          <div className="pn-party__stats" style={{ marginTop: 4 }}>
-            <span>Relação <b className={mood.c}>{Math.round(sn.relation)}</b></span>
-          </div>
-          <span className="pn-meter"><span style={{ width: `${sn.relation}%`, background: party.color }} /></span>
-          <p className="pn-hint" style={{ marginTop: 6 }}><b className={mood.c}>{mood.t}.</b> Com a relação abaixo de {SENADO.president.holdBelow}, segura um projeto por mês (MP escapa).</p>
-          <button className={`pn-btn pn-btn--small ${on ? '' : 'pn-btn--ghost'}`} disabled={!!blocked || full} title={blocked ?? (full ? 'Ações de articulação do mês esgotadas.' : '')} onClick={() => onToggle(a)}>
-            {on ? '✔ Conversa marcada' : `🗣️ Conversar com ela (+${SENADO.president.talkGain})`}
-          </button>
-          {blocked && <small className="pn-hint" style={{ marginLeft: 8 }}>{blocked}</small>}
-        </div>
-      </div>
-      {pending.length > 0 && !hidePending && (
-        <div style={{ marginTop: 10 }}>
-          <b>Esperando o Senado</b>
-          {pending.map((p) => (
-            <div key={p.id} className="pn-row" style={{ alignItems: 'center', gap: 8 }}>
-              <span>{BILL_BY_ID[p.id].name}{p.holds ? ` · 🗄️ ${p.holds}× na gaveta` : ''}</span>
-              {onNegotiate && <button className="pn-btn pn-btn--ghost pn-btn--small" onClick={() => onNegotiate(p.id)}>🗳️ Negociar e pautar no Senado</button>}
-            </div>
-          ))}
-        </div>
-      )}
     </section>
   )
 }

@@ -5,8 +5,8 @@ import { committeeOf, frenteSummary } from '../game/camara'
 import { BILL_BY_ID, GDP_BILLIONS, INSTRUMENTS } from '../game/data/bills'
 import { CAMARA } from '../game/data/camara'
 import { DEALS } from '../game/data/deals'
-import { LIDERES_SENADO, SENADO } from '../game/data/senado'
-import { buysBlockedReason, indecisos, isMeiaSessao, senadoComissoes } from '../game/senado'
+import { LIDERES_SENADO, PRESIDENTE_SENADO, SENADO } from '../game/data/senado'
+import { buysBlockedReason, indecisos, isMeiaSessao, mesaDone, senadoComissoes } from '../game/senado'
 import { PARTIES, PARTY_BY_ID } from '../game/data/parties'
 import { COUNTERABLE, emendasAmount, emendasFactor, emendasMoney, offerFor, type AskOption, type DealScope, type Offer } from '../game/deals'
 import { ASK_BY_KIND, ESFRIA, LINHA_VERMELHA, MENU } from '../game/data/base'
@@ -104,7 +104,7 @@ export function VoteSheet({ state, bill, deals, listened, onListen, listenedSena
   const pb = state.congress.pending.find((p) => p.id === bill)
   const sn = state.congress.senate.president
   const snParty = PARTY_BY_ID[SENADO.president.party]
-  const senateRisk = b.instrument !== 'mp' && sn.relation < SENADO.president.holdBelow && (inSenate?.holds ?? 0) < SENADO.president.maxHold
+  const senateRisk = b.instrument !== 'mp' && !mesaDone(state, 'pautar') && sn.relation < SENADO.president.holdBelow && (inSenate?.holds ?? 0) < SENADO.president.maxHold
   const am = amendmentOf(state, bill)
   const relator = am ? PARTY_BY_ID[am.relator] : null
   const com = committeeOf(b)
@@ -498,13 +498,16 @@ function IndecisosBox({ state, bill, deals, buys, onBuy }: { state: GameState; b
   if (!list.length && !chosen.length) return null
   return (
     <>
-      <div className="pn-vote__head" style={{ marginTop: 16 }}><b>🎯 Senadores indecisos</b><span className="pn-badge">{used} de {max} nesta rodada · pagos ao votar</span></div>
-      <p className="pn-hint">Senador vota pelo estado: os que estão no meio do caminho dizem o preço. Obra ou cargo no estado contam como o pedido da bancada atendido (ajudam os outros dois senadores do estado também). Cumprem {Math.round(SENADO.indeciso.reliability * 100)}% das vezes.</p>
+      <div className="pn-vote__head" style={{ marginTop: 16 }}><b>🎯 Falar direto com um senador</b><span className="pn-badge">{used} de {max} nesta rodada · pagos ao votar</span></div>
+      <p className="pn-hint">
+        Quando a votação está apertada, dá para negociar com um senador só, sem envolver a bancada inteira: gasta menos (cobrança {PRESIDENTE_SENADO.wear.indeciso} na Mesa do Senado, contra {PRESIDENTE_SENADO.wear.acordoSenado} de um acordo com o partido) e não usa as conversas com as lideranças.
+        Aqui aparecem os que estão no meio do caminho, com o preço. Obra ou cargo no estado contam como o pedido da bancada atendido (ajudam os outros dois senadores do estado). Cumprem {Math.round(SENADO.indeciso.reliability * 100)}% das vezes, e o acordo fica na ficha do senador.
+      </p>
       {chosen.length > 0 && (
         <div className="pn-indecisos">
           {chosen.map(({ x, d }) => (
             <div key={x.index} className="pn-indeciso on">
-              <span><b>{d.name}</b> <small style={{ color: PARTY_BY_ID[d.party].color }}>{PARTY_BY_ID[d.party].sigla}-{d.uf?.toUpperCase()}</small></span>
+              <span><PartyLogo party={d.party} size={16} /> <b>{d.name}</b> <small style={{ color: PARTY_BY_ID[d.party].color }}>{PARTY_BY_ID[d.party].sigla}-{d.uf?.toUpperCase()}</small></span>
               <small>✔ {x.kind === 'obra' ? 'Obra no estado' : x.kind === 'cargo' ? 'Cargo no estado' : 'Emenda'}</small>
               {onBuy && <button className="pn-btn pn-btn--ghost pn-btn--small" onClick={() => onBuy(x, false)}>Desfazer</button>}
             </div>
@@ -512,12 +515,12 @@ function IndecisosBox({ state, bill, deals, buys, onBuy }: { state: GameState; b
         </div>
       )}
       <div className="pn-indecisos">
-        {list.slice(0, 8).map((i) => {
+        {list.slice(0, 10).map((i) => {
           const buy: SenatorBuy | null = i.price ? { index: i.index, kind: i.price.kind } : null
           const why = buy ? buysBlockedReason(state, bill, [...buys, buy]) : 'Não tem preço.'
           return (
             <div key={i.index} className="pn-indeciso">
-              <span><b>{i.name}</b> <small style={{ color: PARTY_BY_ID[i.party].color }}>{PARTY_BY_ID[i.party].sigla}-{i.uf}</small> <span className="mono">{Math.round(i.chance * 100)}% sim</span></span>
+              <span><PartyLogo party={i.party} size={16} /> <b>{i.name}</b> <small style={{ color: PARTY_BY_ID[i.party].color }}>{PARTY_BY_ID[i.party].sigla}-{i.uf}</small> <span className="mono">{Math.round(i.chance * 100)}% sim</span></span>
               <small>{i.why}</small>
               {i.price && onBuy ? (
                 <button className="pn-btn pn-btn--small" disabled={!!why} title={why ?? ''} onClick={() => onBuy(buy!, true)}>

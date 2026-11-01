@@ -291,7 +291,9 @@ export function senateExtras(s: GameState, gov: 1 | -1, buys: SenatorBuy[] = [],
 /** Pesos da casa no mês (meia sessão: mais ausentes no Senado). */
 function weightsAt(s: GameState, house: House): Weights {
   const W = W_OF[house]
-  return house === 'senado' && isMeiaSessao(s.month) ? { ...W, absentRate: SENADO.meiaSessao.absentRate } : W
+  // v0.21.1: sessão extra convocada pela presidente do Senado = plenário cheio.
+  const extra = s.round?.month === s.month && s.round.mesaSenado?.includes('sessao')
+  return house === 'senado' && isMeiaSessao(s.month) && !extra ? { ...W, absentRate: SENADO.meiaSessao.absentRate } : W
 }
 
 /**
@@ -435,6 +437,8 @@ function runWith(s: GameState, bill: BillDef, boost: Partial<Record<PartyId, num
     const byAla = {} as Record<PartyId, number[]>
     let yes = 0, no = 0, abstain = 0, absent = 0
     const byParty = Object.fromEntries(PARTIES.map((p) => [p.id, { yes: 0, no: 0, abs: 0, out: 0 }])) as VoteRecord['byParty']
+    // v0.21.1: o voto de cada parlamentar (1 sim, −1 não, 0 abstenção, 2 ausente), para a ficha dos senadores.
+    const cast: number[] = new Array(members.length).fill(2)
     members.forEach((d, i) => {
       if (rng.next() < W.absentRate) { absent++; byParty[d.party].out!++; return }
       const score = deputyScore(d, c, bill, approval, orient[d.party], pop, boost[d.party], fb ? fb[i] : 0, gov, W, relBonus, mods.lf[i], mods.am[i], mods.fm[i]) + partyMood[d.party] + gauss() * W.noise
@@ -442,13 +446,14 @@ function runWith(s: GameState, bill: BillDef, boost: Partial<Record<PartyId, num
       if (score > W.abstainBand) { yes++; byParty[d.party].yes++; vote = 1 }
       else if (score < -W.abstainBand) { no++; byParty[d.party].no++; vote = -1 }
       else { abstain++; byParty[d.party].abs!++ }
+      cast[i] = vote
       if (sign[d.party] !== 0 && vote === -sign[d.party]) {
         traitors[d.party] = (traitors[d.party] ?? 0) + 1
         const arr = (byAla[d.party] ??= [0, 0, 0])
         arr[d.ala ?? 0]++
       }
     })
-    return { yes, no, abstain, absent, byParty, orient: sign, traitors, byAla }
+    return { yes, no, abstain, absent, byParty, orient: sign, traitors, byAla, cast }
   }
   let r = turn()
   let approved: boolean
@@ -468,33 +473,33 @@ export function runVote(s: GameState, billId: BillId, rng: Rng): VoteRecord & { 
   const broken = new Set(deals.filter((d) => rng.next() > dealReliability(d.party, d.kind, d)).map((d) => d.party))
   const { bill, boost } = voteSetup(s, billId, deals, {}, broken)
   const needed = neededVotes(bill)
-  const { byAla, ...r } = runWith(s, bill, boost, needed, 1, rng)
+  const { byAla, cast: _c, ...r } = runWith(s, bill, boost, needed, 1, rng)
   return { month: s.month, bill: billId, ...r, needed, broken: [...broken], byAla }
 }
 
 /** Etapa 4C1: vota no Senado um projeto que a Câmara aprovou (precisa estar em `senate.pending`). Não altera o estado. */
-export function runSenateVote(s: GameState, billId: BillId, rng: Rng): VoteRecord & { broken: PartyId[]; brokenSen: number[] } {
+export function runSenateVote(s: GameState, billId: BillId, rng: Rng): VoteRecord & { broken: PartyId[]; brokenSen: number[]; cast: number[] } {
   const deals = senateDealsOf(s, billId)
   const broken = new Set(deals.filter((d) => rng.next() > dealReliability(d.party, d.kind, d)).map((d) => d.party))
   const { bill, boost, buys } = voteSetup(s, billId, deals, {}, broken, 'senado')
   // Etapa 3: cada indeciso comprado pode não cumprir no dia.
   const brokenSen = new Set(buys.filter(() => rng.next() > SENADO.indeciso.reliability).map((b) => b.index))
   const needed = neededVotes(bill, 'senado')
-  const { byAla: _a, ...r } = runWith(s, bill, boost, needed, 1, rng, 'senado', senateExtras(s, 1, buys, brokenSen))
-  return { month: s.month, bill: billId, ...r, needed, broken: [...broken], brokenSen: [...brokenSen], house: 'senado' }
+  const { byAla: _a, cast, ...r } = runWith(s, bill, boost, needed, 1, rng, 'senado', senateExtras(s, 1, buys, brokenSen))
+  return { month: s.month, bill: billId, ...r, needed, broken: [...broken], brokenSen: [...brokenSen], house: 'senado', cast }
 }
 
 /** Sessão para derrubar um veto. "Aprovado" aqui quer dizer veto derrubado. */
 export function runOverrideVote(s: GameState, bill: BillDef, rng: Rng): VoteRecord {
   const boost: Partial<Record<PartyId, number>> = {}
   for (const [pid, v] of Object.entries(govBoost(s)) as [PartyId, number][]) boost[pid] = -v
-  const { byAla: _a, ...r } = runWith(s, bill, boost, CAMARA.veto.needed, -1, rng)
+  const { byAla: _a, cast: _c, ...r } = runWith(s, bill, boost, CAMARA.veto.needed, -1, rng)
   return { month: s.month, bill: bill.id, ...r, needed: CAMARA.veto.needed, kind: 'veto', title: `Veto: ${bill.name}` }
 }
 
 /** A Câmara votando uma pauta própria (pauta-bomba): quem está longe do governo vota mais a favor. */
 export function runChamberVote(s: GameState, bill: BillDef, rng: Rng): VoteRecord {
-  const { byAla: _a, ...r } = runWith(s, bill, {}, 0, -1, rng)
+  const { byAla: _a, cast: _c, ...r } = runWith(s, bill, {}, 0, -1, rng)
   return { month: s.month, bill: bill.id, ...r, needed: 0 }
 }
 
@@ -585,7 +590,7 @@ export function forecastNomination(s: GameState, bill: BillDef, lean: Partial<Re
 }
 
 export function runNomination(s: GameState, bill: BillDef, lean: Partial<Record<PartyId, number>>, needed: number, rng: Rng): VoteRecord {
-  const { byAla: _a, ...r } = runWith(s, bill, nominationBoost(s, lean), needed, 1, rng, 'senado')
+  const { byAla: _a, cast: _c, ...r } = runWith(s, bill, nominationBoost(s, lean), needed, 1, rng, 'senado')
   return { month: s.month, bill: bill.id, ...r, needed, house: 'senado', kind: 'sabatina', title: bill.name }
 }
 
@@ -602,6 +607,6 @@ export function forecastSenateAgainst(s: GameState, bill: BillDef, boost: Partia
 export function runSenateAgainst(s: GameState, bill: BillDef, boost: Partial<Record<PartyId, number>>, needed: number, orientK: number, rng: Rng, title: string): VoteRecord {
   const b: Partial<Record<PartyId, number>> = { ...boost }
   for (const [pid, v] of Object.entries(govBoost(s)) as [PartyId, number][]) b[pid] = (b[pid] ?? 0) - v
-  const { byAla: _a, ...r } = runWith(s, bill, b, needed, -1, rng, 'senado', undefined, orientK)
+  const { byAla: _a, cast: _c, ...r } = runWith(s, bill, b, needed, -1, rng, 'senado', undefined, orientK)
   return { month: s.month, bill: bill.id, ...r, needed, house: 'senado', kind: 'impeachment', title }
 }

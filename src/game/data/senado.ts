@@ -78,9 +78,12 @@ export const SENADO = {
    */
   wState: 0.3,
 
-  /** Indecisos com preço: senadores que a previsão dá entre `band` e 1 − `band`. Até `perRound` comprados por rodada. */
+  /**
+   * Conversa direta com um senador (v0.21.1): senadores que a previsão dá entre `band` e 1 − `band`. Até `perRound` por rodada.
+   * Gasta menos "cobrança" na Mesa do Senado que um acordo com a bancada inteira (`PRESIDENTE_SENADO.wear`).
+   */
   indeciso: {
-    band: 0.3,
+    band: 0.2,
     perRound: 3,
     /** Reforço do senador comprado (só naquela votação) e a chance de ele cumprir. */
     boost: 0.45,
@@ -154,3 +157,54 @@ export const LIDERES_SENADO: Record<PartyId, { name: string; feminine: boolean }
   pvs: { name: 'Iolanda Ferraz', feminine: true },
   nrm: { name: 'Henrique Lobato', feminine: false },
 }
+
+
+/**
+ * v0.21.1: a presidente do Senado com mais opções. O que ela libera depende da relação MENOS a cobrança acumulada
+ * (cada favor pedido à Mesa e cada acordo fechado no Senado soma cobrança; cai um pouco todo mês).
+ * Efetiva = relação − cobrança × `wearWeight`. Cada opção pede uma efetiva mínima e soma cobrança.
+ */
+export const PRESIDENTE_SENADO = {
+  /** Estado da presidente do Senado (para o pedido dela) e o pedido: obra no estado. */
+  uf: 'pe' as const,
+  wearWeight: 0.6,
+  /** Cobrança: fração que fica de um mês para o outro. */
+  wearKeep: 0.85,
+  /** Quanto cada coisa soma na cobrança. */
+  wear: { acordoSenado: 4, acordoAmbas: 2, indeciso: 1, conversar: 0 },
+  acoes: {
+    pautar: { label: 'Pautar já', icon: '⏩', min: 45, wear: 8, desc: 'Ela pauta o projeto do governo nesta rodada: sem gaveta dela e sem a CAE segurar.' },
+    relatoria: { label: 'Relatoria amiga', icon: '📝', min: 55, wear: 10, desc: 'Ela escolhe relatores amigos nas comissões: nesta rodada, CCJ e CAE quase não desidratam o texto.' },
+    sessao: { label: 'Sessão extra', icon: '🌙', min: 65, wear: 12, desc: 'Convoca sessão extra em mês de meia sessão: o Senado pode votar de novo e com o plenário cheio.' },
+    pedido: { label: 'Atender o pedido dela', icon: '🎁', min: -100, wear: -15, desc: 'Uma obra no estado dela. Custa dinheiro, mas a relação sobe e a cobrança cai.' },
+  },
+  /** O pedido dela: obra (% do PIB ao ano por 12 meses), ganho de relação e intervalo entre dois pedidos. */
+  pedido: { pib: 0.01, months: 12, relation: 12, every: 6 },
+} as const
+
+/**
+ * v0.21.1: quanto cada favor vale na relação com as bancadas estaduais do Senado.
+ * Pasta e pacto valem para o partido inteiro: cada estado ganha o valor × (senadores do partido no estado / 3).
+ * Obra e cargo valem para o estado (data/estados.ts, ESTADO.obra e ESTADO.cargo); emenda, só para o senador.
+ */
+export const FAVOR_SENADO = {
+  pasta: 30,
+  pacto: 14,
+  obra: 18,
+  cargo: 11,
+  emenda: 4,
+} as const
+
+/** v0.21.1: ficha de cada senador (matéria-prima da eleição). */
+export const REP_SENADOR = {
+  /** Fama (0 a 100): de partida, líder e senador comum; cai devagar todo mês. */
+  famaStart: { lider: 55, comum: 20 },
+  famaKeep: 0.98,
+  /** Imagem (−50 a +50) com o eleitor do estado. */
+  imagem: { obra: 3, cargo: -2, emenda: -0.5, traiu: -6, cumpriu: 1 },
+  /** Fama por acontecimento. */
+  fama: { acordo: 2, traiu: 5, impeachment: 3 },
+  /** Voto: votou sim numa lei que mexe com o grupo do estado → imagem muda pelo efeito × peso (até ±2). */
+  votoPeso: 0.35,
+  votoMax: 2,
+} as const

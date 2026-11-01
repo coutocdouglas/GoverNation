@@ -933,6 +933,15 @@ Exposição a escândalo visível de 0 a 100 (item 20), CPIs (35), vice-presiden
 
 **Caixa de ideias desta etapa:** governador puxando a bancada e mapa (Etapa 7); CPI no Senado (Etapa 5); fala dos senadores pela IA (Etapa 9); Senado devolvendo o texto emendado à Câmara (decidido que não, 01/11); sessão de vetos com o Senado.
 
+### 27.11 Ajustes da Etapa 3 (v0.21.1, pedidos do Douglas em 01/11)
+
+- **Ficha do senador** (`Deputy.rep`, `SenatorRep`; números em `REP_SENADOR`): votos com o governo e contra (o `runWith` agora devolve o voto de cada parlamentar em `cast`, que não fica salvo no `VoteRecord`), acordos individuais e descumpridos, fama (líder 55, comum 20; +2 por acordo, +5 por descumprir; × 0,98 por mês) e imagem no estado (−50 a +50: obra +3, cargo −2, emenda −0,5, descumprir −6, cumprir +1; voto sim/não × efeito da lei no grupo do estado × 0,35, até ±2). Funções em `senado.ts` (`noteSenatorVotes`, `noteSenatorDeal`, `noteSenatorBroke`, `stepSenatorReps`, `topSenators`). Matéria-prima da Etapa 8 (candidatos).
+- **Mesa do Senado** (`PRESIDENTE_SENADO`; `mesaNow` em `rodada.ts`; `mesaBlockedReason`, `applyMesa` em `senado.ts`): efetiva = relação − cobrança × 0,6. Pautar já (45, +8), relatoria amiga (55, +10: desidratar 5%), sessão extra (65, +12, só em meia sessão: sem ausência extra e mais uma votação), atender o pedido dela (obra 0,01% do PIB por 12 meses, +12 de relação, −15 de cobrança, a cada 6 meses). Cobrança: acordo só no Senado +4, acordo fechado na Câmara (vale nas duas) +2, senador individual +1; fica 85% de um mês para o outro. A gaveta da presidente continua pela relação crua.
+- **Valor dos favores** (`FAVOR_SENADO`, `favorToStates`): pasta +30 e pacto +14 em cada estado × (senadores do partido no estado / 3); tirar a pasta, −30. Obra +18 e cargo +11 continuam em `ESTADO`.
+- **Individual × bancada:** faixa dos indecisos 30–70% → 20–80%; até 10 na tela.
+- **Telas:** `Hemiciclo.tsx` (semicírculo em 5 fileiras), `SenateCard` e `SenadorFicha` em `SenadoPanels.tsx`, cartões dos estados com logos, `SenadoVotosCard` (uma linha por votação). O post da assessoria saiu do cartão "agenda limpa" (decisão do Douglas; o motor continua aceitando, e nas crises o post fica em "Agir").
+- **Save 20.** 273 testes. Simulador principal igual; o negociador do `sim2c` com números parecidos (pasta e pacto agora também ajudam no Senado).
+
 ### 27.1 Caixa de ideias por etapa
 - Etapa 1 (revisada ao fechar a 1B): conquistas como selos da Ficha vão para a Etapa 8 (já lista conquistas); nome da medida no telejornal e decreto também com janela de confirmação antes de assinar vão para a Etapa 2 (janela da medida em etapas).
 - Etapa 2 (da 1B): o post de agenda com texto livre escrito pela IA fica para a Etapa 9 (polimento); "precisa de você" (alertas) e cenas de transição, para a Etapa 8.
