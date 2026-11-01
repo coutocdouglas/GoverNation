@@ -15,7 +15,7 @@ Complexidade: **alta**. Opus para as regras (bancadas estaduais, indecisos com p
 
 Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdouglas/GoverNation. Leia CLAUDE.md, docs/ESTADO.md e docs/DESIGN.md (seções 27, 27.6 e 27.8). Quero fazer a etapa 3."*
 
-**Decisão em aberto (2C, balanceamento):** o pacto de base sem ministério quase sempre é aceito, e dá para manter 3 pactos o mandato inteiro. Se parecer fácil demais, subir `PACTO.willingRelation` em `src/game/data/base.ts` (DESIGN.md 27.8).
+**Decidido (01/11, Douglas): pacto mais exigente.** Hoje o pacto de base sem ministério quase sempre é aceito, e dá para manter 3 o mandato inteiro. Fazer como primeiro passo da Etapa 3, antes do Senado: subir `PACTO.willingRelation` (e, se preciso, pesar a aprovação do governo) em `src/game/data/base.ts`, conferir com `npm run sim2c` (meta: o negociador assinar bem menos que os 24 pactos por mandato de hoje) e registrar em DESIGN.md 27.8. Complexidade baixa; Opus (balanceamento).
 
 **Sugestão (opcional, 1B):** pedir a um Opus uma revisão final dos números da assessoria (`data/assessoria.ts`: `postScale`, `omissoShare`, `fatigueFactor`, `softenMax`; e `data/rua.ts`). O simulador mostra que ficou equilibrado (DESIGN.md 27.4), mas é a primeira etapa balanceada fora do Opus.
 
@@ -146,3 +146,4 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 | 31/10/2026 | v0.19.0 | Etapa 2B: fato do mês em destaque com Agir ou Deixar passar, central de pendências, corrente de janelas "Etapa N de M" (também decreto e MP), quem vai reagir, notas Congressual e Judicial, Supremo no mesmo dia, mercado no envio, "já valeu"; save 17 |
 | 31/10/2026 | v0.19.1 | Logos dos partidos (arte do Douglas) no jogo e número na urna; material de campanha guardado em `arte/campanha/` para a Etapa 8 |
 | 01/11/2026 | v0.20.0 | Etapa 2C: acordo nas duas casas, cardápio de pedidos (14 tipos), as ruas, pauta que esfria, base como contrato com fidelidade e "A base nesta votação", pacto sem ministério, registro de votos dos partidos; ruas calibradas no simulador novo (`npm run sim2c`); save 18 |
+| 01/11/2026 | — | Decisão: pacto de base sem ministério mais exigente (ajuste no começo da Etapa 3) |
