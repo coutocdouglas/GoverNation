@@ -6,6 +6,8 @@
  * em cada casa; as articulações valem na hora. Os efeitos na economia e nos grupos ficam guardados em
  * `GameState.round` e são aplicados no fechamento do mês (advanceMonth), junto com o resto.
  */
+import { statesOnMeasure } from './estados'
+import { buysBlockedReason, meiaSessaoBlocks, payBuys, runSenadoComissoes, senadoComissoes, senadoScale } from './senado'
 import { affinity, articulationBlockedReason, billBlockedReason, CONGRESS, forecastSenate, forecastVote, isRecess, runSenateVote, runVote, senatePending, symbolicBlockedReason } from './congress'
 import { SENADO } from './data/senado'
 import { actsNow, BILL_BY_ID, RESUBMIT_COOLDOWN } from './data/bills'
@@ -37,7 +39,7 @@ import { addMark, markMeasure, noteRecord } from './reputacao'
 import { REPUTACAO } from './data/marks'
 import { Rng } from './rng'
 import type { MonthPlan } from './game'
-import type { Articulation, BillId, Cause, CourtNow, Deal, DealTerms, Economy, GameState, GroupId, Headline, Impulse, PendingBill, RoundBuffer, ReactionRoll, VoteRecord } from './types'
+import type { Articulation, BillId, Cause, CourtNow, Deal, DealTerms, Economy, GameState, GroupId, Headline, Impulse, PendingBill, RoundBuffer, ReactionRoll, SenatorBuy, VoteRecord } from './types'
 
 export type House = 'camara' | 'senado'
 
@@ -53,6 +55,8 @@ export interface FloorOptions {
   symbolic?: boolean
   /** Etapa 2: nome que o presidente deu à medida (vira a manchete). */
   title?: string
+  /** Etapa 3: senadores indecisos comprados para a votação no Senado (até 3 por rodada). */
+  senadores?: SenatorBuy[]
 }
 
 /** Contexto de trabalho: o estado e os acumuladores da rodada. */
@@ -396,7 +400,7 @@ function enactBill(ctx: RoundCtx, p: PendingBill, placarS: string): void {
   const conc = [...(p.conceded ?? []), ...(p.deals ?? [])].filter((d, i, arr) => d.kind === 'concessao' && arr.findIndex((x) => x.kind === 'concessao' && x.party === d.party && x.concession?.type === d.concession?.type) === i)
   if (concessionSafer(conc) && !s.supremo.adjusted[p.id]) s.supremo.adjusted[p.id] = 'baixo'
   if (bill.instrument !== 'mp') {
-    const k = p.ccj === 'adequado' ? SUPREMO.ccj.adequaScale : 1
+    const k = (p.ccj === 'adequado' ? SUPREMO.ccj.adequaScale : 1) * senadoScale(p)
     const fx = concededEffects(coreEffects(bill, am), conc)
     ctx.conf.v += applyEffects(e, impulses, k === 1 ? fx : coreEffects({ ...bill, effects: fx }, { relator: s.playerParty, kind: 'desidrata', shift: 0, scale: k }), bill.name)
     // Etapa 2B: a parte que o mercado já tinha precificado no envio não conta duas vezes.
@@ -404,6 +408,8 @@ function enactBill(ctx: RoundCtx, p: PendingBill, placarS: string): void {
     plantSeeds(s, p.id, bill.name, s.presidentName, s.playerParty, ctx.rng)
     const scale = (am?.scale ?? 1) * k * conc.reduce((x, d) => x * (d.concession ? CONCESSION_BY_ID[d.concession.type].scale : 1), 1)
     noteInForce(s, p.id, s.presidentName, scale !== 1 ? scale : undefined)
+    // Etapa 3: a lei mexe com a relação dos estados pelo grupo que mais pesa em cada um.
+    statesOnMeasure(s, bill, scale)
     courtToday(ctx, p.id)
   }
   if (am?.kind === 'jabuti' && am.extra) {
@@ -492,12 +498,23 @@ export function gavetaReason(s: GameState, id: BillId, house: House, opts: Floor
     }
     return null
   }
+  // Etapa 3: meia sessão (junho e dezembro): uma votação só no Senado por rodada.
+  if (meiaSessaoBlocks(s)) return 'Meia sessão no Senado antes do recesso: a casa já votou nesta rodada. Fica para a próxima.'
   if (bill.instrument === 'mp') return null
-  const sp = senatePending(s, id)
-  if (!round?.senateHeld && c.senate.president.relation < SENADO.president.holdBelow && (sp?.holds ?? 0) < SENADO.president.maxHold) {
+  if (senatePresidentHolds(s, id)) {
     return `${SENADO.president.name}, presidente do Senado, está de mal com o governo e vai segurar o projeto. Converse com ela.`
   }
+  // Etapa 3: a CAE de mal com o governo segura o projeto caro uma rodada.
+  const cae = senadoComissoes(s, id, senatePending(s, id)).find((x) => x.id === 'cae' && x.holds)
+  if (cae) return `A ${cae.name}, presidida pelo ${PARTY_BY_ID[cae.chair].sigla}, vai segurar o projeto por uma rodada. Converse com o partido.`
   return null
+}
+
+/** A presidente do Senado segura o projeto nesta rodada? */
+function senatePresidentHolds(s: GameState, id: BillId): boolean {
+  const round = peekRound(s)
+  const sp = senatePending(s, id)
+  return !round?.senateHeld && s.congress.senate.president.relation < SENADO.president.holdBelow && (sp?.holds ?? 0) < SENADO.president.maxHold
 }
 
 /**
@@ -584,7 +601,7 @@ function floorCamara(ctx: RoundCtx, p: PendingBill, opts: FloorOptions): 'votado
     const conceded = (p.deals ?? []).filter((d) => d.kind === 'concessao')
     // Etapa 2C: os acordos fechados na Câmara valem também no Senado; as ruas seguem o projeto.
     const senDeals = [...(p.deals ?? []).filter((d) => d.kind !== 'adiar'), ...(p.senateDeals ?? [])]
-    const sp: PendingBill = { id: p.id, sentMonth: s.month, priced: p.priced, amendment: p.amendment, original: p.original, deals: senDeals.length ? senDeals : undefined, ...(p.rua ? { rua: p.rua } : {}), camara: { yes: v.yes, no: v.no, symbolic: symbolic || undefined, month: s.month }, ccj: p.ccj, ...(conceded.length ? { conceded } : {}) }
+    const sp: PendingBill = { id: p.id, sentMonth: s.month, priced: p.priced, amendment: p.amendment, original: p.original, deals: senDeals.length ? senDeals : undefined, ...(p.rua ? { rua: p.rua } : {}), camara: { yes: v.yes, no: v.no, symbolic: symbolic || undefined, month: s.month }, ccj: p.ccj, ...(conceded.length ? { conceded } : {}), ...(p.senadores?.length ? { senadores: p.senadores } : {}) }
     c.senate.pending.push(sp)
     addBio(s, s.presidentName, `Aprovou na Câmara: ${bill.name} (${placar}).`)
     headlines.push({ text: `Câmara aprova ${lowerFirst(bill.name)}: ${placar}${bill.instrument === 'pec' ? ', nos dois turnos' : ''}. Segue para o Senado`, tone: 'good' })
@@ -601,7 +618,11 @@ function floorSenado(ctx: RoundCtx, p: PendingBill, opts: FloorOptions): 'votado
   const hold = gavetaReason(s, p.id, 'senado', opts)
   if (hold) {
     if (p.waitUntil !== undefined && p.waitUntil > s.month) headlines.push({ text: `“${bill.name}” fica para a próxima rodada no Senado, como combinado com a liderança`, tone: 'neutral' })
-    else if (!isRecess(s.month) && !isFrozen(s, p.id)) {
+    else if (!isRecess(s.month) && !isFrozen(s, p.id) && meiaSessaoBlocks(s)) headlines.push({ text: `Meia sessão no Senado: “${bill.name}” fica para a próxima rodada`, tone: 'neutral' })
+    else if (!isRecess(s.month) && !isFrozen(s, p.id) && !senatePresidentHolds(s, p.id)) {
+      // Etapa 3: a CAE segura (uma vez).
+      runSenadoComissoes(s, p, ctx.rng, headlines)
+    } else if (!isRecess(s.month) && !isFrozen(s, p.id)) {
       p.holds = (p.holds ?? 0) + 1
       ctx.round.senateHeld = true
       headlines.push({ text: `${SENADO.president.name}, presidente do Senado, segura “${bill.name}” e não pauta a votação`, tone: 'bad' })
@@ -609,6 +630,9 @@ function floorSenado(ctx: RoundCtx, p: PendingBill, opts: FloorOptions): 'votado
     } else headlines.push({ text: `“${bill.name}” fica na fila do Senado: ${lowerFirst(hold)}`, tone: 'neutral' })
     return 'parado'
   }
+  // Etapa 3: as comissões do Senado (CCJ e CAE) podem desidratar o texto, sem devolvê-lo à Câmara.
+  if (bill.instrument !== 'mp') runSenadoComissoes(s, p, ctx.rng, headlines)
+  ctx.round.senadoVoted = true
   const symbolic = !!opts.symbolic && !symbolicBlockedReason(s, p.id, [], {}, 'senado')
   let v: VoteRecord
   if (symbolic) {
@@ -616,14 +640,23 @@ function floorSenado(ctx: RoundCtx, p: PendingBill, opts: FloorOptions): 'votado
     const byParty = Object.fromEntries(f.byParty.map((r) => [r.party, { yes: r.yes, no: r.no }])) as VoteRecord['byParty']
     v = { month: s.month, bill: p.id, yes: f.yes, no: f.no, abstain: f.abstain, absent: Math.max(0, SENADO.seats - f.yes - f.no - f.abstain), needed: 0, approved: true, byParty, kind: 'simbolica', house: 'senado' }
   } else {
-    const { broken, ...rest } = runSenateVote(s, p.id, ctx.rng)
+    const { broken, brokenSen, ...rest } = runSenateVote(s, p.id, ctx.rng)
     v = rest
     for (const pid of broken) {
       headlines.push({ text: `${PARTY_BY_ID[pid].sigla} não entrega todos os votos prometidos no Senado em “${bill.name}”`, tone: 'bad' })
       addBio(s, leaderOf(s, pid).name, `Prometeu votos no Senado em “${bill.name}” e não entregou tudo.`)
     }
+    // Etapa 3: senador comprado que não cumpriu.
+    for (const i of brokenSen) {
+      const d = c.senate.senators[i]
+      if (!d?.name) continue
+      headlines.push({ text: `${d.name} (${PARTY_BY_ID[d.party].sigla}) leva o pedido e não vota como combinou em “${bill.name}”`, tone: 'bad' })
+      addBio(s, d.name, `Negociou o voto em “${bill.name}” com o governo e não cumpriu.`)
+    }
   }
   if (p.camara?.month === s.month) v.scale = ctx.votes.find((x) => x.bill === p.id && x.house !== 'senado')?.scale
+  const sScale = senadoScale(p)
+  if (sScale !== 1) v.scale = (v.scale ?? 1) * sScale
   afterGovVote(s, v, symbolic, headlines)
   ctx.votes.push(v)
   s.congress.votes.push(v)
@@ -709,6 +742,7 @@ export function sendInto(s: GameState, id: BillId, opts: FloorOptions = {}, resp
     addChronicle(s, `Decreto: ${bill.name}, no governo ${s.presidentName} (${PARTY_BY_ID[s.playerParty].sigla})`, 'neutral')
     if (!response) ctx.taken.push(`Assinou o decreto: ${bill.name}`)
     ctx.mm.enacted.push(bill.area)
+    statesOnMeasure(s, bill)
     reactToday(ctx, id)
     courtToday(ctx, id)
   } else {
@@ -725,6 +759,7 @@ export function sendInto(s: GameState, id: BillId, opts: FloorOptions = {}, resp
     if (opts.original) p.original = true
     c.pending.push(p)
     applyDeals(ctx, (opts.deals ?? []).map((d) => ({ ...d, bill: id })))
+    ctx.conf.v += payBuys(s, id, opts.senadores ?? [], ctx.headlines, ctx.taken)
     if (bill.instrument === 'mp') {
       // A MP vale na hora e entra na fila: precisa ser pautada em até 4 meses, ou caduca.
       ctx.conf.v += applyEffects(ctx.e, ctx.impulses, bill.effects, bill.name)
@@ -733,6 +768,7 @@ export function sendInto(s: GameState, id: BillId, opts: FloorOptions = {}, resp
       addBio(s, s.presidentName, `Editou a medida provisória: ${bill.name}.`)
       ctx.mm.enacted.push(bill.area)
       if (!response) ctx.taken.push(`Editou a MP: ${bill.name}`)
+      statesOnMeasure(s, bill)
       reactToday(ctx, id)
       courtToday(ctx, id)
       parked = true
@@ -793,7 +829,7 @@ function floorOptionsBlocked(s: GameState, id: BillId, opts: FloorOptions, sendi
     const r = dealBlockedReason(s, full, sending ? [id] : [], same)
     if (r) return `${PARTY_BY_ID[d.party].sigla}: ${r}`
   }
-  return null
+  return buysBlockedReason(s, id, opts.senadores ?? [])
 }
 
 /** Pauta agora um projeto que estava na fila (um por casa por rodada). Passando na Câmara, segue para o Senado. */
@@ -819,6 +855,7 @@ export function voteNow(prev: GameState, id: BillId, opts: FloorOptions = {}): R
     if (opts.original) p.original = true
   }
   applyDeals(ctx, (opts.deals ?? []).map((d) => ({ ...d, bill: id })))
+  ctx.conf.v += payBuys(s, id, opts.senadores ?? [], ctx.headlines, ctx.taken)
   ctx.taken.push(`Pautou ${house === 'senado' ? 'no Senado' : 'na Câmara'}: ${bill.name}`)
   const parked = house === 'camara'
     ? floorCamara(ctx, c.pending.find((x) => x.id === id)!, opts) === 'parado'

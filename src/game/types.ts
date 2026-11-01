@@ -1,6 +1,7 @@
 // Tipos centrais do motor do jogo. Nada aqui depende da interface.
 import type { BillDef } from './data/bills'
 import type { AreaId } from './data/ministers'
+import type { UfId } from './data/estados'
 
 export type IndicatorKey =
   | 'growth'
@@ -139,7 +140,7 @@ export interface Meanwhile {
 import type { ReputationState } from './reputacao'
 
 export interface GameState {
-  saveVersion: 18
+  saveVersion: 19
   /** Mês atual, de 0 (janeiro do 1º ano) a 47. Em 48 o mandato acabou. */
   month: number
   presidentName: string
@@ -239,6 +240,9 @@ export interface RoundBuffer {
   dealsDone?: number
   rua?: RuaResult
   pactDone?: boolean
+  /** Etapa 3: senadores indecisos comprados na rodada (até 3) e se o Senado já votou (meia sessão). */
+  indecisos?: number
+  senadoVoted?: boolean
   rngState: number
 }
 
@@ -421,6 +425,9 @@ export interface Deputy {
   loyalty: number
   /** Etapa 2: ala do partido (0, 1 ou 2; data/alas.ts). Senadores não têm ala. */
   ala?: number
+  /** Etapa 3: estado (deputados e senadores) e nome (só senadores, fictícios). */
+  uf?: UfId
+  name?: string
 }
 
 export interface PartyState {
@@ -471,6 +478,10 @@ export interface PendingBill {
   rua?: RuaResult
   /** Etapa 2C: acordo "adiar a votação": não vai a plenário antes deste mês. */
   waitUntil?: number
+  /** Etapa 3: senadores indecisos comprados para a votação no Senado. */
+  senadores?: SenatorBuy[]
+  /** Etapa 3: comissões do Senado (CCJ e CAE): o que decidiram e se a CAE já segurou o projeto uma vez. */
+  senadoCom?: { ccj?: 'aprovado' | 'desidratado'; cae?: 'aprovado' | 'desidratado' | 'segurou' }
 }
 
 /** Etapa 2C: resultado de uma mobilização (ato nacional ou greve geral). */
@@ -523,6 +534,29 @@ export interface SenateState {
   president: { relation: number; lastTalk: number }
   /** Projetos aprovados na Câmara que esperam o Senado. `sentMonth` = mês em que chegaram. */
   pending: PendingBill[]
+  /** Etapa 3: a bancada de cada estado (relação com o governo e o que pede). */
+  states?: Record<UfId, EstadoState>
+  /** Etapa 3: pedido de impeachment de ministro em andamento (vira fato do mês) e o último mês em que houve um. */
+  impeach?: { area: AreaId; minister: string; month: number } | null
+  lastImpeach?: number
+}
+
+/** Etapa 3: a bancada de um estado no Senado (3 senadores). */
+export interface EstadoState {
+  /** −50 a +50, e o ponto para onde volta aos poucos. */
+  relation: number
+  base: number
+  /** O que a bancada pede (renova a cada 6 meses) ou "não negocia". */
+  ask: 'obra' | 'cargo' | 'nao'
+  askUntil: number
+  /** Pedido atendido: não pede de novo até este mês. */
+  doneUntil?: number
+}
+
+/** Etapa 3: um senador indeciso comprado para uma votação (índice em `senate.senators`). */
+export interface SenatorBuy {
+  index: number
+  kind: 'obra' | 'cargo' | 'emenda'
 }
 
 /** Parecer do relator: o texto que vai a voto (etapa 4B). */
@@ -622,7 +656,7 @@ export interface VoteRecord {
   orient?: Partial<Record<PartyId, 1 | -1 | 0>>
   traitors?: Partial<Record<PartyId, number>>
   /** Etapa 4B: votação simbólica (sem painel) ou sessão para derrubar um veto. */
-  kind?: 'simbolica' | 'veto' | 'sabatina'
+  kind?: 'simbolica' | 'veto' | 'sabatina' | 'impeachment'
   /** Título quando não é o nome da medida (ex.: "Veto: ..."). */
   title?: string
   /** Texto desidratado pelo relator: fração dos efeitos que ficou. */

@@ -9,6 +9,7 @@ import { initialReputation } from './reputacao'
 import { ensureAlas, openMesa } from './partidos'
 import { CAMARA } from './data/camara'
 import { BASE } from './data/base'
+import { ensureStates } from './estados'
 import type { GameState } from './types'
 
 // O jogo instalado guarda o localStorage na pasta de dados do usuário no Windows
@@ -164,7 +165,13 @@ export function migrate(raw: unknown): GameState | null {
       s.congress.record ??= {}
       s.saveVersion = 18
     }
-    if (s.saveVersion !== 18) return null
+    if (s.saveVersion === 18) {
+      // v0.20 → v0.21 (etapa 3): deputados e senadores ganham estado; senadores ganham nome; bancadas estaduais.
+      ensureStates(s as GameState, s.rngState)
+      s.congress.senate.impeach ??= null
+      s.saveVersion = 19
+    }
+    if (s.saveVersion !== 19) return null
     syncCustomBills(s as GameState)
     return s as GameState
   } catch {

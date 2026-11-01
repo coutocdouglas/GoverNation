@@ -26,6 +26,8 @@ export interface EventOption {
   credit?: true
   /** Etapas 4C2 e 4C3: resposta a uma derrubada ou a uma liminar no Supremo (o motor trata em supremo.ts). */
   stf?: 'acatar' | 'nova' | 'criticar' | 'esperar' | 'recuar' | 'recorrer'
+  /** Etapa 3: resposta a um pedido de impeachment de ministro no Senado (o motor trata em impeachment.ts). */
+  impeach?: 'defender' | 'demitir' | 'deixar'
 }
 
 export interface EventDef {
@@ -217,9 +219,10 @@ export const EVENTS: EventDef[] = [
 
 import { CONSEQUENCE_EVENTS } from './consequences'
 import { STF_EVENT, STF_LIMINAR_EVENT } from './supremo'
+import { IMPEACH_EVENT } from './impeachment'
 
 /** Todos os fatos: os sorteáveis e os que só nascem de sementes. */
-export const ALL_EVENTS: EventDef[] = [...EVENTS, ...CONSEQUENCE_EVENTS, STF_EVENT, STF_LIMINAR_EVENT, ...REP_EVENTS]
+export const ALL_EVENTS: EventDef[] = [...EVENTS, ...CONSEQUENCE_EVENTS, STF_EVENT, STF_LIMINAR_EVENT, IMPEACH_EVENT, ...REP_EVENTS]
 
 export const EVENT_BY_ID = Object.fromEntries(ALL_EVENTS.map((e) => [e.id, e])) as Record<string, EventDef>
 

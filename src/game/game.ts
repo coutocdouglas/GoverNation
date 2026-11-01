@@ -1,4 +1,6 @@
 import { ACTION_BY_ID, ACTIONS_PER_MONTH, blockedReason, effectMultiplier } from './actions'
+import { stepStates } from './estados'
+import { applyImpeachChoice, maybeImpeach } from './impeachment'
 import { articulationBlockedReason, billBlockedReason, runNomination, CONGRESS, driftRelations, initialCongress, isRecess, runChamberVote, runOverrideVote, senatePending, symbolicBlockedReason } from './congress'
 import { actsNow, BILL_BY_ID, RESUBMIT_COOLDOWN } from './data/bills'
 import { MINISTER_BY_AREA } from './data/ministers'
@@ -83,7 +85,7 @@ export function newGame(
   const rngState = seed ?? Math.floor(Math.random() * 2 ** 31)
   const bonus = DIFFICULTY[difficulty].approvalBonus
   const state: GameState = {
-    saveVersion: 18,
+    saveVersion: 19,
     month: 0,
     presidentName: presidentName.trim() || 'Presidente',
     difficulty,
@@ -568,6 +570,8 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
   c.scandal *= DEALS.scandalDecay
   // Etapa 2C: pactos que vencem e bancadas grandes que pedem mais.
   stepBase(s, headlines)
+  // Etapa 3: bancadas estaduais no Senado (relação volta aos poucos; pedidos se renovam). Sorteio próprio do mês.
+  stepStates(s, new Rng((absMonth(s) * 40503) ^ s.rngState ^ 0x57a7e5))
 
   // 1d6. Supremo (etapas 4C2 e 4C3): sabatina, aposentadorias, consultas, julgamento, novas ações e liminares.
   // Etapa 2B: o que a rodada já deu à oposição (derrubada no mesmo dia, reações ao anúncio).
@@ -714,6 +718,11 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
       }
       if (opt.credit && origin) addBio(s, s.presidentName, `Deu publicamente o crédito de “${origin.label}” a ${origin.author}.`)
       if (opt.stf) rivalExtra.push(...applyStfChoice(s, opt.stf, origin, impulses, headlines, taken))
+      if (opt.impeach) {
+        const r = applyImpeachChoice(s, opt.impeach, impulses, headlines, taken, rng)
+        rivalExtra.push(...r.rival)
+        if (r.vote) votes.push(r.vote)
+      }
       headlines.push({ text: outcome, tone })
       taken.push(`Fato do mês: ${opt.label}`)
       // Etapa 1: como o presidente lidou com o fato entra na Ficha e na reputação.
@@ -765,8 +774,9 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
     return true
   })
 
-  // 1g. Etapa 4C3: desgaste dos ministros.
+  // 1g. Etapa 4C3: desgaste dos ministros. Etapa 3: ministro muito desgastado pode virar pedido de impeachment.
   stepMinistries(s, mm, impulses, headlines)
+  maybeImpeach(s, headlines)
 
   // 1h. Etapa 1: as marcas de reputação pesam (causa visível em cada grupo) e os pontos caem.
   const repMonth = stepReputation(s, impulses, headlines)

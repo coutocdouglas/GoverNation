@@ -879,7 +879,7 @@ Exposição a escândalo visível de 0 a 100 (item 20), CPIs (35), vice-presiden
 
 **Caixa de ideias desta etapa:** a fala de cada pedido escrita pela IA (hoje são frases prontas por tipo; fica para a Etapa 9, polimento); "a pasta está em jogo" virar um fato do mês com escolha (renegociar ou tirar a pasta) na Etapa 6 (governo); diretoria de estatal alimentando os esquemas na Etapa 5; palanque e registro de votos usados nas campanhas e debates na Etapa 8; reaproveitar o cardápio nas bancadas estaduais do Senado na Etapa 3.
 
-### 27.9 Etapa 3: o Senado (plano de 01/11/2026, aguardando o Douglas)
+### 27.9 Etapa 3: o Senado (plano de 01/11/2026, aprovado pelo Douglas no mesmo dia)
 
 **Complexidade: alta. Modelo: Opus nas regras (voto pelo estado, indecisos com preço, impeachment) e no balanceamento; Sonnet nas telas e nos dados dos 27 estados.**
 
@@ -914,7 +914,7 @@ Exposição a escândalo visível de 0 a 100 (item 20), CPIs (35), vice-presiden
 
 **Balanceamento a conferir (simuladores):** sem mexer nos estados, o Senado barra o mesmo de hoje (cerca de 1% a 13% do que a Câmara aprova, conforme o partido); pagar obras vale a pena só para lei difícil (R$ por voto mais caro que no cardápio da Câmara); indecisos não podem virar compra garantida; impeachment de ministro aparece 0 a 2 vezes por mandato para quem deixa ministros desgastados.
 
-**Perguntas ao Douglas:** (1) estados com os nomes reais das 27 UFs ou estados fictícios? (2) retrato para os 81 senadores ou só para os 9 líderes? (3) indecisos gastam as 3 conversas da rodada ou têm limite próprio? (4) quando o Senado muda o texto, ele volta à Câmara (na rodada seguinte) ou não? (5) uma versão só (v0.21) ou duas (3A estados e voto, 3B comissões e poderes próprios)?
+**Respostas do Douglas (01/11):** (1) **nomes reais das 27 UFs** (senadores fictícios); (2) **retrato só para os 9 líderes de bancada** no Senado; (3) indecisos com **limite próprio de 3 por rodada**, além das 3 conversas; (4) o texto desidratado no Senado **não volta à Câmara**. Default mantido: **uma versão só (v0.21)**, com os blocos como ordem de trabalho.
 
 ### 27.1 Caixa de ideias por etapa
 - Etapa 1 (revisada ao fechar a 1B): conquistas como selos da Ficha vão para a Etapa 8 (já lista conquistas); nome da medida no telejornal e decreto também com janela de confirmação antes de assinar vão para a Etapa 2 (janela da medida em etapas).

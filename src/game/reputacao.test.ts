@@ -76,7 +76,7 @@ describe('Etapa 1: causa e consequência', () => {
     old.saveVersion = 13
     delete old.reputation
     const m = migrate(old)!
-    expect(m.saveVersion).toBe(18)
+    expect(m.saveVersion).toBe(19)
     expect(m.reputation.record).toEqual([])
     expect(() => advanceMonth(m, [])).not.toThrow()
   })

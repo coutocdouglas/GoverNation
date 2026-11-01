@@ -85,6 +85,16 @@ export const CAST: CastMember[] = [
   { name: 'Lívia Assunção', role: 'Indicável ao Supremo (garantista)', gender: 'f', portrait: 48, alt: 23 },
   { name: 'Hamilton Rocha', role: 'Indicável ao Supremo (conservador)', gender: 'm', portrait: 21, alt: 16 },
   { name: 'Sueli Barreto', role: 'Indicável ao Supremo (aliada do presidente)', gender: 'f', portrait: 82, alt: 23 },
+  // Etapa 3 (v0.21, data/senado.ts): líderes de bancada no Senado.
+  { name: 'Augusto Meireles', role: 'Líder do POL no Senado', gender: 'm', portrait: 157, alt: 179 },
+  { name: 'Marli Torres', role: 'Líder da FPT no Senado', gender: 'f', portrait: 159, alt: 164 },
+  { name: 'Edmundo Sarmento', role: 'Líder do UCD no Senado', gender: 'm', portrait: 171, alt: 185 },
+  { name: 'Vilma Saldanha', role: 'Líder do PSN no Senado', gender: 'f', portrait: 169, alt: 175 },
+  { name: 'Josué Lustosa', role: 'Líder do MRB no Senado', gender: 'm', portrait: 176, alt: 188 },
+  { name: 'Teodoro Brás', role: 'Líder do MDN no Senado', gender: 'm', portrait: 196, alt: 197 },
+  { name: 'Neide Coutinho', role: 'Líder do PRA no Senado', gender: 'f', portrait: 178, alt: 180 },
+  { name: 'Iolanda Ferraz', role: 'Líder do PVS no Senado', gender: 'f', portrait: 181, alt: 183 },
+  { name: 'Henrique Lobato', role: 'Líder do NRM no Senado', gender: 'm', portrait: 166, alt: 168 },
   // Etapa 2 (v0.18, data/alas.ts): chefes das alas dos partidos (os líderes de partida chefiam a primeira ala).
   { name: 'Gilmar Espíndola', role: 'Chefe da ala ideológica do POL', gender: 'm', portrait: 131, alt: 16 },
   { name: 'Regina Fontoura', role: 'Chefe da ala da segurança do POL', gender: 'f', portrait: 121, alt: 23 },
