@@ -327,6 +327,32 @@ export const SUPREMO = {
   /** Pedido de vista: chance por julgamento (havendo ministro indeciso ou contrário), rodadas de espera. */
   vista: { chance: 0.2, min: 0.3, rounds: [1, 3] as [number, number] },
 
+  // ─── Etapa 4 (v0.23): a Corte e você, o precedente, a crise depois da derrubada e o TSE ───
+  /**
+   * Índice "A seu favor" (0 a 100): como a Corte, como instituição, vê o governo. Começa na média da relação dos
+   * ministros e volta devagar para ela. Multiplica (0,5× a 1,5×) a chance de liminar, de pedido de vista e de o
+   * relator travar um projeto (o caso pautado na pior hora).
+   */
+  favor: {
+    drift: 0.04,
+    /** Peso do índice: fator = 1 + mult × (50 − índice) / 50. */
+    mult: 0.5,
+    acatar: 4, mantida: 3, chancelada: 3, recuar: 2, demitir: 3,
+    criticar: -10, derrubada: -3, vazou: -5, recursoPerdido: -4, embargosPerdidos: -5, descumprir: -30, reprovada: -2,
+  },
+  /**
+   * "O precedente agora é seu": medida mantida protege o mesmo fundamento por `months` (ação menos provável;
+   * quem votou para manter tende a manter de novo). Derrubada cria precedente contra (ação mais provável;
+   * quem derrubou tende a derrubar de novo). Um precedente por fundamento: o mais recente vale.
+   */
+  precedente: { months: 24, fileFavor: 0.5, fileContra: 1.4, shift: 0.3 },
+  /** Embargos: pedir que a Corte module os efeitos. Chance = base + (índice − 50) × perFavor; a medida vale por mais `months`. */
+  embargos: { base: 0.3, perFavor: 0.006, min: 0.1, max: 0.6, months: 12 },
+  /** O ministro da área assume a culpa e sai: zera o desgaste, devolve parte do que os grupos perderam e esfria a oposição. */
+  demitir: { relief: 0.3, rival: -1.5, partyHit: -5, ownHit: -2 },
+  /** Descumprir a decisão: a medida segue valendo, com crise institucional. Custos mostrados antes. */
+  descumprir: { ministers: -15, confidence: -8, scandal: 10, rival: 6, ownParty: 4, rally: 1.5, markFactor: 3 },
+
   /** Voto de cada ministro: derruba se base + risco + discordância + relação + ruído > 0. */
   base: -0.6,
   riskWeight: { baixo: -0.6, medio: 0.3, alto: 0.5 } as Record<LegalRisk, number>,
@@ -388,6 +414,10 @@ export const STF_EVENT: EventDef = {
     { icon: '🤝', label: 'Acatar a decisão', text: 'Respeitar o Supremo e virar a página. Custo pequeno: a base reclama um pouco.', effects: { confidence: 1 }, outcome: 'Governo acata a decisão do Supremo e diz que vai respeitar a Constituição', tone: 'neutral', default: true, stf: 'acatar' },
     { icon: '📘', label: 'Mandar nova proposta', text: 'Reenviar a medida ao Congresso com instrumento mais forte (decreto e MP viram lei; lei vira emenda constitucional).', effects: {}, outcome: 'Governo reenvia a medida ao Congresso com instrumento mais forte', tone: 'neutral', stf: 'nova' },
     { icon: '📢', label: 'Criticar o Supremo', text: 'Ir para o ataque em público. A base gosta; o mercado e os ministros da corte, não.', effects: { confidence: -3 }, outcome: 'Presidente ataca o Supremo em público e mercado reage mal', tone: 'bad', stf: 'criticar' },
+    // Etapa 4 (v0.23): a crise ampliada.
+    { icon: '📜', label: 'Entrar com embargos', text: 'Pedir à própria Corte que module os efeitos: se ela aceitar, a medida vale por mais 12 meses e o dinheiro volta até lá. Se negar, o índice da Corte cai.', effects: {}, outcome: 'Advocacia-Geral entra com embargos e pede que o Supremo module os efeitos da decisão', tone: 'neutral', stf: 'embargos' },
+    { icon: '🚪', label: 'O ministro da área assume e sai', text: 'O ministro responsável pede demissão e leva a culpa: a crise passa mais rápido e parte do que os grupos perderam volta, mas a pasta troca de mãos.', effects: {}, outcome: 'Ministro assume a responsabilidade pela medida derrubada e deixa o governo', tone: 'neutral', stf: 'demitir' },
+    { icon: '🔥', label: 'Descumprir a decisão', text: 'Manter a medida valendo contra a ordem do Supremo. Crise institucional: mercado em pânico, a Corte vira inimiga e isso pode virar pedido de impeachment mais tarde.', effects: {}, outcome: 'Governo anuncia que não vai cumprir a decisão do Supremo: crise institucional', tone: 'bad', stf: 'descumprir' },
   ],
 }
 
@@ -404,3 +434,47 @@ export const STF_LIMINAR_EVENT: EventDef = {
     { icon: '📢', label: 'Criticar o Supremo', text: 'Atacar a liminar em público. A base gosta; o mercado e os ministros da corte, não.', effects: { confidence: -3 }, outcome: 'Presidente ataca a liminar do Supremo em público e mercado reage mal', tone: 'bad', stf: 'criticar' },
   ],
 }
+
+// ─── Etapa 4 (v0.23): a cadeira de jurista no tribunal eleitoral ─────────────
+
+/**
+ * "O Supremo pede você": a cada 2 anos abre a cadeira de jurista no tribunal eleitoral (TSE). O Supremo manda a lista
+ * e o presidente tem um mês para escolher; o padrão é reconduzir quem está. Quem senta ali julgará a campanha
+ * (Etapa 8 usa o `rigor`). O preço de cada nome é aplicado na hora da escolha (recondução não custa nada).
+ */
+export interface TseJuristDef {
+  id: string
+  name: string
+  feminine: boolean
+  title: string
+  /** Quanto o jurista é duro com abuso de poder e propaganda irregular (0 a 100). */
+  rigor: number
+  blurb: string
+  /** Preço da escolha (quando não é recondução). */
+  price: { favor?: number; confidence?: number; scandal?: number; rival?: number; classeMedia?: number }
+  /** O que a escolha diz, em uma frase (prestígio, imprensa, exposição). */
+  priceText: string
+}
+
+export const TSE_JURISTS: TseJuristDef[] = [
+  { id: 'quintela', name: 'Rosana Quintela', feminine: true, title: 'Advogada eleitoral, jurista do tribunal desde o governo anterior', rigor: 60, blurb: 'Conhece cada vírgula da lei eleitoral. Vota caso a caso e raramente surpreende.', price: { favor: 1 }, priceText: 'Escolha discreta: a Corte gosta da continuidade.' },
+  { id: 'dantas', name: 'Heráclito Dantas', feminine: false, title: 'Professor de direito eleitoral, autor do manual que todo juiz cita', rigor: 85, blurb: 'Implacável com abuso de poder e propaganda irregular, venha de onde vier.', price: { favor: 4, confidence: 1 }, priceText: 'Prestígio: a Corte e a imprensa aplaudem. Sua campanha será julgada com lupa.' },
+  { id: 'fontoura', name: 'Marisa Fontoura', feminine: true, title: 'Ex-procuradora eleitoral, técnica e discreta', rigor: 50, blurb: 'Equilibrada. Pesa a prova acima da manchete e evita cassar no grito.', price: {}, priceText: 'Sem barulho: ninguém aplaude, ninguém reclama.' },
+  { id: 'sa', name: 'Gilberto Sá', feminine: false, title: 'Advogado de campanhas do seu partido', rigor: 25, blurb: 'Amigo de longa data do Planalto. Lê a lei eleitoral com boa vontade para quem governa.', price: { favor: -4, scandal: 6, rival: 2, classeMedia: -1.5 }, priceText: 'Exposição: a imprensa fala em juiz amigo e a Corte não gosta.' },
+]
+
+export const TSE_BY_ID = Object.fromEntries(TSE_JURISTS.map((j) => [j.id, j])) as Record<string, TseJuristDef>
+
+export const TSE = {
+  /** Quem ocupa a cadeira na posse. */
+  start: 'quintela',
+  /** Mês absoluto da primeira vaga (out/2027) e intervalo entre vagas. */
+  firstAt: 9,
+  every: 24,
+  /** Efeito no tribunal: firme a partir de `firm`, brando abaixo de `soft`. */
+  firm: 65,
+  soft: 40,
+} as const
+
+export type TseMood = 'firme' | 'equilibrado' | 'brando'
+export const TSE_MOOD_LABEL: Record<TseMood, string> = { firme: 'Firme', equilibrado: 'Equilibrado', brando: 'Brando' }

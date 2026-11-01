@@ -140,7 +140,7 @@ export interface Meanwhile {
 import type { ReputationState } from './reputacao'
 
 export interface GameState {
-  saveVersion: 21
+  saveVersion: 22
   /** Mês atual, de 0 (janeiro do 1º ano) a 47. Em 48 o mandato acabou. */
   month: number
   presidentName: string
@@ -396,6 +396,35 @@ export interface Ruling {
   vistaBy?: string
   /** O governo trabalhou o plenário (ministros que receberam audiência; vazou ou não). */
   worked?: { justice: string; leaked?: boolean }[]
+  // ─── Etapa 4 (v0.23) ───
+  /** Fração dos efeitos que valia (texto desidratado), para embargos e descumprimento devolverem o certo. */
+  scale?: number
+  /** Precedente que pesou no julgamento (a favor ou contra o governo). */
+  precedent?: 'favor' | 'contra'
+}
+
+/** Etapa 4 (v0.23): o precedente de um fundamento (o mais recente vale). Meses absolutos. */
+export interface Precedente {
+  fundamento: string
+  kind: 'favor' | 'contra'
+  bill: BillId
+  name: string
+  at: number
+  until: number
+  /** Quem votou com a maioria (tende a votar igual de novo). */
+  justices: string[]
+}
+
+/** Etapa 4 (v0.23): a cadeira de jurista no tribunal eleitoral. */
+export interface TseState {
+  /** Quem ocupa a cadeira (id de TSE_JURISTS). */
+  seat: string
+  since: number
+  /** Próxima vaga (mês absoluto). */
+  nextAt: number
+  /** Vaga aberta: o presidente decide neste mês (sem decisão, recondução). */
+  open: { at: number } | null
+  log: { at: number; id: string; reconduzido: boolean; by: string }[]
 }
 
 /** Medida em vigor que ainda pode ser contestada (risco médio ou alto, dentro da janela). */
@@ -424,6 +453,19 @@ export interface SupremoState {
   adjusted: Partial<Record<BillId, 'baixo' | 'medio' | 'alto'>>
   /** Etapa 4: prevenção. Quem relatou cada fundamento neste mandato recebe a próxima ação igual. */
   prevencao?: Record<string, { justice: string; term: number }>
+  // ─── Etapa 4 (v0.23) ───
+  /** Índice "A seu favor" (0 a 100): como a Corte, como instituição, vê o governo. */
+  favor: number
+  /** O que mexeu no índice por último (para a tela; as 8 mais recentes). */
+  favorLog?: { at: number; label: string; value: number }[]
+  /** Precedentes por fundamento (um por fundamento, o mais recente). */
+  precedentes: Precedente[]
+  /** Embargos aceitos: a medida derrubada vale até `until` (efeitos modulados). */
+  modulated: { bill: BillId; name: string; until: number; scale?: number; author: string }[]
+  /** Decisões descumpridas pelo presidente (matéria-prima de um pedido de impeachment mais tarde). */
+  defied: { bill: BillId; name: string; at: number }[]
+  /** A cadeira de jurista no tribunal eleitoral. */
+  tse: TseState
 }
 
 /** Pesquisa de intenção de voto do mês (soma 100). */

@@ -18,6 +18,7 @@ import { baseMembers, fidelityOf } from './base'
 import { BASE, ESFRIA } from './data/base'
 import type { GameState } from './types'
 import { deAuthor, justiceName } from './supremo'
+import { TSE_BY_ID } from './data/supremo'
 
 export type Urgency = 'red' | 'yellow' | 'green'
 export type PendingTarget = 'evento' | 'camara' | 'senado' | 'supremo' | 'promessas' | 'cobrancas'
@@ -82,6 +83,16 @@ export function pendencias(s: GameState): Pendencia[] {
   // Vaga no Supremo.
   if (s.supremo.vacancy) {
     out.push({ id: 'stf-vaga', icon: '⚖️', target: 'supremo', title: 'Vaga no Supremo: indicar um ministro', detail: 'A sabatina é no Senado (41 votos). Quem senta ali julga as suas medidas por anos.', urgency: 'yellow', weight: 40 })
+  }
+
+  // Etapa 4 (v0.23): "O Supremo pede você" (cadeira de jurista no tribunal eleitoral) e embargos que vencem.
+  const tse = s.supremo.tse
+  if (tse?.open) {
+    out.push({ id: 'tse', icon: '🗳️', target: 'supremo', left: 0, title: 'O Supremo pede você: jurista no tribunal eleitoral', detail: `A lista chegou. Decida neste mês; sem decisão, ${TSE_BY_ID[tse.seat]?.name ?? 'quem está'} é reconduzid${TSE_BY_ID[tse.seat]?.feminine ? 'a' : 'o'}. Quem senta ali julga a sua campanha.`, urgency: 'red', weight: 58 })
+  }
+  for (const m of s.supremo.modulated ?? []) {
+    const left = m.until - now
+    out.push({ id: `emb-${m.bill}`, icon: '📜', target: 'supremo', left, title: `Embargos: ${m.name} vale até cair`, detail: `O Supremo modulou os efeitos: a medida cai em ${leftText(left)}.`, urgency: urgencyOf(left, false), weight: 30 - left })
   }
 
   // Etapa 3: pedido de impeachment de ministro no Senado (vota no fechamento deste mês).

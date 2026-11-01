@@ -38,7 +38,7 @@ import { ACTION_ICON, GROUP_ICON, INDICATOR_ICON } from './icons'
 import { INDICATORS, lowerFirst, num, signed, type IndicatorMeta } from './format'
 import { Sparkline } from './Sparkline'
 import { PromisesCard, RivalCard } from './OppositionCards'
-import { RulingAnimation, SupremoMini, SupremoView } from './SupremoView'
+import { RulingAnimation, SupremoMini, SupremoView, TseCard } from './SupremoView'
 import { MinistriosView, SenadoView } from './GovTabs'
 import { ministriesInTrouble } from '../game/ministerios'
 import { absMonth } from '../game/memory'
@@ -96,6 +96,7 @@ export function GameScreen({ state, onChange, onExit }: {
   const [reactionView, setReactionView] = useState<BillId | null>(null)
   const [govTab, setGovTab] = useState<'camara' | 'senado' | 'supremo' | 'ministerios'>('camara')
   const [nominee, setNominee] = useState<string | null>(null)
+  const [tseSeen, setTseSeen] = useState<number | null>(null)
   const [consult, setConsult] = useState<BillId | null>(null)
   /** Etapa 2: nome que o presidente deu à medida na janela em etapas (vai junto quando votar ou assinar). */
   const [titles, setTitles] = useState<Record<BillId, string>>({})
@@ -295,6 +296,17 @@ export function GameScreen({ state, onChange, onExit }: {
         </nav>
       </header>
       {showAi && <AiSettings onClose={() => setShowAi(false)} />}
+      {state.supremo.tse?.open && tseSeen !== absMonth(state) && !voteSheet && post.length === 0 && (
+        <aside className="detail pn-sheet-back" onClick={() => setTseSeen(absMonth(state))}>
+          <div className="pn-sheet pn-sheet--wide" onClick={(e) => e.stopPropagation()}>
+            <div className="pn-kicker">⚖️ Ofício do Supremo Tribunal</div>
+            <h2>O Supremo pede você</h2>
+            <p className="pn-advice">Abriu a cadeira de jurista no tribunal eleitoral. A lista chegou ao Planalto e você tem este mês para decidir. Quem senta ali julgará a sua campanha.</p>
+            <TseCard state={state} compact onState={(n) => { onChange(n); setTseSeen(absMonth(state)) }} onToast={toast} />
+            <div className="pn-sheet__foot" style={{ gridTemplateColumns: "1fr" }}><button className="pn-btn pn-btn--ghost" onClick={() => setTseSeen(absMonth(state))}>Decidir depois (na aba Governo › Supremo)</button></div>
+          </div>
+        </aside>
+      )}
       {voteSheet && (
         <VoteSheet
           state={state}
@@ -417,7 +429,7 @@ export function GameScreen({ state, onChange, onExit }: {
               🏛️ Senado {state.congress.senate.pending.length > 0 && <span className="pn-dot">{state.congress.senate.pending.length}</span>}
             </button>
             <button className={govTab === 'supremo' ? 'on' : ''} onClick={() => setGovTab('supremo')}>
-              ⚖️ Supremo {(state.supremo.vacancy ? 1 : 0) + state.supremo.cases.length > 0 && <span className="pn-dot">{(state.supremo.vacancy ? 1 : 0) + state.supremo.cases.length}</span>}
+              ⚖️ Supremo {(state.supremo.vacancy ? 1 : 0) + (state.supremo.tse?.open ? 1 : 0) + state.supremo.cases.length > 0 && <span className="pn-dot">{(state.supremo.vacancy ? 1 : 0) + (state.supremo.tse?.open ? 1 : 0) + state.supremo.cases.length}</span>}
             </button>
             <button className={govTab === 'ministerios' ? 'on' : ''} onClick={() => setGovTab('ministerios')}>
               🏢 Ministérios {ministriesInTrouble(state).length > 0 && <span className="pn-dot">{ministriesInTrouble(state).length}</span>}

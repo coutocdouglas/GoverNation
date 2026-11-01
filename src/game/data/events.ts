@@ -25,7 +25,7 @@ export interface EventOption {
   /** Fato bom: o presidente dá o crédito ao autor (aproxima o partido dele). */
   credit?: true
   /** Etapas 4C2 e 4C3: resposta a uma derrubada ou a uma liminar no Supremo (o motor trata em supremo.ts). */
-  stf?: 'acatar' | 'nova' | 'criticar' | 'esperar' | 'recuar' | 'recorrer'
+  stf?: 'acatar' | 'nova' | 'criticar' | 'esperar' | 'recuar' | 'recorrer' | 'embargos' | 'demitir' | 'descumprir'
   /** Etapa 3: resposta a um pedido de impeachment de ministro no Senado (o motor trata em impeachment.ts). */
   impeach?: 'defender' | 'demitir' | 'deixar'
 }

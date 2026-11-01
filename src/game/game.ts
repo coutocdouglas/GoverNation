@@ -87,7 +87,7 @@ export function newGame(
   const rngState = seed ?? Math.floor(Math.random() * 2 ** 31)
   const bonus = DIFFICULTY[difficulty].approvalBonus
   const state: GameState = {
-    saveVersion: 21,
+    saveVersion: 22,
     month: 0,
     presidentName: presidentName.trim() || 'Presidente',
     difficulty,
@@ -595,7 +595,14 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
     }
   }
   const court2 = stepSupremo(s, court, headlines)
-  const { struck, suspended, restored, archived } = court2
+  const { struck, suspended, restored, archived, expired } = court2
+  // Etapa 4 (v0.23): o prazo dos embargos acabou e a medida cai de vez.
+  for (const x of expired) {
+    const bill = BILL_BY_ID[x.bill]
+    actionConfidence += applyEffects(e, impulses, undoEffects(bill, x.scale), `Fim dos embargos: ${bill.name}`, 1, -1)
+    c.laws = c.laws.filter((id) => id !== x.bill)
+    c.blockedUntil[x.bill] = s.month + RESUBMIT_COOLDOWN
+  }
   if (struck) {
     const bill = BILL_BY_ID[struck.bill]
     // Suspensa por liminar: o dinheiro já tinha parado; só os grupos sentem agora.
@@ -726,7 +733,11 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
         ps.relation = Math.min(100, ps.relation + 6)
       }
       if (opt.credit && origin) addBio(s, s.presidentName, `Deu publicamente o crédito de “${origin.label}” a ${origin.author}.`)
-      if (opt.stf) rivalExtra.push(...applyStfChoice(s, opt.stf, origin, impulses, headlines, taken))
+      if (opt.stf) {
+        const r = applyStfChoice(s, opt.stf, origin, impulses, headlines, taken, e, rng)
+        rivalExtra.push(...r.rival)
+        actionConfidence += r.confidence
+      }
       if (opt.impeach) {
         const r = applyImpeachChoice(s, opt.impeach, impulses, headlines, taken, rng)
         rivalExtra.push(...r.rival)
@@ -750,6 +761,7 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
         }
       }
       if (opt.stf === 'criticar') addMark(s, 'confronto', REPUTACAO.pts.confronto, `Atacou o Supremo em público (${title.toLowerCase()})`, 'supremo')
+      if (opt.stf === 'descumprir') addMark(s, 'confronto', REPUTACAO.pts.confronto * SUPREMO.descumprir.markFactor, `Afrontou o Supremo: descumpriu a decisão (${title.toLowerCase()})`, 'supremo')
       s.eventLog.push({ id: def.id, month: s.month })
       addBio(s, def.presenter.name, `${def.presenter.role}: levou ao presidente “${title}”. Decisão: ${lowerFirst(opt.label)}.`)
       if (def.importance >= 3 || def.kind !== 'crise') addBio(s, s.presidentName, `${title}: ${lowerFirst(opt.label)}.`)

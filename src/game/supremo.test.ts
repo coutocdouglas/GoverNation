@@ -114,7 +114,7 @@ describe('Supremo (etapa 4C2)', () => {
     expect(s.event?.id).toBe('stfDerrubada')
     expect(s.event?.origin?.bill).toBe('armas')
     const ev = EVENT_BY_ID.stfDerrubada
-    expect(ev.options.map((o) => o.stf)).toEqual(['acatar', 'nova', 'criticar'])
+    expect(ev.options.map((o) => o.stf)).toEqual(['acatar', 'nova', 'criticar', 'embargos', 'demitir', 'descumprir'])
     // Não aceita resposta escrita.
     expect(responseBlockedReason(s, 'forcaNacional')).toMatch(/escolhas prontas/)
     expect(s.world.chronicle.some((c) => c.text.includes('Supremo derruba'))).toBe(true)
@@ -207,7 +207,7 @@ describe('Supremo (etapa 4C2)', () => {
     delete raw.supremo
     raw.saveVersion = 10
     const m = migrate(raw)!
-    expect(m.saveVersion).toBe(21)
+    expect(m.saveVersion).toBe(22)
     expect(m.supremo.justices).toHaveLength(11)
     expect(m.supremo.cases).toEqual([])
     expect(m.supremo.watch).toEqual([])

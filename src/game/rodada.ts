@@ -32,10 +32,10 @@ import { CONCESSION_BY_ID, DESTINOS, TALK } from './data/negociacao'
 import { NOMINEE_BY_PARTY } from './data/camara'
 import { ministryBlockedReason, type MinistryChange } from './camara'
 import { resetMinistry } from './ministerios'
-import { ccjApplies, ccjRoll, courtNow, dropInForce, inForceNow, isFrozen, judgeToday, noteInForce, struckImpulses, struckOrigin, todayCase, undoEffects, workBlockedReason, workPlenary, type Struck } from './supremo'
+import { bumpFavor, fillTse, tseBlockedReason, ccjApplies, ccjRoll, courtNow, dropInForce, inForceNow, isFrozen, judgeToday, noteInForce, struckImpulses, struckOrigin, todayCase, undoEffects, workBlockedReason, workPlenary, type Struck } from './supremo'
 import { rollReactions } from './fluxo'
 import { FLUXO } from './data/fluxo'
-import { SUPREMO } from './data/supremo'
+import { SUPREMO, TSE_BY_ID } from './data/supremo'
 import { applyEffects } from './effects'
 import { addMark, markMeasure, noteRecord } from './reputacao'
 import { REPUTACAO } from './data/marks'
@@ -558,6 +558,7 @@ export function withdrawMeasure(prev: GameState, caseId: string): GameState {
   s.supremo.watch = s.supremo.watch.filter((x) => x.bill !== c.bill)
   s.eventQueue = s.eventQueue.filter((x) => !(x.id === 'stfLiminar' && x.origin?.bill === c.bill))
   for (const j of s.supremo.justices) j.relation = Math.min(100, j.relation + SUPREMO.recuar.ministers)
+  bumpFavor(s, SUPREMO.favor.recuar, `Recuou antes do julgamento: ${bill.name}`)
   ctx.taken.push(`Revogou a medida que estava no Supremo: ${bill.name}`)
   ctx.headlines.push({ text: `Governo recua e revoga ${lowerFirst(bill.name)} antes de o Supremo julgar`, tone: 'neutral' })
   addBio(s, s.presidentName, `Recuou e revogou “${bill.name}” antes do julgamento no Supremo.`)
@@ -567,6 +568,25 @@ export function withdrawMeasure(prev: GameState, caseId: string): GameState {
 }
 
 const rivalOf = (ctx: RoundCtx): Cause[] => (ctx.round.rival ??= [])
+
+/**
+ * Etapa 4 (v0.23): o presidente escolhe a cadeira de jurista do tribunal eleitoral (vale na hora).
+ * Reconduzir quem está não custa nada; um nome novo cobra o preço dele.
+ */
+export function chooseTseNow(prev: GameState, id: string): { state: GameState; headlines: Headline[] } {
+  const err = tseBlockedReason(prev, id)
+  if (err) throw new Error(err)
+  const s = structuredClone(prev)
+  const ctx = openCtx(s)
+  const h0 = ctx.headlines.length
+  const r = fillTse(s, id, ctx.headlines, 'presidente')
+  ctx.conf.v += r.confidence
+  rivalOf(ctx).push(...r.rival)
+  for (const x of r.impulses) ctx.impulses[x.group].push({ label: x.label, value: x.value })
+  ctx.taken.push(`Tribunal eleitoral: ${r.impulses.length || r.rival.length || r.confidence ? 'nomeou' : 'escolheu'} ${TSE_BY_ID[id].name}`)
+  closeCtx(ctx)
+  return { state: s, headlines: ctx.headlines.slice(h0) }
+}
 
 /** Reações ao anúncio da medida, sorteadas no envio (valem na rodada). */
 function reactToday(ctx: RoundCtx, id: BillId): void {

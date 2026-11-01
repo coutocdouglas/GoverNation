@@ -4,14 +4,15 @@ import { ChainSteps } from './Chain'
 import type { ChainInfo } from './corrente'
 import { BILL_BY_ID } from '../game/data/bills'
 import { PARTY_BY_ID } from '../game/data/parties'
-import { DOCTRINE_HINT, DOCTRINE_ICON, DOCTRINE_LABEL, NOMINEE_BY_ID, SUPREMO } from '../game/data/supremo'
+import { DOCTRINE_HINT, DOCTRINE_ICON, DOCTRINE_LABEL, NOMINEE_BY_ID, SUPREMO, TSE_BY_ID, TSE_MOOD_LABEL } from '../game/data/supremo'
 import { absMonth, yearOf } from '../game/memory'
 import {
   acordaoFrase, authorLabel, authorWith, ccjApplies, ccjForecast, consultaOf, consultBlockedReason, deAuthor, entityAuthorOf, fileChanceOf, forecastCase, forecastRuling, forecastSabatina,
   fundamentoOf, fundamentoText, isCleared, justiceInfo, justiceName, leakChance, legalReasonIn, courtChanceNow, legalRiskIn, liminarChanceOf, nominationBlockedReason, nomineePosition,
   nomineesOffered, RISK_LABEL, TIPO_LABEL, voteReasons, workBlockedReason, workCandidates,
+  favorFactor, favorLabel, favorOf, tseBlockedReason, tseList, tseMood, tseRigor,
 } from '../game/supremo'
-import { workPlenaryNow, withdrawBlockedReason, withdrawMeasure } from '../game/rodada'
+import { chooseTseNow, workPlenaryNow, withdrawBlockedReason, withdrawMeasure } from '../game/rodada'
 import { RELATOR_ABRE } from '../game/data/acordao'
 import { DOCTRINES, DOCTRINE_PULL, FUNDAMENTOS, type Doctrine, type FundamentoId } from '../game/data/supremo'
 import type { BillId, CourtCase, GameState, JusticeSeat, Ruling } from '../game/types'
@@ -81,10 +82,13 @@ export function LegalRiskLine({ state, id, consult, onConsult }: { state: GameSt
 export function SupremoMini({ state, onOpen }: { state: GameState; onOpen: () => void }) {
   const sup = state.supremo
   const open = sup.consultas.filter((q) => !q.result)
-  if (!sup.vacancy && sup.cases.length === 0 && open.length === 0) return null
+  const fv = favorOf(state)
   return (
     <section className="pn-card pn-card--gold">
-      <h3>⚖️ Supremo</h3>
+      <h3>⚖️ Supremo <span className="pn-badge" title="Como a Corte, como instituição, vê o governo. Abaixo de 50, liminar, vista e projeto travado ficam mais prováveis.">A seu favor <b className={favorCls(fv)}>{Math.round(fv)}</b>/100 · {favorLabel(fv).toLowerCase()}</span></h3>
+      {sup.tse?.open && <p className="pn-hint" style={{ margin: '4px 0' }}>🗳️ <b>O Supremo pede você:</b> a cadeira de jurista do tribunal eleitoral está aberta. Decida neste mês.</p>}
+      {(sup.modulated ?? []).map((m) => <p key={m.bill} className="pn-hint" style={{ margin: '4px 0' }}>📜 Embargos: “{m.name}” vale até {when(m.until)}.</p>)}
+      {!sup.vacancy && sup.cases.length === 0 && open.length === 0 && !sup.tse?.open && <p className="pn-hint" style={{ margin: '4px 0' }}>Nenhuma ação contra o governo no Supremo.</p>}
       {sup.vacancy && <p className="pn-hint" style={{ margin: '4px 0' }}>🪑 Vaga aberta com a aposentadoria de {justiceInfo({ id: sup.vacancy.retired }).name}: indique um nome.</p>}
       {sup.cases.map((c) => (
         <p key={c.id} className="pn-hint" style={{ margin: '4px 0' }}>
@@ -157,6 +161,9 @@ export function SupremoView({ state, nominee, onNominee, onState, onToast }: { s
           )
         })()}
       </section>
+
+      <CorteCard state={state} />
+      <TseCard state={state} onState={onState} onToast={onToast} />
 
       {sup.vacancy && <VacancyCard state={state} nominee={nominee} onNominee={onNominee} />}
 
@@ -293,11 +300,116 @@ function CaseCard({ state, c, onState, onToast }: { state: GameState; c: CourtCa
   )
 }
 
+const favorCls = (v: number) => (v >= 55 ? 'up' : v >= 35 ? 'warn' : 'dn')
+
+/** Etapa 4 (v0.23): o índice "A seu favor", os precedentes, os embargos e as decisões descumpridas. */
+function CorteCard({ state }: { state: GameState }) {
+  const sup = state.supremo
+  const now = absMonth(state)
+  const fv = favorOf(state)
+  const k = favorFactor(state)
+  const precs = (sup.precedentes ?? []).filter((p) => p.until > now)
+  return (
+    <section className="pn-card">
+      <h3>🏛️ A Corte e você <span className="pn-badge">índice “A seu favor”</span></h3>
+      <div className="pn-pv">
+        <div>⚖️ A seu favor<b className={favorCls(fv)}>{Math.round(fv)}<i>/100</i></b><small>{favorLabel(fv)}</small></div>
+        <div>🎲 Liminar, vista e projeto travado<b className={k > 1.05 ? 'dn' : k < 0.95 ? 'up' : ''}>{num(k, 2)}×</b><small>{k > 1.05 ? 'mais prováveis que o normal' : k < 0.95 ? 'menos prováveis que o normal' : 'no normal'}</small></div>
+        <div>📎 Precedentes em vigor<b>{precs.length}</b><small>{precs.filter((p) => p.kind === 'favor').length} a favor · {precs.filter((p) => p.kind === 'contra').length} contra</small></div>
+      </div>
+      <p className="pn-hint">
+        É como a Corte, como instituição, vê o governo (diferente da relação de cada ministro). Sobe quando você acata, recua, tem medida mantida ou consulta chancelada;
+        cai quando você critica, perde ação ou recurso, a pressão vaza ou você descumpre uma decisão. Volta devagar para a média da relação dos ministros.
+      </p>
+      {(sup.favorLog ?? []).length > 0 && (
+        <p className="pn-hint" style={{ margin: '4px 0' }}>
+          Mexeu por último: {[...(sup.favorLog ?? [])].reverse().slice(0, 5).map((x, i) => <span key={i} className={`pn-chipfx ${x.value > 0 ? 'up' : 'dn'}`} style={{ marginRight: 4 }}>{x.value > 0 ? '+' : ''}{num(x.value, 0)} {x.label}</span>)}
+        </p>
+      )}
+      {precs.map((p) => (
+        <p key={p.fundamento} className="pn-hint" style={{ margin: '4px 0' }}>
+          📎 <b className={p.kind === 'favor' ? 'up' : 'dn'}>{p.kind === 'favor' ? 'O precedente é seu' : 'Precedente contra'}</b> em {FUNDAMENTOS[p.fundamento as FundamentoId]?.label.toLowerCase() ?? p.fundamento}:
+          {' '}a Corte {p.kind === 'favor' ? 'manteve' : 'derrubou'} “{p.name}” em {when(p.at)}. Até {when(p.until)}, medidas com esse fundamento são {p.kind === 'favor' ? 'menos' : 'mais'} contestadas, e os {p.justices.length} que votaram com a maioria tendem a votar igual.
+        </p>
+      ))}
+      {(sup.modulated ?? []).map((m) => (
+        <p key={m.bill} className="pn-hint" style={{ margin: '4px 0' }}>📜 <b>Embargos aceitos:</b> “{m.name}” vale até {when(m.until)} e então cai, como a Corte decidiu.</p>
+      ))}
+      {(sup.defied ?? []).length > 0 && (
+        <p className="pn-hint dn" style={{ margin: '4px 0' }}>🔥 <b>Decisões descumpridas:</b> {(sup.defied ?? []).map((d) => `“${d.name}” (${when(d.at)})`).join(', ')}. Fica registrado: pode virar pedido de impeachment.</p>
+      )}
+    </section>
+  )
+}
+
+/** Etapa 4 (v0.23): a cadeira de jurista no tribunal eleitoral ("O Supremo pede você"). */
+export function TseCard({ state, onState, onToast, compact }: { state: GameState; onState?: (s: GameState) => void; onToast?: (t: string) => void; compact?: boolean }) {
+  const t = state.supremo.tse
+  if (!t) return null
+  const seat = TSE_BY_ID[t.seat]
+  const rigor = tseRigor(state)
+  const mood = tseMood(rigor)
+  const pick = (id: string) => {
+    if (!onState) return
+    try {
+      const r = chooseTseNow(state, id)
+      onState(r.state)
+      onToast?.(id === t.seat ? `🗳️ ${TSE_BY_ID[id].name} reconduzid${TSE_BY_ID[id].feminine ? 'a' : 'o'} ao tribunal eleitoral.` : `🗳️ ${TSE_BY_ID[id].name} nomead${TSE_BY_ID[id].feminine ? 'a' : 'o'} para o tribunal eleitoral.`)
+    } catch (e) { onToast?.(`✋ ${(e as Error).message}`) }
+  }
+  return (
+    <section className={`pn-card ${t.open ? 'pn-card--gold' : ''}`}>
+      <h3>🗳️ {t.open && !compact ? 'O Supremo pede você' : 'Tribunal eleitoral'} <span className="pn-badge">cadeira de jurista · a cada 2 anos</span></h3>
+      <p className="pn-hint">
+        Hoje: <b>{seat?.name}</b> (rigor {rigor}/100), e o tribunal está <b>{TSE_MOOD_LABEL[mood].toLowerCase()}</b>. Quem senta ali julgará a sua campanha: abuso de poder, propaganda e contas.
+        {t.open ? ' A lista do Supremo chegou: decida neste mês. Sem decisão, quem está é reconduzido, sem custo.' : ` Próxima vaga em ${when(t.nextAt)}.`}
+      </p>
+      {t.open && (
+        <div className="pn-nominees">
+          {tseList(state).map((j) => {
+            const cur = j.id === t.seat
+            const blocked = tseBlockedReason(state, j.id)
+            const m = tseMood(j.rigor)
+            const p = j.price
+            const chips: { text: string; tone: string }[] = cur ? [{ text: 'sem custo', tone: 'up' }] : [
+              ...(p.favor ? [{ text: `Corte ${p.favor > 0 ? '+' : ''}${p.favor}`, tone: p.favor > 0 ? 'up' : 'dn' }] : []),
+              ...(p.confidence ? [{ text: `confiança +${p.confidence}`, tone: 'up' }] : []),
+              ...(p.scandal ? [{ text: `escândalo +${p.scandal}`, tone: 'dn' }] : []),
+              ...(p.rival ? [{ text: `oposição +${p.rival}`, tone: 'dn' }] : []),
+              ...(p.classeMedia ? [{ text: `classe média ${num(p.classeMedia, 1)}`, tone: 'dn' }] : []),
+            ]
+            return (
+              <div key={j.id} className={`pn-nominee ${cur ? 'sel' : ''}`}>
+                <div className="pn-nominee__head">
+                  <Portrait name={j.name} feminine={j.feminine} size={compact ? 48 : 64} color={cur ? 'var(--pn-gold)' : '#8a97a8'} title={j.name} />
+                  <div>
+                    <b>{j.name}{cur ? ' · na cadeira' : ''}</b>
+                    <div className="pn-hint" style={{ margin: 0 }}>{j.title}</div>
+                    <div className="pn-hint" style={{ margin: 0 }}>Rigor <b className={m === 'firme' ? 'dn' : m === 'brando' ? 'up' : ''}>{j.rigor}</b> · tribunal {TSE_MOOD_LABEL[m].toLowerCase()}</div>
+                  </div>
+                </div>
+                <div className="pn-hint" style={{ margin: 0 }}>{j.blurb}</div>
+                <div className="pn-hint" style={{ margin: 0 }}>{cur ? 'Reconduzir é o padrão: ninguém estranha.' : j.priceText}</div>
+                <span className="pn-chips">{chips.map((c, i) => <span key={i} className={`pn-chipfx ${c.tone}`}>{c.text}</span>)}</span>
+                {onState && <div className="pn-row"><button className="pn-btn" disabled={!!blocked} onClick={() => pick(j.id)}>{cur ? '🔁 Reconduzir' : '🖋️ Nomear'}</button></div>}
+              </div>
+            )
+          })}
+        </div>
+      )}
+      {!compact && t.log.length > 0 && (
+        <p className="pn-hint" style={{ margin: '4px 0' }}>Histórico: {t.log.map((x) => `${when(x.at)} ${TSE_BY_ID[x.id]?.name} (${x.reconduzido ? 'reconduzid' + (TSE_BY_ID[x.id]?.feminine ? 'a' : 'o') : 'nomead' + (TSE_BY_ID[x.id]?.feminine ? 'a' : 'o')}${x.by === 'padrão' ? ', pelo padrão' : ''})`).join(' · ')}</p>
+      )}
+    </section>
+  )
+}
+
 function RulingRow({ r }: { r: Ruling }) {
   const yes = r.votes.filter((v) => v.strike).length
   return (
     <div className="pn-reading">
       <b>{r.project ? (r.struck ? '❌ Projeto arquivado' : '✅ Projeto liberado') : r.struck ? '❌ Derrubada' : '✅ Mantida'}: {r.name}</b>
+      {r.precedent && <span className={`pn-chipfx ${r.precedent === 'favor' ? 'up' : 'dn'}`} style={{ marginLeft: 6 }}>{r.precedent === 'favor' ? '📎 precedente a favor pesou' : '📎 precedente contra pesou'}</span>}
       <p className="pn-hint" style={{ margin: '2px 0' }}>{when(r.at)} · ação {deAuthor(r)} · relator{r.prevencao ? ' por prevenção' : ''} {justiceInfo({ id: r.relator }).name}{r.vistaBy ? ` · vista de ${justiceName(r.vistaBy)}` : ''} · {yes} a {r.votes.length - yes} para derrubar · {r.fundamento ? `${fundamentoText(r.fundamento)}. ` : ''}{r.reason}</p>
       <div className="pn-courtdots">
         {r.votes.map((v) => <span key={v.justice} style={{ background: v.strike ? 'var(--pn-red)' : 'var(--pn-green)' }} title={`${justiceInfo({ id: v.justice }).name}: ${v.strike ? 'derrubar' : 'manter'}`} />)}

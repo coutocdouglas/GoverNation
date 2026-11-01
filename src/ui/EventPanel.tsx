@@ -1,4 +1,5 @@
 import { forecastImpeach } from '../game/impeachment'
+import { stfChoiceNote } from '../game/supremo'
 import { useState } from 'react'
 import type { BillDef } from '../game/data/bills'
 import { defaultOption, currentEvent } from '../game/events'
@@ -147,6 +148,7 @@ export function EventPanel({ state, choice, onChoose, response, onRespond, plann
                   <span className="pn-chips">
                     {effectChips(o.effects, o.parties).map((c, k) => <span key={k} className={`pn-chipfx ${c.tone}`} title={c.title}>{c.text}</span>)}
                   </span>
+                  {o.stf && (() => { const note = stfChoiceNote(state, o.stf, origin); return note ? <small className={o.stf === 'descumprir' ? 'dn' : 'pn-hint'}>⚖️ {note}</small> : null })()}
                   {o.default && <span className="pn-option__def">vale se você não escolher</span>}
                 </button>
               ))}

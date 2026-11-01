@@ -249,7 +249,7 @@ describe('Etapa 2: save 16', () => {
     delete old.congress.mesaLog
     const econ = old.congress.deputies.map((d) => d.econ)
     const m = migrate(old)!
-    expect(m.saveVersion).toBe(21)
+    expect(m.saveVersion).toBe(22)
     expect(m.names).toEqual({})
     expect(m.congress.deputies.map((d) => d.econ)).toEqual(econ)
     expect(m.congress.deputies.every((d) => d.ala !== undefined)).toBe(true)

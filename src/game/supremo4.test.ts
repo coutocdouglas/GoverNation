@@ -258,7 +258,7 @@ describe('Etapa 4: save 21', () => {
     old.supremo.rulings = [{ id: 'r', bill: 'pisoEnfermagem', name: 'Piso', party: 'fpt', relator: 'assis', at: 1, votes: [], struck: false, reason: '' }]
     delete old.supremo.prevencao
     const m = migrate(old)!
-    expect(m.saveVersion).toBe(21)
+    expect(m.saveVersion).toBe(22)
     expect(m.supremo.cases[0]).toMatchObject({ undone: true, author: { kind: 'partido' }, fundamento: 'reserva_lei' })
     expect(m.supremo.prevencao?.federativo?.justice).toBe('assis')
   })

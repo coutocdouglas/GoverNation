@@ -114,6 +114,11 @@ export const CAST: CastMember[] = [
   { name: 'Jussara Lima', role: 'Chefe dos ecossocialistas do PVS', gender: 'f', portrait: 128, alt: 23 },
   { name: 'Bruno Kessler', role: 'Chefe dos libertários do NRM', gender: 'm', portrait: 163, alt: 16 },
   { name: 'Laura Gusmão', role: 'Chefe dos liberais conservadores do NRM', gender: 'f', portrait: 132, alt: 23 },
+  // Etapa 4 (v0.23, data/supremo.ts): juristas da lista do Supremo para a cadeira do tribunal eleitoral.
+  { name: 'Rosana Quintela', role: 'Jurista do tribunal eleitoral', gender: 'f', portrait: 182, alt: 23 },
+  { name: 'Heráclito Dantas', role: 'Jurista indicável ao tribunal eleitoral', gender: 'm', portrait: 198, alt: 16 },
+  { name: 'Marisa Fontoura', role: 'Jurista indicável ao tribunal eleitoral', gender: 'f', portrait: 184, alt: 23 },
+  { name: 'Gilberto Sá', role: 'Jurista indicável ao tribunal eleitoral', gender: 'm', portrait: 177, alt: 16 },
 ]
 
 /**

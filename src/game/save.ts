@@ -2,9 +2,9 @@ import { initialCongress, initialSenate } from './congress'
 import { syncCustomBills } from './custom'
 import { RIVAL } from './data/rival'
 import { createRival } from './rival'
-import { fundamentoOf, initialSupremo } from './supremo'
+import { fundamentoOf, initialSupremo, initialTse, meanRelation } from './supremo'
 import { initialMinistries } from './ministerios'
-import { addBio } from './memory'
+import { absMonth, addBio } from './memory'
 import { initialReputation } from './reputacao'
 import { ensureAlas, openMesa } from './partidos'
 import { CAMARA } from './data/camara'
@@ -191,7 +191,18 @@ export function migrate(raw: unknown): GameState | null {
       }
       s.saveVersion = 21
     }
-    if (s.saveVersion !== 21) return null
+    if (s.saveVersion === 21) {
+      // v0.22 → v0.23 (etapa 4, blocos D a F): índice da Corte pela média das relações, precedentes vazios,
+      // embargos e descumprimentos vazios, a cadeira do TSE com a jurista da posse.
+      const sup = s.supremo
+      sup.favor ??= Math.round(meanRelation(sup))
+      sup.precedentes ??= []
+      sup.modulated ??= []
+      sup.defied ??= []
+      sup.tse ??= initialTse(absMonth(s as GameState))
+      s.saveVersion = 22
+    }
+    if (s.saveVersion !== 22) return null
     syncCustomBills(s as GameState)
     return s as GameState
   } catch {

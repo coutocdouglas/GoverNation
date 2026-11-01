@@ -10,7 +10,7 @@ import { GROUPS, GROUP_BY_ID } from './data/groups'
 import { primaryBalance } from './economy'
 import { clamp } from './ideology'
 import type { Rng } from './rng'
-import { courtChanceNow, forecastRuling, isCleared, legalRiskIn, legalRiskScore, RISK_LABEL } from './supremo'
+import { courtChanceNow, forecastRuling, isCleared, legalRiskIn, legalRiskScore, precedentNote, RISK_LABEL } from './supremo'
 import type { BillId, Cause, Economy, GameState, GroupId, Headline, Impulse, ReactionRoll } from './types'
 
 const lowerFirst = (t: string) => (/^[A-ZÀ-Ú]{2}/.test(t) ? t : t.charAt(0).toLowerCase() + t.slice(1))
@@ -187,6 +187,9 @@ export function notasFicha(s: GameState, id: BillId): NotasFicha {
       : score < limit ? `Abaixo de ${limit}: se for ao plenário, a Corte tende a manter.`
       : `Acima de ${limit}: se for ao plenário, a Corte tende a derrubar.`,
   }
+  // Etapa 4 (v0.23): o precedente do fundamento entra na leitura ("a Corte já derrubou isso em 2028").
+  const prec = precedentNote(s, id)
+  if (prec) risco.text = `${risco.text} ${prec}`
   const pot = b.effects.potential ?? 0
   const crescimento: NotasFicha['crescimento'] = Math.abs(pot) < 0.005
     ? { tone: 'neutral', text: 'Neutro: não mexe no crescimento de longo prazo.' }
