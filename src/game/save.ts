@@ -2,7 +2,7 @@ import { initialCongress, initialSenate } from './congress'
 import { syncCustomBills } from './custom'
 import { RIVAL } from './data/rival'
 import { createRival } from './rival'
-import { initialSupremo } from './supremo'
+import { fundamentoOf, initialSupremo } from './supremo'
 import { initialMinistries } from './ministerios'
 import { addBio } from './memory'
 import { initialReputation } from './reputacao'
@@ -177,7 +177,21 @@ export function migrate(raw: unknown): GameState | null {
       s.congress.senate.president.wear ??= 0
       s.saveVersion = 20
     }
-    if (s.saveVersion !== 20) return null
+    if (s.saveVersion === 20) {
+      // v0.21.1 → v0.22 (etapa 4): ações com autor, fundamento, prevenção, vista e audiências; 5 doutrinas
+      // (vêm do id do ministro, nada a migrar). Liminar antiga já tinha desfeito o dinheiro: marca como desfeito.
+      for (const c of s.supremo.cases) {
+        if (c.suspended && c.kind !== 'projeto') c.undone = true
+        c.author ??= { kind: 'partido' }
+        c.fundamento ??= fundamentoOf(c.bill)
+      }
+      s.supremo.prevencao ??= {}
+      for (const r of s.supremo.rulings) {
+        if (s.supremo.justices.some((j) => j.id === r.relator)) s.supremo.prevencao[r.fundamento ?? fundamentoOf(r.bill)] = { justice: r.relator, term: s.term }
+      }
+      s.saveVersion = 21
+    }
+    if (s.saveVersion !== 21) return null
     syncCustomBills(s as GameState)
     return s as GameState
   } catch {

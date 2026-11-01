@@ -87,7 +87,7 @@ export function newGame(
   const rngState = seed ?? Math.floor(Math.random() * 2 ** 31)
   const bonus = DIFFICULTY[difficulty].approvalBonus
   const state: GameState = {
-    saveVersion: 20,
+    saveVersion: 21,
     month: 0,
     presidentName: presidentName.trim() || 'Presidente',
     difficulty,
@@ -602,6 +602,10 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
     if (!struck.wasSuspended) actionConfidence += applyEffects(e, impulses, undoEffects(bill, struck.scale), bill.name, 1, -1)
     for (const x of struckImpulses(bill, struck.scale)) impulses[x.group].push({ label: x.label, value: x.value })
     c.laws = c.laws.filter((id) => id !== struck.bill)
+    // Etapa 4: MP derrubada perde o objeto também no Congresso.
+    c.pending = c.pending.filter((x) => x.id !== struck.bill)
+    c.senate.pending = c.senate.pending.filter((x) => x.id !== struck.bill)
+    s.eventQueue = s.eventQueue.filter((x) => !(x.id === 'stfLiminar' && x.origin?.bill === struck.bill))
     c.blockedUntil[struck.bill] = s.month + RESUBMIT_COOLDOWN
     rivalExtra.push({ label: 'Supremo derruba medida do governo', value: SUPREMO.rivalGain })
     s.eventQueue.unshift({ id: 'stfDerrubada', origin: struckOrigin(s, struck) })

@@ -56,7 +56,7 @@ describe('Etapa 3: os 27 estados', () => {
     delete s.congress.senate.states
     ;(s as { saveVersion: number }).saveVersion = 18
     const m = migrate(JSON.parse(JSON.stringify(s)))!
-    expect(m.saveVersion).toBe(20)
+    expect(m.saveVersion).toBe(21)
     expect(m.congress.senate.senators.every((d) => d.uf && d.name)).toBe(true)
     expect(m.congress.deputies.every((d) => d.uf)).toBe(true)
     expect(Object.keys(m.congress.senate.states!)).toHaveLength(27)
@@ -224,7 +224,7 @@ describe('v0.21.1: ficha dos senadores, Mesa do Senado e valor dos favores', () 
     delete s.congress.senate.president.wear
     ;(s as { saveVersion: number }).saveVersion = 19
     const m = migrate(JSON.parse(JSON.stringify(s)))!
-    expect(m.saveVersion).toBe(20)
+    expect(m.saveVersion).toBe(21)
     expect(m.congress.senate.senators.every((d) => d.rep)).toBe(true)
     expect(m.congress.senate.president.wear).toBe(0)
   })

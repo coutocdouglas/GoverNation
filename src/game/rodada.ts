@@ -32,7 +32,7 @@ import { CONCESSION_BY_ID, DESTINOS, TALK } from './data/negociacao'
 import { NOMINEE_BY_PARTY } from './data/camara'
 import { ministryBlockedReason, type MinistryChange } from './camara'
 import { resetMinistry } from './ministerios'
-import { ccjApplies, ccjRoll, courtNow, dropInForce, isFrozen, noteInForce, struckImpulses, struckOrigin, undoEffects, type Struck } from './supremo'
+import { ccjApplies, ccjRoll, courtNow, dropInForce, inForceNow, isFrozen, judgeToday, noteInForce, struckImpulses, struckOrigin, todayCase, undoEffects, workBlockedReason, workPlenary, type Struck } from './supremo'
 import { rollReactions } from './fluxo'
 import { FLUXO } from './data/fluxo'
 import { SUPREMO } from './data/supremo'
@@ -430,7 +430,7 @@ function enactBill(ctx: RoundCtx, p: PendingBill, placarS: string): void {
 
 // ─── Etapa 2B: o Supremo no mesmo dia e quem reage ───────────────────────────
 
-/** A medida acabou de valer: o Supremo age na hora (ação, relator, liminar, plenário). Derrubada, desfaz já. */
+/** A medida acabou de valer: o Supremo age na hora (ação, autor, relator, liminar). Etapa 4: o plenário espera o governo. */
 function courtToday(ctx: RoundCtx, id: BillId): void {
   const r = courtNow(ctx.s, id, ctx.rng, ctx.headlines)
   if (!r) return
@@ -443,7 +443,7 @@ function applyStruckNow(ctx: RoundCtx, st: Struck): void {
   const { s, e, impulses } = ctx
   const c = s.congress
   const bill = BILL_BY_ID[st.bill]
-  ctx.conf.v += applyEffects(e, impulses, undoEffects(bill, st.scale), bill.name, 1, -1)
+  if (!st.wasSuspended) ctx.conf.v += applyEffects(e, impulses, undoEffects(bill, st.scale), bill.name, 1, -1)
   for (const x of struckImpulses(bill, st.scale)) impulses[x.group].push({ label: x.label, value: x.value })
   c.laws = c.laws.filter((x) => x !== st.bill)
   // MP derrubada perde o objeto também no Congresso.
@@ -451,9 +451,119 @@ function applyStruckNow(ctx: RoundCtx, st: Struck): void {
   c.senate.pending = c.senate.pending.filter((x) => x.id !== st.bill)
   c.blockedUntil[st.bill] = s.month + RESUBMIT_COOLDOWN
   rivalOf(ctx).push({ label: 'Supremo derruba medida do governo', value: SUPREMO.rivalGain })
+  s.eventQueue = s.eventQueue.filter((x) => !(x.id === 'stfLiminar' && x.origin?.bill === st.bill))
   s.eventQueue.unshift({ id: 'stfDerrubada', origin: struckOrigin(s, st) })
   ctx.mm.struck.push(bill.area)
   noteRecord(s, { text: `O Supremo derrubou “${bill.name}” no mesmo dia`, tone: 'bad', kind: 'supremo', bill: st.bill })
+}
+
+/** Etapa 4: a vista parou o julgamento de uma medida com liminar: o dinheiro e a confiança param até o plenário. */
+function applySuspendNow(ctx: RoundCtx, sus: { bill: BillId; author: string; scale?: number }): void {
+  const { s, e, impulses } = ctx
+  const bill = BILL_BY_ID[sus.bill]
+  ctx.conf.v += applyEffects(e, impulses, undoEffects(bill, sus.scale), `Liminar: ${bill.name}`, 1, -1)
+  rivalOf(ctx).push({ label: 'Liminar suspende medida do governo', value: SUPREMO.rivalGain / 2 })
+  s.eventQueue = s.eventQueue.filter((x) => !(x.id === 'stfLiminar' && x.origin?.bill === sus.bill))
+  s.eventQueue.unshift({ id: 'stfLiminar', origin: struckOrigin(s, sus) })
+  ctx.mm.liminar.push(bill.area)
+}
+
+/** Motivo pelo qual o plenário de hoje não pode ser chamado (ação já julgada ou parada), ou null. */
+export function plenaryBlockedReason(s: GameState, caseId: string, justices: string[] = []): string | null {
+  if (!todayCase(s, caseId)) return 'Esta ação já foi julgada (ou está parada num pedido de vista).'
+  return justices.length ? workBlockedReason(s, caseId, justices) : null
+}
+
+export interface PlenaryResult {
+  state: GameState
+  ruling: string | null
+  struck: boolean
+  vista: { justice: string; until: number } | null
+  leaked: string[]
+  headlines: Headline[]
+}
+
+/**
+ * Etapa 4: o plenário de hoje. Com ministros escolhidos, o governo trabalha o plenário antes (audiências que podem vazar);
+ * sem eles, aguarda. Depois o plenário julga, ou um ministro pede vista e o julgamento para.
+ */
+export function plenaryToday(prev: GameState, caseId: string, justices: string[] = []): PlenaryResult {
+  const err = plenaryBlockedReason(prev, caseId, justices)
+  if (err) throw new Error(err)
+  const s = structuredClone(prev)
+  const ctx = openCtx(s)
+  const h0 = ctx.headlines.length
+  let leaked: string[] = []
+  if (justices.length) {
+    const w = workPlenary(s, caseId, justices, ctx.rng, ctx.headlines)
+    rivalOf(ctx).push(...w.rival)
+    leaked = w.leaked
+    ctx.taken.push(`Trabalhou o plenário do Supremo (${justices.length} ${justices.length === 1 ? 'audiência' : 'audiências'})`)
+  }
+  const t = judgeToday(s, caseId, ctx.rng, ctx.headlines)
+  if (t.struck) applyStruckNow(ctx, t.struck)
+  if (t.suspend) applySuspendNow(ctx, t.suspend)
+  const entry = ctx.round.court?.find((x) => x.caseId === caseId)
+  if (entry) {
+    entry.pending = false
+    if (t.ruling) { entry.ruling = t.ruling.id; entry.struck = t.ruling.struck }
+    if (t.vista) entry.vista = t.vista
+  }
+  closeCtx(ctx)
+  return { state: s, ruling: t.ruling?.id ?? null, struck: !!t.struck, vista: t.vista, leaked, headlines: ctx.headlines.slice(h0) }
+}
+
+/** Etapa 4: trabalhar o plenário de uma ação parada (pedido de vista ou julgamento marcado): vale no julgamento. */
+export function workPlenaryNow(prev: GameState, caseId: string, justices: string[]): { state: GameState; leaked: string[]; headlines: Headline[] } {
+  const err = workBlockedReason(prev, caseId, justices)
+  if (err) throw new Error(err)
+  const s = structuredClone(prev)
+  const ctx = openCtx(s)
+  const h0 = ctx.headlines.length
+  const w = workPlenary(s, caseId, justices, ctx.rng, ctx.headlines)
+  rivalOf(ctx).push(...w.rival)
+  ctx.taken.push(`Trabalhou o plenário do Supremo (${justices.length} ${justices.length === 1 ? 'audiência' : 'audiências'})`)
+  closeCtx(ctx)
+  return { state: s, leaked: w.leaked, headlines: ctx.headlines.slice(h0) }
+}
+
+/** Motivo pelo qual não dá para revogar a medida que está no Supremo, ou null. */
+export function withdrawBlockedReason(s: GameState, caseId: string): string | null {
+  const c = s.supremo.cases.find((x) => x.id === caseId)
+  if (!c) return 'A ação não está mais aberta.'
+  if (c.kind === 'projeto') return 'É um projeto no Congresso: basta não pautar.'
+  if (!inForceNow(s, c.bill)) return 'A medida não está em vigor.'
+  return null
+}
+
+/**
+ * Etapa 4: recuar antes do julgamento (por exemplo, durante a vista). A medida é revogada e a ação perde o objeto;
+ * sem custo com a corte, mas quem ganhava perde. Se a liminar já tinha parado o dinheiro, nada a desfazer.
+ */
+export function withdrawMeasure(prev: GameState, caseId: string): GameState {
+  const err = withdrawBlockedReason(prev, caseId)
+  if (err) throw new Error(err)
+  const s = structuredClone(prev)
+  const ctx = openCtx(s)
+  const c = s.supremo.cases.find((x) => x.id === caseId)!
+  const bill = BILL_BY_ID[c.bill]
+  const w = s.supremo.watch.find((x) => x.bill === c.bill)
+  if (!c.undone) ctx.conf.v += applyEffects(ctx.e, ctx.impulses, undoEffects(bill, w?.scale), `Revogada: ${bill.name}`, 1, -1)
+  for (const x of struckImpulses(bill, w?.scale)) ctx.impulses[x.group].push({ label: x.label.replace('Supremo derruba', 'Governo revoga'), value: x.value })
+  const cg = s.congress
+  cg.laws = cg.laws.filter((x) => x !== c.bill)
+  cg.pending = cg.pending.filter((x) => x.id !== c.bill)
+  cg.senate.pending = cg.senate.pending.filter((x) => x.id !== c.bill)
+  s.supremo.cases = s.supremo.cases.filter((x) => x !== c)
+  s.supremo.watch = s.supremo.watch.filter((x) => x.bill !== c.bill)
+  s.eventQueue = s.eventQueue.filter((x) => !(x.id === 'stfLiminar' && x.origin?.bill === c.bill))
+  for (const j of s.supremo.justices) j.relation = Math.min(100, j.relation + SUPREMO.recuar.ministers)
+  ctx.taken.push(`Revogou a medida que estava no Supremo: ${bill.name}`)
+  ctx.headlines.push({ text: `Governo recua e revoga ${lowerFirst(bill.name)} antes de o Supremo julgar`, tone: 'neutral' })
+  addBio(s, s.presidentName, `Recuou e revogou “${bill.name}” antes do julgamento no Supremo.`)
+  addChronicle(s, `Governo ${s.presidentName} revoga ${lowerFirst(bill.name)} antes do julgamento no Supremo`, 'neutral')
+  closeCtx(ctx)
+  return s
 }
 
 const rivalOf = (ctx: RoundCtx): Cause[] => (ctx.round.rival ??= [])

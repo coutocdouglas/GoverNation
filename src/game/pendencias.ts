@@ -17,6 +17,7 @@ import { TERM_MONTHS } from './game'
 import { baseMembers, fidelityOf } from './base'
 import { BASE, ESFRIA } from './data/base'
 import type { GameState } from './types'
+import { deAuthor, justiceName } from './supremo'
 
 export type Urgency = 'red' | 'yellow' | 'green'
 export type PendingTarget = 'evento' | 'camara' | 'senado' | 'supremo' | 'promessas' | 'cobrancas'
@@ -90,9 +91,14 @@ export function pendencias(s: GameState): Pendencia[] {
   }
 
   // Liminar segurando uma medida.
-  for (const k of s.supremo.cases.filter((x) => x.suspended)) {
+  for (const k of s.supremo.cases.filter((x) => x.suspended && !x.vista)) {
     const name = BILL_BY_ID[k.bill]?.name ?? k.bill
-    out.push({ id: `lim-${k.id}`, icon: '🚫', target: 'supremo', left: Math.max(0, k.judgeAt - now), title: k.kind === 'projeto' ? `Projeto travado no Supremo: ${name}` : `Liminar suspende: ${name}`, detail: `Ação do ${PARTY_BY_ID[k.party].sigla}; o plenário julga em breve.`, urgency: 'yellow', weight: 38 })
+    out.push({ id: `lim-${k.id}`, icon: '🚫', target: 'supremo', left: Math.max(0, k.judgeAt - now), title: k.kind === 'projeto' ? `Projeto travado no Supremo: ${name}` : `Liminar suspende: ${name}`, detail: `Ação ${deAuthor(k)}; o plenário julga em breve.`, urgency: 'yellow', weight: 38 })
+  }
+  // Etapa 4: julgamento parado por pedido de vista (dá para trabalhar o plenário ou recuar até voltar).
+  for (const k of s.supremo.cases.filter((x) => x.vista)) {
+    const name = BILL_BY_ID[k.bill]?.name ?? k.bill
+    out.push({ id: `vista-${k.id}`, icon: '⏸️', target: 'supremo', left: Math.max(0, k.judgeAt - now), title: `Vista no Supremo: ${name}`, detail: `${justiceName(k.vista!.justice)} pediu vista${k.suspended && k.kind !== 'projeto' ? '; a medida segue suspensa' : ''}. Até voltar, dá para trabalhar o plenário ou recuar.`, urgency: k.judgeAt - now <= 1 ? 'red' : 'yellow', weight: 39 })
   }
 
   // Promessas a partidos (pauta, espaço) com prazo.

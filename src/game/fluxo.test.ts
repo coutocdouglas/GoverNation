@@ -3,7 +3,7 @@ import { advanceMonth, newGame } from './game'
 import { BILL_BY_ID } from './data/bills'
 import { FLUXO } from './data/fluxo'
 import { approvalPreview, notasFicha, primaryPreview, reactionsFor, resumoExecutivo } from './fluxo'
-import { peekRound, sendMeasure } from './rodada'
+import { peekRound, plenaryToday, sendMeasure } from './rodada'
 import { courtChanceNow, fileChanceOf, legalRiskScore } from './supremo'
 import { migrate } from './save'
 import type { GameState } from './types'
@@ -25,14 +25,23 @@ describe('Etapa 2B: o Supremo no mesmo dia', () => {
   })
 
   it('decreto de risco alto: a ação, o relator e o plenário acontecem na hora; sem ação, a medida ganha folga', () => {
-    let filed = 0, struck = 0, spared = 0
+    let filed = 0, struck = 0, spared = 0, vista = 0
     for (let seed = 1; seed <= 40; seed++) {
       const s = feb(seed)
       s.rival.strength = 90
-      const r = sendMeasure(s, 'agenciaCiber')
-      const c = r.court.find((x) => x.bill === 'agenciaCiber')!
-      expect(c).toBeTruthy()
-      if (c.filed) {
+      const sent = sendMeasure(s, 'agenciaCiber')
+      const c0 = sent.court.find((x) => x.bill === 'agenciaCiber')!
+      expect(c0).toBeTruthy()
+      if (c0.filed) {
+        // Etapa 4: a ação chega com autor e fundamento e o plenário espera o governo (aqui, aguardar).
+        expect(c0.pending).toBe(true)
+        expect(c0.author).toBeTruthy()
+        expect(c0.fundamento).toBeTruthy()
+        const p = plenaryToday(sent.state, c0.caseId!)
+        if (p.vista) { vista++; continue }
+        const r = { state: p.state }
+        const c = peekRound(p.state)!.court!.find((x) => x.caseId === c0.caseId)!
+        expect(c.pending).toBe(false)
         filed++
         const ruling = r.state.supremo.rulings.find((x) => x.id === c.ruling)!
         expect(ruling.votes).toHaveLength(r.state.supremo.justices.length)
@@ -45,21 +54,24 @@ describe('Etapa 2B: o Supremo no mesmo dia', () => {
         } else expect(r.state.congress.laws).toContain('agenciaCiber')
       } else {
         spared++
-        const w = r.state.supremo.watch.find((x) => x.bill === 'agenciaCiber')!
+        const w = sent.state.supremo.watch.find((x) => x.bill === 'agenciaCiber')!
         expect(w.grace).toBeGreaterThan(w.since)
       }
     }
     expect(filed).toBeGreaterThan(10)
     expect(spared).toBeGreaterThan(0)
     expect(struck).toBeGreaterThan(0)
+    expect(vista).toBeLessThan(filed)
   })
 
   it('medida derrubada no dia: o fechamento do mês não a aplica de novo e a oposição ganha força', () => {
     for (let seed = 1; seed <= 60; seed++) {
       const s = feb(seed)
       s.rival.strength = 90
-      const r = sendMeasure(s, 'agenciaCiber')
-      if (!r.court[0]?.struck) continue
+      const sent = sendMeasure(s, 'agenciaCiber')
+      if (!sent.court[0]?.pending) continue
+      const r = plenaryToday(sent.state, sent.court[0].caseId!)
+      if (!r.struck) continue
       const closed = advanceMonth(r.state, [])
       expect(closed.congress.laws).not.toContain('agenciaCiber')
       expect(closed.event?.id ?? closed.eventQueue[0]?.id).toBeDefined()
@@ -133,7 +145,7 @@ describe('Etapa 2B: save', () => {
     const old = feb() as unknown as { saveVersion: number }
     old.saveVersion = 16
     const m = migrate(old)!
-    expect(m.saveVersion).toBe(20)
+    expect(m.saveVersion).toBe(21)
   })
 })
 

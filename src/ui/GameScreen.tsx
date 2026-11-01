@@ -10,7 +10,7 @@ import { PARTY_BY_ID } from '../game/data/parties'
 import { ACTION_BY_ID, ACTIONS, ACTIONS_PER_MONTH, blockedReason, effectMultiplier } from '../game/actions'
 import { GROUPS, GROUP_BY_ID } from '../game/data/groups'
 import { advanceMonth, isCopomMonth, monthLabel, TERM_MONTHS, type MonthPlan } from '../game/game'
-import { articulate, articulateBlockedReason, gavetaReason, ministryNow, peekRound, queueHouse, sendBlockedReason, sendMeasure, voteNow, voteNowBlockedReason, type FloorOptions } from '../game/rodada'
+import { articulate, articulateBlockedReason, gavetaReason, ministryNow, peekRound, plenaryToday, queueHouse, sendBlockedReason, sendMeasure, voteNow, voteNowBlockedReason, type FloorOptions } from '../game/rodada'
 import { Art } from './Art'
 import type { MinistryChange } from '../game/camara'
 import { VoteAnimation } from './VoteAnimation'
@@ -43,6 +43,7 @@ import { MinistriosView, SenadoView } from './GovTabs'
 import { ministriesInTrouble } from '../game/ministerios'
 import { absMonth } from '../game/memory'
 import { NOMINEE_BY_ID, SUPREMO } from '../game/data/supremo'
+import { justiceName } from '../game/supremo'
 import './painel.css'
 
 type Detail = { kind: 'indicator'; key: IndicatorKey } | { kind: 'group'; id: GroupId } | null
@@ -328,7 +329,22 @@ export function GameScreen({ state, onChange, onExit }: {
         const rest = post.slice(1)
         const advance = () => setPost(rest)
         if (head.kind === 'court') {
-          return <CourtSheet key={`court-${head.entry.bill}-${post.length}`} entry={head.entry} chain={head.chain} onNext={advance} nextLabel={head.entry.filed ? '⚖️ Ver o plenário votar →' : rest.length ? 'Continuar →' : 'Fechar'} />
+          const onPlenary = (justices: string[]) => {
+            try {
+              const r = plenaryToday(state, head.entry.caseId!, justices)
+              onChange(r.state)
+              if (r.leaked.length) toast(`🔴 Vazou: a imprensa soube da audiência com ${r.leaked.map((j) => justiceName(j)).join(' e ')}.`)
+              else if (justices.length) toast(`🤝 Audiência${justices.length > 1 ? 's' : ''} sem vazamento.`)
+              const entry = peekRound(r.state)?.court?.find((x) => x.caseId === head.entry.caseId) ?? head.entry
+              const next: Post[] = r.ruling ? [{ kind: 'ruling', id: r.ruling, chain: head.chain }] : [{ kind: 'court', entry, chain: head.chain }]
+              setPost([...next, ...(r.struck ? rest.filter((x) => !(x.kind === 'reaction' && x.bill === head.entry.bill)) : rest)])
+            } catch (e) {
+              toast(`✋ ${(e as Error).message}`)
+              advance()
+            }
+          }
+          return <CourtSheet key={`court-${head.entry.bill}-${head.entry.pending ? 'p' : 'd'}-${post.length}`} state={state} entry={head.entry} chain={head.chain} onNext={advance} onPlenary={head.entry.pending ? onPlenary : undefined}
+            nextLabel={head.entry.filed && head.entry.ruling && !head.entry.vista ? '⚖️ Ver o plenário votar →' : rest.length ? 'Continuar →' : 'Fechar'} />
         }
         if (head.kind === 'ruling') {
           const r = state.supremo.rulings.find((x) => x.id === head.id)
@@ -408,7 +424,7 @@ export function GameScreen({ state, onChange, onExit }: {
             </button>
           </div>
           {govTab === 'supremo' ? (
-            <SupremoView state={state} nominee={nominee} onNominee={(id) => { setNominee(id); if (id) toast(`📨 ${NOMINEE_BY_ID[id].name} vai à sabatina no Senado ao encerrar o mês.`) }} />
+            <SupremoView state={state} onState={onChange} onToast={toast} nominee={nominee} onNominee={(id) => { setNominee(id); if (id) toast(`📨 ${NOMINEE_BY_ID[id].name} vai à sabatina no Senado ao encerrar o mês.`) }} />
           ) : govTab === 'senado' ? (
             <SenadoView state={state} articulations={peekRound(state)?.articulations ?? []} onToggle={toggleArticulation} onNegotiate={setVoteSheet} deals={deals} plan={plan} onState={onChange} onToast={toast} />
           ) : govTab === 'ministerios' ? (

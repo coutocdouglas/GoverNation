@@ -81,7 +81,7 @@ describe('relator e parecer', () => {
 
 describe('comissões, presidente da Câmara e pauta', () => {
   it('comissão hostil engaveta uma vez; urgência pula a comissão', () => {
-    const s = edit(feb('fpt'), (x) => { x.congress.parties.ucd.relation = 0 })
+    const s = edit(feb('fpt'), (x) => { x.congress.parties.ucd.relation = 0; x.supremo.justices = [] })
     const held = advanceMonth(s, [], { bill: 'taxarDividendos' })
     expect(held.lastReport!.votes).toHaveLength(0)
     expect(held.lastReport!.headlines.some((h) => h.text.includes('engaveta'))).toBe(true)
@@ -216,7 +216,7 @@ describe('save e mandato inteiro', () => {
     delete old.congress.bombLog
     old.saveVersion = 7
     const m = migrate(JSON.parse(JSON.stringify(old)))!
-    expect(m.saveVersion).toBe(20)
+    expect(m.saveVersion).toBe(21)
     expect(m.cabinet).toEqual({})
     expect(m.congress.speaker.relation).toBeGreaterThan(0)
     expect(() => advanceMonth(m, [])).not.toThrow()

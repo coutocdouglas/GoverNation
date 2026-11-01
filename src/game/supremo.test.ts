@@ -23,7 +23,7 @@ const caseNow = (s: GameState, id: string) => {
   s.congress.laws.push(id)
   noteInForce(s, id, s.presidentName)
   const now = absMonth(s)
-  s.supremo.cases.push({ id: `t-${id}`, bill: id, party: 'pvs', relator: s.supremo.justices[0].id, filedAt: now - 3, judgeAt: now })
+  s.supremo.cases.push({ id: `t-${id}`, bill: id, party: 'pvs', relator: s.supremo.justices[0].id, filedAt: now - 3, judgeAt: now, hadVista: true })
   return s
 }
 
@@ -37,7 +37,7 @@ describe('Supremo (etapa 4C2)', () => {
   it('11 ministros fictícios no elenco, com doutrina, e indicáveis com retrato', () => {
     const s = newGame('T', 'normal', 1, 'mdn')
     expect(s.supremo.justices).toHaveLength(SUPREMO.seats)
-    expect(new Set(JUSTICES.map((j) => j.doctrine))).toEqual(new Set(['garantista', 'moderado', 'conservador']))
+    expect(new Set(JUSTICES.map((j) => j.doctrine))).toEqual(new Set(['garantista', 'conservador', 'fiscalista', 'formalista', 'federalista']))
     for (const p of [...JUSTICES, ...NOMINEES]) {
       const m = castMember(p.name)
       expect(m, p.name).toBeDefined()
@@ -207,7 +207,7 @@ describe('Supremo (etapa 4C2)', () => {
     delete raw.supremo
     raw.saveVersion = 10
     const m = migrate(raw)!
-    expect(m.saveVersion).toBe(20)
+    expect(m.saveVersion).toBe(21)
     expect(m.supremo.justices).toHaveLength(11)
     expect(m.supremo.cases).toEqual([])
     expect(m.supremo.watch).toEqual([])

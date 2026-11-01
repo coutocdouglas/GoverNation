@@ -12,7 +12,7 @@ import { monthKind, statementBlockedReason, statementsFor, streetBlockedReason, 
 import type { ActionId, GameState } from '../src/game/types'
 
 /** Responde ao fato do mês com o decreto mais barato da área (etapa 3A). */
-const respond = (s: GameState): MonthPlan => {
+export const respond = (s: GameState): MonthPlan => {
   const ev = s.event ? EVENT_BY_ID[s.event.id] : null
   if (!ev || ev.kind === 'bom') return {}
   const cost = (b: (typeof BILLS)[number]) => (b.effects.spending ?? 0) - (b.effects.revenue ?? 0) + (b.effects.temp ? b.effects.temp.amount * b.effects.temp.months / 12 : 0)

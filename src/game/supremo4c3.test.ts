@@ -30,7 +30,7 @@ const suspendedNow = (s: GameState, id: string, months = 4) => {
   s.congress.laws.push(id)
   noteInForce(s, id, s.presidentName)
   const now = absMonth(s)
-  s.supremo.cases.push({ id: `t-${id}`, bill: id, party: 'pvs', relator: s.supremo.justices[0].id, filedAt: now, judgeAt: now + months, suspended: true })
+  s.supremo.cases.push({ id: `t-${id}`, bill: id, party: 'pvs', relator: s.supremo.justices[0].id, filedAt: now, judgeAt: now + months, suspended: true, undone: true, hadVista: true })
   return s
 }
 
@@ -76,7 +76,7 @@ describe('Etapa 4C3: risco jurídico por regra', () => {
 describe('Etapa 4C3: liminar', () => {
   it('a liminar suspende a medida na hora, desfaz o gasto e vira fato do mês', () => {
     let found = false
-    for (let seed = 1; seed <= 60 && !found; seed++) {
+    for (let seed = 1; seed <= 300 && !found; seed++) {
       const s = mood(feb(seed, 'pol'), 5)
       s.rival.strength = 90
       s.congress.laws.push('planoSafra')
@@ -279,7 +279,7 @@ describe('Etapa 4C3: save', () => {
     delete raw.supremo.consultas
     delete raw.supremo.adjusted
     const m = migrate(raw)!
-    expect(m.saveVersion).toBe(20)
+    expect(m.saveVersion).toBe(21)
     expect(m.supremo.consultas).toEqual([])
     expect(m.supremo.adjusted).toEqual({})
     expect(m.ministries.seguranca.wear).toBe(MINISTERIOS.start + MINISTERIOS.struck)

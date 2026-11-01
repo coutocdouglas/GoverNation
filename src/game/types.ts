@@ -140,7 +140,7 @@ export interface Meanwhile {
 import type { ReputationState } from './reputacao'
 
 export interface GameState {
-  saveVersion: 20
+  saveVersion: 21
   /** Mês atual, de 0 (janeiro do 1º ano) a 47. Em 48 o mandato acabou. */
   month: number
   presidentName: string
@@ -262,6 +262,17 @@ export interface CourtNow {
   struck?: boolean
   reason?: string
   risk?: 'baixo' | 'medio' | 'alto'
+  // ─── Etapa 4 (v0.22) ───
+  /** A ação foi aberta e o plenário espera o governo (trabalhar o plenário ou aguardar). */
+  pending?: boolean
+  /** Id da ação (em supremo.cases) enquanto espera. */
+  caseId?: string
+  author?: CourtAuthor
+  tipo?: 'adi' | 'adpf'
+  fundamento?: string
+  prevencao?: boolean
+  /** O plenário parou: pedido de vista (quem e até quando). */
+  vista?: { justice: string; until: number }
 }
 
 /** Etapa 2B: uma reação prevista ao anúncio de uma medida. */
@@ -322,6 +333,31 @@ export interface CourtCase {
   reason?: string
   /** Risco usado no julgamento (projeto contestado por jabuti ou cláusula pétrea julga como médio, no mínimo). */
   risk?: 'baixo' | 'medio' | 'alto'
+  // ─── Etapa 4 (v0.22) ───
+  /** Quem assina a ação: um partido (sem isso) ou uma entidade, a Procuradoria ou o governo de uma UF. */
+  author?: CourtAuthor
+  /** Ação direta (adi) ou arguição de descumprimento (adpf). */
+  tipo?: 'adi' | 'adpf'
+  fundamento?: string
+  /** O relator recebeu por prevenção (já relatou matéria igual no mandato). */
+  prevencao?: boolean
+  /** Julgamento parado por pedido de vista: quem pediu e até quando (mês absoluto, igual a judgeAt). */
+  vista?: { justice: string; until: number }
+  /** Já houve um pedido de vista (só um por ação). */
+  hadVista?: boolean
+  /** Audiências do governo com ministros (trabalhar o plenário): quanto puxou o voto de cada um. */
+  pressure?: { justice: string; shift: number; leaked?: boolean }[]
+  /** Rodada em que o governo trabalhou o plenário pela última vez (uma vez por rodada). */
+  workedAt?: number
+  /** Os efeitos em dinheiro foram mesmo desfeitos pela liminar (para não desfazer ou devolver duas vezes). */
+  undone?: boolean
+}
+
+/** Etapa 4: quem assina a ação no Supremo. */
+export interface CourtAuthor {
+  kind: 'partido' | 'entidade' | 'pgr' | 'estado'
+  /** Id da entidade (AUTORES) ou sigla da UF. */
+  id?: string
 }
 
 /** Etapa 4C3: consulta do governo ao Supremo antes de enviar uma medida. Meses absolutos. */
@@ -349,6 +385,17 @@ export interface Ruling {
   reason: string
   /** Etapa 4C3: julgamento de um projeto ainda no Congresso (derrubado = arquivado). */
   project?: boolean
+  // ─── Etapa 4 (v0.22): o acórdão ───
+  author?: CourtAuthor
+  tipo?: 'adi' | 'adpf'
+  fundamento?: string
+  prevencao?: boolean
+  /** Por que cada ministro votou assim (as maiores parcelas). */
+  why?: Record<string, Cause[]>
+  /** Quem pediu vista antes deste julgamento. */
+  vistaBy?: string
+  /** O governo trabalhou o plenário (ministros que receberam audiência; vazou ou não). */
+  worked?: { justice: string; leaked?: boolean }[]
 }
 
 /** Medida em vigor que ainda pode ser contestada (risco médio ou alto, dentro da janela). */
@@ -375,6 +422,8 @@ export interface SupremoState {
   consultas: Consulta[]
   /** Etapa 4C3: risco jurídico rebaixado pela CCJ (emenda de adequação). */
   adjusted: Partial<Record<BillId, 'baixo' | 'medio' | 'alto'>>
+  /** Etapa 4: prevenção. Quem relatou cada fundamento neste mandato recebe a próxima ação igual. */
+  prevencao?: Record<string, { justice: string; term: number }>
 }
 
 /** Pesquisa de intenção de voto do mês (soma 100). */

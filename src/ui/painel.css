@@ -815,3 +815,25 @@
 .pn-senvotes > div.up { border-left-color: #2fd07a; } .pn-senvotes > div.dn { border-left-color: #ff6b6b; }
 .pn-senvotes b { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pn-senvotes .mono { color: var(--pn-mut); font-size: 11.5px; }
+
+/* Etapa 4 (v0.22): Supremo profundo */
+.pn-draw { display: flex; flex-wrap: wrap; gap: 3px; }
+.pn-draw span { opacity: .35; transition: opacity .08s, transform .08s; border-radius: 50%; }
+.pn-draw span.on { opacity: 1; transform: scale(1.18); box-shadow: 0 0 0 2px var(--pn-gold); }
+.pn-court__rel span { font-size: 12px; color: var(--pn-mut); }
+.pn-court__rel span b { color: var(--pn-txt, #e8eef6); font-size: 13px; }
+.pn-work { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 6px; margin-top: 6px; }
+.pn-work__j { display: flex; align-items: center; gap: 8px; padding: 6px 8px; background: #0f1620; border: 1px solid #1f2b3a; border-radius: 10px; color: inherit; cursor: pointer; text-align: left; }
+.pn-work__j span { display: flex; flex-direction: column; font-size: 12px; }
+.pn-work__j small { color: var(--pn-mut); font-size: 11px; }
+.pn-work__j.sel { border-color: var(--pn-gold); background: #1b1a10; }
+.pn-work__j:disabled { opacity: .45; cursor: default; }
+.pn-doctrines { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 8px 0 2px; font-size: 12px; color: var(--pn-mut); }
+.pn-doctrines span { cursor: help; }
+.pn-acordao { text-align: left; display: flex; flex-direction: column; gap: 6px; margin: 8px 0; padding: 10px; background: #0b1118; border: 1px solid #1d2836; border-radius: 10px; max-height: 300px; overflow: auto; }
+.pn-acordao__v { display: flex; gap: 8px; align-items: flex-start; animation: pn-in .3s ease both; }
+.pn-acordao__v small { color: var(--pn-mut); font-size: 11px; }
+.pn-acordao__v.n small b { color: #ff5a5f; } .pn-acordao__v.y small b { color: #2fd07a; }
+.pn-acordao__v p { margin: 2px 0; font-size: 13px; font-style: italic; }
+.pn-acordao__why { display: flex; flex-wrap: wrap; gap: 4px; }
+.pn-acordao__why span { font-size: 10.5px; padding: 1px 6px; border-radius: 8px; background: #152030; }
