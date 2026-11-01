@@ -217,6 +217,19 @@ describe('Etapa 2C: a base como contrato e o pacto', () => {
     s.congress.parties.pvs.relation = 5
     expect(pactBlocked(s, 'pvs', 'emendas')).toMatch(/não topa/)
   })
+
+  it('pacto mais exigente (v0.21): aprovação baixa e pactos em vigor fazem o partido recusar', () => {
+    const s = feb()
+    s.congress.parties.psn.relation = 50
+    for (const g of Object.values(s.groups)) g.approval = 60
+    expect(sondar(s, 'psn', flagshipOf).willing).toBe(true)
+    for (const g of Object.values(s.groups)) g.approval = 30
+    expect(sondar(s, 'psn', flagshipOf).willing).toBe(false)
+    expect(sondar(s, 'psn', flagshipOf).why).toMatch(/aprovação 30%/)
+    for (const g of Object.values(s.groups)) g.approval = 60
+    s.congress.pacts = [{ party: 'pra', since: s.month, until: s.month + 6, kind: 'emendas' }, { party: 'ucd', since: s.month, until: s.month + 6, kind: 'emendas' }]
+    expect(sondar(s, 'psn', flagshipOf).willing).toBe(false)
+  })
 })
 
 describe('Etapa 2C: registro de votos (matéria-prima da eleição)', () => {

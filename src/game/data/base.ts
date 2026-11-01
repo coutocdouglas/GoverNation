@@ -140,9 +140,15 @@ export const PACTO = {
   emendasPerSeat: 0.0004,
   /** Relatoria: pautar o projeto do partido em até N meses. */
   relatoriaMonths: 3,
-  /** Topa o pacto quem tiver relação + fisiologismo × peso acima do limite. */
-  willingRelation: 50,
-  willingFis: 30,
+  /**
+   * Topa o pacto quem tiver relação + fisiologismo × peso + (aprovação − 50) × peso − pactos em vigor × peso acima do limite.
+   * Mais exigente desde a v0.21 (decisão de 01/11): antes, relação + 30 × fisiologismo ≥ 50 e quase todo partido topava.
+   */
+  willingRelation: 62,
+  willingFis: 25,
+  willingApproval: 0.6,
+  /** Cada pacto já em vigor deixa o próximo mais difícil ("a base já está cheia"). */
+  willingPerActive: 8,
   /** Relação ao assinar e ao terminar bem. */
   signGain: 6,
   endGain: 4,

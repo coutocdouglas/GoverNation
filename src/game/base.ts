@@ -18,6 +18,7 @@ import { CAMARA, NOMINEE_BY_PARTY } from './data/camara'
 import type { AreaId } from './data/ministers'
 import { affinity, clamp } from './ideology'
 import { absMonth, addBio, addChronicle } from './memory'
+import { overallApproval } from './groups'
 import { leaderOf } from './partidos'
 import { noteRecord } from './reputacao'
 import type { BaseCheck, BillId, GameState, GroupId, Headline, Pact, PartyId, PartyVote, VoteRecord } from './types'
@@ -226,11 +227,14 @@ export const pactEmendas = (party: PartyId) => PACTO.emendasPerSeat * PARTY_BY_I
 export function sondar(s: GameState, party: PartyId, flagship: (s: GameState, p: PartyId) => BillId | null): Sondagem {
   const p = PARTY_BY_ID[party]
   const rel = s.congress.parties[party].relation
-  const score = rel + p.fisiologismo * PACTO.willingFis
+  const appr = overallApproval(s.groups)
+  const others = activePacts(s).filter((x) => x.party !== party).length
+  const score = rel + p.fisiologismo * PACTO.willingFis + (appr - 50) * PACTO.willingApproval - others * PACTO.willingPerActive
   const willing = score >= PACTO.willingRelation
+  const falta = Math.max(1, Math.ceil(PACTO.willingRelation - score))
   return {
     party, pastas: NOMINEE_BY_PARTY[party] ? PASTA_QUER[party] ?? [] : [], linha: LINHA_VERMELHA[party], projeto: flagship(s, party),
-    willing, why: willing ? `Topa: relação ${Math.round(rel)}${p.fisiologismo >= 0.5 ? ' e gosta de estar perto do governo' : ''}.` : `Ainda não topa: relação ${Math.round(rel)}. Converse antes ou espere a aprovação subir.`,
+    willing, why: willing ? `Topa: relação ${Math.round(rel)}${p.fisiologismo >= 0.5 ? ' e gosta de estar perto do governo' : ''}.` : `Ainda não topa: relação ${Math.round(rel)}, aprovação ${Math.round(appr)}%${others ? `, ${others} pacto${others > 1 ? 's' : ''} em vigor` : ''}. Faltam uns ${falta} pontos de relação. Converse antes ou espere a aprovação subir.`,
     emendasMes: (pactEmendas(party) / 100) * GDP_BILLIONS / 12,
   }
 }

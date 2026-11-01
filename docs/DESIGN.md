@@ -879,6 +879,43 @@ Exposição a escândalo visível de 0 a 100 (item 20), CPIs (35), vice-presiden
 
 **Caixa de ideias desta etapa:** a fala de cada pedido escrita pela IA (hoje são frases prontas por tipo; fica para a Etapa 9, polimento); "a pasta está em jogo" virar um fato do mês com escolha (renegociar ou tirar a pasta) na Etapa 6 (governo); diretoria de estatal alimentando os esquemas na Etapa 5; palanque e registro de votos usados nas campanhas e debates na Etapa 8; reaproveitar o cardápio nas bancadas estaduais do Senado na Etapa 3.
 
+### 27.9 Etapa 3: o Senado (plano de 01/11/2026, aguardando o Douglas)
+
+**Complexidade: alta. Modelo: Opus nas regras (voto pelo estado, indecisos com preço, impeachment) e no balanceamento; Sonnet nas telas e nos dados dos 27 estados.**
+
+**Ponto de partida (v0.20):** 81 senadores sem nome e sem estado, votando com a mesma fórmula da Câmara (pesos próprios); presidente do Senado (Hermínia Valença) que segura projetos; o cardápio da 2C já converte votos nas duas casas; sabatina só para o Supremo; o Senado é uma aba dentro de Governo.
+
+**0 · Feito primeiro: pacto mais exigente (decisão de 01/11).** Topa o pacto quem tiver relação + 25 × fisiologismo + 0,6 × (aprovação − 50) − 8 × pactos já em vigor ≥ 62 (antes: relação + 30 × fisiologismo ≥ 50). A sondagem diz por que não topa (relação, aprovação, pactos em vigor e quantos pontos faltam). Simulador (`npm run sim2c`, 30 sementes): pactos por mandato do negociador 24 → 11 (MDN), 13 (FPT) e 16 (POL); leis e nota no mesmo nível (MDN 5,5 → 6,6 leis; POL 5,3 → 5,2).
+
+**Bloco A · Os 27 estados**
+1. **Dados dos estados** (`data/estados.ts`): as 27 unidades da federação com sigla, região e o grupo social que mais pesa nelas (agro, trabalhadores, classe média...). Cada estado tem **3 senadores** (fictícios, com nome, partido e posição própria) e **os deputados proporcionais à população** (o deputado ganha `uf`; nesta etapa só serve para as fichas e para a Etapa 7).
+2. **Relação do estado com o governo** (−50 a +50, começa pela distância ideológica entre o presidente e a bancada do estado, mais ruído): sobe com obra entregue, cargo e lei que agrade o grupo do estado; cai com promessa de obra não paga, lei que machuque o grupo do estado e crise regional ignorada (ex.: enchente, seca).
+3. **O que cada bancada estadual quer** (renovado a cada 6 meses): **obra** (R$ bi, entra no primário por 12 meses, risco de escândalo), **cargo regional** (superintendência, sem dinheiro, com escândalo), **não negocia** (bancada ideológica, só muda pela relação) ou **com você** (já é aliada).
+
+**Bloco B · Senador vota pelo estado**
+4. **Na fórmula de voto do senador entra a relação do estado** (peso novo `wState` em `data/senado.ts`), e a orientação do partido pesa menos que na Câmara. Assim um senador de partido da base pode votar contra se o estado está de mal com o governo, e um de oposição pode votar a favor se o estado ganhou a obra. Meta de balanceamento: o Senado continua barrando mais ou menos o mesmo de hoje quando o jogador não faz nada com os estados.
+5. **Indecisos com preço:** na janela de votação do Senado, os senadores perto da linha (que a previsão dá entre 35% e 65%) aparecem pelo nome, com o estado e o que pedem (obra, cargo, emenda ou "não tem preço"). Comprar um indeciso vale só para aquela votação e conta como uma das 3 conversas da rodada (ou um limite próprio de 3 indecisos por rodada; ver pergunta 3).
+6. **"Pagar as N obras":** botão na página do Senado que paga de uma vez as obras pedidas por um filtro de estados, com o custo total no primário mostrado antes.
+
+**Bloco C · A página do Senado** (a aba Senado vira uma página própria dentro de Governo)
+7. **Mesa** (presidente, relação, estado da sessão), **"Como o Senado está hoje"** (barra: com você, indecisos, contra) e **"Com você: X de 81"** (quantos deles são de partidos da base).
+8. **Bancadas por estado:** os 27 cartões com a relação, os 3 senadores, o pedido e o botão de atender; filtros **Todas, Obra, Cargo, Não negociam, Com você**.
+9. **Líderes de bancada no Senado:** um por partido (fictício, nome; retrato ver pergunta 2), que é quem aparece no cardápio quando o projeto está no Senado.
+10. **Comissões do Senado:** CCJ e CAE (Assuntos Econômicos). Projeto de risco jurídico alto passa pela CCJ do Senado; projeto com custo alto pela CAE; cada uma pode aprovar, **desidratar** (o texto perde força) ou segurar 1 rodada. Mostradas antes de votar, como a CCJ da Câmara.
+11. **"Meia sessão" perto do recesso** (junho e dezembro): mais ausentes no Senado (5% → 15%) e a presidente só pauta 1 projeto na rodada. Aparece na faixa da rodada.
+
+**Bloco D · Poderes próprios do Senado**
+12. **Sabatinas na página do Senado:** a do Supremo (já existe, 41 votos) passa a mostrar os senadores indecisos e aceita a mesma negociação por estado.
+13. **Impeachment de ministro** (crime de responsabilidade, 54 votos em voto secreto): quando um ministro está muito desgastado (80+) e a exposição a escândalo está alta, a oposição pode pedir o afastamento; vira fato do mês com **Agir** (defender: negociar os votos no Senado) ou **Deixar passar** (o ministro cai, custo de imagem). Demitir antes da votação evita a derrota mas também marca a Ficha.
+
+**Fica fora (Caixa de ideias):** governador puxando a bancada (Etapa 7); mapa do Brasil por estado (Etapa 7); CPI no Senado (Etapa 5); a fala dos senadores escrita pela IA (Etapa 9); Senado emendando e devolvendo o projeto à Câmara (ver pergunta 4).
+
+**Save 19:** `SenateState` ganha `states` (relação e pedido por estado), senadores com `uf` e `name`, deputados com `uf`, líderes de bancada, impeachment em andamento. Migração gera tudo com a semente do save.
+
+**Balanceamento a conferir (simuladores):** sem mexer nos estados, o Senado barra o mesmo de hoje (cerca de 1% a 13% do que a Câmara aprova, conforme o partido); pagar obras vale a pena só para lei difícil (R$ por voto mais caro que no cardápio da Câmara); indecisos não podem virar compra garantida; impeachment de ministro aparece 0 a 2 vezes por mandato para quem deixa ministros desgastados.
+
+**Perguntas ao Douglas:** (1) estados com os nomes reais das 27 UFs ou estados fictícios? (2) retrato para os 81 senadores ou só para os 9 líderes? (3) indecisos gastam as 3 conversas da rodada ou têm limite próprio? (4) quando o Senado muda o texto, ele volta à Câmara (na rodada seguinte) ou não? (5) uma versão só (v0.21) ou duas (3A estados e voto, 3B comissões e poderes próprios)?
+
 ### 27.1 Caixa de ideias por etapa
 - Etapa 1 (revisada ao fechar a 1B): conquistas como selos da Ficha vão para a Etapa 8 (já lista conquistas); nome da medida no telejornal e decreto também com janela de confirmação antes de assinar vão para a Etapa 2 (janela da medida em etapas).
 - Etapa 2 (da 1B): o post de agenda com texto livre escrito pela IA fica para a Etapa 9 (polimento); "precisa de você" (alertas) e cenas de transição, para a Etapa 8.

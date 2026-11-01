@@ -9,13 +9,13 @@
 
 ## Próximo passo
 
-**Etapa 3: Senado** (v0.21). Plano em `docs/DESIGN.md`, seção 27 (tabela) e 27.6 ("O que fica para outras etapas"): página própria, líderes de bancada, indecisos com preço, comissões do Senado, 27 estados com bancadas estaduais (3 senadores e os deputados de cada estado, fictícios e proporcionais; relação, pedido de obra ou cargo, "não negocia", "pagar as N obras"), "senador vota pelo estado", sabatina e impeachment de ministro, "meia sessão" perto do recesso. Antes de programar, escrever o plano da etapa no DESIGN.md (seção nova) e mostrar ao Douglas. Boa base pronta: alas, conversa por tipos, contraoferta, concessões e o **cardápio de pedidos da 2C** podem ser reaproveitados no Senado.
+**Etapa 3: Senado** (v0.21). **Plano escrito em `docs/DESIGN.md`, seção 27.9, aguardando as respostas do Douglas** (estados reais ou fictícios, retratos dos senadores, limite dos indecisos, se o Senado devolve o texto à Câmara, uma versão ou duas). Depois das respostas, programar na ordem dos blocos A a D.
 
-Complexidade: **alta**. Opus para as regras (bancadas estaduais, indecisos com preço) e o balanceamento; Sonnet nas telas e nos dados dos 27 estados.
+Complexidade: **alta**. Opus para as regras (voto pelo estado, indecisos com preço, impeachment de ministro) e o balanceamento; Sonnet nas telas e nos dados dos 27 estados.
 
-Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdouglas/GoverNation. Leia CLAUDE.md, docs/ESTADO.md e docs/DESIGN.md (seções 27, 27.6 e 27.8). Quero fazer a etapa 3."*
+Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdouglas/GoverNation. Leia CLAUDE.md, docs/ESTADO.md e docs/DESIGN.md (seções 27.8 e 27.9). Quero continuar a etapa 3."*
 
-**Decidido (01/11, Douglas): pacto mais exigente.** Hoje o pacto de base sem ministério quase sempre é aceito, e dá para manter 3 o mandato inteiro. Fazer como primeiro passo da Etapa 3, antes do Senado: subir `PACTO.willingRelation` (e, se preciso, pesar a aprovação do governo) em `src/game/data/base.ts`, conferir com `npm run sim2c` (meta: o negociador assinar bem menos que os 24 pactos por mandato de hoje) e registrar em DESIGN.md 27.8. Complexidade baixa; Opus (balanceamento).
+**Feito (01/11, ainda sem versão publicada; sai junto da v0.21): pacto mais exigente.** Topa quem tiver relação + 25 × fisiologismo + 0,6 × (aprovação − 50) − 8 × pactos em vigor ≥ 62 (`PACTO` em `src/game/data/base.ts`). No simulador, o negociador assina 11 a 16 pactos por mandato (antes 24). Detalhes em DESIGN.md 27.9, item 0.
 
 **Sugestão (opcional, 1B):** pedir a um Opus uma revisão final dos números da assessoria (`data/assessoria.ts`: `postScale`, `omissoShare`, `fatigueFactor`, `softenMax`; e `data/rua.ts`). O simulador mostra que ficou equilibrado (DESIGN.md 27.4), mas é a primeira etapa balanceada fora do Opus.
 
@@ -30,7 +30,7 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 **Base técnica**
 - App de Windows (Tauri 2 + React + TypeScript). O instalador é gerado pelo GitHub Actions e o jogo se atualiza sozinho, com atualização assinada.
 - O motor do jogo (`src/game/`) fica separado das telas (`src/ui/`). Os números de balanceamento ficam em `src/game/data/`.
-- 258 testes automáticos. Saves antigos são migrados (versão atual do save: 18).
+- 259 testes automáticos. Saves antigos são migrados (versão atual do save: 18).
 
 **Jogabilidade**
 - Mandato de 48 meses (jan/2027 a dez/2030), com o mês em 4 passos: notícias, fato do mês, decisões e encerrar.
@@ -147,3 +147,4 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 | 31/10/2026 | v0.19.1 | Logos dos partidos (arte do Douglas) no jogo e número na urna; material de campanha guardado em `arte/campanha/` para a Etapa 8 |
 | 01/11/2026 | v0.20.0 | Etapa 2C: acordo nas duas casas, cardápio de pedidos (14 tipos), as ruas, pauta que esfria, base como contrato com fidelidade e "A base nesta votação", pacto sem ministério, registro de votos dos partidos; ruas calibradas no simulador novo (`npm run sim2c`); save 18 |
 | 01/11/2026 | — | Decisão: pacto de base sem ministério mais exigente (ajuste no começo da Etapa 3) |
+| 01/11/2026 | — | Pacto de base mais exigente (aprovação e pactos em vigor pesam; 24 → 11 a 16 pactos por mandato no simulador) e plano da Etapa 3 (Senado) no DESIGN.md 27.9, aguardando as respostas do Douglas |
