@@ -3,17 +3,17 @@
 > **Leia este arquivo primeiro.** Ele diz onde o projeto está e qual é o próximo passo.
 > Atualize-o a cada mudança: seção "Estado atual", "Próximo passo" e uma linha no "Histórico".
 
-**Última atualização:** 01/11/2026 · **Versão publicada:** v0.23.0
+**Última atualização:** 02/11/2026 · **Versão publicada:** v0.23.0 · **Pronta para publicar:** v0.24.0 (Fase A; ainda sem commit)
 
 ---
 
 ## Próximo passo
 
-**Etapa 5: Oposição, escândalos e CPI** (ainda sem plano detalhado; ver `docs/DESIGN.md`, seção 27, e `docs/levantamento-congresso.md`, itens 43 a 46): CPI com 171 assinaturas por 6 meses ("trabalhar as assinaturas" ou "cooperar"), relatório pelas provas, esquemas de corrupção (Controle do Estado, pastas de risco), esquema que estoura e custa bancada na eleição, serviço de inteligência. A Etapa 4 (Supremo profundo) fechou na v0.23: ver 27.13 e 27.14. Primeiro passo: escrever o plano da Etapa 5 no DESIGN.md e aprovar com o Douglas.
+**Publicar a v0.24.0 (Fase A) depois do playtest do Douglas** (portão: uma partida completa, anotando o que ficou confuso, repetitivo ou fácil demais; ver `docs/DESIGN.md` 27.15). Em seguida, **Etapa 5A: Elos e semente de risco** (plano pronto no doc do projeto `plano-de-desenvolvimento.md`, Parte 4; a 5A usa `registrarOrigemRisco`, em `src/game/causas.ts`, para gravar a origem de cada semente). Depois 5B (vazamento, PF e advogado, com o núcleo mínimo da agenda) e 5C (oposição, CPI e inteligência).
 
-Complexidade: **alta**. Opus para o plano e as regras; Sonnet nas telas.
+Complexidade da 5A: **muito alta**. Opus nas regras (Elos, risco oculto, Controle do Estado, três fontes de escândalo); Sonnet nas telas.
 
-Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdouglas/GoverNation. Leia CLAUDE.md, docs/ESTADO.md e docs/DESIGN.md (seção 27). Quero planejar a etapa 5."*
+Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdouglas/GoverNation. Leia CLAUDE.md, docs/ESTADO.md e docs/DESIGN.md (seção 27). Quero fazer a etapa 5A."*
 
 **Sugestão (opcional, 1B):** pedir a um Opus uma revisão final dos números da assessoria (`data/assessoria.ts`: `postScale`, `omissoShare`, `fatigueFactor`, `softenMax`; e `data/rua.ts`). O simulador mostra que ficou equilibrado (DESIGN.md 27.4), mas é a primeira etapa balanceada fora do Opus.
 
@@ -28,7 +28,7 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 **Base técnica**
 - App de Windows (Tauri 2 + React + TypeScript). O instalador é gerado pelo GitHub Actions e o jogo se atualiza sozinho, com atualização assinada.
 - O motor do jogo (`src/game/`) fica separado das telas (`src/ui/`). Os números de balanceamento ficam em `src/game/data/`.
-- 304 testes automáticos. Saves antigos são migrados (versão atual do save: 22).
+- 315 testes automáticos. Saves antigos são migrados (versão atual do save: 23).
 
 **Jogabilidade**
 - Mandato de 48 meses (jan/2027 a dez/2030), com o mês em 4 passos: notícias, fato do mês, decisões e encerrar.
@@ -68,6 +68,7 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 - **Senado por estado (v0.21):** 27 estados (nomes reais) com 3 senadores fictícios cada e os deputados proporcionais; relação de cada bancada estadual com o governo e pedido (obra, cargo, não negocia, com você); senador vota pelo estado; página do Senado com "Como o Senado está hoje", bancadas com filtros, "Pagar as N obras" e 9 líderes de bancada; indecisos com preço na votação (até 3 por rodada); comissões do Senado (CCJ e CAE) que desidratam sem devolver à Câmara; meia sessão em junho e dezembro; impeachment de ministro (54 votos, fato do mês); pacto de base mais exigente. **v0.21.1:** plenário em semicírculo, ficha de cada senador (fama, imagem no estado, votos, acordos), presidente do Senado com opções liberadas pela relação menos a cobrança, falar direto com um senador, valor diferente de cada favor nos estados, cartões dos estados com logos, votações resumidas; post da assessoria fora da página inicial.
 - **Supremo profundo, parte 1 (v0.22):** a ação chega com autor (partido, entidade fictícia, Procuradoria ou governo de um estado), tipo e fundamento; 5 doutrinas (garantista, conservador, fiscalista, formalista, federalista), cada uma pesando um tipo de fundamento; relator por sorteio animado ou por prevenção, e quem tem a doutrina dele tende a segui-lo; **trabalhar o plenário** (até 2 audiências com indecisos, que podem vazar) ou **aguardar o julgamento**; **pedido de vista** (o julgamento para 1 a 3 rodadas; dá para trabalhar de novo ou recuar); acórdão com a frase de cada ministro e o porquê em selos.
 - **Supremo profundo, parte 2 (v0.23):** índice "A seu favor" da Corte (0 a 100), que multiplica liminar, vista e projeto travado; precedente de cada julgamento por 24 meses (a favor protege o fundamento; contra o deixa mais arriscado, e a leitura do gabinete avisa); depois da derrubada, seis saídas com o custo à vista (acatar, nova proposta, criticar, **embargos**, **o ministro da área sai**, **descumprir**); **"O Supremo pede você"**: a cada 2 anos, a cadeira de jurista no tribunal eleitoral, com 4 juristas, rigor e preço (o rigor fica guardado para a eleição).
+- **Fase A (v0.24):** medida barrada por inconstitucionalidade (CCJ ou Supremo) agora marca a reputação e derruba a aprovação como qualquer derrota; parecer do ministro da pasta na medida do mês (um por mês por ministro, com texto de reserva sem IA); botão "Atender" nas pendências de cobrança; sem catálogo nem "Outros caminhos" no fato do mês; plenário do Senado com anel único de relação e filtros; acordo da Câmara rende 35% no Senado; **registro de causas** (`src/game/causas.ts`) por baixo; **texto de reserva da IA** (`src/game/reserva.ts`) com o erro real no gasto medido.
 - **Logos dos partidos (v0.19.1):** arte do Douglas em `public/logos/`, na posse, no Painel, na Câmara, nas lideranças e no cartão da oposição; número na urna de cada partido.
 - **Retratos:** 110 fotos, cada uma usada por uma pessoa só, e 88 retratos ilustrados (111 a 198) feitos pelo Douglas. 97 rostos livres para personagens novos e para o presidente (18 foram para os chefes de ala na v0.18 e 9 para os líderes de bancada do Senado na v0.21). O presidente escolhe o rosto na posse (41 livres) e 15 retratos ficam reservados para Defesa, povos indígenas, campo e tradições.
 
@@ -75,7 +76,7 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 
 **Onde está cada coisa**
 - `CLAUDE.md`: regras do projeto e quando abrir uma conversa nova.
-- `docs/DESIGN.md`: decisões de desenho, seções 1 a 27 (Supremo em 24.2, 24.2.1 e 26; como ficou a 4C3 em 26.8; plano novo por etapas na seção 27, com a 1A em 27.3, a 1B em 27.4, a 2 em 27.5, o plano da 2B e da 2C em 27.6, como ficou a 2B em 27.7 e a 2C em 27.8; plano da Etapa 3 em 27.9, como ficou em 27.10 e os ajustes em 27.11; plano da Etapa 4 em 27.12, como ficou a v0.22 em 27.13 e a v0.23 em 27.14).
+- `docs/DESIGN.md`: decisões de desenho, seções 1 a 27 (Fase A em 27.15; Supremo em 24.2, 24.2.1 e 26; como ficou a 4C3 em 26.8; plano novo por etapas na seção 27, com a 1A em 27.3, a 1B em 27.4, a 2 em 27.5, o plano da 2B e da 2C em 27.6, como ficou a 2B em 27.7 e a 2C em 27.8; plano da Etapa 3 em 27.9, como ficou em 27.10 e os ajustes em 27.11; plano da Etapa 4 em 27.12, como ficou a v0.22 em 27.13 e a v0.23 em 27.14).
 - `docs/levantamento-video-1.md`: o que o jogo de referência tem e nós não (vídeo 1).
 - `docs/levantamento-congresso.md`: o mesmo para o Congresso, a medida do dia e o Supremo (prints de 31/10), com a proposta da Etapa 2B.
 - `CHANGELOG.md`: novidades de cada versão.
@@ -154,3 +155,4 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 | 01/11/2026 | — | Plano da Etapa 4 (Supremo profundo) no DESIGN.md 27.12, aprovado pelo Douglas (5 doutrinas, descumprir entra, TSE agora, duas versões) |
 | 01/11/2026 | v0.22.0 | Etapa 4, blocos A a C: ação com autor (partido, entidade, Procuradoria, estado), tipo e fundamento; 5 doutrinas; relator por sorteio ou prevenção; trabalhar o plenário ou aguardar; pedido de vista; acórdão com frases; correção da MP no Supremo; simulador `npm run sim4`; save 21 |
 | 01/11/2026 | v0.23.0 | Etapa 4, blocos D a F (a etapa fecha): índice "A seu favor" da Corte, precedentes, embargos, o ministro sai, descumprir a decisão, cadeira no tribunal eleitoral ("O Supremo pede você"); `npm run sim4` ampliado; save 22 |
+| 02/11/2026 | v0.24.0 | Fase A: correção da medida barrada por inconstitucionalidade, ajustes pequenos (parecer do ministro na medida do mês, Atender, sem Outros caminhos, anel do Senado, acordo da Câmara rende menos no Senado), registro de causas e texto de reserva da IA; save 23 |

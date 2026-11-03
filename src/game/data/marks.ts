@@ -59,6 +59,8 @@ export const REPUTACAO = {
   eventCooldown: 12,
   /** Medida com popularidade abaixo disto conta como impopular (soma ponderada do efeito nos grupos). */
   impopularBelow: -0.8,
+  /** Medida barrada por inconstitucionalidade (CCJ ou Supremo): mesma queda da derrota em plenário, em todos os grupos. */
+  barradaJuridicaHit: -0.8,
   /** Pontos por gatilho. */
   pts: {
     impopularBase: 12, impopularPer: 6, impopularMax: 30,

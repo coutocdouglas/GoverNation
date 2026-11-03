@@ -9,6 +9,7 @@ import { clamp } from './ideology'
 import { addBio } from './memory'
 import { Rng } from './rng'
 import type { Deputy, EstadoState, GameState, Headline, PartyId, PartyState, SenateState } from './types'
+import { bumpScandal } from './causas'
 
 const gaussOf = (rng: Rng) => () => {
   const u = Math.max(1e-9, rng.next())
@@ -214,7 +215,7 @@ export function attendState(s: GameState, uf: UfId, headlines?: Headline[]): Att
   if (st.ask === 'obra') {
     const c = obraCost(uf)
     s.economy.tempSpending.push({ label: `Obra no ${e.sigla} (bancada do Senado)`, amount: c.pib, monthsLeft: c.months })
-    s.congress.scandal = clamp(s.congress.scandal + ESTADO.obra.scandal, 0, 100)
+    bumpScandal(s, ESTADO.obra.scandal, `Obra para a bancada de ${e.name}`, 'acordo')
     moveState(s, uf, ESTADO.obra.relation)
     st.doneUntil = Math.max(st.askUntil, s.month + ESTADO.askMonths)
     const text = `Governo libera obra em ${e.name} (R$ ${c.total.toFixed(1).replace('.', ',')} bi) e agrada a bancada do estado no Senado`
@@ -222,7 +223,7 @@ export function attendState(s: GameState, uf: UfId, headlines?: Headline[]): Att
     if (lead?.name) addBio(s, lead.name, `Conseguiu do governo ${s.presidentName} uma obra para ${e.name}.`)
     return { money: c.total, scandal: ESTADO.obra.scandal, text }
   }
-  s.congress.scandal = clamp(s.congress.scandal + ESTADO.cargo.scandal, 0, 100)
+  bumpScandal(s, ESTADO.cargo.scandal, `Cargo federal para a bancada de ${e.name}`, 'acordo')
   moveState(s, uf, ESTADO.cargo.relation)
   st.doneUntil = Math.max(st.askUntil, s.month + ESTADO.askMonths)
   const text = `Bancada de ${e.name} indica nome para cargo federal no estado`

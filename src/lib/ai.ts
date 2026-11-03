@@ -142,6 +142,17 @@ function record(model: string, input: number, output: number, failed: boolean, e
 
 export class AiError extends Error {}
 
+/**
+ * Fase A: registra uma falha da IA que não veio da rede (resposta fora do formato, texto vazio).
+ * O jogador não vê isso na tela (o jogo usa o texto de reserva); o motivo real fica no gasto medido, com o modelo ativo.
+ */
+export function noteAiFailure(task: AiTask, detail: string): void {
+  const cfg = getAiConfig()
+  const prov = PROVIDER_BY_ID[cfg.provider]
+  record(`${prov.id}:${cfg.modelsBy[prov.id][task]}`, 0, 0, true, detail)
+  console.warn(`[IA] ${task} (${prov.id}): ${detail}`)
+}
+
 /** Mensagem de erro em português simples, sem nunca repetir a chave. */
 function safeError(status: number | null, key: string, detail = ''): AiError {
   const clean = key ? detail.split(key).join('[chave]') : detail
@@ -190,7 +201,7 @@ export async function callAi(task: AiTask, req: AiRequest, key?: string, provide
     res = await fetch(prov.url, { method: 'POST', signal: ctrl.signal, headers, body: JSON.stringify(body) })
   } catch {
     const err = safeError(null, k)
-    record(usageKey, 0, 0, true, err.message)
+    record(usageKey, 0, 0, true, `sem resposta · ${err.message}`)
     throw err
   } finally {
     clearTimeout(timer)
@@ -202,7 +213,7 @@ export async function callAi(task: AiTask, req: AiRequest, key?: string, provide
       detail = (Array.isArray(j) ? j[0] : j)?.error?.message ?? ''
     } catch { /* corpo sem JSON */ }
     const err = safeError(res.status, k, detail)
-    record(usageKey, 0, 0, true, err.message)
+    record(usageKey, 0, 0, true, `erro ${res.status} · ${err.message}`)
     throw err
   }
   if (anthropic) {

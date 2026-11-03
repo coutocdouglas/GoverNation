@@ -10,6 +10,7 @@ import { addBio } from './memory'
 import { Rng } from './rng'
 import { legalRiskIn } from './supremo'
 import type { BillId, GameState, Headline, MesaSenadoAcao, PartyId, PendingBill, SenatorBuy, SenatorRep } from './types'
+import { bumpScandal } from './causas'
 
 const C = SENADO.comissoes
 const R = SENADO.indeciso
@@ -162,7 +163,7 @@ export function payBuys(s: GameState, billId: BillId, buys: SenatorBuy[], headli
     else {
       const amount = R.emenda
       s.economy.tempSpending.push({ label: `Emenda para ${d.name ?? 'senador'} (${PARTY_BY_ID[d.party].sigla}-${ESTADO_BY_ID[uf].sigla})`, amount, monthsLeft: R.emendaMonths })
-      s.congress.scandal = clamp(s.congress.scandal + 0.5, 0, 100)
+      bumpScandal(s, 0.5, `Emenda para ${d.name ?? 'senador'}`, 'acordo')
       conf -= amount * 40 / 100
     }
     taken.push(`${x.kind === 'obra' ? 'Obra' : x.kind === 'cargo' ? 'Cargo' : 'Emenda'} para ${d.name} (${PARTY_BY_ID[d.party].sigla}-${ESTADO_BY_ID[uf].sigla}) votar “${name}” no Senado`)

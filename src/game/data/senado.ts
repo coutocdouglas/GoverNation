@@ -46,6 +46,8 @@ export const SENADO = {
   spread: 11,
   /** A relação de cada partido no Senado é a da Câmara mais este bônus. */
   relationBonus: 2,
+  /** Fase A: fração do reforço que o acordo da Câmara rende no Senado (o líder do partido na Câmara não amarra o senador, que vota pelo estado). Acordo fechado direto no Senado vale por inteiro. */
+  dealCarry: 0.35,
 
   /** Presidente do Senado: dono da pauta da casa. */
   president: {

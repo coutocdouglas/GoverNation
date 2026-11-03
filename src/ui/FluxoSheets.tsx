@@ -174,7 +174,7 @@ function useDraw(state: GameState, relator: string | undefined, animate: boolean
 const DOT = { red: '🔴', yellow: '🟡', green: '🟢' } as const
 
 /** Etapa 2B: central de pendências, por urgência, com o clique que leva ao lugar. */
-export function PendenciasCard({ state, onGo }: { state: GameState; onGo: (t: PendingTarget) => void }) {
+export function PendenciasCard({ state, onGo, onAttend }: { state: GameState; onGo: (t: PendingTarget) => void; onAttend?: (order: string) => void }) {
   const [all, setAll] = useState(false)
   const list = pendencias(state)
   const shown = all ? list : list.slice(0, 6)
@@ -183,12 +183,17 @@ export function PendenciasCard({ state, onGo }: { state: GameState; onGo: (t: Pe
       <h3>📌 Pendências <span className="pn-badge">{list.length === 0 ? 'nada esperando' : `${list.filter((p) => p.urgency === 'red').length} urgentes · ${list.length} no total`}</span></h3>
       {list.length === 0 && <p className="pn-hint">Nada esperando você agora. Aproveite para governar nos seus termos.</p>}
       {shown.map((p) => (
-        <button key={p.id} className={`pn-pend__row ${p.urgency}`} onClick={() => onGo(p.target)}>
-          <span className="pn-pend__dot">{DOT[p.urgency]}</span>
-          <span className="pn-pend__ic">{p.icon}</span>
-          <span className="pn-pend__body"><b>{p.title}</b><small>{p.detail}</small></span>
-          {p.left !== undefined && <span className={`pn-timer ${p.left <= 1 ? 'hot' : ''}`}>⏳ {p.left <= 0 ? 'agora' : `${p.left}m`}</span>}
-        </button>
+        <div key={p.id} className="pn-pend__wrap">
+          <button className={`pn-pend__row ${p.urgency}`} onClick={() => onGo(p.target)}>
+            <span className="pn-pend__dot">{DOT[p.urgency]}</span>
+            <span className="pn-pend__ic">{p.icon}</span>
+            <span className="pn-pend__body"><b>{p.title}</b><small>{p.detail}</small></span>
+            {p.left !== undefined && <span className={`pn-timer ${p.left <= 1 ? 'hot' : ''}`}>⏳ {p.left <= 0 ? 'agora' : `${p.left}m`}</span>}
+          </button>
+          {p.order && onAttend && (
+            <button className="pn-btn pn-btn--small" title={`Leva “${p.order}” para a medida do mês; você ainda pode editar antes de pedir a leitura do gabinete`} onClick={() => onAttend(p.order!)}>✍️ Atender</button>
+          )}
+        </div>
       ))}
       {list.length > 6 && <button className="pn-btn pn-btn--ghost pn-btn--small" onClick={() => setAll((v) => !v)}>{all ? 'Mostrar menos' : `Ver todas (${list.length})`}</button>}
     </section>

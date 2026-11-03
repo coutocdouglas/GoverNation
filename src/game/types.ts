@@ -1,6 +1,7 @@
 // Tipos centrais do motor do jogo. Nada aqui depende da interface.
 import type { BillDef } from './data/bills'
 import type { AreaId } from './data/ministers'
+import type { CausaEntry } from './causas'
 import type { UfId } from './data/estados'
 
 export type IndicatorKey =
@@ -140,7 +141,7 @@ export interface Meanwhile {
 import type { ReputationState } from './reputacao'
 
 export interface GameState {
-  saveVersion: 22
+  saveVersion: 23
   /** Mês atual, de 0 (janeiro do 1º ano) a 47. Em 48 o mandato acabou. */
   month: number
   presidentName: string
@@ -197,6 +198,8 @@ export interface GameState {
   round?: RoundBuffer
   /** Etapa 1 (v0.16): Ficha de governo, marcas de reputação e capítulos da presidência. */
   reputation: ReputationState
+  /** Fase A: registro de causas (quem mexeu em cada número, quando e por quê). Ver causas.ts. */
+  causas: CausaEntry[]
   /** Etapa 1B (v0.17): posts da assessoria e falas ao país dos últimos meses (para a repetição e o intervalo). */
   statementLog: { id: string; month: number }[]
   /** Etapa 2 (v0.18): nomes que o presidente deu às medidas (viram manchete e ficam na Ficha). */
@@ -204,6 +207,15 @@ export interface GameState {
 }
 
 /** Etapa 0: efeitos acumulados na rodada, aplicados no fechamento do mês. */
+/** Fase A: parecer que o ministro da pasta deu sobre a medida do mês (um por mês por ministro). */
+export interface Parecer {
+  area: AreaId
+  bill: BillId
+  stance: 'apoia' | 'ressalva' | 'contra'
+  speech: string
+  suggestions: string[]
+}
+
 export interface RoundBuffer {
   month: number
   impulses: Partial<Record<GroupId, Impulse[]>>
@@ -224,6 +236,8 @@ export interface RoundBuffer {
   articulations: Articulation[]
   /** Etapa 2: contraofertas tentadas na rodada (a resposta fica valendo até o fim do mês). */
   counters?: { party: PartyId; bill: BillId; house?: 'senado'; ok: boolean }[]
+  /** Fase A: pareceres de ministros já pedidos na medida do mês (um por ministro por mês). */
+  pareceres?: Parecer[]
   /** Etapa 2: urgência pedida e ministério mudado nesta rodada (um de cada). */
   urgencyAsked?: boolean
   ministryDone?: boolean
@@ -731,13 +745,13 @@ export interface DealTerms {
   concession?: { type: ConcessionType; ask: string; change: string }
   /** Etapa 2C: pasta pedida (tipo "pasta"). */
   area?: AreaId
+  /** Etapa 4C1 / Fase A: acordo fechado direto no Senado (vale por inteiro lá; o da Câmara rende só uma fração no Senado). */
+  house?: 'senado'
 }
 
 /** Acordo fechado no mês: o partido vota com o governo neste projeto em troca do preço. */
 export interface Deal extends DealTerms {
   bill: BillId
-  /** Etapa 4C1: acordo com a liderança no Senado (sem isso, é na Câmara). */
-  house?: 'senado'
 }
 
 /** Promessa de pautar o projeto-bandeira de um partido até o mês `due`. */

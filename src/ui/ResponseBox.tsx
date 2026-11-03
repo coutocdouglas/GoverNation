@@ -10,7 +10,7 @@ import { measuresOfArea } from '../game/interpret'
 import type { Advice, Review } from '../game/ai'
 import { GROUP_BY_ID } from '../game/data/groups'
 import { GROUP_ICON } from './icons'
-import { aiReady, AiError } from '../lib/ai'
+import { AiError } from '../lib/ai'
 import { askAdvice, askReview, readText } from '../lib/aiActions'
 import type { BillId, GameState, GroupId } from '../game/types'
 import { ForecastRow } from './CongressView'
@@ -52,12 +52,10 @@ export function ResponseBox({ state, ev, response, plannedBill, onRespond, onAdd
   const [text, setText] = useState('')
   const [reading, setReading] = useState<SheetData | null>(null)
   const [noMatch, setNoMatch] = useState<string | null>(null)
-  const [showCatalog, setShowCatalog] = useState(false)
   const [busy, setBusy] = useState<'ler' | 'conselho' | null>(null)
   const [advice, setAdvice] = useState<Advice | null>(null)
   const [picked, setPicked] = useState<number | null>(null)
   const [adviceError, setAdviceError] = useState<string | null>(null)
-  const ai = aiReady()
   const catalog = measuresOfArea(ev.area)
   const doMinister = m.feminine ? 'da ministra' : 'do ministro'
 
@@ -100,16 +98,12 @@ export function ResponseBox({ state, ev, response, plannedBill, onRespond, onAdd
 
   return (
     <div className="pn-respond" id="agir">
-      {ai ? (
-        !advice && (
-          <div className="pn-row">
-            <button className="pn-btn pn-btn--ghost" disabled={!!busy} onClick={counsel}>
-              {busy === 'conselho' ? `⏳ ${m.name} está pensando…` : `🗣️ Pedir a opinião ${doMinister}`}
-            </button>
-          </div>
-        )
-      ) : (
-        <p className="pn-hint">💡 Ligue a IA (botão 🤖 IA no topo) para ouvir a opinião {doMinister} antes de decidir.</p>
+      {!advice && (
+        <div className="pn-row">
+          <button className="pn-btn pn-btn--ghost" disabled={!!busy} onClick={counsel}>
+            {busy === 'conselho' ? `⏳ ${m.name} está pensando…` : `🗣️ Pedir a opinião ${doMinister}`}
+          </button>
+        </div>
       )}
       {adviceError && <p className="pn-hint">⚠️ {adviceError}</p>}
 
@@ -148,18 +142,12 @@ export function ResponseBox({ state, ev, response, plannedBill, onRespond, onAdd
       {noMatch !== null && (
         <div className="pn-preview">
           <b>🧑‍💼 {m.name}: “Presidente, não sei fazer isso pela {m.areaName.toLowerCase()}.”</b>
-          <p className="pn-hint">{noMatch} Tente outras palavras ou escolha no catálogo da área.</p>
+          <p className="pn-hint">{noMatch} Tente outras palavras.</p>
         </div>
       )}
       <div className="pn-row pn-row--end">
-        <button className="pn-btn pn-btn--ghost" onClick={() => setShowCatalog((v) => !v)}>📚 {showCatalog ? 'Esconder' : 'Ver'} o catálogo ({catalog.length})</button>
         <button className="pn-btn" disabled={!text.trim() || !!busy} onClick={read}>{busy === 'ler' ? '⏳ Lendo…' : '🗂️ Ler com os ministros'}</button>
       </div>
-      {showCatalog && (
-        <div className="pn-preview">
-          {catalog.map((b) => <Reading key={b.id} state={state} id={b.id} first plannedBill={plannedBill} onRespond={onRespond} compact />)}
-        </div>
-      )}
 
       {reading && (
         <ReadingSheet
@@ -276,7 +264,7 @@ function ReadingSheet({ state, ev, order, data, plannedBill, onClose, onSign, on
         {recess && <div className="warn">⚠️ Congresso em recesso: até a votação, vale o que acontece se ninguém agir.</div>}
         <p className="pn-hint">Se não é isso que você quis dizer, volte e reescreva: <b>nada foi assinado ainda</b>.</p>
 
-        {aiReady() && !review && (
+        {!review && (
           <button className="pn-btn pn-btn--ghost pn-btn--wide" disabled={reviewBusy} onClick={listen}>
             {reviewBusy ? `⏳ ${m.name} está lendo…` : `🗣️ Ouvir ${m.name} antes de assinar`}
           </button>
@@ -291,7 +279,7 @@ function ReadingSheet({ state, ev, order, data, plannedBill, onClose, onSign, on
             </div>
             <p className="pn-review__quote">“{review.speech}”</p>
             {review.suggestions.length > 0 && <ul>{review.suggestions.map((x, i) => <li key={i}>{x}</li>)}</ul>}
-            <p className="pn-hint">Personagem fictício; a fala é gerada pela IA. {m.feminine ? 'Ela' : 'Ele'} opina pelo que acredita, não pelo que é melhor para o país. Decidir continua sendo seu.</p>
+            <p className="pn-hint">Personagem fictício. {m.feminine ? 'Ela' : 'Ele'} opina pelo que acredita, não pelo que é melhor para o país. Decidir continua sendo seu.</p>
             {review.suggestions.length > 0 && (
               <button className="pn-btn pn-btn--ghost pn-btn--wide" onClick={accept}>Acatar as sugestões e reescrever</button>
             )}
@@ -307,45 +295,5 @@ function ReadingSheet({ state, ev, order, data, plannedBill, onClose, onSign, on
         {blocked && <p className="pn-action__blk">⏳ {blocked}</p>}
       </div>
     </aside>
-  )
-}
-
-function Reading({ state, id, first, plannedBill, onRespond, compact }: {
-  state: GameState; id: BillId; first: boolean; plannedBill: BillId | null; onRespond: (id: BillId) => void; compact?: boolean
-}) {
-  const b = BILL_BY_ID[id]
-  const blocked = responseBlockedReason(state, id) ?? (plannedBill === id ? 'Já é a sua medida do mês.' : null)
-  const cost = costOf(id)
-  const now = b.instrument === 'decreto' || b.instrument === 'mp'
-  const recess = !now && isRecess(state.month)
-  return (
-    <div className="pn-reading">
-      <div className="pn-reading__head">
-        <span className="pn-action__ic">{ICON[b.instrument]}</span>
-        <div>
-          <strong>{first ? b.name : `Ou talvez: ${b.name}`} <NewBadge id={id} /></strong>
-          <div className="pn-hint">{b.summary}</div>
-        </div>
-      </div>
-      <div className="pn-pv">
-        <div>📜 Vira<b>{INSTRUMENTS[b.instrument].label}</b></div>
-        <div>💸 Custo<b className={cost.yearly + cost.once > 0.5 ? 'dn' : cost.yearly < -0.5 ? 'up' : ''}>{costText(cost)}</b></div>
-        <div>⏱️ Resolve<b>{now ? 'Na hora' : recess ? 'Só depois do recesso' : 'Se o Congresso aprovar'}</b></div>
-      </div>
-      {!compact && <p className="pn-hint" style={{ margin: '2px 0 4px' }}>{INSTRUMENTS[b.instrument].rule}</p>}
-      <span className="pn-chips">
-        {effectChips(b.effects).map((c, k) => <span key={k} className={`pn-chipfx ${c.tone}`} title={c.title}>{c.text}</span>)}
-      </span>
-      {!compact && <LegalRiskLine state={state} id={id} />}
-      {!now && !blocked && <ForecastRow state={state} id={id} />}
-      {!compact && <><div className="up">+ {b.pros}</div><div className="dn">− {b.cons}</div></>}
-      {recess && <div className="warn">⚠️ Congresso em recesso: até a votação, vale o que acontece se ninguém agir.</div>}
-      <div className="pn-row">
-        <button className="pn-btn" disabled={!!blocked} onClick={() => onRespond(id)}>
-          {b.instrument === 'decreto' ? '🖊️ Assinar como resposta' : b.instrument === 'mp' ? '⚡ Editar a MP como resposta' : '📨 Enviar à Câmara como resposta'}
-        </button>
-        {blocked && <span className="pn-action__blk">⏳ {blocked}</span>}
-      </div>
-    </div>
   )
 }

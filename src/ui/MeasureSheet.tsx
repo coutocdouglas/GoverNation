@@ -4,8 +4,11 @@ import { GROUP_BY_ID } from '../game/data/groups'
 import { conditionsOf, fichaDaMedida, LEVEL_LABEL } from '../game/ficha'
 import { approvalPreview, notasFicha, reactionsFor, resumoExecutivo } from '../game/fluxo'
 import { aiReady } from '../lib/ai'
-import { askBriefing } from '../lib/aiActions'
-import type { BillId, GameState, GroupId } from '../game/types'
+import { askBriefing, askReview } from '../lib/aiActions'
+import { ministerOf } from '../game/camara'
+import { parecerOf } from '../game/rodada'
+import { Portrait } from './Portrait'
+import type { BillId, GameState, GroupId, Parecer } from '../game/types'
 import { Art } from './Art'
 import { ChainSteps } from './Chain'
 import { chainAt, chainLabels } from './corrente'
@@ -16,6 +19,11 @@ import { LegalRiskLine } from './SupremoView'
 import { num } from './format'
 
 const pct = (x: number) => `${Math.round(x * 100)}%`
+const STANCE_CLS = {
+  apoia: { label: 'Apoia', cls: 'up' },
+  ressalva: { label: 'Apoia com ressalva', cls: 'warn' },
+  contra: { label: 'É contra', cls: 'dn' },
+} as const
 
 /**
  * A janela da medida, as duas primeiras etapas da corrente do dia (etapa 2 da v0.18, refeita na 2B):
@@ -23,7 +31,7 @@ const pct = (x: number) => `${Math.round(x * 100)}%`
  * quem vai reagir, nome) · 2 · Ficha (resumo executivo, notas Congressual e Judicial, risco jurídico em número,
  * potencial de crescimento e a ficha da pasta). Depois: votação (lei) ou assinatura (decreto, MP).
  */
-export function MeasureSheet({ state, id, ids, request, constraints, speech, notes, startStep = 1, onClose, onConfirm, consult, onConsult, backLabel }: {
+export function MeasureSheet({ state, id, ids, request, constraints, speech, notes, startStep = 1, onClose, onConfirm, consult, onConsult, backLabel, onParecer, onRewrite }: {
   state: GameState
   id: BillId
   /** Outras leituras possíveis do mesmo pedido (troca na etapa 1). */
@@ -44,12 +52,17 @@ export function MeasureSheet({ state, id, ids, request, constraints, speech, not
   consult?: BillId | null
   onConsult?: (id: BillId | null) => void
   backLabel?: string
+  /** Fase A: guarda o parecer do ministro na rodada (um por mês por ministro). */
+  onParecer?: (p: Parecer) => void
+  /** Fase A: "acatar as sugestões e reescrever": devolve o texto novo para o campo da medida. */
+  onRewrite?: (text: string) => void
 }) {
   const [step, setStep] = useState<1 | 2>(startStep)
   const [cur, setCur] = useState<BillId>(id)
   const [title, setTitle] = useState(state.names?.[id] ?? '')
   const [summary, setSummary] = useState<{ id: BillId; text: string | null } | null>(null)
   const [pending, setPending] = useState<BillId | null>(startStep === 2 && aiReady() ? id : null)
+  const [hearing, setHearing] = useState(false)
   const b = BILL_BY_ID[cur]
   const f = fichaDaMedida(state, cur)
   const n = notasFicha(state, cur)
@@ -72,6 +85,20 @@ export function MeasureSheet({ state, id, ids, request, constraints, speech, not
   }, [pending]) // eslint-disable-line react-hooks/exhaustive-deps
   const toFicha = () => { setStep(2); if (aiReady() && summary?.id !== cur) setPending(cur) }
 
+  // Fase A: ouvir o ministro da pasta antes de assinar (um parecer por mês por ministro; sem IA, o parecer sai pelas regras).
+  const minister = ministerOf(state, b.area)
+  const saved = parecerOf(state, b.area)
+  const hear = async () => {
+    if (!onParecer || hearing || saved) return
+    setHearing(true)
+    const r = await askReview(state, b.area, request, cur)
+    setHearing(false)
+    onParecer({ area: b.area, bill: cur, stance: r.stance, speech: r.speech, suggestions: r.suggestions })
+  }
+  const accept = () => {
+    if (!saved || !onRewrite) return
+    onRewrite(`${request.trim()}\n\nIncorporando o parecer de ${minister.name}:\n${saved.suggestions.map((x) => `- ${x}`).join('\n')}`)
+  }
   const nCls = (x: number) => (x >= 7 ? 'up' : x >= 4 ? 'warn' : 'dn')
   const swap = (x: BillId) => { setCur(x); setTitle(state.names?.[x] ?? '') }
   return (
@@ -143,6 +170,29 @@ export function MeasureSheet({ state, id, ids, request, constraints, speech, not
             )}
             <p className="pn-hint" style={{ marginTop: 2 }}>As chances valem no anúncio: o sorteio acontece quando você {acts ? 'assina' : 'envia'}.</p>
 
+            {onParecer && (
+              <div className="pn-label">{minister.icon} Ouvir {minister.feminine ? 'a ministra' : 'o ministro'} da pasta</div>
+            )}
+            {onParecer && !saved && (
+              <button className="pn-btn pn-btn--ghost pn-btn--wide" disabled={hearing} onClick={hear}>
+                {hearing ? `⏳ ${minister.name} está lendo…` : `🗣️ Ouvir ${minister.name} (${minister.areaName}) antes de assinar`}
+              </button>
+            )}
+            {saved && (
+              <div className="pn-review">
+                <div className="pn-review__head">
+                  <Portrait name={minister.name} feminine={minister.feminine} color={minister.color} size={40} title={minister.name} />
+                  <div><b>{minister.name}</b> <span className="muted">· {minister.areaName}</span></div>
+                  <span className={`pn-stance ${STANCE_CLS[saved.stance].cls}`}>{STANCE_CLS[saved.stance].label}</span>
+                </div>
+                <p className="pn-review__quote">“{saved.speech}”</p>
+                {saved.suggestions.length > 0 && <ul>{saved.suggestions.map((x, i) => <li key={i}>{x}</li>)}</ul>}
+                <p className="pn-hint">{saved.bill !== cur ? `Parecer sobre “${BILL_BY_ID[saved.bill].name}”. ` : ''}{minister.feminine ? 'Ela' : 'Ele'} opina pelo que acredita, não pelo que é melhor para o país. Um parecer por mês por ministro. Decidir continua sendo seu.</p>
+                {saved.suggestions.length > 0 && onRewrite && (
+                  <button className="pn-btn pn-btn--ghost pn-btn--wide" onClick={accept}>Acatar as sugestões e reescrever</button>
+                )}
+              </div>
+            )}
             <label className="pn-name">
               <span>🏷️ Nome da medida <small>(opcional: vira a manchete do telejornal e fica na Ficha de governo)</small></span>
               <input className="pn-input" maxLength={60} value={title} placeholder="Ex.: Renda Livre, Brasil Sem Fila" onChange={(e) => setTitle(e.target.value)} />

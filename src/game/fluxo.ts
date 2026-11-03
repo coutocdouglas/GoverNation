@@ -12,6 +12,7 @@ import { clamp } from './ideology'
 import type { Rng } from './rng'
 import { courtChanceNow, forecastRuling, isCleared, legalRiskIn, legalRiskScore, precedentNote, RISK_LABEL } from './supremo'
 import type { BillId, Cause, Economy, GameState, GroupId, Headline, Impulse, ReactionRoll } from './types'
+import { bumpScandal } from './causas'
 
 const lowerFirst = (t: string) => (/^[A-ZÀ-Ú]{2}/.test(t) ? t : t.charAt(0).toLowerCase() + t.slice(1))
 const dec = (n: number, d = 1) => n.toLocaleString('pt-BR', { minimumFractionDigits: d, maximumFractionDigits: d })
@@ -110,7 +111,7 @@ export function rollReactions(ctx: ReactionCtx, id: BillId, rng: Rng): ReactionR
     if (fx.confidence) ctx.conf.v += fx.confidence
     if (fx.potential) e.potential += fx.potential
     if (fx.group && fx.groupId) impulses[fx.groupId].push({ label: r.label, value: fx.group })
-    if (fx.scandal) s.congress.scandal = clamp(s.congress.scandal + fx.scandal, 0, 100)
+    if (fx.scandal) bumpScandal(s, fx.scandal, r.label, 'medida', id)
     if (fx.rival) ctx.rival.push({ label: r.label, value: fx.rival })
     if (fx.speaker) s.congress.speaker.relation = clamp(s.congress.speaker.relation + fx.speaker, 0, 100)
     headlines.push({ text: r.headline, tone: good ? 'good' : 'bad' })

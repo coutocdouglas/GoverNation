@@ -14,6 +14,7 @@ import { attendNow, mesaNow } from '../game/rodada'
 import { monthLabel } from '../game/game'
 import type { Articulation, GameState, MesaSenadoAcao, SenatorRep } from '../game/types'
 import { Hemiciclo } from './Hemiciclo'
+import { LEAN_COLOR, LEAN_LABEL, type Lean } from './lean'
 import { PartyLogo } from './PartyLogo'
 import { Portrait } from './Portrait'
 import { num } from './format'
@@ -22,12 +23,12 @@ const relColor = (r: number) => (r >= ESTADO.comAt ? '#2fd07a' : r >= -10 ? '#f5
 const surname = (n?: string) => (n ?? '').split(' ').slice(-1)[0]
 
 /** Inclinação de cada senador hoje (partido + estado), para o semicírculo e os contadores. */
-function leanOf(state: GameState, i: number): 'up' | 'dn' | null {
+function leanOf(state: GameState, i: number): Lean {
   const d = state.congress.senate.senators[i]
   const pr = d.party === state.playerParty ? 40 : state.congress.parties[d.party].relation - 50
   const sr = d.uf ? state.congress.senate.states?.[d.uf]?.relation ?? 0 : 0
   const v = pr * 0.6 + sr * 0.8
-  return v >= 12 ? 'up' : v <= -12 ? 'dn' : null
+  return v >= 12 ? 'ali' : v <= -12 ? 'opo' : 'neu'
 }
 
 /** Senadores na ordem do plenário: partidos da esquerda para a direita, cada um pela posição. */
@@ -66,6 +67,7 @@ export function SenateCard({ state, articulations, onToggle, onState, onToast }:
   state: GameState; articulations: Articulation[]; onToggle: (a: Articulation) => void; onState?: (s: GameState) => void; onToast?: (t: string) => void
 }) {
   const [pick, setPick] = useState<number | null>(null)
+  const [focus, setFocus] = useState<Lean | null>(null)
   const sn = state.congress.senate.president
   const party = PARTY_BY_ID[SENADO.president.party]
   const a: Articulation = { kind: 'senado', party: SENADO.president.party }
@@ -84,13 +86,23 @@ export function SenateCard({ state, articulations, onToggle, onState, onToast }:
     <section className="pn-card pn-speaker">
       <h3>🏛️ Senado Federal <span className="pn-badge">81 senadores · 3 por estado · vota depois da Câmara</span></h3>
       <div className="pn-hemi-wrap">
-        <Hemiciclo members={plenaryOrder(state)} ring={(i) => leanOf(state, i)} onPick={setPick} />
+        <Hemiciclo members={plenaryOrder(state)} lean={(i) => leanOf(state, i)} focus={focus} onPick={setPick} />
       </div>
       <div className="pn-legend" style={{ justifyContent: 'center' }}>
         {order.map((p) => <span key={p.id}><PartyLogo party={p.id} size={14} /> {p.sigla} {SENATE_SEATS[p.id]}</span>)}
-        <span><i style={{ background: 'transparent', border: '2px solid #2fd07a' }} />com você</span>
-        <span><i style={{ background: 'transparent', border: '2px solid #ff6b6b' }} />contra</span>
       </div>
+      <div className="pn-legend" style={{ justifyContent: 'center', marginTop: 4 }} role="group" aria-label="Relação com o governo (anel em volta da cadeira)">
+        <button className={`pn-btn pn-btn--small ${focus === null ? '' : 'pn-btn--ghost'}`} onClick={() => setFocus(null)}>Todos 81</button>
+        {(['ali', 'neu', 'opo'] as Lean[]).map((l) => {
+          const n = state.congress.senate.senators.filter((_, i) => leanOf(state, i) === l).length
+          return (
+            <button key={l} className={`pn-btn pn-btn--small ${focus === l ? '' : 'pn-btn--ghost'}`} onClick={() => setFocus(focus === l ? null : l)}>
+              <i style={{ background: 'transparent', border: `2px solid ${LEAN_COLOR[l]}` }} /> {LEAN_LABEL[l]} {n}
+            </button>
+          )
+        })}
+      </div>
+      <p className="pn-hint" style={{ textAlign: 'center', margin: '2px 0' }}>O miolo é a cor do partido; o anel em volta é a relação com o seu governo (verde aliado, amarelo neutro, vermelho oposição).</p>
       {pick !== null && <SenadorFicha state={state} index={pick} onClose={() => setPick(null)} />}
       <p className="pn-hint" style={{ textAlign: 'center' }}>Clique numa cadeira para ver a ficha do senador.</p>
 

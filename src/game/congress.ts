@@ -234,12 +234,14 @@ export function dealBoost(d: DealTerms): number {
 }
 
 /** Reforço que os acordos dão a cada partido, numa votação. `broken` = acordos que falharam no dia. */
-function boosts(deals: DealList, broken?: Set<PartyId>): Partial<Record<PartyId, number>> {
+function boosts(deals: DealList, broken?: Set<PartyId>, carryK = 1): Partial<Record<PartyId, number>> {
   const out: Partial<Record<PartyId, number>> = {}
   for (const d of deals) {
     const rel = dealReliability(d.party, d.kind, d)
     const k = broken ? (broken.has(d.party) ? DEALS.brokenShare : 1) : rel + (1 - rel) * DEALS.brokenShare
-    out[d.party] = (out[d.party] ?? 0) + dealBoost(d) * k
+    // Fase A: no Senado, o acordo fechado com a liderança da Câmara rende bem menos (senador vota pelo estado).
+    const carry = d.house === 'senado' ? 1 : carryK
+    out[d.party] = (out[d.party] ?? 0) + dealBoost(d) * k * carry
   }
   return out
 }
@@ -322,7 +324,7 @@ function voteSetup(s: GameState, billId: BillId, deals: DealList, opts: VoteOpti
   // Etapa 2: concessões no texto (acordadas nesta votação ou antes, na Câmara) deixam o texto mais fraco.
   const conc = [...(pb?.conceded ?? []), ...(pb?.deals ?? []), ...deals].filter((d, i, arr) => d.kind === 'concessao' && arr.findIndex((x) => x.kind === 'concessao' && x.party === d.party && x.concession?.type === d.concession?.type) === i)
   const bill = withConcessions(effectiveBill(BILL_BY_ID[billId], am, original), conc)
-  const boost = boosts(deals, broken)
+  const boost = boosts(deals, broken, house === 'senado' ? SENADO.dealCarry : 1)
   const gb = govBoost(s)
   for (const [pid, v] of Object.entries(gb) as [PartyId, number][]) boost[pid] = (boost[pid] ?? 0) + v
   // Etapa 2C: a pasta acordada já entrou no gabinete: o reforço da pasta não conta duas vezes.

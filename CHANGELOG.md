@@ -1,5 +1,16 @@
 # Novidades
 
+## 0.24.0
+- **Fase A: correções e ajustes pequenos, antes da Etapa 5.**
+  - **Correção:** medida barrada por inconstitucionalidade (pela CCJ ou pelo Supremo) agora tira aprovação em todos os grupos, marca a reputação e entra na Ficha, como qualquer derrota. Antes, a medida sumia sem reação do público.
+  - **Ouvir o ministro da pasta na medida do mês:** a janela da leitura ganhou o parecer (posição, fala e até 3 ajustes) e "Acatar as sugestões e reescrever". Um parecer por mês por ministro. Funciona também sem IA.
+  - **Botão "Atender"** nas pendências de cobrança dos grupos: leva o pedido para o campo da medida do mês.
+  - **O catálogo e os "Outros caminhos" (post da assessoria e rua) saíram do fato do mês**: era fácil demais ganhar aprovação somando um post à medida. Voltam na Etapa 6 como ações de agenda.
+  - **Senado:** o plenário tem um único anel de relação com o governo (verde, amarelo, vermelho) separado da cor do partido, com filtros Todos, Aliados, Neutros e Oposição. O acordo fechado com a liderança da Câmara rende bem menos no Senado (35%); o fechado direto no Senado vale por inteiro.
+  - **Registro de causas (por baixo):** cada grupo, indicador, ponto de escândalo e marca de reputação guarda quem mexeu, quando e por quê, para o "Por quê?" e para a origem dos escândalos da Etapa 5.
+  - **Texto de reserva da IA:** o parecer e a opinião do ministro e o resumo da assessoria nunca mostram falha; sem IA ou com erro, o jogo escreve pelas regras. O erro real fica no gasto medido da IA, com o modelo ativo.
+- Mandatos salvos continuam normalmente (save versão 23): o registro de causas começa vazio.
+
 ## 0.23.0
 - **O Supremo profundo, parte 2 (etapa 4, blocos D a F).** A Corte agora lembra de como você a trata, as decisões viram precedente, a derrubada tem mais saídas e o Supremo pede um nome para o tribunal eleitoral.
   - **Índice "A seu favor" (0 a 100):** como a Corte, como instituição, vê o governo (diferente da relação de cada ministro). Começa na média da relação dos ministros e volta devagar para ela. **Sobe** quando você acata (+4), tem medida mantida (+3), consulta chancelada (+3), recua (+2) ou o ministro assume a culpa (+3). **Cai** com crítica pública (−10), medida derrubada (−3), recurso perdido (−4 a mais), pressão que vaza (−5), embargos negados (−5), consulta reprovada (−2) e descumprimento (−30). **Multiplica** (de 0,5× a 1,5×) a chance de liminar, de pedido de vista e de o relator travar um projeto. Aparece no cartão do Supremo no Painel e no novo cartão **"A Corte e você"** da aba Supremo, com o que mexeu por último.

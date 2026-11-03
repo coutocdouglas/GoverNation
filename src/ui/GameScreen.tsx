@@ -10,7 +10,7 @@ import { PARTY_BY_ID } from '../game/data/parties'
 import { ACTION_BY_ID, ACTIONS, ACTIONS_PER_MONTH, blockedReason, effectMultiplier } from '../game/actions'
 import { GROUPS, GROUP_BY_ID } from '../game/data/groups'
 import { advanceMonth, isCopomMonth, monthLabel, TERM_MONTHS, type MonthPlan } from '../game/game'
-import { articulate, articulateBlockedReason, gavetaReason, ministryNow, peekRound, plenaryToday, queueHouse, sendBlockedReason, sendMeasure, voteNow, voteNowBlockedReason, type FloorOptions } from '../game/rodada'
+import { articulate, articulateBlockedReason, gavetaReason, guardarParecer, ministryNow, peekRound, plenaryToday, queueHouse, sendBlockedReason, sendMeasure, voteNow, voteNowBlockedReason, type FloorOptions } from '../game/rodada'
 import { Art } from './Art'
 import type { MinistryChange } from '../game/camara'
 import { VoteAnimation } from './VoteAnimation'
@@ -80,6 +80,7 @@ export function GameScreen({ state, onChange, onExit }: {
   const [eventChoice, setEventChoice] = useState<number | null>(null)
   const [eventResponse, setEventResponse] = useState<BillId | null>(null)
   /** Etapa 1B: post da assessoria e ação de rua do mês. */
+  const [draftOrder, setDraftOrder] = useState<{ text: string; n: number } | null>(null)
   const [statement, setStatement] = useState<StatementId | null>(null)
   const [street, setStreet] = useState<string | null>(null)
   const [showAi, setShowAi] = useState(false)
@@ -221,6 +222,7 @@ export function GameScreen({ state, onChange, onExit }: {
       setEventResponse(null)
       setStatement(null)
       setStreet(null)
+      setDraftOrder(null)
       setDeals([])
       setBuys({})
       setListened([])
@@ -263,6 +265,12 @@ export function GameScreen({ state, onChange, onExit }: {
 
   const nextMonth = state.month + 1
   /** Etapa 2B: o clique numa pendência leva ao lugar dela. */
+  /** Fase A: o botão "Atender" das pendências leva o pedido para o campo da medida do mês. */
+  const attend = (order: string) => {
+    setDraftOrder({ text: order, n: (draftOrder?.n ?? 0) + 1 })
+    medidaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    toast(`✍️ Pedido levado para a medida do mês: “${order}”. Edite se quiser e peça a leitura do gabinete.`)
+  }
   const goPending = (t: PendingTarget) => {
     if (t === 'camara' || t === 'senado' || t === 'supremo') { setTab('governo'); setGovTab(t); window.scrollTo({ top: 0, behavior: 'smooth' }); return }
     const el = document.getElementById(t === 'promessas' ? 'promessas' : t === 'evento' ? 'fato-do-mes' : 'fato-do-mes')
@@ -529,10 +537,6 @@ export function GameScreen({ state, onChange, onExit }: {
                 response={eventResponse ?? round?.response ?? null}
                 plannedBill={bill}
                 onAddBill={addBill}
-                statement={statement}
-                street={street}
-                onStatement={(id) => { setStatement(id); if (id) toast(`📣 Post anotado: ${STATEMENT_BY_ID[id].label}. Sai ao encerrar o mês.`) }}
-                onStreet={(id) => { setStreet(id); if (id) toast(`🚶 Ação de rua anotada. Vale ao encerrar o mês.`) }}
                 onRespond={(id) => {
                   // Etapa 2B: a resposta passa pela ficha (etapa 2 da corrente) antes de assinar ou votar.
                   if (id) { setRespSheet(id); return }
@@ -577,8 +581,10 @@ export function GameScreen({ state, onChange, onExit }: {
                   <p className="pn-hint">Você já mandou a medida desta rodada: <b>{BILL_BY_ID[round.measure].name}</b>. A próxima medida nova, só na rodada que vem. Enquanto isso, dá para pautar um projeto da fila em cada casa, articular e responder ao fato do mês.</p>
                 </>
               ) : <MeasureBox consult={consult} setConsult={(id) => { setConsult(id); if (id) toast(`📨 O Supremo recebe o pedido de parecer ao encerrar o mês. A resposta sai em ${SUPREMO.consulta.months} meses.`) }}
-                key={state.month}
+                key={`${state.month}-${draftOrder?.n ?? 0}`}
                 state={state}
+                onState={onChange}
+                draft={draftOrder}
                 selected={selected}
                 bill={bill}
                 onAddBill={addBill}
@@ -686,7 +692,7 @@ export function GameScreen({ state, onChange, onExit }: {
           </div>
 
           <div className="pn-col">
-            <PendenciasCard state={state} onGo={goPending} />
+            <PendenciasCard state={state} onGo={goPending} onAttend={attend} />
 
             <section className="pn-card">
               <h3>❤️ Aprovação do governo</h3>
@@ -836,8 +842,12 @@ function ApprovalRing({ value }: { value: number }) {
   )
 }
 
-function MeasureBox({ state, selected, onSign, onSend, onAddBill, consult, setConsult }: {
+function MeasureBox({ state, onState, draft, selected, onSign, onSend, onAddBill, consult, setConsult }: {
   state: GameState
+  /** Fase A: grava o estado novo (parecer do ministro). */
+  onState: (s: GameState) => void
+  /** Fase A: pedido levado pelo botão "Atender" das pendências. */
+  draft: { text: string; n: number } | null
   consult: BillId | null
   setConsult: (id: BillId | null) => void
   onAddBill: (b: BillDef) => BillId
@@ -846,7 +856,7 @@ function MeasureBox({ state, selected, onSign, onSend, onAddBill, consult, setCo
   onSign: (id: ActionId) => void
   onSend: (id: BillId, title?: string) => void
 }) {
-  const [text, setText] = useState('')
+  const [text, setText] = useState(draft?.text ?? '')
   const [result, setResult] = useState<{ matches: MeasureRef[]; speech: string; fallback: string | null; notes: string[]; constraints: string[] } | null>(null)
   /** Etapa 2: janela da medida em etapas aberta para esta medida. */
   const [sheet, setSheet] = useState<BillId | null>(null)
@@ -882,7 +892,7 @@ function MeasureBox({ state, selected, onSign, onSend, onAddBill, consult, setCo
       <div className="pn-row">
         <button className="pn-btn" disabled={!text.trim() || busy} onClick={read}>{busy ? '⏳ Lendo…' : '📋 Pedir leitura do gabinete'}</button>
       </div>
-      {sheet && <MeasureSheet state={state} id={sheet} ids={billIds} request={text} constraints={result?.constraints} speech={result?.speech} notes={result?.notes} consult={consult} onConsult={setConsult} onClose={() => setSheet(null)} onConfirm={(id, title) => { setSheet(null); onSend(id, title) }} />}
+      {sheet && <MeasureSheet state={state} id={sheet} ids={billIds} request={text} constraints={result?.constraints} speech={result?.speech} notes={result?.notes} consult={consult} onConsult={setConsult} onClose={() => setSheet(null)} onConfirm={(id, title) => { setSheet(null); onSend(id, title) }} onParecer={(p) => onState(guardarParecer(state, p))} onRewrite={(t) => { setText(t); setResult(null); setSheet(null) }} />}
       {result && (
         <div className="pn-preview">
           {result.fallback && <p className="pn-hint">⚠️ {result.fallback} Lido por palavras-chave.</p>}

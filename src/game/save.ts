@@ -202,7 +202,12 @@ export function migrate(raw: unknown): GameState | null {
       sup.tse ??= initialTse(absMonth(s as GameState))
       s.saveVersion = 22
     }
-    if (s.saveVersion !== 22) return null
+    if (s.saveVersion === 22) {
+      // v0.23 → v0.24 (Fase A): registro de causas começa vazio (sem herança retroativa).
+      s.causas ??= []
+      s.saveVersion = 23
+    }
+    if (s.saveVersion !== 23) return null
     syncCustomBills(s as GameState)
     return s as GameState
   } catch {

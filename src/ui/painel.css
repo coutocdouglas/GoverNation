@@ -709,6 +709,8 @@
 .pn-court__rel { display: flex; align-items: center; gap: 8px; }
 
 .pn-pend { border-color: #f5c54255; }
+.pn-pend__wrap { display: flex; gap: 6px; align-items: center; }
+.pn-pend__wrap .pn-pend__row { flex: 1; width: auto; }
 .pn-pend__row { display: flex; gap: 8px; align-items: center; width: 100%; text-align: left; font: inherit; color: var(--pn-ink); background: var(--pn-panel2); border: 1px solid transparent; border-radius: 10px; padding: 8px 10px; margin-top: 6px; cursor: pointer; transition: .15s; }
 .pn-pend__row:hover { border-color: var(--pn-teal); transform: translateX(2px); }
 .pn-pend__row.red { border-left: 3px solid var(--pn-red); }

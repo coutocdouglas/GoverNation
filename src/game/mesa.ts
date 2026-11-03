@@ -15,6 +15,7 @@ import { BASE } from './data/base'
 import { joinBase, notePact, pactBlockedReason, pactEmendas } from './base'
 import { closeCtx, openCtx, peekRound } from './rodada'
 import type { BillId, GameState, GroupId, Pact, PartyId, RuaResult } from './types'
+import { bumpScandal } from './causas'
 
 // ─── As ruas ──────────────────────────────────────────────────────────────────
 
@@ -115,7 +116,7 @@ export function mobilize(prev: GameState, bill: BillId, kind: RuaKind): { state:
   } else ctx.taken.push(`Convocou um ato nacional por “${name}”`)
   if (clash) {
     for (const [g, v] of Object.entries(RUAS.clashGroups) as [GroupId, number][]) ctx.impulses[g].push({ label: 'Confronto nas ruas', value: v })
-    s.congress.scandal = Math.min(100, s.congress.scandal + RUAS.clashScandal)
+    bumpScandal(s, RUAS.clashScandal, `Confronto nas ruas (${R.label.toLowerCase()})`, 'congresso')
     ctx.headlines.push({ text: `Confronto entre manifestantes e a polícia no ${R.label.toLowerCase()}: imagens rodam o país`, tone: 'bad' })
   }
   addBio(s, s.presidentName, `${kind === 'greve' ? 'Pediu uma greve geral' : 'Convocou um ato nacional'} por “${name}”: ${filled ? 'as ruas encheram' : 'esvaziou'}${clash ? ', com confronto' : ''}.`)

@@ -4,7 +4,8 @@ import type { EventDef } from '../game/data/events'
 import type { AreaId } from '../game/data/ministers'
 import { interpretMeasure, interpretResponse, type MeasureRef } from '../game/interpret'
 import type { GameState } from '../game/types'
-import { aiReady, AiError, callAi } from './ai'
+import { aiReady, AiError, callAi, noteAiFailure } from './ai'
+import { reservaAdvice, reservaBrief, reservaReview } from '../game/reserva'
 import { buildCustomBill } from '../game/custom'
 import type { BillDef } from '../game/data/bills'
 
@@ -53,45 +54,70 @@ export async function readText(state: GameState, text: string, area: AreaId | nu
   }
 }
 
-/** Opinião do ministro sobre o fato. Lança AiError se a IA não puder responder. */
+/**
+ * Opinião do ministro sobre o fato. Fase A: nunca falha. Sem IA, ou se ela falhar, vale o texto de reserva feito pelas regras
+ * (o motivo real da falha fica no gasto medido da IA).
+ */
 export async function askAdvice(state: GameState, ev: EventDef): Promise<Advice> {
-  const advice = parseAdvice(await callAi('fala', ministerAdvicePrompt(state, ev)), ev.area)
-  if (!advice) throw new AiError('O ministro não conseguiu responder agora. Tente de novo ou escreva com suas palavras.')
-  return advice
+  if (aiReady()) {
+    try {
+      const advice = parseAdvice(await callAi('fala', ministerAdvicePrompt(state, ev)), ev.area)
+      if (advice) return advice
+      noteAiFailure('fala', 'opinião do ministro: a IA respondeu fora do formato')
+    } catch (e) {
+      if (!(e instanceof AiError)) noteAiFailure('fala', `opinião do ministro: ${String(e)}`)
+    }
+  }
+  return reservaAdvice(state, ev)
 }
 
-/** Parecer do ministro sobre a ordem antes de assinar. */
+/** Parecer do ministro sobre a ordem antes de assinar. Fase A: nunca falha (texto de reserva pelas regras). */
 export async function askReview(state: GameState, area: AreaId, order: string, measure: BillId): Promise<Review> {
-  const r = parseReview(await callAi('fala', ministerReviewPrompt(state, area, order, measure)))
-  if (!r) throw new AiError('O ministro não conseguiu opinar agora.')
-  return r
+  if (aiReady()) {
+    try {
+      const r = parseReview(await callAi('fala', ministerReviewPrompt(state, area, order, measure)))
+      if (r) return r
+      noteAiFailure('fala', 'parecer do ministro: a IA respondeu fora do formato')
+    } catch (e) {
+      if (!(e instanceof AiError)) noteAiFailure('fala', `parecer do ministro: ${String(e)}`)
+    }
+  }
+  return reservaReview(state, area, order, measure)
 }
 
 /** Etapa 2: a IA escreve a concessão pedida pela liderança (só as frases; os números são do motor). Null = usar a lista pronta. */
 export async function askConcession(state: GameState, party: string, leader: string, bill: BillId, type: { label: string; change: string }): Promise<{ ask: string; change: string } | null> {
   if (!aiReady()) return null
   try {
-    return parseConcession(await callAi('fala', concessionPrompt(state, party, leader, bill, type)))
+    const c = parseConcession(await callAi('fala', concessionPrompt(state, party, leader, bill, type)))
+    if (!c) noteAiFailure('fala', 'concessão: a IA respondeu fora do formato (vale a frase pronta)')
+    return c
   } catch {
     return null
   }
 }
 
-/** Etapa 2B: a assessoria explica o fato do mês em poucas frases. Null = mostrar o texto do próprio fato. */
+/** Etapa 2B: a assessoria explica o fato do mês em poucas frases. Fase A: nunca devolve vazio (texto de reserva pelas regras). */
 export async function askEventBrief(state: GameState, ev: EventDef): Promise<string | null> {
-  if (!aiReady()) return null
-  try {
-    return parseShortText(await callAi('fala', eventBriefPrompt(state, ev)))
-  } catch {
-    return null
+  if (aiReady()) {
+    try {
+      const t = parseShortText(await callAi('fala', eventBriefPrompt(state, ev)))
+      if (t) return t
+      noteAiFailure('fala', 'resumo da assessoria: a IA respondeu fora do formato')
+    } catch (e) {
+      if (!(e instanceof AiError)) noteAiFailure('fala', `resumo da assessoria: ${String(e)}`)
+    }
   }
+  return reservaBrief(state, ev)
 }
 
 /** Etapa 2B: resumo executivo narrado pela IA. Null = usar o resumo pronto do motor. */
 export async function askBriefing(state: GameState, bill: BillId, facts: string): Promise<string | null> {
   if (!aiReady()) return null
   try {
-    return parseShortText(await callAi('fala', briefingPrompt(state, bill, facts)), 500)
+    const t = parseShortText(await callAi('fala', briefingPrompt(state, bill, facts)), 500)
+    if (!t) noteAiFailure('fala', 'resumo executivo: a IA respondeu fora do formato (vale o resumo pronto)')
+    return t
   } catch {
     return null
   }

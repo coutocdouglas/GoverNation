@@ -41,7 +41,9 @@ import { addMark, markMeasure, noteRecord } from './reputacao'
 import { REPUTACAO } from './data/marks'
 import { Rng } from './rng'
 import type { MonthPlan } from './game'
-import type { Articulation, BillId, Cause, CourtNow, Deal, DealTerms, Economy, GameState, GroupId, Headline, Impulse, PendingBill, RoundBuffer, ReactionRoll, MesaSenadoAcao, SenatorBuy, VoteRecord } from './types'
+import type { AreaId } from './data/ministers'
+import type { Articulation, Parecer, BillId, Cause, CourtNow, Deal, DealTerms, Economy, GameState, GroupId, Headline, Impulse, PendingBill, RoundBuffer, ReactionRoll, MesaSenadoAcao, SenatorBuy, VoteRecord } from './types'
+import { bumpScandal } from './causas'
 
 export type House = 'camara' | 'senado'
 
@@ -193,6 +195,7 @@ export function applyDeals(ctx: RoundCtx, deals: Deal[]): void {
     if (d.destino) terms.destino = d.destino
     if (d.concession) terms.concession = d.concession
     if (d.area) terms.area = d.area
+    if (senado) terms.house = 'senado'
     // v0.21.1: acordo no Senado soma cobrança na Mesa do Senado (o da bancada inteira pesa mais que o individual).
     addMesaWear(s, senado ? PRESIDENTE_SENADO.wear.acordoSenado : PRESIDENTE_SENADO.wear.acordoAmbas)
     if (senado) {
@@ -210,7 +213,7 @@ export function applyDeals(ctx: RoundCtx, deals: Deal[]): void {
     const lead = leaderOf(s, d.party).name
     const name = BILL_BY_ID[d.bill].name
     const cut = d.counter ? ' (contraoferta aceita)' : ''
-    c.scandal = Math.min(100, c.scandal + DEALS.scandal[d.kind] * (d.counter ? DEALS.counter.scandal : 1))
+    bumpScandal(s, DEALS.scandal[d.kind] * (d.counter ? DEALS.counter.scandal : 1), `Acordo com o ${party.sigla}${where}`, 'acordo', d.bill)
     // Etapa 2C: o cardápio lembra o que já foi pedido; acordo pago quita o favor devido; 3 acordos por rodada.
     c.dealLog = [...(c.dealLog ?? []), { party: d.party, kind: d.kind, month: s.month }].slice(-60)
     ctx.round.dealsDone = (ctx.round.dealsDone ?? 0) + 1
@@ -348,6 +351,17 @@ function applyAsk(ctx: RoundCtx, d: Deal, name: string, where: string, cut: stri
 }
 
 // ─── Rejeição e aprovação ─────────────────────────────────────────────────────
+
+/**
+ * Fase A: medida barrada por inconstitucionalidade (CCJ ou Supremo) também marca o presidente.
+ * Antes, este caminho pulava a derrota, a marca e a Ficha, e o público não reagia.
+ */
+export function barredByLaw(s: GameState, impulses: Record<GroupId, Impulse[]>, id: BillId, who: 'a CCJ' | 'o Supremo'): void {
+  const bill = BILL_BY_ID[id]
+  for (const g of GROUPS) impulses[g.id].push({ label: `Medida barrada por inconstitucionalidade: ${bill.name}`, value: REPUTACAO.barradaJuridicaHit })
+  noteBarred(s, id, who, 'por inconstitucionalidade', billPopularity(bill))
+  addMark(s, 'derrotado', REPUTACAO.pts.derrotado, `Barrada por inconstitucionalidade (${who}): “${bill.name}”`, 'derrota', id)
+}
 
 /** Projeto rejeitado na Câmara ou no Senado (ou MP que caducou): volta em 6 meses; MP derrubada desfaz o efeito. */
 export function rejectBill(ctx: RoundCtx, p: PendingBill, house: House | 'caducou', placar: string): void {
@@ -676,6 +690,7 @@ function floorCamara(ctx: RoundCtx, p: PendingBill, opts: FloorOptions): 'votado
       c.pending = c.pending.filter((x) => x !== p)
       c.blockedUntil[p.id] = s.month + RESUBMIT_COOLDOWN
       ctx.mm.barred.push(bill.area)
+      barredByLaw(s, ctx.impulses, p.id, 'a CCJ')
       headlines.push({ text: `CCJ, presidida pelo ${chair.sigla}, barra “${bill.name}” como inconstitucional. O projeto só volta em ${RESUBMIT_COOLDOWN} meses`, tone: 'bad' })
       addBio(s, leaderOf(s, CCJ.chair).name, `O ${chair.sigla} barrou na CCJ “${bill.name}”, do governo ${s.presidentName}, como inconstitucional.`)
       addBio(s, s.presidentName, `Teve “${bill.name}” barrado na CCJ como inconstitucional.`)
@@ -1115,7 +1130,7 @@ export function applyMinistryChange(s: GameState, ch: MinistryChange, headlines:
     const own = c.parties[s.playerParty]
     own.relation = Math.max(0, own.relation + CAMARA.ministry.ownPartyHit)
     if (before.party !== s.playerParty && before.party !== party) c.parties[before.party].relation = Math.max(0, c.parties[before.party].relation + CAMARA.ministry.formerHit)
-    c.scandal = Math.min(100, c.scandal + CAMARA.ministry.scandal)
+    bumpScandal(s, CAMARA.ministry.scandal, `Pasta cedida ao ${p.sigla}`, 'acordo')
     const after = ministerOf(s, area)
     taken.push(`Cedeu ${after.role.replace(/^(Ministr|Secretári)[oa] /, 'a pasta ')} ao ${p.sigla}`)
     headlines.push({ text: `${nominee.name} (${p.sigla}) assume no lugar de ${before.name}: ${p.sigla} entra na base do governo`, tone: 'neutral' })
@@ -1137,6 +1152,18 @@ export function applyMinistryChange(s: GameState, ch: MinistryChange, headlines:
     addBio(s, back.name, `Voltou ao cargo: ${back.role}.`)
     addChronicle(s, `${p.sigla} perde ministério no governo ${s.presidentName}`, 'neutral')
   }
+}
+
+/** Fase A: o parecer que o ministro da área já deu neste mês (limite de um por mês por ministro). */
+export const parecerOf = (s: GameState, area: AreaId): Parecer | undefined => peekRound(s)?.pareceres?.find((p) => p.area === area)
+
+/** Guarda o parecer na rodada: o ministro não opina de novo neste mês, e a leitura pode ser reaberta. */
+export function guardarParecer(prev: GameState, p: Parecer): GameState {
+  if (parecerOf(prev, p.area)) return prev
+  const s = structuredClone(prev)
+  const r = roundOf(s)
+  r.pareceres = [...(r.pareceres ?? []), p]
+  return s
 }
 
 export function ministryNowBlockedReason(s: GameState, ch: MinistryChange): string | null {

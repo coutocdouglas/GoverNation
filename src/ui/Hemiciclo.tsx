@@ -2,6 +2,7 @@
 import type { Deputy } from '../game/types'
 import { PARTY_BY_ID } from '../game/data/parties'
 import { ESTADO_BY_ID } from '../game/data/estados'
+import { LEAN_COLOR, LEAN_LABEL, type Lean } from './lean'
 
 /** Posições das cadeiras num semicírculo: `rows` fileiras, cada uma com cadeiras proporcionais ao raio. */
 function seatPositions(n: number, rows: number, r0: number, r1: number): { x: number; y: number; a: number }[] {
@@ -23,29 +24,33 @@ function seatPositions(n: number, rows: number, r0: number, r1: number): { x: nu
 }
 
 /**
- * Semicírculo de cadeiras. `members` já na ordem do plenário; `ring` marca cadeiras (ex.: quem está com você).
- * Passe o mouse para ver o nome, o partido e o estado.
+ * Semicírculo de cadeiras. `members` já na ordem do plenário. Fase A: a relação com o governo (`lean`) é um único
+ * anel separado do miolo (que tem sempre a cor do partido): verde aliado, amarelo neutro, vermelho oposição.
+ * `focus` apaga as cadeiras que não são do grupo escolhido. Passe o mouse para ver o nome, o partido e o estado.
  */
-export function Hemiciclo({ members, ring, rows = 5, width = 420, onPick }: {
+export function Hemiciclo({ members, lean, focus = null, rows = 5, width = 420, onPick }: {
   members: { d: Deputy; i: number }[]
-  ring?: (i: number) => 'up' | 'dn' | null
+  lean?: (i: number) => Lean
+  focus?: Lean | null
   rows?: number
   width?: number
   onPick?: (i: number) => void
 }) {
   const R = 100
   const pos = seatPositions(members.length, rows, R * 0.45, R)
-  const seat = ((R * 0.55) / rows) * 0.4
+  const seat = ((R * 0.55) / rows) * 0.36
   return (
     <svg className="pn-hemi" viewBox={`${-R - 8} ${-R - 8} ${2 * R + 16} ${R + 14}`} width="100%" style={{ maxWidth: width }} role="img" aria-label={`${members.length} cadeiras`}>
       {members.map(({ d, i }, k) => {
         const p = pos[k]
         const party = PARTY_BY_ID[d.party]
-        const mark = ring?.(i)
+        const l = lean?.(i)
+        const dim = focus !== null && l !== focus
         return (
-          <g key={i} onClick={onPick ? () => onPick(i) : undefined} style={onPick ? { cursor: 'pointer' } : undefined}>
-            <title>{`${d.name ?? ''} · ${party.sigla}${d.uf ? `-${ESTADO_BY_ID[d.uf].sigla}` : ''}`}</title>
-            <circle cx={p.x} cy={p.y} r={seat} fill={party.color} stroke={mark === 'up' ? '#2fd07a' : mark === 'dn' ? '#ff6b6b' : '#0b0f14'} strokeWidth={mark ? 1.6 : 0.6} />
+          <g key={i} opacity={dim ? 0.14 : 1} onClick={onPick ? () => onPick(i) : undefined} style={onPick ? { cursor: 'pointer' } : undefined}>
+            <title>{`${d.name ?? ''} · ${party.sigla}${d.uf ? `-${ESTADO_BY_ID[d.uf].sigla}` : ''}${l ? ` · ${LEAN_LABEL[l].toLowerCase()}` : ''}`}</title>
+            {l && <circle cx={p.x} cy={p.y} r={seat + 1.7} fill="none" stroke={LEAN_COLOR[l]} strokeWidth={1.1} />}
+            <circle cx={p.x} cy={p.y} r={seat} fill={party.color} stroke="#0b0f14" strokeWidth={0.5} />
           </g>
         )
       })}

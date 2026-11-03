@@ -25,9 +25,10 @@ import { PROMISE_BY_ID } from './data/promises'
 import { RIVAL_BY_PARTY } from './data/rival'
 import { Rng } from './rng'
 import { applyEffects } from './effects'
+import { registrarCausas } from './causas'
 import { addMark, initialReputation, maybeCloseChapter, noteRecord, stepReputation } from './reputacao'
 import { REPUTACAO } from './data/marks'
-import { applyMinistryChange, applyPlanToRound, archiveStale, expireMps, peekRound, roundOf, type RoundCtx } from './rodada'
+import { applyMinistryChange, applyPlanToRound, barredByLaw, archiveStale, expireMps, peekRound, roundOf, type RoundCtx } from './rodada'
 import { stepBase } from './base'
 import { MENU } from './data/base'
 import { DEALS } from './data/deals'
@@ -87,7 +88,7 @@ export function newGame(
   const rngState = seed ?? Math.floor(Math.random() * 2 ** 31)
   const bonus = DIFFICULTY[difficulty].approvalBonus
   const state: GameState = {
-    saveVersion: 22,
+    saveVersion: 23,
     month: 0,
     presidentName: presidentName.trim() || 'Presidente',
     difficulty,
@@ -121,6 +122,7 @@ export function newGame(
     supremo: undefined as unknown as GameState['supremo'],
     ministries: undefined as unknown as GameState['ministries'],
     reputation: initialReputation(),
+    causas: [],
     statementLog: [],
     names: {},
   }
@@ -640,6 +642,7 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
     c.blockedUntil[archived] = s.month + RESUBMIT_COOLDOWN
     rivalExtra.push({ label: 'Supremo barra projeto do governo', value: SUPREMO.rivalGain / 2 })
     mm.barred.push(BILL_BY_ID[archived].area)
+    barredByLaw(s, impulses, archived, 'o Supremo')
   }
   if (plan.consult) {
     askConsulta(s, plan.consult)
@@ -837,6 +840,9 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
   const groupCauses = {} as Record<GroupId, Cause[]>
   for (const def of GROUPS) groupCauses[def.id] = stepGroup(s.groups[def.id], after, bonus + offsets[def.id], impulses[def.id])
   const approvalAfter = overallApproval(s.groups)
+  // Fase A: o registro de causas guarda o que mais pesou em cada grupo e em cada indicador neste mês.
+  for (const def of GROUPS) registrarCausas(s, `grupo:${def.id}`, groupCauses[def.id], 'outro')
+  for (const [key, list] of Object.entries(causes) as [string, Cause[] | undefined][]) if (list) registrarCausas(s, `indicador:${key}`, list, 'economia')
 
   headlines.push(...economicHeadlines(before, after, approvalBefore, approvalAfter))
   driftRelations(c, approvalAfter, s.playerParty)

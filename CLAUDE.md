@@ -46,6 +46,7 @@ Etapas com portão: a próxima só abre quando a anterior fecha; ideia fora de h
 ✅ 2C Mesa de negociação e base (v0.20)
 ✅ 3. Senado (v0.21)
 ✅ 4. Supremo profundo (v0.22 e v0.23)
-5. Oposição, escândalos e CPI · 6. Vice e governo · 7. Estados e governadores · 8. Começo, sociedade e fim · 9. Arte final
+✅ A. Correções, ajustes pequenos, registro de causas e texto de reserva da IA (v0.24)
+5. Oposição, escândalos e CPI (5A, 5B, 5C) · 6. Vice e governo · 7. Estados e governadores · 8. Começo, sociedade e fim · 9. Arte final
 
 Antes disso (já feito): retratos, memória do mundo, IA, Congresso 2.0, rival e promessas, Senado votando, Supremo (v0.4 a v0.14).

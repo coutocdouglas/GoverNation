@@ -16,6 +16,7 @@ import { absMonth } from './memory'
 import type { Rng } from './rng'
 import type { BillDef } from './data/bills'
 import type { BillId, Cause, GameState, GroupId, Headline, Impulse, PartyId } from './types'
+import { registrarCausa } from './causas'
 
 export type RecordKind = 'medida' | 'lei' | 'derrota' | 'crise' | 'acordo' | 'supremo' | 'outro'
 
@@ -73,6 +74,7 @@ export function addMark(s: GameState, id: MarkId, pts: number, text: string, kin
   r.marks[id] = clamp((r.marks[id] ?? 0) + pts, 0, 100)
   const def = MARK_BY_ID[id]
   noteRecord(s, { text, tone: def.tone, kind, mark: id, pts: Math.round(pts), bill })
+  registrarCausa(s, { subject: `marca:${id}`, delta: pts, why: text, source: kind === 'derrota' ? 'congresso' : kind === 'acordo' ? 'acordo' : 'medida', bill })
 }
 
 /** Popularidade do texto que vai a voto (soma ponderada do efeito nos grupos). */

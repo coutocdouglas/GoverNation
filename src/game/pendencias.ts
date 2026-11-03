@@ -35,12 +35,24 @@ export interface Pendencia {
   target: PendingTarget
   /** Peso para ordenar (maior = mais urgente). */
   weight: number
+  /** Fase A: texto do pedido que o botão "Atender" leva para o campo da medida do dia. */
+  order?: string
 }
 
 const urgencyOf = (left: number | undefined, grave: boolean): Urgency =>
   left !== undefined && left <= 1 ? 'red' : grave || (left !== undefined && left <= 3) ? 'yellow' : 'green'
 
 const leftText = (left: number) => (left <= 0 ? 'vence agora' : `${left} ${left === 1 ? 'mês' : 'meses'}`)
+
+/** O pedido de uma cobrança, em palavras que o gabinete entende: a primeira medida ou decreto que atende. */
+export function orderOfDemand(def: { title: string; satisfiedBy: readonly string[] }): string {
+  for (const x of def.satisfiedBy) {
+    if (x in BILL_BY_ID) return BILL_BY_ID[x as keyof typeof BILL_BY_ID].name
+    const a = ACTION_BY_ID[x as keyof typeof ACTION_BY_ID]
+    if (a) return a.name
+  }
+  return def.title
+}
 
 export function pendencias(s: GameState): Pendencia[] {
   const out: Pendencia[] = []
@@ -56,6 +68,7 @@ export function pendencias(s: GameState): Pendencia[] {
       id: `dem-${d.id}`, icon: '📣', title: def.title, target: 'cobrancas', left,
       detail: `${GROUP_BY_ID[def.group].name} cobra · ${leftText(left)} · +${def.reward} / −${def.penalty} · atende: ${def.satisfiedBy.map((x) => (x in BILL_BY_ID ? BILL_BY_ID[x as keyof typeof BILL_BY_ID].name : ACTION_BY_ID[x as keyof typeof ACTION_BY_ID]?.name ?? x)).join(' ou ')}`,
       urgency: urgencyOf(left, def.penalty >= 4), weight: 50 - left * 6 + def.penalty,
+      order: orderOfDemand(def),
     })
   }
 

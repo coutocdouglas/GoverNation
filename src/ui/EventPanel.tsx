@@ -11,23 +11,17 @@ import { ResponseBox } from './ResponseBox'
 import { MINISTER_BY_AREA } from '../game/data/ministers'
 import { ministerOf } from '../game/camara'
 import { aiReady } from '../lib/ai'
-import type { StatementId } from '../game/data/assessoria'
-import { AssessoriaBox } from './AssessoriaBox'
 import { askEventBrief } from '../lib/aiActions'
 
 /**
  * Painel do fato do mês. Etapa 2B (v0.19): é o destaque da página, com duas saídas para todo fato, bom ou ruim:
- * **Agir** (a assessoria explica, o ministro dá 2 ou 3 ordens, o presidente escreve e manda a medida;
- * post e rua ficam aqui também) ou **Deixar passar** (vale a consequência mostrada antes).
+ * **Agir** (a assessoria explica, o ministro dá 2 ou 3 ordens, o presidente escreve e manda a medida) ou **Deixar passar** (vale a consequência mostrada antes).
  * Os fatos do Supremo (liminar, derrubada) mantêm as escolhas próprias dentro de Agir.
+ * Fase A (02/11/2026): saíram daqui o catálogo e os "Outros caminhos" (post e rua), que eram bônus fácil demais
+ * (Teste do atalho); voltam na Etapa 6 como ações de agenda, que substituem a medida em vez de somar com ela.
  */
-export function EventPanel({ state, choice, onChoose, response, onRespond, plannedBill, onAddBill, statement, street, onStatement, onStreet }: {
+export function EventPanel({ state, choice, onChoose, response, onRespond, plannedBill, onAddBill }: {
   state: GameState
-  /** Etapa 1B: post da assessoria e ação de rua escolhidos para o mês. */
-  statement: StatementId | null
-  street: string | null
-  onStatement: (id: StatementId | null) => void
-  onStreet: (id: string | null) => void
   /** Põe no catálogo do mandato uma medida nova montada pela IA (etapa 3C). */
   onAddBill: (b: BillDef) => BillId
   choice: number | null
@@ -64,7 +58,6 @@ export function EventPanel({ state, choice, onChoose, response, onRespond, plann
   const letPassed = choice !== null && !response && (!ev.choiceOnly || choice === def) && !acting
   const decided = !!response || (choice !== null && ev.choiceOnly && choice !== def)
   const open = acting || decided
-  const extra = statement || street ? ' · + assessoria' : ''
   const badge = response ? '✔ você agiu' : decided ? '✔ decidido' : letPassed ? '✔ deixou passar' : 'aguarda você'
   const startActing = async () => {
     setActing(true)
@@ -80,7 +73,7 @@ export function EventPanel({ state, choice, onChoose, response, onRespond, plann
     : passOpt.text
   return (
     <section className={`pn-card pn-event pn-event--hero ${kind === 'bom' ? 'pn-event--good' : ''}`} id="fato-do-mes">
-      <h3>🔥 Fato do mês <span className="pn-badge">{badge}{extra}</span></h3>
+      <h3>🔥 Fato do mês <span className="pn-badge">{badge}</span></h3>
       <div className="pn-event__head">
         <div className="pn-event__who">
           <Portrait name={p.name} feminine={p.feminine} color={p.color} size={96} title={p.name} />
@@ -106,7 +99,7 @@ export function EventPanel({ state, choice, onChoose, response, onRespond, plann
         <div className="pn-twoway">
           <button className="pn-twoway__act" onClick={startActing}>
             <span>⚡</span><b>Agir</b>
-            <small>{ev.choiceOnly ? 'Ver as saídas que o caso permite.' : `Ouvir ${resp.feminine ? 'a ministra' : 'o ministro'}, escrever a ordem e mandar a medida. Post e rua também.`}</small>
+            <small>{ev.choiceOnly ? 'Ver as saídas que o caso permite.' : `Ouvir ${resp.feminine ? 'a ministra' : 'o ministro'}, escrever a ordem e mandar a medida.`}</small>
           </button>
           <button className="pn-twoway__pass" onClick={() => onChoose(def)}>
             <span>🤷</span><b>Deixar passar</b>
@@ -120,7 +113,6 @@ export function EventPanel({ state, choice, onChoose, response, onRespond, plann
         <div className="pn-letpass">
           <b>🤷 Você deixou passar.</b> {goodPass}
           <span className="pn-chips">{passChips.map((c, k) => <span key={k} className={`pn-chipfx ${c.tone}`} title={c.title}>{c.text}</span>)}</span>
-          {(statement || street) && <div className="pn-hint" style={{ margin: '4px 0 0' }}>O post e a rua anotados amenizam a penalidade.</div>}
           <div className="pn-row"><button className="pn-btn pn-btn--ghost" onClick={startActing}>Mudar de ideia e agir</button></div>
         </div>
       )}
@@ -157,7 +149,6 @@ export function EventPanel({ state, choice, onChoose, response, onRespond, plann
           ) : (
             <>
               <ResponseBox key={`${state.month}-${ev.id}`} state={state} ev={ev} response={response} plannedBill={plannedBill} onRespond={onRespond} onAddBill={onAddBill} />
-              <AssessoriaBox state={state} statement={statement} street={street} onStatement={onStatement} onStreet={onStreet} />
             </>
           )}
           {!response && !decided && (

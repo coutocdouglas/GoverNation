@@ -12,6 +12,7 @@ import { addBio, addChronicle } from './memory'
 import { noteRecord } from './reputacao'
 import { Rng } from './rng'
 import type { CongressState, Deputy, GameState, Headline, MesaResult, MesaState, PartyId, PartyState, VoteRecord } from './types'
+import { bumpScandal } from './causas'
 
 export { LEADER_STYLE }
 
@@ -303,7 +304,7 @@ export function supportMesa(prev: GameState, name: string, push: MesaPush, own =
   m.support = { name, push }
   if (push === 'emendas') s.economy.tempSpending.push({ label: `Emendas pela eleição da Mesa (${name})`, amount: MESA.emendasCost, monthsLeft: MESA.emendasMonths })
   if (push === 'cargos') {
-    c.scandal = Math.min(100, c.scandal + MESA.cargosScandal)
+    bumpScandal(s, MESA.cargosScandal, 'Cargos em troca de apoio na eleição da Mesa', 'acordo')
     const ps = c.parties[s.playerParty]
     ps.relation = clamp(ps.relation + MESA.cargosOwnHit, 0, 100)
   }

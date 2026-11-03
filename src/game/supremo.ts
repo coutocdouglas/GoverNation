@@ -17,6 +17,7 @@ import { FLUXO } from './data/fluxo'
 import type { BillId, Cause, Consulta, CourtAuthor, CourtCase, CourtNow, Economy, EventOrigin, GameState, GroupId, Headline, Impulse, Instrument, JusticeSeat, PartyId, PendingBill, Precedente, Ruling, SupremoState, TseState } from './types'
 import { applyEffects } from './effects'
 import { resetMinistry } from './ministerios'
+import { bumpScandal } from './causas'
 
 const lowerFirst = (t: string) => (/^[A-ZÀ-Ú]{2}/.test(t) ? t : t.charAt(0).toLowerCase() + t.slice(1))
 
@@ -295,7 +296,7 @@ export function fillTse(s: GameState, id: string, headlines: Headline[], by: 'pr
   const p = j.price
   if (p.favor) bumpFavor(s, p.favor, `Tribunal eleitoral: ${j.name}`)
   if (p.confidence) out.confidence += p.confidence
-  if (p.scandal) s.congress.scandal = clamp(s.congress.scandal + p.scandal, 0, 100)
+  if (p.scandal) bumpScandal(s, p.scandal, `Tribunal eleitoral: ${j.name}`, 'supremo')
   if (p.rival) out.rival.push({ label: `Juiz amigo no tribunal eleitoral (${j.name})`, value: p.rival })
   if (p.classeMedia) out.impulses.push({ group: 'classeMedia', value: p.classeMedia, label: `Juiz amigo no tribunal eleitoral` })
   headlines.push({ text: `Presidente nomeia ${j.name} para o tribunal eleitoral: a corte fica ${mood === 'firme' ? 'mais firme' : mood === 'brando' ? 'mais branda' : 'equilibrada'}`, tone: p.scandal ? 'bad' : 'neutral' })
@@ -1105,7 +1106,7 @@ export function workPlenary(s: GameState, caseId: string, justices: string[], rn
   if (!leaked.length) return { rival: [], leaked }
   for (const j of sup.justices) j.relation = clamp(j.relation + k.leakRelation, 0, 100)
   bumpFavor(s, SUPREMO.favor.vazou, `Vazou: pressão sobre o plenário (${bill?.name ?? c.bill})`)
-  s.congress.scandal = clamp(s.congress.scandal + k.leakScandal * leaked.length, 0, 100)
+  bumpScandal(s, k.leakScandal * leaked.length, `Vazou: pressão sobre o plenário (${bill?.name ?? c.bill})`, 'supremo', c.bill)
   const names = leaked.map((id) => minister(id)).join(' e ')
   headlines.push({ text: `Vazou: Planalto pressiona ${names} antes do julgamento de ${lowerFirst(bill?.name ?? 'uma medida')}`, tone: 'bad' })
   addChronicle(s, `Vaza conversa do governo ${s.presidentName} com ${names} antes de um julgamento no Supremo`, 'bad')
@@ -1395,7 +1396,7 @@ export function applyStfChoice(
     }
     bump(k.ministers)
     bumpFavor(s, SUPREMO.favor.descumprir, `Descumpriu a decisão: ${name}`)
-    c.scandal = clamp(c.scandal + k.scandal, 0, 100)
+    bumpScandal(s, k.scandal, `Descumpriu a decisão: ${name}`, 'supremo')
     own.relation = clamp(own.relation + k.ownParty, 0, 100)
     for (const [gid, v] of Object.entries(bill.effects.groups ?? {}) as [GroupId, number][]) {
       if (v > 0) impulses[gid].push({ label: 'Presidente mantém a medida contra o Supremo', value: k.rally })
