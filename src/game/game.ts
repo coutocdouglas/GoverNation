@@ -8,7 +8,7 @@ import { actsNow, BILL_BY_ID, RESUBMIT_COOLDOWN } from './data/bills'
 import { MINISTER_BY_AREA } from './data/ministers'
 import { DEMAND_BY_ID } from './data/demands'
 import { EVENT_BY_ID } from './data/events'
-import { defaultOption, drawEvent, spawnDemand } from './events'
+import { currentEvent, defaultOption, drawEvent, spawnDemand } from './events'
 import { absMonth, addBio, addChronicle, fillText, plantInheritance, plantSeeds, sproutSeeds } from './memory'
 import { amendmentFor, jabutiBill, ministerOf, ministryBlockedReason, type MinistryChange } from './camara'
 import { BOMBS, CAMARA } from './data/camara'
@@ -650,14 +650,14 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
   }
 
   // 1d7. Etapa 1B: post da assessoria e ação de rua (valem junto com a medida ou a opção pronta).
-  const evNow = s.event ? EVENT_BY_ID[s.event.id] : null
+  const evNow = currentEvent(s)
   const assess = applyAssessoria(s, plan, evNow ? fillText(evNow.title, s.event?.origin) : '', e, impulses, headlines, taken, rivalExtra, rng)
   actionConfidence += assess.confidence
 
   // 1e. Fato do mês
   let eventReport: MonthReport['event']
   if (s.event) {
-    const def = EVENT_BY_ID[s.event.id]
+    const def = currentEvent(s)
     if (def) {
       const origin = s.event.origin
       const title = fillText(def.title, origin)
@@ -708,7 +708,7 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
     }
   }
   if (s.event) {
-    const def = EVENT_BY_ID[s.event.id]
+    const def = currentEvent(s)
     if (def) {
       const origin = s.event.origin
       const title = fillText(def.title, origin)

@@ -3,13 +3,13 @@
 > **Leia este arquivo primeiro.** Ele diz onde o projeto está e qual é o próximo passo.
 > Atualize-o a cada mudança: seção "Estado atual", "Próximo passo" e uma linha no "Histórico".
 
-**Última atualização:** 02/11/2026 · **Versão publicada:** v0.23.0 · **Pronta para publicar:** v0.24.0 (Fase A; ainda sem commit)
+**Última atualização:** 03/11/2026 · **Versão publicada:** v0.24.1
 
 ---
 
 ## Próximo passo
 
-**Publicar a v0.24.0 (Fase A) depois do playtest do Douglas** (portão: uma partida completa, anotando o que ficou confuso, repetitivo ou fácil demais; ver `docs/DESIGN.md` 27.15). Em seguida, **Etapa 5A: Elos e semente de risco** (plano pronto no doc do projeto `plano-de-desenvolvimento.md`, Parte 4; a 5A usa `registrarOrigemRisco`, em `src/game/causas.ts`, para gravar a origem de cada semente). Depois 5B (vazamento, PF e advogado, com o núcleo mínimo da agenda) e 5C (oposição, CPI e inteligência).
+**Playtest da Fase A (v0.24.x, já publicada) pelo Douglas** (portão: uma partida completa, anotando o que ficou confuso, repetitivo ou fácil demais; ver `docs/DESIGN.md` 27.15). Em seguida, **Etapa 5A: Elos e semente de risco** (plano pronto no doc do projeto `plano-de-desenvolvimento.md`, Parte 4; a 5A usa `registrarOrigemRisco`, em `src/game/causas.ts`, para gravar a origem de cada semente). Depois 5B (vazamento, PF e advogado, com o núcleo mínimo da agenda) e 5C (oposição, CPI e inteligência).
 
 Complexidade da 5A: **muito alta**. Opus nas regras (Elos, risco oculto, Controle do Estado, três fontes de escândalo); Sonnet nas telas.
 
@@ -156,3 +156,4 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 | 01/11/2026 | v0.22.0 | Etapa 4, blocos A a C: ação com autor (partido, entidade, Procuradoria, estado), tipo e fundamento; 5 doutrinas; relator por sorteio ou prevenção; trabalhar o plenário ou aguardar; pedido de vista; acórdão com frases; correção da MP no Supremo; simulador `npm run sim4`; save 21 |
 | 01/11/2026 | v0.23.0 | Etapa 4, blocos D a F (a etapa fecha): índice "A seu favor" da Corte, precedentes, embargos, o ministro sai, descumprir a decisão, cadeira no tribunal eleitoral ("O Supremo pede você"); `npm run sim4` ampliado; save 22 |
 | 02/11/2026 | v0.24.0 | Fase A: correção da medida barrada por inconstitucionalidade, ajustes pequenos (parecer do ministro na medida do mês, Atender, sem Outros caminhos, anel do Senado, acordo da Câmara rende menos no Senado), registro de causas e texto de reserva da IA; save 23 |
+| 03/11/2026 | v0.24.1 | Desdobramentos de reputação com texto por situação da medida (na pauta, barrada ou em vigor): a agência ameaça em vez de contar como feito; origem do desdobramento guarda a medida |

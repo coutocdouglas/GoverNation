@@ -2,9 +2,12 @@ import { describe, expect, it } from 'vitest'
 import { barredByLaw } from './rodada'
 import { bumpScandal, causasDe, porque, registrarCausa, registrarOrigemRisco, CAUSAS } from './causas'
 import { absMonth } from './memory'
+import { billStage, currentEvent, eventStage } from './events'
+import { EVENT_BY_ID } from './data/events'
+import { addMark, reputationEvent } from './reputacao'
+import { Rng } from './rng'
 import { migrate } from './save'
 import { reservaAdvice, reservaBrief, reservaReview } from './reserva'
-import { currentEvent } from './events'
 import { BILLS } from './data/bills'
 import { pendencias } from './pendencias'
 import { forecastSenate } from './congress'
@@ -147,5 +150,62 @@ describe('Fase A: botão Atender nas pendências', () => {
       }
     }
     expect(found).toBe(true)
+  })
+})
+
+describe('Fase A (v0.24.1): o texto do desdobramento segue a situação da medida', () => {
+  const withEvent = (id: string, bill: string, setup: (s: GameState) => void) => {
+    const s: GameState = structuredClone(feb(9))
+    setup(s)
+    s.event = { id, month: s.month, origin: { label: 'Reajuste real do salário mínimo', author: s.presidentName, year: 2029, bill } }
+    return s
+  }
+  const toQueue = (s: GameState) => s.congress.pending.push({ id: 'salarioMinimo', sentMonth: s.month, stage: 'plenario' })
+
+  it('billStage: pauta, vigor e barrada', () => {
+    const s: GameState = structuredClone(feb(9))
+    expect(billStage(s, 'salarioMinimo')).toBeNull()
+    toQueue(s)
+    expect(billStage(s, 'salarioMinimo')).toBe('pauta')
+    s.congress.pending = []
+    s.congress.blockedUntil.salarioMinimo = s.month + 6
+    expect(billStage(s, 'salarioMinimo')).toBe('barrada')
+    s.congress.blockedUntil = {}
+    s.congress.laws.push('salarioMinimo')
+    expect(billStage(s, 'salarioMinimo')).toBe('vigor')
+  })
+
+  it('lei ainda na pauta: a agência ameaça em vez de contar como feito; as opções e os efeitos não mudam', () => {
+    const s = withEvent('repGastador', 'salarioMinimo', toQueue)
+    const ev = currentEvent(s)!
+    const base = EVENT_BY_ID.repGastador
+    expect(eventStage(s)).toBe('pauta')
+    expect(ev.title).toMatch(/se {lei} passar/)
+    expect(ev.title).not.toBe(base.title)
+    expect(ev.options[2].text).not.toBe(base.options[2].text)
+    expect(ev.options.map((o) => o.effects)).toEqual(base.options.map((o) => o.effects))
+    expect(ev.options.map((o) => o.default)).toEqual(base.options.map((o) => o.default))
+  })
+
+  it('lei em vigor mantém o texto original; barrada tem o seu texto', () => {
+    const vigor = withEvent('repGastador', 'salarioMinimo', (s) => s.congress.laws.push('salarioMinimo'))
+    expect(currentEvent(vigor)!.title).toBe(EVENT_BY_ID.repGastador.title)
+    const barrada = withEvent('repGastador', 'salarioMinimo', (s) => { s.congress.blockedUntil.salarioMinimo = s.month + 6 })
+    expect(currentEvent(barrada)!.title).toMatch(/barrada/)
+  })
+
+  it('o mercado não elogia um ajuste que ainda nem foi votado como se já valesse', () => {
+    const s = withEvent('repFiscalista', 'privatizar', (x) => x.congress.pending.push({ id: 'privatizar', sentMonth: x.month, stage: 'plenario' }))
+    const ev = currentEvent(s)!
+    expect(ev.text).toMatch(/na pauta/)
+    expect(ev.text).not.toMatch(/^Depois de/)
+  })
+
+  it('o desdobramento de reputação guarda a medida de origem', () => {
+    const s: GameState = structuredClone(feb(9))
+    addMark(s, 'gastador', 60, 'Gasto novo: “Reajuste real do salário mínimo”', 'medida', 'salarioMinimo')
+    let origin
+    for (let seed = 1; seed < 80 && !origin; seed++) origin = reputationEvent(s, new Rng(seed))?.origin
+    expect(origin?.bill).toBe('salarioMinimo')
   })
 })

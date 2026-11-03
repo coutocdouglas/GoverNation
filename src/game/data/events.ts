@@ -30,6 +30,14 @@ export interface EventOption {
   impeach?: 'defender' | 'demitir' | 'deixar'
 }
 
+/** Texto de um fato conforme a situação da medida que o originou (pauta ou barrada). Só troca palavras; as regras são as mesmas. */
+export interface EventVariant {
+  title?: string
+  text?: string
+  /** Troca o texto e o resultado de uma opção, pelo índice. */
+  options?: Record<number, { text?: string; outcome?: string }>
+}
+
 export interface EventDef {
   id: string
   tag: string
@@ -48,6 +56,10 @@ export interface EventDef {
   /** Efeito que acontece de qualquer jeito, além da escolha. */
   effects?: ActionEffects
   weight: number
+  /** v0.24.1: versão do texto quando a medida de origem ainda está na pauta do Congresso (a história ameaça e antecipa, não conta como feito). */
+  pauta?: EventVariant
+  /** v0.24.1: versão do texto quando a medida de origem foi barrada. */
+  barrada?: EventVariant
   /** Etapa 4C2: só as opções prontas valem (sem resposta escrita), mesmo com a IA ligada. */
   choiceOnly?: true
   /** Só acontece se a condição for verdadeira. */

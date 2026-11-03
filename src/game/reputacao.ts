@@ -160,7 +160,7 @@ export function reputationEvent(s: GameState, rng: Rng): GameState['event'] {
     if (s.eventLog.some((e) => e.id === def.event && now - e.month < REPUTACAO.eventCooldown)) continue
     const last = [...s.reputation.record].reverse().find((e) => e.mark === m.id)
     const label = last?.bill ? (BILL_BY_ID[last.bill]?.name ?? def.name.toLowerCase()) : def.name.toLowerCase()
-    return { id: def.event, month: now, origin: { label, author: s.presidentName, party: s.playerParty, year: 2027 + Math.floor(absMonth(s) / 12) } }
+    return { id: def.event, month: now, origin: { label, author: s.presidentName, party: s.playerParty, year: 2027 + Math.floor(absMonth(s) / 12), ...(last?.bill ? { bill: last.bill } : {}) } }
   }
   return null
 }

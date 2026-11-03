@@ -1,5 +1,8 @@
 # Novidades
 
+## 0.24.1
+- **Correção de texto (achado do Douglas):** os desdobramentos de reputação contavam a história como se a lei já tivesse passado, mesmo com a medida ainda na pauta do Congresso. Agora o texto segue a situação da medida: **na pauta**, a agência de risco **avisa** ("se passar sem fonte, o país pode ser rebaixado"), o mercado "aplaude o ajuste que o governo mandou" e os atos acontecem "antes mesmo da votação"; **barrada**, o fato reconhece a tentativa; **em vigor**, o texto continua como antes. A linha de origem diz "Reação a… · ainda na pauta do Congresso" em vez de "Consequência de…". As opções, os efeitos e a reputação são os mesmos: só as palavras mudam.
+
 ## 0.24.0
 - **Fase A: correções e ajustes pequenos, antes da Etapa 5.**
   - **Correção:** medida barrada por inconstitucionalidade (pela CCJ ou pelo Supremo) agora tira aprovação em todos os grupos, marca a reputação e entra na Ficha, como qualquer derrota. Antes, a medida sumia sem reação do público.

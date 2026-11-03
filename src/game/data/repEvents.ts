@@ -20,6 +20,14 @@ export const REP_EVENTS: EventDef[] = [
     title: 'Protestos contra {lei} tomam as capitais',
     text: 'A medida mal saiu do Planalto e já virou símbolo: o movimento Basta convoca atos em 20 capitais e diz que o governo “não ouve ninguém”.',
     presenter: P.rua,
+    pauta: {
+      title: 'Atos contra {lei} se espalham antes mesmo da votação',
+      text: 'A medida ainda nem foi votada e já virou símbolo: o movimento Basta convoca atos em 20 capitais para pressionar os deputados e diz que o governo “não ouve ninguém”.',
+    },
+    barrada: {
+      title: 'Mesmo barrada, {lei} ainda rende protestos',
+      text: 'A medida não passou, mas o movimento Basta cobra explicações: “por que o governo insistiu nisso?”. Os atos seguem em algumas capitais.',
+    },
     options: [
       { icon: '🤝', label: 'Receber os organizadores', text: 'Ouvir não custa caro, e baixa a temperatura.', effects: { groups: { trabalhadores: 2, jovens: 2, classeMedia: 1 } }, outcome: 'Presidente recebe organizadores dos protestos e promete ouvir', tone: 'good' },
       { icon: '📺', label: 'Defender a medida em rede nacional', text: 'Explica o porquê. Convence uns, irrita outros.', effects: { groups: { empresarios: 1, classeMedia: -1, jovens: -2 } }, outcome: 'Em rede nacional, presidente defende a medida e panelaços respondem', tone: 'neutral' },
@@ -31,6 +39,16 @@ export const REP_EVENTS: EventDef[] = [
     title: 'Agência de risco ameaça rebaixar o país depois de {lei}',
     text: 'A agência Atlas põe a nota do Brasil em observação: “gasto novo sem fonte, mês após mês”. O dólar abre em alta.',
     presenter: P.agencia,
+    pauta: {
+      title: 'Agência de risco avisa: se {lei} passar sem fonte, o país pode ser rebaixado',
+      text: 'A agência Atlas põe o Brasil em observação por causa da conta que vem aí: “gasto novo sem fonte de receita”. O mercado já desconta parte do risco e o dólar abre em alta.',
+      options: { 2: { text: 'O mercado segue desconfiado e a ameaça de rebaixamento fica de pé. Juros e dólar sobem.', outcome: 'Mercado segue desconfiado e a agência mantém a ameaça de rebaixar a nota' } },
+    },
+    barrada: {
+      title: 'Agência de risco mantém o país em observação, mesmo com {lei} barrada',
+      text: 'A medida não passou, mas a agência Atlas anota a tentativa: “gasto novo sem fonte, de novo”. O dólar abre em alta.',
+      options: { 2: { text: 'A desconfiança fica. Juros e dólar sobem.', outcome: 'Agência mantém o país em observação' } },
+    },
     options: [
       { icon: '✂️', label: 'Anunciar um corte de gastos', text: 'Acalma o mercado; servidores e programas sentem.', effects: { spending: -0.1, confidence: 4, groups: { servidores: -2, baixaRenda: -1 } }, outcome: 'Governo anuncia corte e agência mantém a nota', tone: 'good' },
       { icon: '🗣️', label: 'Dizer que o gasto é investimento', text: 'Discurso não paga conta.', effects: { confidence: -2 }, outcome: 'Mercado não compra o discurso e o dólar sobe', tone: 'neutral' },
@@ -42,6 +60,15 @@ export const REP_EVENTS: EventDef[] = [
     title: 'Mercado elogia o ajuste e a agência melhora a perspectiva do país',
     text: 'Depois de {lei}, a agência Atlas fala em “compromisso fiscal crível”. Os juros futuros caem.',
     presenter: P.agencia,
+    pauta: {
+      title: 'Mercado aplaude o ajuste que o governo mandou ao Congresso',
+      text: 'Com {lei} na pauta, a agência Atlas fala em “sinal de compromisso fiscal”, ainda condicionado à aprovação. Os juros futuros caem um pouco.',
+      options: { 1: { outcome: 'Juros futuros caem um pouco, à espera da votação' } },
+    },
+    barrada: {
+      title: 'Mercado lamenta o ajuste barrado, mas reconhece a intenção',
+      text: 'Com {lei} barrada, a agência Atlas diz que “a intenção fiscal é crível”, mas cobra nova tentativa. Os juros futuros ficam estáveis.',
+    },
     options: [
       { icon: '📣', label: 'Comemorar em público', text: 'O mercado aplaude; quem perdeu com o ajuste, não.', effects: { confidence: 2, groups: { empresarios: 2, baixaRenda: -1, servidores: -1 } }, outcome: 'Governo comemora melhora da nota', tone: 'good', promote: true },
       { icon: '🤫', label: 'Ficar quieto e seguir', text: 'Sem alarde. O efeito vem sozinho.', effects: { confidence: 1 }, outcome: 'Juros futuros caem com a melhora da perspectiva', tone: 'good', default: true },

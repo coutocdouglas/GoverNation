@@ -11,8 +11,43 @@ export function defaultOption(def: EventDef): number {
   return i >= 0 ? i : def.options.length - 1
 }
 
+/**
+ * Em que pé está a medida que originou o fato: já vale, está na pauta do Congresso ou foi barrada.
+ * Null se o fato não nasceu de uma medida (ou não dá para saber).
+ */
+export function billStage(s: Pick<GameState, 'congress' | 'month'>, id: BillId): 'vigor' | 'pauta' | 'barrada' | null {
+  const c = s.congress
+  if (c.laws.includes(id)) return 'vigor'
+  const queued = c.pending.some((p) => p.id === id) || c.senate.pending.some((p) => p.id === id)
+  // MP vale na hora, mesmo esperando o Congresso.
+  if (queued) return BILL_BY_ID[id]?.instrument === 'mp' ? 'vigor' : 'pauta'
+  if ((c.blockedUntil[id] ?? 0) > s.month) return 'barrada'
+  return null
+}
+
+/** Situação da medida de origem do fato do mês, só para os fatos que têm texto próprio por situação. */
+export function eventStage(s: GameState, ev: EventDef | null = s.event ? EVENT_BY_ID[s.event.id] ?? null : null): 'vigor' | 'pauta' | 'barrada' | null {
+  const bill = s.event?.origin?.bill
+  if (!ev || !bill || (!ev.pauta && !ev.barrada)) return null
+  return billStage(s, bill)
+}
+
+/** O fato com o texto da situação da medida (pauta ou barrada). As opções e os efeitos não mudam: só as palavras. */
+export function resolveEvent(s: GameState, ev: EventDef): EventDef {
+  const stage = eventStage(s, ev)
+  const v = stage === 'pauta' ? ev.pauta : stage === 'barrada' ? ev.barrada : undefined
+  if (!v) return ev
+  return {
+    ...ev,
+    title: v.title ?? ev.title,
+    text: v.text ?? ev.text,
+    options: ev.options.map((o, i) => (v.options?.[i] ? { ...o, ...v.options[i] } : o)),
+  }
+}
+
 export function currentEvent(s: GameState): EventDef | null {
-  return s.event ? EVENT_BY_ID[s.event.id] ?? null : null
+  const ev = s.event ? EVENT_BY_ID[s.event.id] ?? null : null
+  return ev ? resolveEvent(s, ev) : null
 }
 
 /** Sorteia o fato do mês atual de s (ou nenhum). */

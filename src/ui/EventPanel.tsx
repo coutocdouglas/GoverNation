@@ -2,7 +2,7 @@ import { forecastImpeach } from '../game/impeachment'
 import { stfChoiceNote } from '../game/supremo'
 import { useState } from 'react'
 import type { BillDef } from '../game/data/bills'
-import { defaultOption, currentEvent } from '../game/events'
+import { defaultOption, currentEvent, eventStage } from '../game/events'
 import { fillText } from '../game/memory'
 import type { BillId, GameState } from '../game/types'
 import { Portrait } from './Portrait'
@@ -53,6 +53,7 @@ export function EventPanel({ state, choice, onChoose, response, onRespond, plann
   const resp = ministerOf(state, ev.area)
   const p = ev.presenter.name === MINISTER_BY_AREA[ev.area].name ? { name: resp.name, role: resp.role, feminine: resp.feminine, color: resp.color } : ev.presenter
   const origin = state.event?.origin
+  const stage = eventStage(state, ev)
   const kind = ev.kind ?? 'crise'
   const passOpt = ev.options[def]
   const letPassed = choice !== null && !response && (!ev.choiceOnly || choice === def) && !acting
@@ -90,7 +91,7 @@ export function EventPanel({ state, choice, onChoose, response, onRespond, plann
           <h2>{fillText(ev.title, origin)}</h2>
           {resp.name !== p.name && <p className="pn-hint" style={{ margin: '0 0 4px' }}>{resp.icon} Área: {resp.areaName} · responsável: <b>{resp.name}</b></p>}
           <p>{fillText(ev.text, origin)}</p>
-          {origin && ev.id !== 'impeachMinistro' && <p className="pn-event__origin">🌱 Consequência de <b>{origin.label}</b> · {origin.author} · {origin.year}</p>}
+          {origin && ev.id !== 'impeachMinistro' && <p className="pn-event__origin">🌱 {stage === 'pauta' ? 'Reação a' : stage === 'barrada' ? 'Reação à tentativa de' : 'Consequência de'} <b>{origin.label}</b> · {origin.author} · {origin.year}{stage === 'pauta' ? ' · ainda na pauta do Congresso' : stage === 'barrada' ? ' · barrada' : ''}</p>}
           <p className="pn-event__ask">{kind === 'bom' ? '“Presidente, temos uma boa notícia. Vamos agir em cima dela?”' : '“Presidente, precisamos de uma decisão.”'}</p>
         </div>
       </div>
