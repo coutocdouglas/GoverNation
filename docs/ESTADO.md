@@ -3,7 +3,7 @@
 > **Leia este arquivo primeiro.** Ele diz onde o projeto está e qual é o próximo passo.
 > Atualize-o a cada mudança: seção "Estado atual", "Próximo passo" e uma linha no "Histórico".
 
-**Última atualização:** 03/11/2026 · **Versão publicada:** v0.24.1
+**Última atualização:** 05/11/2026 · **Versão publicada:** v0.24.2
 
 ---
 
@@ -157,3 +157,4 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 | 01/11/2026 | v0.23.0 | Etapa 4, blocos D a F (a etapa fecha): índice "A seu favor" da Corte, precedentes, embargos, o ministro sai, descumprir a decisão, cadeira no tribunal eleitoral ("O Supremo pede você"); `npm run sim4` ampliado; save 22 |
 | 02/11/2026 | v0.24.0 | Fase A: correção da medida barrada por inconstitucionalidade, ajustes pequenos (parecer do ministro na medida do mês, Atender, sem Outros caminhos, anel do Senado, acordo da Câmara rende menos no Senado), registro de causas e texto de reserva da IA; save 23 |
 | 03/11/2026 | v0.24.1 | Desdobramentos de reputação com texto por situação da medida (na pauta, barrada ou em vigor): a agência ameaça em vez de contar como feito; origem do desdobramento guarda a medida |
+| 05/11/2026 | v0.24.2 | Correção do travamento na transição de mês: se o fechamento do mês falhar, o jogo avisa o motivo e solta a tela. Causa exata do travamento do mês 36 (partida do Douglas) ainda a investigar |

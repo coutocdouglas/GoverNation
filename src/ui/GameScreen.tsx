@@ -212,8 +212,19 @@ export function GameScreen({ state, onChange, onExit }: {
   }
 
   const endMonth = () => {
+    let next: GameState
+    try {
+      next = advanceMonth(state, selected, plan)
+    } catch (err) {
+      // Se o fechamento do mês falhar, o jogo não pode ficar preso na transição: avisa o motivo e devolve o controle.
+      const motivo = err instanceof Error ? err.message : String(err)
+      console.error('Falha ao encerrar o mês', err)
+      toast(`⚠️ Não foi possível encerrar o mês: ${motivo}`)
+      return
+    }
     setTurning(true)
-    const next = advanceMonth(state, selected, plan)
+    // Trava de segurança: se algo falhar no meio da transição, o jogo solta a tela em vez de ficar preso.
+    setTimeout(() => setTurning(false), 5000)
     setTimeout(() => {
       onChange(next)
       setSelected([])

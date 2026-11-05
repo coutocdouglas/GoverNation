@@ -1,5 +1,8 @@
 # Novidades
 
+## 0.24.2
+- **Correção (achado do Douglas):** ao encerrar o mês 36, o jogo podia ficar preso na tela de transição do mês, com o calendário na frente e sem avançar. A tela era ligada antes de calcular o mês, e, se o cálculo falhasse, ninguém a desligava. Agora, se o fechamento do mês falhar, o jogo **mostra o motivo num aviso** e devolve o controle (a decisão pode ser corrigida e o mês encerrado de novo). Há também uma trava de segurança que solta a tela se algo travar no meio da transição. A causa exata da falha daquela partida ainda será investigada com o aviso.
+
 ## 0.24.1
 - **Correção de texto (achado do Douglas):** os desdobramentos de reputação contavam a história como se a lei já tivesse passado, mesmo com a medida ainda na pauta do Congresso. Agora o texto segue a situação da medida: **na pauta**, a agência de risco **avisa** ("se passar sem fonte, o país pode ser rebaixado"), o mercado "aplaude o ajuste que o governo mandou" e os atos acontecem "antes mesmo da votação"; **barrada**, o fato reconhece a tentativa; **em vigor**, o texto continua como antes. A linha de origem diz "Reação a… · ainda na pauta do Congresso" em vez de "Consequência de…". As opções, os efeitos e a reputação são os mesmos: só as palavras mudam.
 
