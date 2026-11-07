@@ -1,5 +1,17 @@
 # Novidades
 
+## 0.27.0 (07/11/2026)
+- **Etapa 5A, bloco 1 (regras): Elos e semente de risco.** O escândalo deixa de ser sorteio solto e passa a ter origem nas escolhas do governo. **Nada vaza ainda** (o vazamento é da Etapa 5B), e as telas vêm na v0.27.1.
+  - **Elo de reputação:** o presidente, os ministros, os ministros do Supremo e os líderes dos partidos ganham um Elo (Bronze, Prata, Ouro, Platina, com 3 divisões cada, e "sob suspeita"). Subir é mais difícil que cair. Ministro com Elo baixo apanha mais da imprensa (desgasta mais rápido); o Elo do indicado ao Supremo pesa na sabatina do Senado.
+  - **Risco oculto:** cada pessoa tem um risco escondido (partido fisiológico, pouca ligação com o governo, pasta com muito contrato). O jogo vai mostrar só uma pista em palavras.
+  - **Rastro do presidente:** um número escondido que só sobe com o que o presidente aceita (empresa de aliado, aliado no Tribunal de Contas e, na v0.27.1, propostas de setores). Recusar não muda nada.
+  - **Controle do Estado (0 a 100):** quanto o governo fiscaliza a própria máquina. Quanto menor, mais fácil uma escolha arriscada virar esquema. Sobe com a força-tarefa contra a corrupção, o portal de transparência e o fim das emendas sem rastreio; cai com cargos para a base. **Quatro medidas novas:** Fortalecer a Controladoria-Geral, Lei Anticorrupção mais dura, Autonomia da Polícia Federal e Indicar um aliado para o Tribunal de Contas. Repetir medidas parecidas rende cada vez menos.
+  - **Sementes de risco:** nomear alguém arriscado, entregar diretoria de estatal ou cargos, prometer obra e contratar empresa para uma medida plantam uma semente, com quem escolheu, quando e por quê na Ficha. A semente pode virar um esquema escondido com o tempo, e isso fica mais difícil com o Controle do Estado alto.
+  - **Contrato e licitação:** medida com obra ou gasto grande tem 3 ou 4 empresas para executar (a de sempre, a de primeira linha e mais cara, a mais barata e arriscada, e a ligada a um aliado). Até a tela chegar, vale a de sempre, sem custo extra.
+  - **Medidas que você escreve:** com IA, a ficha da medida nova diz se ela mexe no Controle do Estado (dentro da faixa das medidas do catálogo) e se gera contrato.
+- Mandatos salvos continuam normalmente (save versão 26): ganham o Controle do Estado e as fichas, sem nenhuma semente retroativa.
+- Balanceamento: simulador novo `npm run sim5a` (cerca de 3 a 4 esquemas por mandato, 1 grave; com Controle do Estado alto, quase nenhum). Os simuladores antigos não mudaram de forma relevante. 360 testes.
+
 ## 0.26.1 (07/11/2026)
 - **Lote A2, item 3: logos dos partidos no mapa do Senado.** O miolo de cada bolinha agora é o logo do partido (o anel de relação com o governo, os filtros e o clique na cadeira continuam iguais). As bolinhas e o mapa ficaram um pouco maiores para o logo aparecer.
   - Cada logo é carregado uma vez e reaproveitado nas 81 cadeiras. Se o arquivo de um partido faltar, a bolinha mostra a cor sólida dele, sem imagem quebrada.

@@ -19,6 +19,7 @@ import { applyEffects } from './effects'
 import { curvaGanho } from './efeitos'
 import { resetMinistry } from './ministerios'
 import { bumpScandal } from './causas'
+import { garantirPessoa, sabatinaPorElo } from './risco'
 
 const lowerFirst = (t: string) => (/^[A-ZÀ-Ú]{2}/.test(t) ? t : t.charAt(0).toLowerCase() + t.slice(1))
 
@@ -1459,7 +1460,9 @@ export function nominationBill(s: GameState, n: NomineeDef): BillDef {
 /** Reforço de cada partido na sabatina. */
 export function nominationLean(s: GameState, n: NomineeDef): Partial<Record<PartyId, number>> {
   const out: Partial<Record<PartyId, number>> = {}
-  for (const p of PARTIES) out[p.id] = SUPREMO.sabatinaLean + (n.kind === 'aliado' && p.id !== s.playerParty ? SUPREMO.aliadoPenalty : 0)
+  // Etapa 5A: o Elo do indicado pesa na sabatina (Prata 2 é o centro).
+  const elo = sabatinaPorElo(s, n.name)
+  for (const p of PARTIES) out[p.id] = SUPREMO.sabatinaLean + elo + (n.kind === 'aliado' && p.id !== s.playerParty ? SUPREMO.aliadoPenalty : 0)
   return out
 }
 
@@ -1485,6 +1488,7 @@ export function appointJustice(s: GameState, n: NomineeDef, impulses: Record<Gro
   const seat: JusticeSeat = { id: n.id, relation: n.relation, appointedBy: s.presidentName, year: yearOf(now), econ: pos.econ, costumes: pos.costumes }
   sup.justices.push(seat)
   sup.used.push(n.id)
+  garantirPessoa(s, n.name, { papel: 'supremo' })
   const retired = sup.vacancy ? justiceInfo({ id: sup.vacancy.retired }).name : ''
   sup.vacancy = null
   const c = s.congress

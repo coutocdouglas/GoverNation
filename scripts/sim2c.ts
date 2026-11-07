@@ -85,7 +85,7 @@ export function negociador(seed: number, party: PartyId, useDeals: boolean) {
   const leis = s.congress.laws.filter((l) => BILLS.some((b) => b.id === l && b.instrument === 'lei')).length
   st.leis = leis
   const fid = PARTIES.filter((p) => s.congress.parties[p.id].fidelity !== undefined).map((p) => fidelityOf(s, p.id))
-  return { st, score: finalScore(s).total, scandal: s.congress.scandal, fid: fid.length ? fid.reduce((a, b) => a + b) / fid.length : NaN, base: baseCounts(s), recParties: Object.keys(s.congress.record ?? {}).length }
+  return { s, st, score: finalScore(s).total, scandal: s.congress.scandal, fid: fid.length ? fid.reduce((a, b) => a + b) / fid.length : NaN, base: baseCounts(s), recParties: Object.keys(s.congress.record ?? {}).length }
 }
 
 if (process.argv[1]?.endsWith('sim2c.ts')) {

@@ -7,6 +7,7 @@ import { clamp } from './ideology'
 import { absMonth, addBio } from './memory'
 import { promiseStatus, type PromiseStatus } from './promises'
 import type { Cause, GameState, GroupId, Headline, Impulse, MinistrySeat } from './types'
+import { imprensaPorElo } from './risco'
 
 export const AREAS: AreaId[] = MINISTERS.map((m) => m.area)
 
@@ -69,6 +70,9 @@ export function stepMinistries(s: GameState, m: MinistryMonth, impulses: Record<
     if (m.barred.includes(area)) add('Projeto da área barrado', MINISTERIOS.barred)
     const goal = ministryGoal(s, area)
     add(`Meta da pasta: ${goal.status === 'rumo' || goal.status === 'cumprida' ? 'no rumo' : goal.status === 'risco' ? 'em risco' : 'longe'}`, MINISTERIOS.goal[goal.status] ?? 0)
+    // Etapa 5A: Elo baixo apanha mais da imprensa; Elo alto, menos.
+    const imprensa = imprensaPorElo(s, area)
+    if (imprensa) add(imprensa.label, imprensa.value)
     const before = seat.wear
     seat.wear = clamp(seat.wear + causes.reduce((a, c) => a + c.value, 0), 0, 100)
     seat.causes = causes

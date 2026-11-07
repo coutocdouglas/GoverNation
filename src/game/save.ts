@@ -10,6 +10,7 @@ import { ensureAlas, openMesa } from './partidos'
 import { CAMARA } from './data/camara'
 import { BASE } from './data/base'
 import { ensureStates } from './estados'
+import { garantirPessoa, initialRisco, pessoasAtuais } from './risco'
 import type { GameState } from './types'
 
 // O jogo instalado guarda o localStorage na pasta de dados do usuário no Windows
@@ -221,7 +222,16 @@ export function migrate(raw: unknown): GameState | null {
       // do envio, então viram lei com o efeito cheio; nada fica adiado do teto do mês.
       s.saveVersion = 25
     }
-    if (s.saveVersion !== 25) return null
+    if (s.saveVersion === 25) {
+      // v0.26 → v0.27 (Etapa 5A): Controle do Estado pela dificuldade, rastro zero, sem sementes nem esquemas.
+      // O ministério atual e os líderes ganham ficha (Elo e risco oculto), mas ninguém planta semente
+      // retroativa: nada do mandato salvo vira esquema por causa da atualização.
+      const g = s as GameState
+      g.risco ??= initialRisco(g.difficulty ?? 'normal')
+      for (const { name, ctx } of pessoasAtuais(g)) garantirPessoa(g, name, ctx)
+      s.saveVersion = 26
+    }
+    if (s.saveVersion !== 26) return null
     syncCustomBills(s as GameState)
     return s as GameState
   } catch {

@@ -27,6 +27,12 @@ export interface BillDef {
   keywords: string[]
   /** Medida montada pela IA a pedido do presidente (etapa 3C). Ausente nas medidas do catálogo fixo. */
   custom?: CustomInfo
+  /** Etapa 5A: quanto a medida mexe no Controle do Estado (na régua do instrumento, data/risco.ts). */
+  controle?: number
+  /** Etapa 5A: a execução depende de contratar empresa (além do que o gasto já indica). */
+  contrato?: boolean
+  /** Etapa 5A: quanto a medida sobe o rastro do presidente (ex.: auditor amigo no TCU). */
+  rastro?: number
 }
 
 export type LegalRisk = 'baixo' | 'medio' | 'alto'

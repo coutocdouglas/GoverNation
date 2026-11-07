@@ -2,6 +2,7 @@ import type { ActionEffects } from './actions'
 import { BILL_BY_ID, BILLS, type BillDef, type LegalRisk } from './data/bills'
 import { SEED_RULES } from './data/consequences'
 import { CUSTOM } from './data/custom'
+import { CONTROLE } from './data/risco'
 import { GROUPS } from './data/groups'
 import { MINISTER_BY_AREA, type AreaId } from './data/ministers'
 import { ministerOf } from './camara'
@@ -41,6 +42,10 @@ export interface CustomDraft {
   pros?: unknown
   contras?: unknown
   palavras?: unknown
+  /** Etapa 5A: quanto a medida aumenta (+) ou reduz (-) a fiscalização do próprio governo. */
+  controle?: unknown
+  /** Etapa 5A: a execução depende de contratar empresa (obra, compra grande, serviço). */
+  contrato?: unknown
 }
 
 /** Matérias que exigem um instrumento mínimo. */
@@ -245,6 +250,13 @@ export function buildCustomBill(s: GameState, draft: CustomDraft, request: strin
     keywords,
     custom: { createdAt: at, term: s.term, legalRisk, request: request.slice(0, 300), matters: matters.length ? matters : undefined },
   }
+  // Etapa 5A: Controle do Estado na régua do instrumento (as medidas do catálogo dão o tamanho) e contrato.
+  const rawControle = Math.round(num(draft.controle))
+  const regua = CONTROLE.regua[instrument]
+  const controle = Math.max(-regua, Math.min(regua, rawControle))
+  if (controle) bill.controle = controle
+  if (Math.abs(rawControle) > regua) notes.push('O efeito na fiscalização do governo foi trazido para a faixa das medidas conhecidas.')
+  if (draft.contrato === true || draft.contrato === 'sim') bill.contrato = true
   return { ok: true, bill, notes: [...new Set(notes)] }
 }
 

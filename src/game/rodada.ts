@@ -45,6 +45,8 @@ import type { MonthPlan } from './game'
 import type { AreaId } from './data/ministers'
 import type { Articulation, Parecer, BillId, Cause, CourtNow, Deal, DealTerms, Economy, GameState, GroupId, Headline, Impulse, PendingBill, RoundBuffer, ReactionRoll, MesaSenadoAcao, SenatorBuy, VoteRecord } from './types'
 import { bumpScandal } from './causas'
+import { guardarEmpresa, medidaEmVigorRisco, nomeacaoDePasta, sementeDeAcordo, soltarEmpresa } from './risco'
+import type { PerfilEmpresa } from './data/risco'
 
 export type House = 'camara' | 'senado'
 
@@ -62,6 +64,8 @@ export interface FloorOptions {
   title?: string
   /** Etapa 3: senadores indecisos comprados para a votação no Senado (até 3 por rodada). */
   senadores?: SenatorBuy[]
+  /** Etapa 5A: empresa escolhida para executar a medida (perfil); sem escolha, a padrão (preço de mercado). */
+  empresa?: PerfilEmpresa
 }
 
 /** Contexto de trabalho: o estado e os acumuladores da rodada. */
@@ -221,6 +225,8 @@ export function applyDeals(ctx: RoundCtx, deals: Deal[]): void {
     const name = BILL_BY_ID[d.bill].name
     const cut = d.counter ? ' (contraoferta aceita)' : ''
     bumpScandal(s, DEALS.scandal[d.kind] * (d.counter ? DEALS.counter.scandal : 1) * priceK, `${renewed ? 'Renovação do acordo' : 'Acordo'} com o ${party.sigla}${where}`, 'acordo', d.bill)
+    // Etapa 5A: estatal, segundo escalão e obra plantam semente de risco (a renovação não planta outra).
+    if (!renewed) sementeDeAcordo(s, d.kind, d.party, d.bill)
     // Etapa 2C: o cardápio lembra o que já foi pedido; acordo pago quita o favor devido; 3 acordos por rodada.
     c.dealLog = [...(c.dealLog ?? []), { party: d.party, kind: d.kind, month: s.month }].slice(-60)
     ctx.round.dealsDone = (ctx.round.dealsDone ?? 0) + 1
@@ -377,6 +383,7 @@ export function rejectBill(ctx: RoundCtx, p: PendingBill, house: House | 'caduco
   const bill = BILL_BY_ID[p.id]
   const senado = house === 'senado'
   c.blockedUntil[p.id] = s.month + RESUBMIT_COOLDOWN
+  soltarEmpresa(s, p.id)
   // Etapa 2B: o mercado tinha precificado parte da lei no envio; barrada, desfaz.
   if (p.priced) ctx.conf.v -= p.priced
   if (bill.instrument === 'mp') {
@@ -435,6 +442,8 @@ function enactBill(ctx: RoundCtx, p: PendingBill, placarS: string): void {
     plantSeeds(s, p.id, bill.name, s.presidentName, s.playerParty, ctx.rng)
     const scale = (am?.scale ?? 1) * k * conc.reduce((x, d) => x * (d.concession ? CONCESSION_BY_ID[d.concession.type].scale : 1), 1)
     noteInForce(s, p.id, s.presidentName, scale !== 1 ? scale : undefined)
+    // Etapa 5A: Controle do Estado e contrato com a empresa escolhida no envio.
+    medidaEmVigorRisco(s, e, p.id, undefined, headlines)
     // Etapa 3: a lei mexe com a relação dos estados pelo grupo que mais pesa em cada um.
     statesOnMeasure(s, bill, scale)
     courtToday(ctx, p.id)
@@ -900,6 +909,7 @@ export function sendInto(s: GameState, id: BillId, opts: FloorOptions = {}, resp
     c.laws.push(id)
     noteInForce(s, id, s.presidentName)
     plantSeeds(s, id, bill.name, s.presidentName, s.playerParty, ctx.rng)
+    medidaEmVigorRisco(s, ctx.e, id, opts.empresa, ctx.headlines)
     addBio(s, s.presidentName, `Assinou o decreto: ${bill.name}.`)
     addChronicle(s, `Decreto: ${bill.name}, no governo ${s.presidentName} (${PARTY_BY_ID[s.playerParty].sigla})`, 'neutral')
     if (!response) ctx.taken.push(`Assinou o decreto: ${bill.name}`)
@@ -920,6 +930,8 @@ export function sendInto(s: GameState, id: BillId, opts: FloorOptions = {}, resp
     }
     if (opts.original) p.original = true
     c.pending.push(p)
+    // Etapa 5A: lei e PEC guardam a empresa escolhida até passar (MP assina o contrato abaixo, na hora).
+    if (bill.instrument !== 'mp') guardarEmpresa(s, id, opts.empresa)
     applyDeals(ctx, (opts.deals ?? []).map((d) => ({ ...d, bill: id })))
     ctx.conf.v += payBuys(s, id, opts.senadores ?? [], ctx.headlines, ctx.taken)
     if (bill.instrument === 'mp') {
@@ -927,6 +939,7 @@ export function sendInto(s: GameState, id: BillId, opts: FloorOptions = {}, resp
       ctx.conf.v += applyEffects(ctx.e, ctx.impulses, bill.effects, bill.name, 1, 1, true)
       plantSeeds(s, id, bill.name, s.presidentName, s.playerParty, ctx.rng)
       noteInForce(s, id, s.presidentName)
+      medidaEmVigorRisco(s, ctx.e, id, opts.empresa, ctx.headlines)
       addBio(s, s.presidentName, `Editou a medida provisória: ${bill.name}.`)
       ctx.mm.enacted.push(bill.area)
       if (!response) ctx.taken.push(`Editou a MP: ${bill.name}`)
@@ -1060,6 +1073,7 @@ export function archiveStale(ctx: RoundCtx): void {
     c.pending = c.pending.filter((x) => x !== p)
     c.senate.pending = c.senate.pending.filter((x) => x !== p)
     c.blockedUntil[p.id] = s.month + ESFRIA.resubmit
+    soltarEmpresa(s, p.id)
     if (p.priced) ctx.conf.v -= p.priced
     // Lote A2: avisa quanto foi pago nos acordos que se perdem com o arquivamento.
     const lost = [...(p.deals ?? []), ...(p.senateDeals ?? [])]
@@ -1152,6 +1166,8 @@ export function applyMinistryChange(s: GameState, ch: MinistryChange, headlines:
     own.relation = Math.max(0, own.relation + CAMARA.ministry.ownPartyHit)
     if (before.party !== s.playerParty && before.party !== party) c.parties[before.party].relation = Math.max(0, c.parties[before.party].relation + CAMARA.ministry.formerHit)
     bumpScandal(s, CAMARA.ministry.scandal, `Pasta cedida ao ${p.sigla}`, 'acordo')
+    // Etapa 5A: o indicado ganha ficha; se o risco oculto for alto, nasce uma semente.
+    nomeacaoDePasta(s, area, party)
     const after = ministerOf(s, area)
     taken.push(`Cedeu ${after.role.replace(/^(Ministr|Secretári)[oa] /, 'a pasta ')} ao ${p.sigla}`)
     headlines.push({ text: `${nominee.name} (${p.sigla}) assume no lugar de ${before.name}: ${p.sigla} entra na base do governo`, tone: 'neutral' })

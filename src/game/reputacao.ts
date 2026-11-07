@@ -18,7 +18,7 @@ import type { BillDef } from './data/bills'
 import type { BillId, Cause, GameState, GroupId, Headline, Impulse, PartyId } from './types'
 import { registrarCausa } from './causas'
 
-export type RecordKind = 'medida' | 'lei' | 'derrota' | 'crise' | 'acordo' | 'supremo' | 'outro'
+export type RecordKind = 'medida' | 'lei' | 'derrota' | 'crise' | 'acordo' | 'supremo' | 'risco' | 'outro'
 
 export interface RecordEntry {
   /** Mês absoluto (vários mandatos). */

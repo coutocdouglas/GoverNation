@@ -43,6 +43,7 @@ import { applyAssessoria, lostCreditValue, softenEffects, statementBlockedReason
 import { buildMeanwhile } from './entretanto'
 import { driftAlas, internalElections, leaderOf, openMesa, runMesa, speakerOf } from './partidos'
 import { TALK } from './data/negociacao'
+import { initialRisco, posseRisco, sortearProposta, stepRisco } from './risco'
 
 import type { ActionId, Deal, Articulation, BillId, Cause, GameState, GroupId, Headline, Impulse, MonthReport, PartyId, SanctionItem, Snapshot, VetoItem, VoteRecord } from './types'
 
@@ -89,7 +90,8 @@ export function newGame(
   const rngState = seed ?? Math.floor(Math.random() * 2 ** 31)
   const bonus = DIFFICULTY[difficulty].approvalBonus
   const state: GameState = {
-    saveVersion: 25,
+    saveVersion: 26,
+    risco: initialRisco(difficulty),
     month: 0,
     presidentName: presidentName.trim() || 'Presidente',
     difficulty,
@@ -130,6 +132,8 @@ export function newGame(
   state.supremo = initialSupremo(state)
   state.ministries = initialMinistries(state)
   state.reputation = initialReputation()
+  // Etapa 5A: o ministério da posse e os líderes ganham ficha (Elo e risco oculto); ministro de risco planta semente.
+  posseRisco(state)
   syncCustomBills(state)
   for (const b of promiseSideBoosts(promises, playerParty)) {
     const g = state.groups[b.group]
@@ -808,6 +812,10 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
   actionConfidence += repMonth.confidence
   rivalExtra.push(...repMonth.rival)
 
+  // 1i. Etapa 5A: fichas (Elo com histerese), sementes que viram esquema escondido, proposta de setor vencida.
+  // Sorteio próprio, para não mudar o resto do mês. Nada vaza na 5A.
+  stepRisco(s, new Rng((absMonth(s) * 69069) ^ s.rngState ^ 0x5a17e5), impulses, headlines)
+
   // 2. Copom (antes da economia andar, com os dados do mês anterior)
   const selicCauses: Cause[] = []
   if (isCopomMonth(s.month)) headlines.push(runCopom(e, selicCauses))
@@ -910,6 +918,8 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
     sproutSeeds(s)
     s.event = drawEvent(s, rng)
     openMesa(s)
+    // Etapa 5A: proposta de setor (no máximo uma a cada 3 meses, nunca com fato grave). Sorteio próprio.
+    sortearProposta(s, new Rng((absMonth(s) * 40961) ^ s.rngState ^ 0x9e0b05))
   }
   s.rngState = rng.state
   return s
