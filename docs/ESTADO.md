@@ -3,13 +3,13 @@
 > **Leia este arquivo primeiro.** Ele diz onde o projeto está e qual é o próximo passo.
 > Atualize-o a cada mudança: seção "Estado atual", "Próximo passo" e uma linha no "Histórico".
 
-**Última atualização:** 07/11/2026 · **Versão publicada:** v0.26.0
+**Última atualização:** 07/11/2026 · **Versão publicada:** v0.26.1
 
 ---
 
 ## Próximo passo
 
-**Lote A2** (o Douglas dispensou o playtest da Fase A em 07/11/2026 e o travamento do mês 36 está resolvido): ~~1) acordos que esfriam~~ (feito na v0.25.0; falta o aviso "acordo para vencer" na central de pendências); ~~2) calibrar o tamanho dos efeitos das medidas nos grupos~~ (feito na v0.26.0: curva do ganho, "só de mandar já pesa" e teto por grupo no mês; a "medida explosiva" ficou para a Etapa 6); **3) logos dos partidos no mapa do Senado (Sonnet ou Haiku, complexidade baixa)**. Em seguida, **Etapa 5A: Elos e semente de risco** (plano pronto no doc do projeto `plano-de-desenvolvimento.md`, Parte 4; a 5A usa `registrarOrigemRisco`, em `src/game/causas.ts`, para gravar a origem de cada semente). Depois 5B (vazamento, PF e advogado, com o núcleo mínimo da agenda) e 5C (oposição, CPI e inteligência).
+**Lote A2** (o Douglas dispensou o playtest da Fase A em 07/11/2026 e o travamento do mês 36 está resolvido): ~~1) acordos que esfriam~~ (feito na v0.25.0; falta o aviso "acordo para vencer" na central de pendências); ~~2) calibrar o tamanho dos efeitos das medidas nos grupos~~ (feito na v0.26.0: curva do ganho, "só de mandar já pesa" e teto por grupo no mês; a "medida explosiva" ficou para a Etapa 6); ~~3) logos dos partidos no mapa do Senado~~ (feito na v0.26.1, **lote A2 fechado**). Em seguida, **Etapa 5A: Elos e semente de risco** (plano pronto no doc do projeto `plano-de-desenvolvimento.md`, Parte 4; a 5A usa `registrarOrigemRisco`, em `src/game/causas.ts`, para gravar a origem de cada semente). Depois 5B (vazamento, PF e advogado, com o núcleo mínimo da agenda) e 5C (oposição, CPI e inteligência).
 
 Complexidade da 5A: **muito alta**. Opus nas regras (Elos, risco oculto, Controle do Estado, três fontes de escândalo); Sonnet nas telas.
 
@@ -163,3 +163,4 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 | 07/11/2026 | — | Douglas confirma que o travamento do mês 36 foi resolvido. Playtest da Fase A dispensado por ele; segue o lote A2 (acordos, calibragem dos efeitos, logos do Senado). CLAUDE.md reescrito (regras de trabalho: pedir permissão antes de mudar e dizer o modelo ideal por etapa) |
 | 07/11/2026 | — | Lote A2, item 2: medição no simulador do tamanho dos efeitos (decreto bom +0,6 de aprovação, abaixo da variação natural de 1,1 por mês; medida absurda barrada na Câmara só −1,3, quase igual a uma lei impopular aprovada). Documentos atualizados para a v0.25.0 |
 | 07/11/2026 | v0.26.0 | Lote A2, item 2: curva do ganho, "só de mandar já pesa" (lei, LC e PEC) com aviso na leitura, teto por grupo no mês com sobra adiada; absurda barrada −1,3 → −4,5 a −6; decreto bom +0,6 → +0,9; simulador estável; save 25; 334 testes. Ideia do Douglas "medida explosiva" na Caixa de ideias da Etapa 6 |
+| 07/11/2026 | v0.26.1 | Lote A2, item 3: logo do partido no miolo de cada bolinha do mapa do Senado (cor sólida se o arquivo faltar, cada logo carregado uma vez), bolinhas e mapa um pouco maiores; anel e filtros iguais. Fecha o lote A2; 334 testes |

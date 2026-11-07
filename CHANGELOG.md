@@ -1,5 +1,10 @@
 # Novidades
 
+## 0.26.1 (07/11/2026)
+- **Lote A2, item 3: logos dos partidos no mapa do Senado.** O miolo de cada bolinha agora é o logo do partido (o anel de relação com o governo, os filtros e o clique na cadeira continuam iguais). As bolinhas e o mapa ficaram um pouco maiores para o logo aparecer.
+  - Cada logo é carregado uma vez e reaproveitado nas 81 cadeiras. Se o arquivo de um partido faltar, a bolinha mostra a cor sólida dele, sem imagem quebrada.
+- Sem mudança no motor nem no save (continua na versão 25). Fecha o lote A2.
+
 ## 0.26.0 (07/11/2026)
 - **Lote A2, item 2: o tamanho dos efeitos das medidas nos grupos.** Antes, um decreto bom mal aparecia (+0,6 de aprovação, menos que a variação normal de um mês) e a medida absurda barrada na Câmara custava só −1,3, quase o mesmo que uma lei impopular aprovada.
   - **Ganho com curva:** ganho pequeno num grupo fica mais visível e ganho grande cresce cada vez menos (+2 vira +2,8; +8 vira +5,7). Decreto bom: +0,6 → +0,9 de aprovação, com o grupo beneficiado mexendo +2,9 no mês. Lei forte (salário mínimo): +2,6 → +2,2.

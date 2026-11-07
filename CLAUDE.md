@@ -2,7 +2,7 @@
 
 Jogo de simulação política (governar o Brasil) para Windows, do Douglas (arquiteto, dono do projeto). Mecânicas inspiradas no jogo de referência planalto.fun. **Só a mecânica entra: nomes, textos, imagens e políticos reais do jogo de referência ficam de fora. Tudo no GoverNation é fictício.**
 
-Versão atual: **v0.26.0**. Documentação técnica: `docs/DESIGN.md` (seção 27; 27.15 Fase A, 27.16 e 27.17 lote A2). Plano completo por etapas: `docs/projeto/plano-de-desenvolvimento.md`, se estiver na pasta; este arquivo traz o essencial.
+Versão atual: **v0.26.1**. Documentação técnica: `docs/DESIGN.md` (seção 27; 27.15 Fase A, 27.16 a 27.18 lote A2). Plano completo por etapas: `docs/projeto/plano-de-desenvolvimento.md`, se estiver na pasta; este arquivo traz o essencial.
 
 ## Como trabalhar com o Douglas
 - Responder em português do Brasil.
@@ -65,12 +65,12 @@ Testes passando · partida simulada sem erro · balanceamento revisado · efeito
 - Save na versão 25.
 
 ## Situação
-Etapas feitas: 0, 1A, 1B, 2, 2B, 2C, 3 (Senado, v0.21), 4A e 4B (Supremo profundo, v0.22 e v0.23), **Fase A** (v0.24 e v0.24.1, publicada em 03/11/2026; playtest dispensado pelo Douglas em 07/11/2026), **lote A2 item 1** (v0.25.0, acordos que esfriam).
+Etapas feitas: 0, 1A, 1B, 2, 2B, 2C, 3 (Senado, v0.21), 4A e 4B (Supremo profundo, v0.22 e v0.23), **Fase A** (v0.24 e v0.24.1, publicada em 03/11/2026; playtest dispensado pelo Douglas em 07/11/2026), **lote A2 itens 1 a 3** (v0.25.0 acordos que esfriam, v0.26.0 efeitos das medidas, v0.26.1 logos do Senado).
 
 ### Próximo: lote A2 (nesta ordem)
 1. ✅ **Feito na v0.25.0** (força cai 15 pontos por mês, renovação por 70%, aviso no arquivamento; DESIGN.md 27.16). Falta o aviso "acordo para vencer" na central de pendências e rebalancear o 35% do Senado no playtest. Texto original: **Acordos que esfriam e travam a bancada** (erro achado pelo Douglas jogando; confirmado no código). Hoje: o acordo fica guardado na medida; a fila esfria todos os partidos (0,04 por rodada, até 0,20), corroendo o reforço; o partido fica travado em "Acordo já fechado" mesmo com o efeito anulado; aos 6 meses a medida é arquivada e o acordo some, enquanto as emendas pagas continuam saindo por 3 meses. Correção: (a) validade visível com força que cai mês a mês e "vence em N meses"; (b) renegociar quando a força cai ou vence, considerando o que já foi pago; (c) o desconto da fila vir do próprio acordo, sem zerar sem aviso; (d) avisar no arquivamento quanto foi pago e perdido; (e) valer para Câmara e Senado (`dealsOf`, `senateDealsOf`, `senado.dealCarry`). Cuidados: renegociar não pode ser grátis (Teste do atalho); manter o limite de 3 conversas por rodada; rebalancear o 35% do Senado. **Complexidade média · Opus** na regra; Sonnet no cartão do partido.
 2. ✅ **Feito na v0.26.0** (curva do ganho, "só de mandar já pesa", teto por grupo no mês; `src/game/efeitos.ts`, DESIGN.md 27.17; a "medida explosiva" ficou para a Etapa 6). Texto original: **Calibrar o tamanho dos efeitos das medidas nos grupos** (medida boa sobe pouco, absurda desce pouco; hoje a barrada vale −0,8 por grupo). Passos: medir no simulador antes de mexer; curvas não lineares e sensibilidade por grupo; a absurda desce forte em quem é atingido; ganho com retorno decrescente; guardas (teto mensal por grupo, perdas e ganhos na mesma escala, aprovação ancorada nos fundamentos). Pronto quando a medida boa e a absurda dão resposta visível no mesmo mês e a simulação não dispara nem desaba. **Complexidade média-alta · Opus.** Vem depois da correção dos acordos.
-3. **Logos dos partidos nas bolinhas do mapa do Senado**, com bolinhas um pouco maiores. Manter o anel de relação e os filtros, logo no miolo, cair para a cor sólida se faltar o logo, carregar cada logo uma vez. **Complexidade baixa · Sonnet ou Haiku.** Sem dependência.
+3. ✅ **Feito na v0.26.1** (DESIGN.md 27.18). Texto original: **Logos dos partidos nas bolinhas do mapa do Senado**, com bolinhas um pouco maiores. Manter o anel de relação e os filtros, logo no miolo, cair para a cor sólida se faltar o logo, carregar cada logo uma vez. **Complexidade baixa · Sonnet ou Haiku.** Sem dependência.
 
 ## Roadmap seguinte
 | Etapa | Conteúdo | Modelo |

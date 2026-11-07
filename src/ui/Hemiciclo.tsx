@@ -1,4 +1,5 @@
 // v0.21.1: plenário em semicírculo, como o do Congresso (cadeiras em fileiras, partidos da esquerda para a direita).
+import { useId, useState } from 'react'
 import type { Deputy } from '../game/types'
 import { PARTY_BY_ID } from '../game/data/parties'
 import { ESTADO_BY_ID } from '../game/data/estados'
@@ -28,7 +29,7 @@ function seatPositions(n: number, rows: number, r0: number, r1: number): { x: nu
  * anel separado do miolo (que tem sempre a cor do partido): verde aliado, amarelo neutro, vermelho oposição.
  * `focus` apaga as cadeiras que não são do grupo escolhido. Passe o mouse para ver o nome, o partido e o estado.
  */
-export function Hemiciclo({ members, lean, focus = null, rows = 5, width = 420, onPick }: {
+export function Hemiciclo({ members, lean, focus = null, rows = 5, width = 480, onPick }: {
   members: { d: Deputy; i: number }[]
   lean?: (i: number) => Lean
   focus?: Lean | null
@@ -38,9 +39,24 @@ export function Hemiciclo({ members, lean, focus = null, rows = 5, width = 420, 
 }) {
   const R = 100
   const pos = seatPositions(members.length, rows, R * 0.45, R)
-  const seat = ((R * 0.55) / rows) * 0.36
+  const seat = ((R * 0.55) / rows) * 0.42
+  const uid = useId().replace(/:/g, '')
+  const partidos = [...new Set(members.map((m) => m.d.party))]
+  // Partidos cujo logo não carregou: ficam só com a cor sólida (senão o navegador desenha o ícone de imagem quebrada).
+  const [semLogo, setSemLogo] = useState<string[]>([])
   return (
     <svg className="pn-hemi" viewBox={`${-R - 8} ${-R - 8} ${2 * R + 16} ${R + 14}`} width="100%" style={{ maxWidth: width }} role="img" aria-label={`${members.length} cadeiras`}>
+      {/* Um desenho por partido, carregado uma vez e reaproveitado em todas as cadeiras. Sem o arquivo, fica só a cor. */}
+      <defs>
+        {partidos.map((id) => (
+          <pattern key={id} id={`${uid}-${id}`} patternContentUnits="objectBoundingBox" width="1" height="1">
+            {!semLogo.includes(id) && (
+              <image href={`${import.meta.env.BASE_URL}logos/${id}.webp`} x="0" y="0" width="1" height="1" preserveAspectRatio="xMidYMid slice"
+                onError={() => setSemLogo((l) => (l.includes(id) ? l : [...l, id]))} />
+            )}
+          </pattern>
+        ))}
+      </defs>
       {members.map(({ d, i }, k) => {
         const p = pos[k]
         const party = PARTY_BY_ID[d.party]
@@ -51,6 +67,7 @@ export function Hemiciclo({ members, lean, focus = null, rows = 5, width = 420, 
             <title>{`${d.name ?? ''} · ${party.sigla}${d.uf ? `-${ESTADO_BY_ID[d.uf].sigla}` : ''}${l ? ` · ${LEAN_LABEL[l].toLowerCase()}` : ''}`}</title>
             {l && <circle cx={p.x} cy={p.y} r={seat + 1.7} fill="none" stroke={LEAN_COLOR[l]} strokeWidth={1.1} />}
             <circle cx={p.x} cy={p.y} r={seat} fill={party.color} stroke="#0b0f14" strokeWidth={0.5} />
+            {!semLogo.includes(d.party) && <circle cx={p.x} cy={p.y} r={seat} fill={`url(#${uid}-${d.party})`} />}
           </g>
         )
       })}

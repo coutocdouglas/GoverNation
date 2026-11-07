@@ -102,7 +102,7 @@ export function SenateCard({ state, articulations, onToggle, onState, onToast }:
           )
         })}
       </div>
-      <p className="pn-hint" style={{ textAlign: 'center', margin: '2px 0' }}>O miolo é a cor do partido; o anel em volta é a relação com o seu governo (verde aliado, amarelo neutro, vermelho oposição).</p>
+      <p className="pn-hint" style={{ textAlign: 'center', margin: '2px 0' }}>O miolo é o logo do partido; o anel em volta é a relação com o seu governo (verde aliado, amarelo neutro, vermelho oposição).</p>
       {pick !== null && <SenadorFicha state={state} index={pick} onClose={() => setPick(null)} />}
       <p className="pn-hint" style={{ textAlign: 'center' }}>Clique numa cadeira para ver a ficha do senador.</p>
 
