@@ -362,7 +362,8 @@ function OfferCard({ state, offer, house, deal, onClose, onDeal, onState }: {
     ...(o.concession && texts ? { concession: { type: o.concession.type, ask: texts.ask, change: texts.change } } : {}),
     ...(o.area ? { area: o.area } : {}),
   })
-  const money = opt ? (opt.kind === 'emendas' ? emendasMoney(offer.party, scope, { tipo }) : opt.money) : offer.money
+  const renewK = opt?.renewal ? DEALS.validade.renewPrice : 1
+  const money = opt ? (opt.kind === 'emendas' ? emendasMoney(offer.party, scope, { tipo }) * renewK : opt.money) : offer.money
   const status = !offer.options.length
   const tag = status || offer.closed ? KIND_TAG[offer.kind] : null
   return (
@@ -416,7 +417,7 @@ function OfferCard({ state, offer, house, deal, onClose, onDeal, onState }: {
             ))}
           </div>
           <p className="pn-hint" style={{ margin: 0 }}>
-            Na hora: <b>R$ {Math.round(money)} bi</b> em {DEALS.emendasMonths} meses (cerca de {num(money / GDP_BILLIONS * 100 * 12 / DEALS.emendasMonths, 2)}% do PIB ao ano no primário) e a confiança do mercado cai {num(Math.abs(emendasAmount(offer.party, scope) * emendasFactor({ tipo }) * DEALS.emendasConfidence / 100), 1)} ponto.
+            Na hora: <b>R$ {Math.round(money)} bi</b> em {DEALS.emendasMonths} meses (cerca de {num(money / GDP_BILLIONS * 100 * 12 / DEALS.emendasMonths, 2)}% do PIB ao ano no primário) e a confiança do mercado cai {num(Math.abs(emendasAmount(offer.party, scope) * emendasFactor({ tipo }) * renewK * DEALS.emendasConfidence / 100), 1)} ponto.
             {tipo ? ` ${DEALS.emendaTipo[tipo].desc}` : ''}{destino ? ` ${DESTINOS[destino].icon} ${GROUP_BY_ID[DESTINOS[destino].group].name} gostam.` : ''}
           </p>
         </div>

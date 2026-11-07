@@ -1,4 +1,4 @@
-import { affinity, dealReliability, dealsOf, forecastSenate, forecastVote, seatsIn, senateDealsOf, senatePending, type DealList, type House } from './congress'
+import { affinity, canRenew, dealMonthsLeft, dealReliability, dealsOf, dealStrength, forecastSenate, forecastVote, seatsIn, senateDealsOf, senatePending, type DealList, type House } from './congress'
 import { BILL_BY_ID, BILLS, GDP_BILLIONS } from './data/bills'
 import { DEALS } from './data/deals'
 import { PARTY_BY_ID } from './data/parties'
@@ -50,6 +50,14 @@ export interface AskOption {
   group?: GroupId
   /** Dá para fazer contraoferta nesta opção? O que muda. */
   counterAsk?: string
+  /** Lote A2: esta opção renova um acordo que esfriou (preço com desconto). */
+  renewal?: boolean
+}
+
+/** Lote A2: "vence em N meses" para o texto do acordo. */
+export function dealMonthsLeftText(d: Pick<DealTerms, 'month'>, now: number): string {
+  const n = dealMonthsLeft(d, now)
+  return n <= 0 ? 'acabou' : `vence em ${n} ${n === 1 ? 'mês' : 'meses'}`
 }
 
 export interface Offer {
@@ -73,8 +81,12 @@ export interface Offer {
   /** R$ bi no total (emendas). */
   money: number
   scandal: number
-  /** Acordo fechado em mês anterior: nada a negociar. */
+  /** Acordo fechado em mês anterior e ainda forte: nada a negociar. */
   closed?: boolean
+  /** Lote A2: força do acordo já fechado (0 a 1). */
+  strength?: number
+  /** Lote A2: o acordo antigo esfriou; o que está na mesa é uma renovação, com desconto. */
+  renewal?: boolean
   /** Etapa 2: concessão pedida no texto (tipo, frases da lista pronta e quanto o texto enfraquece). */
   concession?: { type: ConcessionType; ask: string; change: string; weaken: number }
   /** Etapa 2: chance de a liderança aceitar uma contraoferta (só nas moedas que dá para baratear). */
@@ -243,8 +255,16 @@ export function offerFor(s: GameState, party: PartyId, bill: BillId, planned: De
     return { ...base, kind: 'recusa', quote: 'Não temos cadeira nesta casa, presidente.', ask: 'Nada: sem bancada.', detail: `O ${p.sigla} não tem ${who} aqui.` }
   }
   const existing = (senado ? senateDealsOf : dealsOf)(s, bill).find((d) => d.party === party)
-  if (existing) {
-    return { ...base, kind: existing.kind, quote: 'Acordo é acordo, presidente. Estamos com o senhor nessa.', ask: 'Acordo já fechado.', detail: 'O preço já foi pago quando o acordo foi fechado.', reliability: dealReliability(party, existing.kind, existing), closed: true, terms: existing }
+  // Lote A2: acordo forte trava a bancada; depois que esfria, o partido volta à mesa (renovação, a preço menor).
+  const renew = !!existing && canRenew(existing, s.month)
+  const renewK = renew ? DEALS.validade.renewPrice : 1
+  if (existing && !renew) {
+    const st = dealStrength(existing, s.month)
+    return {
+      ...base, kind: existing.kind, quote: 'Acordo é acordo, presidente. Estamos com o senhor nessa.', ask: 'Acordo já fechado.',
+      detail: `O preço já foi pago quando o acordo foi fechado. A força dele cai a cada mês: hoje ${Math.round(st * 100)}%, ${dealMonthsLeftText(existing, s.month)}. Abaixo de ${Math.round(DEALS.validade.renewBelow * 100)}% dá para renegociar.`,
+      reliability: dealReliability(party, existing.kind, existing), closed: true, terms: existing, strength: st,
+    }
   }
   if (row.yes >= row.seats * (1 - 0.04) * DEALS.alreadyYes) {
     return {
@@ -281,8 +301,8 @@ export function offerFor(s: GameState, party: PartyId, bill: BillId, planned: De
     const terms: DealTerms = { party, kind, ...(ctype ? { concession: { type: ctype, ...concessionText(ctype) } } : {}), ...(area ? { area } : {}) }
     const yesWith = forecast(s, bill, [...others, terms]).byParty.find((r) => r.party === party)!.yes
     const sen = fcS && rowS ? { yesNow: rowS.yes, yesWith: forecastSenate(s, bill, [...others, terms]).byParty.find((r) => r.party === party)!.yes, seats: rowS.seats } : undefined
-    const money = askMoney(kind, party, scope)
-    const o: AskOption = { kind, label: def.label, icon: def.icon, quote: '', ask: '', detail: '', yesWith, senado: sen, reliability: dealReliability(party, kind), money, scandal: def.scandal, ...(flagship ? { flagship } : {}), ...(area ? { area } : {}) }
+    const money = askMoney(kind, party, scope) * renewK
+    const o: AskOption = { kind, label: def.label, icon: def.icon, quote: '', ask: '', detail: '', yesWith, senado: sen, reliability: dealReliability(party, kind), money, scandal: def.scandal * renewK, ...(flagship ? { flagship } : {}), ...(area ? { area } : {}) }
     if (kind === 'concessao') {
       const cd = CONCESSION_BY_ID[ctype!]
       const weaken = Math.round((1 - cd.scale) * 100)
@@ -356,6 +376,10 @@ export function offerFor(s: GameState, party: PartyId, bill: BillId, planned: De
       o.ask = 'Votar só na próxima rodada'
       o.detail = 'Não custa nada, mas a medida espera um mês na fila (e esfria um pouco).'
     }
+    if (renew) {
+      o.renewal = true
+      o.detail = `RENOVAÇÃO: o acordo anterior esfriou (força ${Math.round(dealStrength(existing!, s.month) * 100)}%). Renovar custa ${Math.round(renewK * 100)}% do preço cheio, porque parte do que foi pago já conta, e gasta uma das conversas da rodada. ${o.detail}`
+    }
     options.push(o)
   }
   const first = options[0]
@@ -365,6 +389,7 @@ export function offerFor(s: GameState, party: PartyId, bill: BillId, planned: De
   return {
     ...base, kind: first.kind, quote: first.quote, ask: first.ask, detail: first.detail, yesWith: first.yesWith, reliability: first.reliability,
     money: first.money, scandal: first.scandal, flagship: first.flagship, concession: first.concession, counterChance, counterAsk: first.counterAsk, options,
+    ...(renew ? { renewal: true, strength: dealStrength(existing!, s.month), terms: existing } : {}),
   }
 }
 
@@ -375,10 +400,12 @@ export function dealBlockedReason(s: GameState, d: Deal, planBills: BillId[], pl
   const inCamara = planBills.includes(d.bill) || s.congress.pending.some((p) => p.id === d.bill)
   if (d.house === 'senado') {
     if (!inCamara && !senatePending(s, d.bill)) return 'O projeto não está no Congresso.'
-    if (senateDealsOf(s, d.bill).some((x) => x.party === d.party)) return 'Já há acordo com este partido no Senado para este projeto.'
+    const old = senateDealsOf(s, d.bill).find((x) => x.party === d.party)
+    if (old && !canRenew(old, s.month)) return `Já há acordo com este partido no Senado para este projeto (${dealMonthsLeftText(old, s.month)}). Dá para renegociar quando a força cair abaixo de ${Math.round(DEALS.validade.renewBelow * 100)}%.`
   } else {
     if (!inCamara) return senatePending(s, d.bill) ? 'O projeto já passou na Câmara.' : 'O projeto não está na Câmara.'
-    if (dealsOf(s, d.bill).some((x) => x.party === d.party)) return 'Já há acordo com este partido para este projeto.'
+    const old = dealsOf(s, d.bill).find((x) => x.party === d.party)
+    if (old && !canRenew(old, s.month)) return `Já há acordo com este partido para este projeto (${dealMonthsLeftText(old, s.month)}). Dá para renegociar quando a força cair abaixo de ${Math.round(DEALS.validade.renewBelow * 100)}%.`
   }
   const o = offerFor(s, d.party, d.bill, planned, d.house ?? 'camara')
   const opt = o.options.find((x) => x.kind === d.kind)

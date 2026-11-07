@@ -21,7 +21,7 @@ import { CAMARA, CCJ } from './data/camara'
 import { PARTY_BY_ID } from './data/parties'
 import { GROUPS } from './data/groups'
 import { DEALS } from './data/deals'
-import { askSpending, dealBlockedReason, emendasAmount, emendasFactor, flagshipOf, hurtGroup } from './deals'
+import { askMoney, askSpending, dealBlockedReason, emendasAmount, emendasFactor, flagshipOf, hurtGroup } from './deals'
 import { afterGovVote, billGroups, joinBase, noteBarred, supportersOf } from './base'
 import { ASK_BY_KIND, ESFRIA, MENU, PARTY_GROUP } from './data/base'
 import { billPopularity } from './congress'
@@ -196,24 +196,30 @@ export function applyDeals(ctx: RoundCtx, deals: Deal[]): void {
     if (d.concession) terms.concession = d.concession
     if (d.area) terms.area = d.area
     if (senado) terms.house = 'senado'
+    terms.month = s.month
     // v0.21.1: acordo no Senado soma cobrança na Mesa do Senado (o da bancada inteira pesa mais que o individual).
     addMesaWear(s, senado ? PRESIDENTE_SENADO.wear.acordoSenado : PRESIDENTE_SENADO.wear.acordoAmbas)
+    // Lote A2: o acordo novo com o mesmo partido (renovação) substitui o antigo, e custa só uma parte do preço cheio.
+    const mine = (x: DealTerms) => x.party !== d.party
+    let renewed = false
     if (senado) {
       const sp = senatePending(s, d.bill)
       const pc = c.pending.find((x) => x.id === d.bill)
-      if (sp) sp.deals = [...(sp.deals ?? []), terms]
-      else if (pc) pc.senateDeals = [...(pc.senateDeals ?? []), terms]
+      if (sp) { renewed = (sp.deals ?? []).some((x) => !mine(x)); sp.deals = [...(sp.deals ?? []).filter(mine), terms] }
+      else if (pc) { renewed = (pc.senateDeals ?? []).some((x) => !mine(x)); pc.senateDeals = [...(pc.senateDeals ?? []).filter(mine), terms] }
       else continue
     } else {
       const pb = c.pending.find((x) => x.id === d.bill)
       if (!pb) continue
-      pb.deals = [...(pb.deals ?? []), terms]
+      renewed = (pb.deals ?? []).some((x) => !mine(x))
+      pb.deals = [...(pb.deals ?? []).filter(mine), terms]
     }
+    const priceK = renewed ? DEALS.validade.renewPrice : 1
     const party = PARTY_BY_ID[d.party]
     const lead = leaderOf(s, d.party).name
     const name = BILL_BY_ID[d.bill].name
     const cut = d.counter ? ' (contraoferta aceita)' : ''
-    bumpScandal(s, DEALS.scandal[d.kind] * (d.counter ? DEALS.counter.scandal : 1), `Acordo com o ${party.sigla}${where}`, 'acordo', d.bill)
+    bumpScandal(s, DEALS.scandal[d.kind] * (d.counter ? DEALS.counter.scandal : 1) * priceK, `${renewed ? 'Renovação do acordo' : 'Acordo'} com o ${party.sigla}${where}`, 'acordo', d.bill)
     // Etapa 2C: o cardápio lembra o que já foi pedido; acordo pago quita o favor devido; 3 acordos por rodada.
     c.dealLog = [...(c.dealLog ?? []), { party: d.party, kind: d.kind, month: s.month }].slice(-60)
     ctx.round.dealsDone = (ctx.round.dealsDone ?? 0) + 1
@@ -223,11 +229,11 @@ export function applyDeals(ctx: RoundCtx, deals: Deal[]): void {
     const spend = askSpending(d.kind, d.counter)
     if (spend) {
       const label = `${ASK_BY_KIND[d.kind].label} (${party.sigla})`
-      e.tempSpending.push({ label, amount: spend.pib, monthsLeft: spend.months })
-      ctx.conf.v += spend.pib * DEALS.emendasConfidence / 100
+      e.tempSpending.push({ label, amount: spend.pib * priceK, monthsLeft: spend.months })
+      ctx.conf.v += spend.pib * priceK * DEALS.emendasConfidence / 100
     }
     if (d.kind === 'emendas') {
-      const amount = emendasAmount(d.party, senado ? 'senado' : both ? 'ambas' : 'camara') * emendasFactor(d)
+      const amount = emendasAmount(d.party, senado ? 'senado' : both ? 'ambas' : 'camara') * emendasFactor(d) * priceK
       e.tempSpending.push({ label: `Emendas para o ${party.sigla}${where}`, amount, monthsLeft: DEALS.emendasMonths })
       // Etapa 2: o mercado vê o gasto na hora; o destino agrada o grupo ligado a ele.
       ctx.conf.v += amount * DEALS.emendasConfidence / 100
@@ -1046,7 +1052,13 @@ export function archiveStale(ctx: RoundCtx): void {
     c.senate.pending = c.senate.pending.filter((x) => x !== p)
     c.blockedUntil[p.id] = s.month + ESFRIA.resubmit
     if (p.priced) ctx.conf.v -= p.priced
-    headlines.push({ text: `${senado ? 'Senado' : 'Câmara'} arquiva “${bill.name}”: ${ESFRIA.archiveAfter} meses na fila sem votação. Pode voltar em ${ESFRIA.resubmit} meses`, tone: 'bad' })
+    // Lote A2: avisa quanto foi pago nos acordos que se perdem com o arquivamento.
+    const lost = [...(p.deals ?? []), ...(p.senateDeals ?? [])]
+    const paid = lost.reduce((sum, t) => sum + askMoney(t.kind, t.party, t.house === 'senado' ? 'senado' : 'camara', t), 0)
+    const lostText = lost.length
+      ? ` Os ${lost.length} ${lost.length === 1 ? 'acordo' : 'acordos'} fechados com ${[...new Set(lost.map((t) => PARTY_BY_ID[t.party].sigla))].join(', ')} se perdem${paid >= 1 ? ` (cerca de R$ ${Math.round(paid)} bi em acordos pagos; as emendas já liberadas continuam saindo)` : ''}.`
+      : ''
+    headlines.push({ text: `${senado ? 'Senado' : 'Câmara'} arquiva “${bill.name}”: ${ESFRIA.archiveAfter} meses na fila sem votação. Pode voltar em ${ESFRIA.resubmit} meses.${lostText}`, tone: 'bad' })
     noteRecord(s, { text: `${senado ? 'O Senado' : 'A Câmara'} arquivou “${bill.name}” depois de ${ESFRIA.archiveAfter} meses parado na fila`, tone: 'bad', kind: 'derrota', bill: p.id, groups: billGroups(p.id) })
     addBio(s, s.presidentName, `Viu “${bill.name}” ser arquivado ${senado ? 'no Senado' : 'na Câmara'} sem votação.`)
   }

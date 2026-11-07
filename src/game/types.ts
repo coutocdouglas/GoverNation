@@ -141,7 +141,7 @@ export interface Meanwhile {
 import type { ReputationState } from './reputacao'
 
 export interface GameState {
-  saveVersion: 23
+  saveVersion: 24
   /** Mês atual, de 0 (janeiro do 1º ano) a 47. Em 48 o mandato acabou. */
   month: number
   presidentName: string
@@ -747,6 +747,8 @@ export interface DealTerms {
   area?: AreaId
   /** Etapa 4C1 / Fase A: acordo fechado direto no Senado (vale por inteiro lá; o da Câmara rende só uma fração no Senado). */
   house?: 'senado'
+  /** Lote A2: mês em que o acordo foi fechado (a força dele cai a cada mês depois disso). Ausente = ainda não gravado (acordo da mesa). */
+  month?: number
 }
 
 /** Acordo fechado no mês: o partido vota com o governo neste projeto em troca do preço. */

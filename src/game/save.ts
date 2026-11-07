@@ -207,7 +207,16 @@ export function migrate(raw: unknown): GameState | null {
       s.causas ??= []
       s.saveVersion = 23
     }
-    if (s.saveVersion !== 23) return null
+    if (s.saveVersion === 23) {
+      // v0.24 → v0.25 (lote A2): os acordos já fechados passam a guardar o mês em que foram fechados
+      // (o do envio do projeto, que é o que se sabe), para a força deles cair mês a mês.
+      const c = s.congress
+      for (const p of [...c.pending, ...c.senate.pending]) {
+        for (const d of [...(p.deals ?? []), ...(p.senateDeals ?? [])]) d.month ??= p.sentMonth
+      }
+      s.saveVersion = 24
+    }
+    if (s.saveVersion !== 24) return null
     syncCustomBills(s as GameState)
     return s as GameState
   } catch {

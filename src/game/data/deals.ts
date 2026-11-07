@@ -14,6 +14,12 @@ export const DEALS = {
   boost: byKind((a) => a.boost),
   /** Parte do reforço que chega a cada deputado (além da orientação). */
   deputyShare: 0.5,
+  /**
+   * Lote A2: o acordo esfria. A força (1 = recém-fechado) cai `decayPerMonth` a cada mês e multiplica o reforço.
+   * Abaixo de `renewBelow` dá para renegociar com o partido; renovar custa `renewPrice` do preço cheio
+   * (o que já foi pago conta como parte), gasta uma das conversas da rodada e substitui o acordo antigo.
+   */
+  validade: { decayPerMonth: 0.15, renewBelow: 0.5, renewPrice: 0.7 },
   /** Parte do reforço que sobra quando a bancada não entrega. */
   brokenShare: 0.25,
   /** Confiabilidade = base + disciplina do partido × peso. */

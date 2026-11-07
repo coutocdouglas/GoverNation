@@ -233,15 +233,39 @@ export function dealBoost(d: DealTerms): number {
   return DEALS.boost[d.kind] * tipo * (d.counter ? DEALS.counter.boost : 1)
 }
 
+/**
+ * Lote A2: força de um acordo (0 a 1). Recém-fechado vale 1 e perde `decayPerMonth` por mês.
+ * Acordo ainda na mesa (sem mês gravado) vale 1.
+ */
+export function dealStrength(d: Pick<DealTerms, 'month'>, now: number): number {
+  if (d.month === undefined) return 1
+  return Math.max(0, 1 - Math.max(0, now - d.month) * DEALS.validade.decayPerMonth)
+}
+
+/** Lote A2: em quantos meses a força do acordo chega a zero (0 = já acabou). */
+export function dealMonthsLeft(d: Pick<DealTerms, 'month'>, now: number): number {
+  const st = dealStrength(d, now)
+  return st <= 0 ? 0 : Math.ceil(st / DEALS.validade.decayPerMonth - 1e-9)
+}
+
+/** Lote A2: o acordo já esfriou o bastante para renegociar com o partido. */
+export const canRenew = (d: Pick<DealTerms, 'month'>, now: number) => dealStrength(d, now) < DEALS.validade.renewBelow
+
+/** Lote A2: junta os acordos guardados com os da mesa; o da mesa substitui o antigo do mesmo partido (renovação). */
+export function mergeDeals(saved: DealList, extra: DealList): DealList {
+  const parties = new Set(extra.map((d) => d.party))
+  return [...saved.filter((d) => !parties.has(d.party)), ...extra]
+}
+
 /** Reforço que os acordos dão a cada partido, numa votação. `broken` = acordos que falharam no dia. */
-function boosts(deals: DealList, broken?: Set<PartyId>, carryK = 1): Partial<Record<PartyId, number>> {
+function boosts(deals: DealList, broken?: Set<PartyId>, carryK = 1, now = 0): Partial<Record<PartyId, number>> {
   const out: Partial<Record<PartyId, number>> = {}
   for (const d of deals) {
     const rel = dealReliability(d.party, d.kind, d)
     const k = broken ? (broken.has(d.party) ? DEALS.brokenShare : 1) : rel + (1 - rel) * DEALS.brokenShare
     // Fase A: no Senado, o acordo fechado com a liderança da Câmara rende bem menos (senador vota pelo estado).
     const carry = d.house === 'senado' ? 1 : carryK
-    out[d.party] = (out[d.party] ?? 0) + dealBoost(d) * k * carry
+    out[d.party] = (out[d.party] ?? 0) + dealBoost(d) * k * carry * dealStrength(d, now)
   }
   return out
 }
@@ -324,7 +348,7 @@ function voteSetup(s: GameState, billId: BillId, deals: DealList, opts: VoteOpti
   // Etapa 2: concessões no texto (acordadas nesta votação ou antes, na Câmara) deixam o texto mais fraco.
   const conc = [...(pb?.conceded ?? []), ...(pb?.deals ?? []), ...deals].filter((d, i, arr) => d.kind === 'concessao' && arr.findIndex((x) => x.kind === 'concessao' && x.party === d.party && x.concession?.type === d.concession?.type) === i)
   const bill = withConcessions(effectiveBill(BILL_BY_ID[billId], am, original), conc)
-  const boost = boosts(deals, broken, house === 'senado' ? SENADO.dealCarry : 1)
+  const boost = boosts(deals, broken, house === 'senado' ? SENADO.dealCarry : 1, s.month)
   const gb = govBoost(s)
   for (const [pid, v] of Object.entries(gb) as [PartyId, number][]) boost[pid] = (boost[pid] ?? 0) + v
   // Etapa 2C: a pasta acordada já entrou no gabinete: o reforço da pasta não conta duas vezes.
@@ -385,19 +409,19 @@ function forecastWith(s: GameState, bill: BillDef, boost: Partial<Record<PartyId
 
 /** Previsão do placar com os números de hoje, sem sorteio. É o que o gabinete mostra antes de enviar. */
 export function forecastVote(s: GameState, billId: BillId, extraDeals: DealList = [], opts: VoteOptions = {}): Forecast {
-  const { bill, boost } = voteSetup(s, billId, [...dealsOf(s, billId), ...extraDeals], opts)
+  const { bill, boost } = voteSetup(s, billId, mergeDeals(dealsOf(s, billId), extraDeals), opts)
   return forecastWith(s, bill, boost, neededVotes(bill), 1)
 }
 
 /** Etapa 4C1: previsão no Senado com o texto que a Câmara aprovaria (ou aprovou), sem sorteio. */
 export function forecastSenate(s: GameState, billId: BillId, extraDeals: DealList = [], opts: VoteOptions = {}): Forecast {
-  const { bill, boost, buys } = voteSetup(s, billId, [...senateDealsOf(s, billId), ...extraDeals], opts, undefined, 'senado')
+  const { bill, boost, buys } = voteSetup(s, billId, mergeDeals(senateDealsOf(s, billId), extraDeals), opts, undefined, 'senado')
   return forecastWith(s, bill, boost, neededVotes(bill, 'senado'), 1, 'senado', senateExtras(s, 1, buys))
 }
 
 /** Etapa 3: chance de cada senador votar sim (índice em `senate.senators`), com os acordos e as compras de hoje. */
 export function senatorOdds(s: GameState, billId: BillId, extraDeals: DealList = [], opts: VoteOptions = {}): number[] {
-  const { bill, boost, buys } = voteSetup(s, billId, [...senateDealsOf(s, billId), ...extraDeals], opts, undefined, 'senado')
+  const { bill, boost, buys } = voteSetup(s, billId, mergeDeals(senateDealsOf(s, billId), extraDeals), opts, undefined, 'senado')
   const probs: number[] = []
   forecastWith(s, bill, boost, neededVotes(bill, 'senado'), 1, 'senado', senateExtras(s, 1, buys), probs)
   return probs

@@ -88,7 +88,7 @@ export function newGame(
   const rngState = seed ?? Math.floor(Math.random() * 2 ** 31)
   const bonus = DIFFICULTY[difficulty].approvalBonus
   const state: GameState = {
-    saveVersion: 23,
+    saveVersion: 24,
     month: 0,
     presidentName: presidentName.trim() || 'Presidente',
     difficulty,

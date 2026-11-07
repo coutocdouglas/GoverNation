@@ -1,16 +1,29 @@
-# GoverNation — diretrizes de desenvolvimento
+# GoverNation: guia para o Claude Code
 
-Jogo pessoal de simulação política para Windows (Tauri + React + TypeScript). O dono do projeto, Douglas, não programa: explique em português simples, sem jargão, e diga sempre o nível de complexidade da tarefa e qual modelo usar (Opus para desenho de sistemas e balanceamento; Sonnet para telas, dados e tarefas repetitivas).
+Jogo de simulação política (governar o Brasil) para Windows, do Douglas (arquiteto, dono do projeto). Mecânicas inspiradas no jogo de referência planalto.fun. **Só a mecânica entra: nomes, textos, imagens e políticos reais do jogo de referência ficam de fora. Tudo no GoverNation é fictício.**
 
-## Antes de mexer
+Versão atual: **v0.25.0**. Documentação técnica: `docs/DESIGN.md` (seção 27, principalmente 27.15 para a Fase A). Plano completo por etapas: `docs/projeto/plano-de-desenvolvimento.md`, se estiver na pasta; este arquivo traz o essencial.
 
-0. Leia **`docs/ESTADO.md`**: onde o projeto está e qual é o próximo passo. **Atualize-o a cada mudança** (estado atual, próximo passo e uma linha no histórico).
-1. Leia `docs/DESIGN.md` (decisões e roteiro) e `CHANGELOG.md` (o que já existe).
-2. Rode `npm ci`, `npm test`, `npx tsc -b`, `npx oxlint`.
-3. Trabalhe **uma etapa por vez** e feche-a antes de abrir outra. Cada etapa termina com: testes passando, partida jogada no navegador (`npx vite build && npx vite preview`), CHANGELOG e DESIGN.md atualizados, versão nova publicada.
+## Como trabalhar com o Douglas
+- Responder em português do Brasil.
+- **Sempre avisar o nível de complexidade da tarefa e sugerir qual modelo é melhor para ela** (Haiku/Sonnet para ajustes e telas; Opus para regras que se cruzam e balanceamento; Fable ou Opus para motor central).
+- O Douglas decide o que entra. Ideia fora de hora vai para a Caixa de ideias da etapa certa, não para o código.
+- Ele prefere ideias que dão decisão e história ao jogador. Realidade bruta sem graça de jogar (orçamento anual detalhado, sessão de vetos, modo de realismo ajustável) fica de fora. Tudo deve ser divertido de jogar.
 
-## Regras do jogo que não podem quebrar
+## Regras de desenvolvimento
+O Douglas não programa: explicar em português simples, sem jargão.
 
+**Combinados de trabalho**
+- **Sempre pedir permissão antes de fazer qualquer mudança** (código, dados, documentos). Primeiro dizer o que pretende mudar e esperar o "sim" do Douglas.
+- **Sempre dizer qual modelo é o melhor para cada etapa** e o nível de complexidade (ver a regra de modelos acima).
+- Trabalhar **uma etapa por vez** e fechá-la antes de abrir outra. Cada etapa termina com: testes passando, partida jogada no navegador (`npx vite build && npx vite preview`), CHANGELOG e `docs/DESIGN.md` atualizados e versão nova publicada.
+
+**Antes de mexer**
+1. Ler `docs/ESTADO.md` (onde o projeto está e o próximo passo). **Atualizá-lo a cada mudança** (estado atual, próximo passo e uma linha no histórico).
+2. Ler `docs/DESIGN.md` e `CHANGELOG.md`.
+3. Rodar `npm ci`, `npm test`, `npx tsc -b`, `npx oxlint`.
+
+**Regras do jogo que não podem quebrar**
 - **Motor sem interface:** `src/game/` não importa nada de `src/ui/`. Todo número de balanceamento mora em `src/game/data/`.
 - **Saves:** toda mudança no `GameState` sobe `saveVersion` e ganha migração em `src/game/save.ts`, com teste. Ninguém perde mandato ao atualizar.
 - **Retratos:** um retrato por pessoa, nunca repetido (`src/game/data/cast.ts`, há teste). Personagem novo entra no `CAST`.
@@ -18,35 +31,69 @@ Jogo pessoal de simulação política para Windows (Tauri + React + TypeScript).
 - **Efeitos visíveis:** toda escolha mostra o custo antes; toda mudança de indicador ou grupo explica a causa.
 - **Memória do mundo:** leis, decretos e decisões geram sementes e entradas de biografia; nada importante acontece sem ficar registrado.
 
-## Publicar
+**Publicar:** subir `version` em `package.json`, registrar no `CHANGELOG.md`, commit na `main`. O GitHub Actions gera o instalador e o jogo instalado se atualiza sozinho (`docs/RELEASES.md`).
 
-Subir `version` em `package.json`, registrar no `CHANGELOG.md`, commit na `main`. O GitHub Actions gera o instalador e o jogo instalado se atualiza sozinho (`docs/RELEASES.md`).
+**Quando abrir uma conversa nova (para poupar créditos):** ao fechar cada etapa (já publicada), ao trocar de assunto, depois de muitos prints ou arquivos grandes, com mais de umas 30 trocas ou quando o Claude esquecer combinados, e antes de uma etapa grande. Para começar: "Projeto GoverNation, repositório coutocdouglas/GoverNation. Leia CLAUDE.md, docs/ESTADO.md e docs/DESIGN.md. Quero fazer a etapa X."
 
-## Quando abrir uma conversa nova (para poupar créditos)
+## Princípios do jogo
+1. **Realidade na lógica, jogo no tempo e na apresentação.**
+2. **Regras decidem, IA narra.** O resultado sai de regras balanceáveis; a IA escreve texto, desdobramentos, concessões e resumos.
+3. **Causa e consequência é o motor central.** Toda ação marca reputação e a Ficha de governo, inclusive a medida impopular que não passou.
+4. **Fatos do mês têm duas saídas: Agir ou Deixar passar.**
+5. **Uma medida nova por rodada**, votada na hora (Câmara e, se passar, Senado).
 
-Cada mensagem faz o Claude reler a conversa inteira; conversas longas custam muito mais e ficam mais lentas. Abra uma conversa nova:
+## Testes que toda ideia nova precisa passar
+- **Régua realidade × jogo:** o jogador entende por que aconteceu e consegue agir na próxima rodada?
+- **Teste do mix:** (1) a instituição se comporta como na vida real? (2) a parte de jogo está só na decisão e na apresentação, sem mudar quem pode o quê?
+- **Teste do atalho:** dá para ganhar aprovação, reputação ou poder sem entregar nada, repetindo ação barata ou somando bônus fácil? Se sim, precisa de custo que volta no tempo, retorno decrescente, teto ou exclusão.
+- **Teste do beco sem saída:** toda mecânica que cobra um custo deixa uma saída (mostrar antes o que vai se perder; permitir renegociar, reforçar ou desistir).
+- **Teste da sobrecarga:** poucas decisões novas por tela (1 ou 2); o resto aparece como "o que mudou". A agenda do presidente é o limitador comum.
+- **Teste da interface (proposta de 05/11/2026):** mecânica nova entra com versão resumida na tela principal e o detalhe atrás de um clique.
 
-1. **Ao fechar cada etapa** (depois da versão publicada). É o melhor momento: o estado está todo no repositório.
-2. **Ao trocar de assunto** (ex.: de Congresso para eleição, ou de código para arte).
-3. **Depois de mandar muitos prints, PDFs ou arquivos grandes** numa conversa: eles pesam em cada mensagem seguinte.
-4. **Quando a conversa passar de umas 30 trocas** ou o Claude começar a esquecer combinados.
-5. **Antes de uma etapa grande** (motor novo, Congresso 2.0, eleição): comece limpo.
+## Definição de pronto
+Testes passando · partida simulada sem erro · balanceamento revisado · efeitos ligados à memória do mundo · placeholders cadastrados · sem regressão · versão publicada · Caixa de ideias revisada · **partida completa jogada pelo Douglas (portão de playtest) ao fim de cada fase** · **todo texto escrito pela IA tem texto de reserva** (a tela nunca mostra falha da IA; o erro real vai para o registro, com o modelo ativo).
 
-Continue na mesma conversa quando estiver no meio de uma etapa, corrigindo algo que acabou de ser feito.
+**Texto conforme a situação da medida:** todo fato ligado a uma medida sabe se ela está em vigor, na pauta ou barrada (`EventDef.pauta`, `EventDef.barrada`, `billStage`, `resolveEvent` em `src/game/events.ts`). Com a lei na pauta, o texto ameaça ou antecipa, não conta como feito.
 
-**Como começar a conversa nova:** "Projeto GoverNation, repositório coutocdouglas/GoverNation. Leia CLAUDE.md, docs/ESTADO.md e docs/DESIGN.md. Quero fazer a etapa X." Não precisa reenviar prints antigos: o que importa já está no ESTADO.md e no DESIGN.md.
+## Mapa do código (o que já foi dito no plano)
+- `src/game/congress.ts`, `deals.ts`, `rodada.ts`, `data/base.ts`: Câmara, acordos, fila da pauta, `ESFRIA`, `offerFor`, `dealBlockedReason`, `archiveStale`, `emendasMonths`.
+- `src/game/causas.ts`: registro de causas (`registrarOrigemRisco`, `porque`); `bumpScandal` registra todo ponto de escândalo.
+- `src/game/reserva.ts`: textos de reserva da IA (parecer do ministro, opinião sobre o fato, resumo da assessoria).
+- `src/game/events.ts`: fatos do mês e desdobramentos.
+- `assessoria.ts`, `data/assessoria.ts`, `data/rua.ts`: motor do post e da rua, sem tela até a Etapa 6.
+- `SENADO.dealCarry` (35%): conversão do acordo da Câmara no Senado, valor ilustrativo a rebalancear.
+- Save na versão 23.
 
-## Roteiro atual (detalhes em docs/DESIGN.md, seção 27, que substitui o roteiro antigo)
+## Situação
+Etapas feitas: 0, 1A, 1B, 2, 2B, 2C, 3 (Senado, v0.21), 4A e 4B (Supremo profundo, v0.22 e v0.23), **Fase A** (v0.24 e v0.24.1, publicada em 03/11/2026; **falta o playtest do Douglas**).
 
-Etapas com portão: a próxima só abre quando a anterior fecha; ideia fora de hora vai para a Caixa de ideias da etapa certa (DESIGN.md 27.1).
+### Próximo: lote A2 (nesta ordem, depois do playtest da Fase A)
+1. **Acordos que esfriam e travam a bancada** (erro achado pelo Douglas jogando; confirmado no código). Hoje: o acordo fica guardado na medida; a fila esfria todos os partidos (0,04 por rodada, até 0,20), corroendo o reforço; o partido fica travado em "Acordo já fechado" mesmo com o efeito anulado; aos 6 meses a medida é arquivada e o acordo some, enquanto as emendas pagas continuam saindo por 3 meses. Correção: (a) validade visível com força que cai mês a mês e "vence em N meses"; (b) renegociar quando a força cai ou vence, considerando o que já foi pago; (c) o desconto da fila vir do próprio acordo, sem zerar sem aviso; (d) avisar no arquivamento quanto foi pago e perdido; (e) valer para Câmara e Senado (`dealsOf`, `senateDealsOf`, `senado.dealCarry`). Cuidados: renegociar não pode ser grátis (Teste do atalho); manter o limite de 3 conversas por rodada; rebalancear o 35% do Senado. **Complexidade média · Opus** na regra; Sonnet no cartão do partido.
+2. **Calibrar o tamanho dos efeitos das medidas nos grupos** (medida boa sobe pouco, absurda desce pouco; hoje a barrada vale −0,8 por grupo). Passos: medir no simulador antes de mexer; curvas não lineares e sensibilidade por grupo; a absurda desce forte em quem é atingido; ganho com retorno decrescente; guardas (teto mensal por grupo, perdas e ganhos na mesma escala, aprovação ancorada nos fundamentos). Pronto quando a medida boa e a absurda dão resposta visível no mesmo mês e a simulação não dispara nem desaba. **Complexidade média-alta · Opus.** Vem depois da correção dos acordos.
+3. **Logos dos partidos nas bolinhas do mapa do Senado**, com bolinhas um pouco maiores. Manter o anel de relação e os filtros, logo no miolo, cair para a cor sólida se faltar o logo, carregar cada logo uma vez. **Complexidade baixa · Sonnet ou Haiku.** Sem dependência.
 
-0. ✅ A rodada (v0.15)
-1. ✅ 1A Causa e consequência (v0.16) · ✅ 1B O mês mais vivo (v0.17)
-2. ✅ Câmara e partidos (v0.18) · ✅ 2B Página inicial e fluxo do dia (v0.19)
-✅ 2C Mesa de negociação e base (v0.20)
-✅ 3. Senado (v0.21)
-✅ 4. Supremo profundo (v0.22 e v0.23)
-✅ A. Correções, ajustes pequenos, registro de causas e texto de reserva da IA (v0.24)
-5. Oposição, escândalos e CPI (5A, 5B, 5C) · 6. Vice e governo · 7. Estados e governadores · 8. Começo, sociedade e fim · 9. Arte final
+## Roadmap seguinte
+| Etapa | Conteúdo | Modelo |
+|---|---|---|
+| 5A | Elos de reputação (Platina, Ouro, Prata, Bronze, "sob suspeita"), risco oculto, Controle do Estado 0 a 100, três fontes de escândalo, rastro do presidente; usa `registrarOrigemRisco` | Opus nas regras, Sonnet nas telas |
+| 5B | Vazamento, investigação da PF (provas 0 a 100), advogado do presidente, delação, núcleo mínimo da agenda | Opus, Sonnet |
+| 5C | Oposição como personagem, CPI (171 assinaturas, 6 meses), serviço de inteligência com dossiês | Opus, Sonnet |
+| 6 | Agenda completa, ação política sem instrumento, credibilidade e crédito de expectativa, pressão antes da votação, tela do "Por quê?", líder do governo, vice, ministérios com vida, discurso, pesquisa, círculo de confiança, dilemas | Opus, Sonnet |
+| 6B | Congresso vivo e partido do presidente, frentes parlamentares, visual dos cartões dos partidos | Opus, Sonnet |
+| 7 / 7B | Mapa de aprovação por região e estado, governadores, desastres e crises com relógio, calendário; árvores de programas e diplomacia (depois de gravar essas abas) | Opus, Sonnet |
+| 8 / 8B / 9 | Candidatura completa, sociedade, apelidos, vida pessoal, cenários, eleição e herança; governo autoritário (opcional, em discussão); arte final e tutorial gradual | Sonnet; Fable ou Opus na 8B |
 
-Antes disso (já feito): retratos, memória do mundo, IA, Congresso 2.0, rival e promessas, Senado votando, Supremo (v0.4 a v0.14).
+Etapa 5: parcimônia (3 a 6 casos por mandato, no máximo 2 ativos); todo escândalo tem origem rastreável na Ficha; o presidente só é atingido pelo que fez (rastro oculto, com pista em palavras); a PF não investiga o presidente direto (sobe ao Supremo); a CPI não condena, produz relatório, e a base define presidente e relator.
+
+## Decisões já tomadas
+- O Senado vota as leis depois da Câmara e **não** devolve o texto emendado.
+- "Outros caminhos" e catálogo saíram do fato do mês (Teste do atalho); post e rua voltam na Etapa 6 como ações de agenda, que gastam espaço e substituem a medida em vez de somar.
+- O custo de uso da IA não é critério do plano por enquanto.
+- Logos dos partidos são desenhados pelo Douglas (placeholders até lá).
+- Fora do escopo: 22 partidos como na referência (usamos 9 com 3 alas cada), orçamento anual detalhado, sessão de vetos, modo de realismo.
+
+## Playtest da Fase A (o que o Douglas vai anotar)
+Parecer do ministro e o limite de um por mês · botão "Atender" nas pendências · fato do mês sem catálogo · plenário do Senado com anel e filtros · dificuldade do Senado com o acordo a 35% · medida absurda ("Amputa Brasil") derrubando a aprovação · falhas da IA no gasto medido · desdobramento da agência de risco ameaçando com a lei na pauta · grupos "parados" depois de medida boa e absurda · mês em que o acordo sumiu com a medida parada.
+
+## Documentos de apoio (no Project GoverNation do claude.ai)
+`levantamento-video-1.md` (comparação com o jogo de referência, vídeo 1), `levantamento-congresso.md` (Congresso, medida do dia e Supremo), `ideias-interface-e-ritmo.md` (Teste da interface, tutorial gradual, janelas e pausas, identidade visual própria). Peça ao Douglas para colocá-los em `docs/projeto/` se precisar.

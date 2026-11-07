@@ -3,13 +3,13 @@
 > **Leia este arquivo primeiro.** Ele diz onde o projeto está e qual é o próximo passo.
 > Atualize-o a cada mudança: seção "Estado atual", "Próximo passo" e uma linha no "Histórico".
 
-**Última atualização:** 05/11/2026 · **Versão publicada:** v0.24.2
+**Última atualização:** 07/11/2026 · **Versão publicada:** v0.25.0
 
 ---
 
 ## Próximo passo
 
-**Playtest da Fase A (v0.24.x, já publicada) pelo Douglas** (portão: uma partida completa, anotando o que ficou confuso, repetitivo ou fácil demais; ver `docs/DESIGN.md` 27.15). Em seguida, **Etapa 5A: Elos e semente de risco** (plano pronto no doc do projeto `plano-de-desenvolvimento.md`, Parte 4; a 5A usa `registrarOrigemRisco`, em `src/game/causas.ts`, para gravar a origem de cada semente). Depois 5B (vazamento, PF e advogado, com o núcleo mínimo da agenda) e 5C (oposição, CPI e inteligência).
+**Lote A2** (o Douglas dispensou o playtest da Fase A em 07/11/2026 e o travamento do mês 36 está resolvido): 1) acordos que esfriam e travam a bancada (Opus); 2) calibrar o tamanho dos efeitos das medidas nos grupos (Opus); 3) logos dos partidos no mapa do Senado (Sonnet). Em seguida, **Etapa 5A: Elos e semente de risco** (plano pronto no doc do projeto `plano-de-desenvolvimento.md`, Parte 4; a 5A usa `registrarOrigemRisco`, em `src/game/causas.ts`, para gravar a origem de cada semente). Depois 5B (vazamento, PF e advogado, com o núcleo mínimo da agenda) e 5C (oposição, CPI e inteligência).
 
 Complexidade da 5A: **muito alta**. Opus nas regras (Elos, risco oculto, Controle do Estado, três fontes de escândalo); Sonnet nas telas.
 
@@ -158,3 +158,5 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 | 02/11/2026 | v0.24.0 | Fase A: correção da medida barrada por inconstitucionalidade, ajustes pequenos (parecer do ministro na medida do mês, Atender, sem Outros caminhos, anel do Senado, acordo da Câmara rende menos no Senado), registro de causas e texto de reserva da IA; save 23 |
 | 03/11/2026 | v0.24.1 | Desdobramentos de reputação com texto por situação da medida (na pauta, barrada ou em vigor): a agência ameaça em vez de contar como feito; origem do desdobramento guarda a medida |
 | 05/11/2026 | v0.24.2 | Correção do travamento na transição de mês: se o fechamento do mês falhar, o jogo avisa o motivo e solta a tela. Causa exata do travamento do mês 36 (partida do Douglas) ainda a investigar |
+| 07/11/2026 | v0.25.0 | Lote A2, item 1: força do acordo que cai 15 pontos por mês, renovação por 70% do preço quando a força fica abaixo de 50%, aviso do que se perde no arquivamento; save 24; 327 testes |
+| 07/11/2026 | — | Douglas confirma que o travamento do mês 36 foi resolvido. Playtest da Fase A dispensado por ele; segue o lote A2 (acordos, calibragem dos efeitos, logos do Senado). CLAUDE.md reescrito (regras de trabalho: pedir permissão antes de mudar e dizer o modelo ideal por etapa) |

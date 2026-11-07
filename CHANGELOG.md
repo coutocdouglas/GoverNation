@@ -1,5 +1,15 @@
 # Novidades
 
+## 0.25.0 (07/11/2026)
+- **Lote A2, item 1: acordos que esfriam.** Corrige o erro achado pelo Douglas: o partido ficava travado em "Acordo já fechado" mesmo com o efeito já gasto.
+  - **Força do acordo:** todo acordo nasce com força 100% e perde 15 pontos a cada mês; o reforço de votos acompanha a força. O cartão do partido mostra "hoje X%, vence em N meses".
+  - **Renegociar:** quando a força cai abaixo de 50%, o partido volta à mesa. A **renovação custa 70% do preço cheio** (o que já foi pago conta como parte), gasta uma das 3 conversas da rodada e **substitui** o acordo antigo (nunca soma). Antes disso, o acordo forte continua travando o partido, para não ser atalho.
+  - **Câmara e Senado:** vale para os dois (inclusive o acordo da Câmara que rende 35% no Senado).
+  - **Arquivamento:** a manchete diz quantos acordos se perdem, com quem e quanto foi pago.
+- Mandatos salvos continuam normalmente (save versão 24): os acordos já fechados recebem o mês do envio do projeto.
+- Balanceamento (`npm run sim2c`): sem mudança relevante (nota do negociador 495,1 contra 495,4 no MDN; 478,6 contra 484,0 no FPT; arquivados 4,2 contra 4,9).
+- Falta deste item: aviso de "acordo para vencer, renovar" na central de pendências.
+
 ## 0.24.2
 - **Correção (achado do Douglas):** ao encerrar o mês 36, o jogo podia ficar preso na tela de transição do mês, com o calendário na frente e sem avançar. A tela era ligada antes de calcular o mês, e, se o cálculo falhasse, ninguém a desligava. Agora, se o fechamento do mês falhar, o jogo **mostra o motivo num aviso** e devolve o controle (a decisão pode ser corrigida e o mês encerrado de novo). Há também uma trava de segurança que solta a tela se algo travar no meio da transição. A causa exata da falha daquela partida ainda será investigada com o aviso.
 
