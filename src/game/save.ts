@@ -216,7 +216,12 @@ export function migrate(raw: unknown): GameState | null {
       }
       s.saveVersion = 24
     }
-    if (s.saveVersion !== 24) return null
+    if (s.saveVersion === 24) {
+      // v0.25 → v0.26 (lote A2, item 2): campos novos são opcionais. Projetos já na fila não pagaram o custo
+      // do envio, então viram lei com o efeito cheio; nada fica adiado do teto do mês.
+      s.saveVersion = 25
+    }
+    if (s.saveVersion !== 25) return null
     syncCustomBills(s as GameState)
     return s as GameState
   } catch {

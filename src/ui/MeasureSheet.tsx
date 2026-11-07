@@ -3,6 +3,7 @@ import { BILL_BY_ID, INSTRUMENTS } from '../game/data/bills'
 import { GROUP_BY_ID } from '../game/data/groups'
 import { conditionsOf, fichaDaMedida, LEVEL_LABEL } from '../game/ficha'
 import { approvalPreview, notasFicha, reactionsFor, resumoExecutivo } from '../game/fluxo'
+import { curvaGanho, custoDeEnviar, pesaNoEnvio } from '../game/efeitos'
 import { aiReady } from '../lib/ai'
 import { askBriefing, askReview } from '../lib/aiActions'
 import { ministerOf } from '../game/camara'
@@ -72,6 +73,8 @@ export function MeasureSheet({ state, id, ids, request, constraints, speech, not
   const acts = b.instrument === 'decreto' || b.instrument === 'mp'
   const reacts = reactionsFor(state, cur)
   const ap = approvalPreview(state, cur)
+  // v0.26: lei, LC e PEC já pesam no envio em quem a medida atinge.
+  const envio = pesaNoEnvio(b.instrument) ? (Object.entries(custoDeEnviar(b.effects)) as [GroupId, number][]).filter(([, v]) => v <= -0.5).sort((a, z) => a[1] - z[1]) : []
   const fallback = resumoExecutivo(state, cur)
 
   // Resumo executivo: com IA, narrado pela Casa Civil a partir dos números do motor (pedido ao abrir a ficha).
@@ -149,11 +152,16 @@ export function MeasureSheet({ state, id, ids, request, constraints, speech, not
                 <div className="pn-feel">
                   {groups.map(([g, v]) => {
                     const before = state.groups[g].approval
-                    const after = Math.max(0, Math.min(100, before + v))
+                    const after = Math.max(0, Math.min(100, before + curvaGanho(v)))
                     return <span key={g} className={v > 0 ? 'up' : 'dn'}>{GROUP_ICON[g]} {GROUP_BY_ID[g].name} {Math.round(before)}% → {Math.round(after)}%</span>
                   })}
                 </div>
                 <p className="pn-hint" style={{ margin: '4px 0 0' }}>Aprovação geral no dia do anúncio: <b>{num(ap.before, 1)}% → {num(ap.after, 1)}%</b> (sem contar o resto do mês).</p>
+                {envio.length > 0 && (
+                  <p className="pn-hint dn" style={{ margin: '4px 0 0' }}>
+                    ⚠️ <b>Só de mandar ao Congresso</b>, mesmo que não passe: {envio.map(([g, v]) => `${GROUP_BY_ID[g].name} −${num(-v, 1)}`).join(' · ')}. Se virar lei, essa parte já fica contada.
+                  </p>
+                )}
               </>
             )}
 

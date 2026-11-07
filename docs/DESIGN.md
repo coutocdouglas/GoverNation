@@ -1036,7 +1036,7 @@ Fase nova, adiantada antes da Etapa 5A (ver o plano: Parte 5). Complexidade baix
 
 **Ficou para depois:** o "Por quê?" na tela (Etapa 6); a IA como segunda opinião nos textos de reserva continua opcional; o limite de um parecer por mês também no fato do mês (decidir no playtest); rebalancear `dealCarry` na partida do Douglas.
 
-### 27.16 Lote A2, item 1: acordos que esfriam (v0.25, em preparação)
+### 27.16 Lote A2, item 1: acordos que esfriam (v0.25)
 
 Problema (achado do Douglas jogando): o acordo ficava guardado na medida; a fila esfriava todos os partidos e comia o reforço; o partido continuava travado em "Acordo já fechado" com o efeito anulado; aos 6 meses o projeto era arquivado e o acordo sumia sem aviso.
 
@@ -1044,7 +1044,22 @@ Regra nova (`data/deals.ts`, `DEALS.validade`): cada acordo guarda o mês em que
 
 Testes do atalho/beco sem saída: renovar não é grátis nem soma força; acordo forte continua travando (sem trocar o acordo toda rodada); sempre há saída (renovar ou deixar vencer). Simulador `sim2c` sem mudança relevante. Save 24. **Pendente:** aviso de "acordo para vencer" na central de pendências; rebalancear o `dealCarry` (35%) do Senado e o 15% por mês no playtest.
 
+### 27.17 Lote A2, item 2: o tamanho dos efeitos das medidas (v0.26)
+
+**Medição antes (07/11/2026, 10 sementes, medida assinada no mês 3, comparada com a mesma partida sem ela).** A aprovação varia 1,1 ponto por mês sozinha. Decreto bom típico: +0,6. Melhor MP: +2,1. Lei boa aprovada: +2,6. Lei impopular aprovada (regra fiscal): −1,1. **Medida absurda (−12 em quase todos) mandada como lei e barrada: −1,3**; como PEC (fica na fila): −0,5; como decreto: −12,5. Diagnóstico: (1) o decreto bom some no ruído; (2) a medida absurda só pesava se passasse, e barrada custava o mesmo −0,8 de qualquer derrota.
+
+**Regra nova (`src/game/efeitos.ts`, números em `data/efeitos.ts`).**
+1. **Curva do ganho** (`curvaGanho`): ganho num grupo vira `min(2v, 2√v)`; cruza em 4 (pequeno sobe, grande cresce cada vez menos). Perdas passam como estão (perdas já são lembradas por mais tempo). Vale só para medidas: `applyEffects(..., medida = true)` em lei aprovada, decreto, MP, decretos rápidos e veto. Posts, rua e opções do fato do mês ficam fora (balanceados na 1B). A prévia "já valeu" e a derrubada no Supremo (`struckImpulses`) usam a mesma curva.
+2. **Só de mandar** (`custoDeEnviar`): lei, LC e PEC tiram de cada grupo atingido `v × 0,4 × min(1, |v|/6)` no envio (`sendInto`); fica em `PendingBill.antecipado` e é descontado quando vira lei (`descontarEnvio` em `enactBill`), para não contar duas vezes. Decreto e MP não pagam (valem na hora). A leitura do gabinete mostra a linha antes de assinar.
+3. **Teto por grupo no mês** (`aplicarTeto`, no fechamento, antes de `stepGroup`): soma dos ganhos de medidas ≤ +6 e das perdas ≥ −8 por grupo; corta proporcionalmente e guarda a sobra em `GameState.efeitoAdiado`, que entra no mês seguinte. A marca `Impulse.medida` só vive na rodada.
+4. A derrota (−0,8 em todos) não muda.
+
+**Medição depois.** Decreto bom +0,9 (grupo beneficiado +2,9 no mês); melhor MP +2,4; lei boa +2,2; lei impopular aprovada −1,4; absurda barrada como lei −4,5 (mista) a −6,0 (−12 em todos); como PEC −5,2; como decreto −8 no mês e −11,8 em três meses. Simulador (`npm run sim`): notas praticamente iguais (respondeFatos 608 → 614; soAssessoria 468 → 468). Save 25.
+
+**Testes do atalho e do beco:** a curva só ajuda medida que entrega algo, e repetir medida parecida continua rendendo menos (`effectMultiplier`); o custo de enviar só tira; o teto impede somar várias medidas no mesmo mês para disparar; o custo aparece antes de assinar. **Ficou para a Etapa 6:** a faixa "medida explosiva" (ver a Caixa de ideias).
+
 ### 27.1 Caixa de ideias por etapa
+- **Medida explosiva (ideia do Douglas, 07/11/2026; Etapa 6, junto com a nota de absurdo e a credibilidade).** Um patamar acima da medida ruim: medida super impopular com alerta antes de assinar e extras além dos grupos (marca forte de reputação, força ao rival, mercado e dólar, base no Congresso fugindo, fato do mês de protesto) e saída de retirar da pauta com custo menor. Cuidado: não criar degrau seco (a queda nos grupos segue a curva da v0.26; a faixa só liga os extras) e nada de ganho para grupo algum. Complexidade alta · Opus.
 - **Do lote A2 (avaliação de 07/11/2026, aprovadas pelo Douglas).** (1) Acordo para vencer: a central de pendências avisa e oferece "renovar" (entra no item 1 do lote A2, junto com a renegociação). (2) Ficha da medida com o "antes → depois" de cada grupo, para o jogador sentir a escala dos efeitos (Etapa 6, tela do "Por quê?"). (3) Etapa 5A: quando houver 2 escândalos ativos, alerta de que o próximo espera na fila. (4) Organização do código entre etapas: `supremo.ts` (1.525 linhas), `rodada.ts`, `GameScreen.tsx` e `game.ts` em partes menores, só depois de fechar uma etapa. (5) Regra: rodar `npm test` antes de cada commit. *(A ideia de "ritmo/mês curto" foi sugerida e o Douglas não aceitou: não entra.)*
 - **Pressão antes da votação (ideia do Douglas, 03/11/2026; Etapa 5 ou 6).** Hoje, com a lei na pauta, o desdobramento só muda de palavras (v0.24.1). A ideia maior: fatos de **pressão antes do voto** (ameaça da agência de risco, atos nas ruas, mercado nervoso) com **efeito de verdade na votação**, e saídas como retirar da pauta, adiar, negociar ou enfrentar. Cuidado com o Teste do atalho (retirar e reenviar não pode ser grátis) e o da sobrecarga (poucas decisões por rodada). Reaproveita a mesa de negociação e as ruas (2C) e a agenda (5B). Complexidade média-alta · Opus no desenho, Sonnet nas telas.
 - Etapa 1 (revisada ao fechar a 1B): conquistas como selos da Ficha vão para a Etapa 8 (já lista conquistas); nome da medida no telejornal e decreto também com janela de confirmação antes de assinar vão para a Etapa 2 (janela da medida em etapas).

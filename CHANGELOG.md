@@ -1,5 +1,15 @@
 # Novidades
 
+## 0.26.0 (07/11/2026)
+- **Lote A2, item 2: o tamanho dos efeitos das medidas nos grupos.** Antes, um decreto bom mal aparecia (+0,6 de aprovação, menos que a variação normal de um mês) e a medida absurda barrada na Câmara custava só −1,3, quase o mesmo que uma lei impopular aprovada.
+  - **Ganho com curva:** ganho pequeno num grupo fica mais visível e ganho grande cresce cada vez menos (+2 vira +2,8; +8 vira +5,7). Decreto bom: +0,6 → +0,9 de aprovação, com o grupo beneficiado mexendo +2,9 no mês. Lei forte (salário mínimo): +2,6 → +2,2.
+  - **Só de mandar já pesa:** lei, lei complementar e PEC (que votam antes de valer) já tiram aprovação, no envio, de quem a medida atinge. Perda pequena quase não conta (−3 → −0,6); perda grande pesa forte (−12 → −4,8). Se a medida virar lei, essa parte já fica contada. A leitura do gabinete avisa antes de assinar ("⚠️ Só de mandar ao Congresso…"), e o cartão do grupo mostra a causa. Medida absurda barrada: −1,3 → cerca de −4,5 a −6.
+  - **Teto por grupo no mês:** no máximo +6 de ganho e −8 de perda vindos de medidas no mesmo mês; o que passar entra no mês seguinte ("Efeito de medidas que ainda chega"). Medida absurda por decreto: −12,5 de uma vez → −8 no mês e o resto depois.
+  - A derrota no Congresso continua custando −0,8 em todos os grupos (é o "governo fraco", separado do castigo pela intenção).
+  - Posts da assessoria, ruas e opções do fato do mês ficam como estavam (balanceados à parte).
+- Mandatos salvos continuam normalmente (save versão 25). Projetos que já estavam na fila viram lei com o efeito cheio.
+- Balanceamento (`npm run sim`, 30 sementes): passivo 434 → 434, populista 296 → 295, responde aos fatos 608 → 614, só posta 468 → 468. `sim2c`, `sim3` e `sim4` sem erro.
+
 ## 0.25.0 (07/11/2026)
 - **Lote A2, item 1: acordos que esfriam.** Corrige o erro achado pelo Douglas: o partido ficava travado em "Acordo já fechado" mesmo com o efeito já gasto.
   - **Força do acordo:** todo acordo nasce com força 100% e perde 15 pontos a cada mês; o reforço de votos acompanha a força. O cartão do partido mostra "hoje X%, vence em N meses".

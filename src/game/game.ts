@@ -25,6 +25,7 @@ import { PROMISE_BY_ID } from './data/promises'
 import { RIVAL_BY_PARTY } from './data/rival'
 import { Rng } from './rng'
 import { applyEffects } from './effects'
+import { aplicarTeto } from './efeitos'
 import { registrarCausas } from './causas'
 import { addMark, initialReputation, maybeCloseChapter, noteRecord, stepReputation } from './reputacao'
 import { REPUTACAO } from './data/marks'
@@ -88,7 +89,7 @@ export function newGame(
   const rngState = seed ?? Math.floor(Math.random() * 2 ** 31)
   const bonus = DIFFICULTY[difficulty].approvalBonus
   const state: GameState = {
-    saveVersion: 24,
+    saveVersion: 25,
     month: 0,
     presidentName: presidentName.trim() || 'Presidente',
     difficulty,
@@ -380,7 +381,7 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
   let actionConfidence = round?.confidence ?? 0
   for (const id of actions) {
     const def = ACTION_BY_ID[id]
-    actionConfidence += applyEffects(e, impulses, def.effects, def.name, effectMultiplier(s, id))
+    actionConfidence += applyEffects(e, impulses, def.effects, def.name, effectMultiplier(s, id), 1, true)
     if (id === 'anteciparObras') plantSeeds(s, id, 'Obras aceleradas por decreto', s.presidentName, s.playerParty, rng)
     s.cooldowns[id] = def.cooldown + 1 // +1 porque o contador cai no fim deste mês
     s.actionLog.push({ month: s.month, id })
@@ -423,7 +424,7 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
       votes.push(v)
       c.vetoes = c.vetoes.filter((x) => x !== vt)
       if (v.approved) {
-        actionConfidence += applyEffects(e, impulses, vb.effects, vb.name)
+        actionConfidence += applyEffects(e, impulses, vb.effects, vb.name, 1, 1, true)
         if (vt.kind === 'bomba') { c.laws.push(vt.bill); sanctioned.push(vt.bill) }
         for (const g of GROUPS) impulses[g.id].push({ label: 'Veto derrubado na Câmara', value: CAMARA.veto.defeatHit })
         sp.relation = Math.max(0, sp.relation + CAMARA.speaker.vetoHit)
@@ -442,7 +443,7 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
     const vb = vetoedBill(it)
     c.toSanction = c.toSanction.filter((x) => x !== it)
     if ((plan.sanctions?.[it.id] ?? 'sancionar') === 'sancionar') {
-      actionConfidence += applyEffects(e, impulses, vb.effects, vb.name)
+      actionConfidence += applyEffects(e, impulses, vb.effects, vb.name, 1, 1, true)
       if (it.kind === 'bomba') { c.laws.push(it.bill); sanctioned.push(it.bill); plantSeeds(s, it.bill, vb.name, s.presidentName, s.playerParty, rng) }
       taken.push(`Sancionou: ${vb.name}`)
       headlines.push({ text: `Presidente sanciona ${lowerFirst(vb.name)}`, tone: 'neutral' })
@@ -837,6 +838,8 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
   const bonus = DIFFICULTY[s.difficulty].approvalBonus
   const offsets = profileOffsets(s.profile)
   const approvalBefore = overallApproval(s.groups)
+  // v0.26: teto por grupo para o que veio de medidas neste mês; o excesso entra no mês seguinte.
+  aplicarTeto(s, impulses)
   const groupCauses = {} as Record<GroupId, Cause[]>
   for (const def of GROUPS) groupCauses[def.id] = stepGroup(s.groups[def.id], after, bonus + offsets[def.id], impulses[def.id])
   const approvalAfter = overallApproval(s.groups)

@@ -62,14 +62,15 @@ describe('Etapa 4C3: risco jurídico por regra', () => {
     noteInForce(s, 'armas', s.presidentName)
     expect(fileChanceOf(s, 'armas')).toBeGreaterThan(0.25)
     let filed = 0
-    for (let seed = 1; seed <= 20; seed++) {
+    // v0.26: 40 partidas (antes 20, com folga de uma só partida); a chance esperada é de cerca de 82%.
+    for (let seed = 1; seed <= 40; seed++) {
       let g = feb(seed, 'fpt')
       g.congress.laws.push('armas')
       noteInForce(g, 'armas', g.presidentName)
       for (let i = 0; i < 6 && !g.supremo.cases.some((c) => c.bill === 'armas') && !g.supremo.rulings.length; i++) g = advanceMonth(g, [])
       if (g.supremo.cases.some((c) => c.bill === 'armas') || g.supremo.rulings.some((r) => r.bill === 'armas')) filed++
     }
-    expect(filed).toBeGreaterThanOrEqual(16)
+    expect(filed).toBeGreaterThanOrEqual(30)
   })
 })
 
@@ -279,7 +280,7 @@ describe('Etapa 4C3: save', () => {
     delete raw.supremo.consultas
     delete raw.supremo.adjusted
     const m = migrate(raw)!
-    expect(m.saveVersion).toBe(24)
+    expect(m.saveVersion).toBe(25)
     expect(m.supremo.consultas).toEqual([])
     expect(m.supremo.adjusted).toEqual({})
     expect(m.ministries.seguranca.wear).toBe(MINISTERIOS.start + MINISTERIOS.struck)

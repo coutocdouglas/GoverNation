@@ -37,6 +37,7 @@ import { rollReactions } from './fluxo'
 import { FLUXO } from './data/fluxo'
 import { SUPREMO, TSE_BY_ID } from './data/supremo'
 import { applyEffects } from './effects'
+import { custoDeEnviar, descontarEnvio, pesaNoEnvio } from './efeitos'
 import { addMark, markMeasure, noteRecord } from './reputacao'
 import { REPUTACAO } from './data/marks'
 import { Rng } from './rng'
@@ -426,7 +427,9 @@ function enactBill(ctx: RoundCtx, p: PendingBill, placarS: string): void {
   if (bill.instrument !== 'mp') {
     const k = (p.ccj === 'adequado' ? SUPREMO.ccj.adequaScale : 1) * senadoScale(p)
     const fx = concededEffects(coreEffects(bill, am), conc)
-    ctx.conf.v += applyEffects(e, impulses, k === 1 ? fx : coreEffects({ ...bill, effects: fx }, { relator: s.playerParty, kind: 'desidrata', shift: 0, scale: k }), bill.name)
+    const final = k === 1 ? fx : coreEffects({ ...bill, effects: fx }, { relator: s.playerParty, kind: 'desidrata', shift: 0, scale: k })
+    // v0.26: a parte da perda que já pesou no envio não conta duas vezes.
+    ctx.conf.v += applyEffects(e, impulses, descontarEnvio(final, p.antecipado), bill.name, 1, 1, true)
     // Etapa 2B: a parte que o mercado já tinha precificado no envio não conta duas vezes.
     if (p.priced) ctx.conf.v -= p.priced
     plantSeeds(s, p.id, bill.name, s.presidentName, s.playerParty, ctx.rng)
@@ -893,7 +896,7 @@ export function sendInto(s: GameState, id: BillId, opts: FloorOptions = {}, resp
   markMeasure(s, bill, response)
   let parked = false
   if (bill.instrument === 'decreto') {
-    ctx.conf.v += applyEffects(ctx.e, ctx.impulses, bill.effects, bill.name)
+    ctx.conf.v += applyEffects(ctx.e, ctx.impulses, bill.effects, bill.name, 1, 1, true)
     c.laws.push(id)
     noteInForce(s, id, s.presidentName)
     plantSeeds(s, id, bill.name, s.presidentName, s.playerParty, ctx.rng)
@@ -921,7 +924,7 @@ export function sendInto(s: GameState, id: BillId, opts: FloorOptions = {}, resp
     ctx.conf.v += payBuys(s, id, opts.senadores ?? [], ctx.headlines, ctx.taken)
     if (bill.instrument === 'mp') {
       // A MP vale na hora e entra na fila: precisa ser pautada em até 4 meses, ou caduca.
-      ctx.conf.v += applyEffects(ctx.e, ctx.impulses, bill.effects, bill.name)
+      ctx.conf.v += applyEffects(ctx.e, ctx.impulses, bill.effects, bill.name, 1, 1, true)
       plantSeeds(s, id, bill.name, s.presidentName, s.playerParty, ctx.rng)
       noteInForce(s, id, s.presidentName)
       addBio(s, s.presidentName, `Editou a medida provisória: ${bill.name}.`)
@@ -936,6 +939,12 @@ export function sendInto(s: GameState, id: BillId, opts: FloorOptions = {}, resp
       // Etapa 2B: o mercado precifica parte da lei já no envio; o anúncio provoca reações.
       const shock = (bill.effects.confidence ?? 0) * FLUXO.pricedAtSend
       if (shock) { p.priced = shock; ctx.conf.v += shock }
+      // v0.26: quem a medida atinge reage já no envio (perda grande pesa mais); se virar lei, isso é descontado.
+      if (pesaNoEnvio(bill.instrument)) {
+        const custo = custoDeEnviar(bill.effects)
+        for (const [g, v] of Object.entries(custo) as [GroupId, number][]) ctx.impulses[g].push({ label: `Só de mandar: ${bill.name}`, value: v, medida: true })
+        if (Object.keys(custo).length) p.antecipado = custo
+      }
       reactToday(ctx, id)
       parked = floorCamara(ctx, p, opts) === 'parado'
     }

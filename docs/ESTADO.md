@@ -3,13 +3,13 @@
 > **Leia este arquivo primeiro.** Ele diz onde o projeto está e qual é o próximo passo.
 > Atualize-o a cada mudança: seção "Estado atual", "Próximo passo" e uma linha no "Histórico".
 
-**Última atualização:** 07/11/2026 · **Versão publicada:** v0.25.0
+**Última atualização:** 07/11/2026 · **Versão publicada:** v0.26.0
 
 ---
 
 ## Próximo passo
 
-**Lote A2** (o Douglas dispensou o playtest da Fase A em 07/11/2026 e o travamento do mês 36 está resolvido): 1) acordos que esfriam e travam a bancada (Opus); 2) calibrar o tamanho dos efeitos das medidas nos grupos (Opus); 3) logos dos partidos no mapa do Senado (Sonnet). Em seguida, **Etapa 5A: Elos e semente de risco** (plano pronto no doc do projeto `plano-de-desenvolvimento.md`, Parte 4; a 5A usa `registrarOrigemRisco`, em `src/game/causas.ts`, para gravar a origem de cada semente). Depois 5B (vazamento, PF e advogado, com o núcleo mínimo da agenda) e 5C (oposição, CPI e inteligência).
+**Lote A2** (o Douglas dispensou o playtest da Fase A em 07/11/2026 e o travamento do mês 36 está resolvido): ~~1) acordos que esfriam~~ (feito na v0.25.0; falta o aviso "acordo para vencer" na central de pendências); ~~2) calibrar o tamanho dos efeitos das medidas nos grupos~~ (feito na v0.26.0: curva do ganho, "só de mandar já pesa" e teto por grupo no mês; a "medida explosiva" ficou para a Etapa 6); **3) logos dos partidos no mapa do Senado (Sonnet ou Haiku, complexidade baixa)**. Em seguida, **Etapa 5A: Elos e semente de risco** (plano pronto no doc do projeto `plano-de-desenvolvimento.md`, Parte 4; a 5A usa `registrarOrigemRisco`, em `src/game/causas.ts`, para gravar a origem de cada semente). Depois 5B (vazamento, PF e advogado, com o núcleo mínimo da agenda) e 5C (oposição, CPI e inteligência).
 
 Complexidade da 5A: **muito alta**. Opus nas regras (Elos, risco oculto, Controle do Estado, três fontes de escândalo); Sonnet nas telas.
 
@@ -28,7 +28,7 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 **Base técnica**
 - App de Windows (Tauri 2 + React + TypeScript). O instalador é gerado pelo GitHub Actions e o jogo se atualiza sozinho, com atualização assinada.
 - O motor do jogo (`src/game/`) fica separado das telas (`src/ui/`). Os números de balanceamento ficam em `src/game/data/`.
-- 315 testes automáticos. Saves antigos são migrados (versão atual do save: 23).
+- 334 testes automáticos. Saves antigos são migrados (versão atual do save: 25).
 
 **Jogabilidade**
 - Mandato de 48 meses (jan/2027 a dez/2030), com o mês em 4 passos: notícias, fato do mês, decisões e encerrar.
@@ -69,6 +69,7 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 - **Supremo profundo, parte 1 (v0.22):** a ação chega com autor (partido, entidade fictícia, Procuradoria ou governo de um estado), tipo e fundamento; 5 doutrinas (garantista, conservador, fiscalista, formalista, federalista), cada uma pesando um tipo de fundamento; relator por sorteio animado ou por prevenção, e quem tem a doutrina dele tende a segui-lo; **trabalhar o plenário** (até 2 audiências com indecisos, que podem vazar) ou **aguardar o julgamento**; **pedido de vista** (o julgamento para 1 a 3 rodadas; dá para trabalhar de novo ou recuar); acórdão com a frase de cada ministro e o porquê em selos.
 - **Supremo profundo, parte 2 (v0.23):** índice "A seu favor" da Corte (0 a 100), que multiplica liminar, vista e projeto travado; precedente de cada julgamento por 24 meses (a favor protege o fundamento; contra o deixa mais arriscado, e a leitura do gabinete avisa); depois da derrubada, seis saídas com o custo à vista (acatar, nova proposta, criticar, **embargos**, **o ministro da área sai**, **descumprir**); **"O Supremo pede você"**: a cada 2 anos, a cadeira de jurista no tribunal eleitoral, com 4 juristas, rigor e preço (o rigor fica guardado para a eleição).
 - **Fase A (v0.24):** medida barrada por inconstitucionalidade (CCJ ou Supremo) agora marca a reputação e derruba a aprovação como qualquer derrota; parecer do ministro da pasta na medida do mês (um por mês por ministro, com texto de reserva sem IA); botão "Atender" nas pendências de cobrança; sem catálogo nem "Outros caminhos" no fato do mês; plenário do Senado com anel único de relação e filtros; acordo da Câmara rende 35% no Senado; **registro de causas** (`src/game/causas.ts`) por baixo; **texto de reserva da IA** (`src/game/reserva.ts`) com o erro real no gasto medido.
+- **Tamanho dos efeitos (v0.26):** ganho de medida nos grupos com curva (pequeno visível, grande com retorno decrescente); lei, LC e PEC que machucam já pesam no envio em quem atingem (aviso na leitura do gabinete, descontado se virar lei); teto por grupo no mês (+6 / −8), com a sobra no mês seguinte.
 - **Logos dos partidos (v0.19.1):** arte do Douglas em `public/logos/`, na posse, no Painel, na Câmara, nas lideranças e no cartão da oposição; número na urna de cada partido.
 - **Retratos:** 110 fotos, cada uma usada por uma pessoa só, e 88 retratos ilustrados (111 a 198) feitos pelo Douglas. 97 rostos livres para personagens novos e para o presidente (18 foram para os chefes de ala na v0.18 e 9 para os líderes de bancada do Senado na v0.21). O presidente escolhe o rosto na posse (41 livres) e 15 retratos ficam reservados para Defesa, povos indígenas, campo e tradições.
 
@@ -160,3 +161,5 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 | 05/11/2026 | v0.24.2 | Correção do travamento na transição de mês: se o fechamento do mês falhar, o jogo avisa o motivo e solta a tela. Causa exata do travamento do mês 36 (partida do Douglas) ainda a investigar |
 | 07/11/2026 | v0.25.0 | Lote A2, item 1: força do acordo que cai 15 pontos por mês, renovação por 70% do preço quando a força fica abaixo de 50%, aviso do que se perde no arquivamento; save 24; 327 testes |
 | 07/11/2026 | — | Douglas confirma que o travamento do mês 36 foi resolvido. Playtest da Fase A dispensado por ele; segue o lote A2 (acordos, calibragem dos efeitos, logos do Senado). CLAUDE.md reescrito (regras de trabalho: pedir permissão antes de mudar e dizer o modelo ideal por etapa) |
+| 07/11/2026 | — | Lote A2, item 2: medição no simulador do tamanho dos efeitos (decreto bom +0,6 de aprovação, abaixo da variação natural de 1,1 por mês; medida absurda barrada na Câmara só −1,3, quase igual a uma lei impopular aprovada). Documentos atualizados para a v0.25.0 |
+| 07/11/2026 | v0.26.0 | Lote A2, item 2: curva do ganho, "só de mandar já pesa" (lei, LC e PEC) com aviso na leitura, teto por grupo no mês com sobra adiada; absurda barrada −1,3 → −4,5 a −6; decreto bom +0,6 → +0,9; simulador estável; save 25; 334 testes. Ideia do Douglas "medida explosiva" na Caixa de ideias da Etapa 6 |

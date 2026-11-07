@@ -16,6 +16,7 @@ import type { Rng } from './rng'
 import { FLUXO } from './data/fluxo'
 import type { BillId, Cause, Consulta, CourtAuthor, CourtCase, CourtNow, Economy, EventOrigin, GameState, GroupId, Headline, Impulse, Instrument, JusticeSeat, PartyId, PendingBill, Precedente, Ruling, SupremoState, TseState } from './types'
 import { applyEffects } from './effects'
+import { curvaGanho } from './efeitos'
 import { resetMinistry } from './ministerios'
 import { bumpScandal } from './causas'
 
@@ -1218,7 +1219,8 @@ export function undoEffects(bill: BillDef, scale = 1) {
 export function struckImpulses(bill: BillDef, scale = 1): { group: GroupId; value: number; label: string }[] {
   const out: { group: GroupId; value: number; label: string }[] = []
   for (const [gid, v] of Object.entries(bill.effects.groups ?? {}) as [GroupId, number][]) {
-    if (v > 0) out.push({ group: gid, value: -v * scale * SUPREMO.winnersLoss, label: `Supremo derruba: ${bill.name}` })
+    // v0.26: quem ganhava perde na mesma régua em que ganhou (curva do ganho).
+    if (v > 0) out.push({ group: gid, value: -curvaGanho(v * scale) * SUPREMO.winnersLoss, label: `Supremo derruba: ${bill.name}` })
     else if (v < 0) out.push({ group: gid, value: -v * scale * SUPREMO.losersRelief, label: `Alívio com a derrubada: ${bill.name}` })
   }
   return out

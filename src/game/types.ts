@@ -33,6 +33,8 @@ export interface Cause {
 export interface Impulse {
   label: string
   value: number
+  /** v0.26: veio de uma medida (conta no teto do mês por grupo). Só na rodada; some antes de virar memória. */
+  medida?: boolean
 }
 
 export interface Group {
@@ -141,7 +143,9 @@ export interface Meanwhile {
 import type { ReputationState } from './reputacao'
 
 export interface GameState {
-  saveVersion: 24
+  saveVersion: 25
+  /** v0.26: efeito de medidas que passou do teto do mês num grupo e entra no mês seguinte (ganho > 0, perda < 0). */
+  efeitoAdiado?: Partial<Record<GroupId, { ganho: number; perda: number }>>
   /** Mês atual, de 0 (janeiro do 1º ano) a 47. Em 48 o mandato acabou. */
   month: number
   presidentName: string
@@ -596,6 +600,8 @@ export interface PendingBill {
   conceded?: DealTerms[]
   /** Etapa 2B: parte do choque de confiança que o mercado já precificou no envio (desfeita se o projeto cair). */
   priced?: number
+  /** v0.26: o que cada grupo atingido já perdeu no envio (descontado se virar lei). */
+  antecipado?: Partial<Record<GroupId, number>>
   /** Etapa 2C: as ruas a favor ou contra (reforço em todas as bancadas, nas duas casas). */
   rua?: RuaResult
   /** Etapa 2C: acordo "adiar a votação": não vai a plenário antes deste mês. */

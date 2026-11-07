@@ -8,6 +8,7 @@ import { BILL_BY_ID, GDP_BILLIONS } from './data/bills'
 import { FLUXO, REACAO_CHANCE, REACOES, type ReactionId } from './data/fluxo'
 import { GROUPS, GROUP_BY_ID } from './data/groups'
 import { primaryBalance } from './economy'
+import { curvaGanho } from './efeitos'
 import { clamp } from './ideology'
 import type { Rng } from './rng'
 import { courtChanceNow, forecastRuling, isCleared, legalRiskIn, legalRiskScore, precedentNote, RISK_LABEL } from './supremo'
@@ -130,7 +131,7 @@ export function approvalPreview(s: GameState, id: BillId, scale = 1): { before: 
   for (const def of GROUPS) {
     const a = s.groups[def.id].approval
     before += def.weight * a
-    after += def.weight * clamp(a + (g[def.id] ?? 0) * scale, 0, 100)
+    after += def.weight * clamp(a + curvaGanho((g[def.id] ?? 0) * scale), 0, 100)
   }
   return { before, after }
 }
