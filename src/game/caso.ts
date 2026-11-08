@@ -181,6 +181,10 @@ export function chanceVazamento(s: GameState): number {
 /** Quanto o caso pesa em você: envolve o presidente (mais) ou é de vizinhança (menos). */
 const fatorEnvolvimento = (c: Caso) => (envolvePresidente(c) ? ESTRAGO.presidente : ESTRAGO.vizinhanca)
 
+/** A sangria do mês (perda em todos os grupos com o caso aberto): menos se você soltou a mão ou exonerou. */
+export const sangriaDoCaso = (c: Caso) =>
+  (c.gravidade / 100) * ESTRAGO.sangria * fatorEnvolvimento(c) * (c.exonerado ? ACOES_CASO.exonerar.sangriaFator : c.solto ? ACOES_CASO.soltar.sangriaFator : 1)
+
 function hitTodos(impulses: Record<GroupId, Impulse[]>, label: string, value: number): void {
   if (!value) return
   const v = round1(value)
@@ -406,7 +410,7 @@ export function aplicarDecisoes(s: GameState, decisoes: DecisaoCaso[], rng: Rng,
       }
       case 'exonerar': {
         const area = areaDoAlvo(s, c)!
-        const nome = tirarMinistro(s, area, `exonerado por causa do caso ${c.alvo}`, headlines)
+        const nome = tirarMinistro(s, area, 'por causa da investigação da PF', headlines)
         if (!nome) break
         c.exonerado = nome
         partido(s, c.party, ACOES_CASO.exonerar.partido)
@@ -489,7 +493,7 @@ function denunciar(s: GameState, c: Caso, impulses: Record<GroupId, Impulse[]>, 
     pessoa.suspeita = true
   }
   const area = !c.exonerado ? areaDoAlvo(s, c) : null
-  if (area) tirarMinistro(s, area, 'denunciado pela PF', headlines)
+  if (area) tirarMinistro(s, area, 'com denúncia da PF', headlines)
   partido(s, c.party, ESTRAGO.partidoDenuncia)
   const R = riscoOf(s)
   R.sementes = R.sementes.filter((x) => x.id !== c.semente)
@@ -609,8 +613,7 @@ export function stepCasos(s: GameState, rng: Rng, impulses: Record<GroupId, Impu
     if (c.fase === 'encerrado' || c.at === now) continue
     c.provas = clamp(round1(c.provas + ritmoProvas(s, c)))
     // A sangria: o caso aberto na imprensa pesa todo mês (menos se você soltou a mão ou exonerou).
-    const sang = (c.gravidade / 100) * ESTRAGO.sangria * fatorEnvolvimento(c) * (c.exonerado ? ACOES_CASO.exonerar.sangriaFator : c.solto ? ACOES_CASO.soltar.sangriaFator : 1)
-    hitTodos(impulses, `Caso ${c.alvo} na imprensa`, -sang)
+    hitTodos(impulses, `Caso ${c.alvo} na imprensa`, -sangriaDoCaso(c))
     if (c.fase === 'supremo') {
       if (now >= (c.supremoEm ?? now)) confidence += decidirSupremo(s, c, rng, impulses, headlines)
       continue

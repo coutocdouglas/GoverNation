@@ -863,3 +863,16 @@
 .pn-proposta__cols > div.on { border-color: var(--pn-gold); }
 .pn-pista { display: block; font-size: 11.5px; color: var(--pn-mut); font-style: italic; }
 .pn-justice .pn-elo { align-self: center; }
+
+/* Etapa 5B (v0.28.1): casos na investigação, advogado e interino. */
+.pn-card--red { border-color: #ff5a5f55; }
+.pn-caso { background: var(--pn-panel2); border: 1px solid var(--pn-line); border-radius: 8px; padding: 8px 10px; margin: 8px 0; }
+.pn-caso__head { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.pn-caso__meter { position: relative; }
+.pn-caso__meter i { position: absolute; top: -2px; bottom: -2px; width: 2px; background: var(--pn-ink); opacity: 0.55; }
+.pn-caso__acoes { display: grid; gap: 6px; margin-top: 8px; }
+.pn-caso__acoes .pn-empresa small.up { color: var(--pn-green); }
+.pn-caso__acoes .pn-empresa small.dn { color: var(--pn-red); }
+.pn-empresa:disabled { opacity: 0.55; cursor: not-allowed; }
+.pn-badge.warn { color: var(--pn-gold); }
+.pn-badge.dn { color: var(--pn-red); }

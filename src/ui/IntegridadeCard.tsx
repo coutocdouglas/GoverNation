@@ -7,6 +7,7 @@ import { num } from './format'
 import type { GameState, GroupId } from '../game/types'
 import { yearOf } from '../game/memory'
 import { EloOf } from './Elo'
+import { chanceVazamento, faixaChance, parecerAdvogado, vazamentoTravado } from '../game/caso'
 
 const MONTHS = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez']
 const when = (at: number) => `${MONTHS[at % 12]}/${yearOf(at)}`
@@ -17,6 +18,23 @@ function controleLabel(v: number): { text: string; cls: string } {
   if (v >= 45) return { text: 'vigilância comum', cls: 'warn' }
   if (v >= 25) return { text: 'vigilância fraca', cls: 'dn' }
   return { text: 'máquina sem vigia', cls: 'dn' }
+}
+
+/**
+ * Etapa 5B (v0.28.1): a chance de algo vazar no fechamento deste mês, em faixa (o número exato fica com o motor).
+ * Quando nada pode vazar (2 casos abertos ou vazamento recente), diz o porquê.
+ */
+function VazamentoFaixa({ state }: { state: GameState }) {
+  const p = chanceVazamento(state)
+  const trava = vazamentoTravado(state)
+  const faixa = trava ? 'Nada vaza agora' : faixaChance(p)
+  const cls = p >= 0.45 ? 'dn' : p >= 0.05 ? 'warn' : 'up'
+  return (
+    <p className="pn-hint" style={{ margin: '4px 0' }} title="Sobe com a gravidade do que está escondido, a exposição a escândalo, a força da oposição e o Controle do Estado (vigia forte acha mais)">
+      📰 Chance de algo vazar este mês: <b className={cls}>{faixa}</b>
+      {trava && p === 0 ? ` · ${trava}` : ''}
+    </p>
+  )
 }
 
 /**
@@ -41,6 +59,7 @@ export function IntegridadeCard({ state }: { state: GameState }) {
       <p className="pn-hint" style={{ margin: '4px 0' }}>
         🗂️ O que pesa sobre você: <span className="pn-integ__pista">“{pistaRastro(state)}”</span>
       </p>
+      <VazamentoFaixa state={state} />
       <div style={{ marginTop: 8 }}>
         <span>🔍 Controle do Estado <b className={lbl.cls}>{c}/100</b> · {lbl.text}</span>
         <span className="pn-meter" style={{ display: 'block', marginTop: 4 }}><span style={{ width: `${c}%`, background: color }} /></span>
@@ -88,10 +107,15 @@ export function PropostaCard({ state, value, onChange }: { state: GameState; val
     def.ganho.baseRelacao ? `relação com os partidos da base +${def.ganho.baseRelacao}` : '',
   ].filter(Boolean)
   const pick = (v: 'aceitar' | 'recusar') => onChange(value === v ? null : v)
+  const par = parecerAdvogado(state, def.id, def.peso, def.rastro)
   return (
     <section className="pn-card pn-card--gold">
       <h3>{def.icon} Proposta de um setor <span className="pn-badge">{def.setor} · responda até encerrar o mês</span></h3>
       <p className="pn-proposta__pede">“{def.pede}”</p>
+      <p className="pn-hint" style={{ margin: '4px 0' }}>
+        💼 Parecer de {par.advogado}: risco <b className={par.faixa === 'alto' ? 'dn' : par.faixa === 'médio' ? 'warn' : 'up'}>{par.faixa}</b> de isso voltar contra você
+        {' '}· confiança {par.confianca} no parecer{par.confianca === 'baixa' ? ' (às vezes subestima o perigo)' : ''}.
+      </p>
       <div className="pn-proposta__cols">
         <div className={value === 'aceitar' ? 'on' : ''}>
           <b className="up">Aceitar</b>

@@ -6,8 +6,9 @@ import { GROUPS } from './data/groups'
 import { ACOES_CASO, ADVOGADOS, AGENDA, DELACAO, PF, SUPREMO_CASO, VAZAMENTO } from './data/caso'
 import {
   acaoCasoBlockedReason, advogadoAtual, advogadoBlockedReason, advogadoInicial, agendaUsada, aplicarDecisoes, casosAbertos, chanceDescobre, ligarVazamento,
-  chanceEsquece, chanceVazamento, envolvePresidente, invOf, parecerAdvogado, ritmoProvas, stepCasos, trocarAdvogado, vazamentoTravado, type Caso,
+  chanceEsquece, chanceVazamento, envolvePresidente, invOf, parecerAdvogado, ritmoProvas, sangriaDoCaso, stepCasos, trocarAdvogado, vazamentoTravado, type Caso,
 } from './caso'
+import { pendencias } from './pendencias'
 import { abrirLicitacao, contratoDe, garantirPessoa, limparNomeEmpresa, nomearEmpresas, pessoasAtuais, plantarSemente, riscoOf, type SementeRisco } from './risco'
 import { BILL_BY_ID } from './data/bills'
 import { absMonth } from './memory'
@@ -22,7 +23,7 @@ const fixed = (v: number) => ({ next: () => v, normal: () => 0, state: 1 }) as u
 const NUNCA = () => fixed(0.999)
 const SEMPRE = () => fixed(0)
 
-// O vazamento está desligado no jogo até a tela da v0.28.1; aqui ele vale.
+// O vazamento está ligado no jogo desde a v0.28.1; um teste desliga e liga de volta.
 beforeAll(() => ligarVazamento(true))
 
 /** Estado limpo (sem as sementes da posse) com um esquema maduro, de ministro ou de proposta aceita. */
@@ -349,7 +350,7 @@ describe('5B: save 28 e partida inteira', () => {
   })
 })
 
-describe('5B: desligado até a tela', () => {
+describe('5B: chave do vazamento', () => {
   it('com o vazamento desligado, o esquema maduro não vaza (o jogador não ficaria sem saída)', () => {
     ligarVazamento(false)
     try {
@@ -359,5 +360,31 @@ describe('5B: desligado até a tela', () => {
     } finally {
       ligarVazamento(true)
     }
+  })
+})
+
+describe('5B, telas (v0.28.1)', () => {
+  it('o vazamento vem ligado no jogo', () => {
+    expect(VAZAMENTO.ativo).toBe(true)
+  })
+
+  it('caso aberto vira pendência (PF ou Supremo) e some quando o caso fecha', () => {
+    const { s, c } = vazado()
+    const p = pendencias(s).find((x) => x.id === `caso-${c.id}`)
+    expect(p?.target).toBe('caso')
+    expect(p?.title).toContain(c.alvo)
+    expect(p?.detail).toContain('Provas')
+    c.fase = 'supremo'
+    expect(pendencias(s).find((x) => x.id === `caso-${c.id}`)?.title).toContain('Supremo')
+    c.fase = 'encerrado'
+    expect(pendencias(s).some((x) => x.id === `caso-${c.id}`)).toBe(false)
+  })
+
+  it('a sangria que a tela mostra cai ao soltar a mão e mais ainda ao exonerar', () => {
+    const { c } = vazado()
+    const cheia = sangriaDoCaso(c)
+    expect(cheia).toBeGreaterThan(0)
+    expect(sangriaDoCaso({ ...c, solto: true })).toBeCloseTo(cheia * ACOES_CASO.soltar.sangriaFator)
+    expect(sangriaDoCaso({ ...c, exonerado: 'X' })).toBeCloseTo(cheia * ACOES_CASO.exonerar.sangriaFator)
   })
 })

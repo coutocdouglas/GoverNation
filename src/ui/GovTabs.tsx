@@ -99,6 +99,11 @@ export function MinistriosView({ state, change, onChange, done }: { state: GameS
                   <b>{m.name}</b>
                   <small style={{ color: PARTY_BY_ID[m.party].color }}>{PARTY_BY_ID[m.party].sigla}{seat ? ' · pasta cedida' : ''}</small>
                   <span><EloOf state={state} name={m.name} ctx={{ papel: 'ministro', party: m.party, area }} small /></span>
+                  {!seat && state.interinos?.[area] === m.name && (
+                    <small className="pn-pista" title="Técnico de carreira que assumiu depois que o ministro saiu por causa de um caso. Fica até você ceder a pasta a um partido.">
+                      <span className="pn-badge warn">interino</span> Técnico de carreira: assumiu quando o ministro saiu por causa de um caso. Fica até você ceder a pasta.
+                    </small>
+                  )}
                 </div>
                 <div className="pn-minister__act">
                   {pending ? (

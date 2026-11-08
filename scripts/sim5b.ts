@@ -7,7 +7,7 @@ import { GRAVIDADE } from '../src/game/data/caso'
 import type { GameState } from '../src/game/types'
 
 const N = 30
-// O vazamento fica desligado no jogo até a tela da v0.28.1; o simulador mede como ele vai ficar.
+// O vazamento está ligado no jogo desde a v0.28.1; a chamada abaixo deixa isso explícito no simulador.
 ligarVazamento(true)
 /** Maior número de casos abertos ao mesmo tempo (pelos meses de início e fim). */
 const maxAbertos = (s: GameState) => {

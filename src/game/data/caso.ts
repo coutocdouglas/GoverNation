@@ -11,10 +11,10 @@ import type { GroupId } from '../types'
 
 export const VAZAMENTO = {
   /**
-   * Desligado até a tela da v0.28.1 (como a proposta de setor na 5A): sem tela, o caso vazaria sem o jogador poder
-   * agir (Teste do beco sem saída). Os testes e o simulador ligam com `ligarVazamento(true)`.
+   * Ligado na v0.28.1, junto com as telas (cartão do caso, pendência, agenda): o jogador sempre pode agir sobre o
+   * caso (Teste do beco sem saída). Testes e simulador podem desligar com `ligarVazamento(false)`.
    */
-  ativo: false,
+  ativo: true,
   /**
    * Chance de cada esquema vazar no mês: (base + gravidade/100 × porGravidade) × fator do Controle do Estado
    * × (1 + exposição e oposição). A chance do mês é a de pelo menos um vazar, até `teto`.

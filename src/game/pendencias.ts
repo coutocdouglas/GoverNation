@@ -18,11 +18,12 @@ import { baseMembers, fidelityOf } from './base'
 import { BASE, ESFRIA } from './data/base'
 import type { BillId, GameState } from './types'
 import { licitacoesAbertas, prazoLicitacao } from './risco'
+import { casosAbertos, faixaGravidade } from './caso'
 import { deAuthor, justiceName } from './supremo'
 import { TSE_BY_ID } from './data/supremo'
 
 export type Urgency = 'red' | 'yellow' | 'green'
-export type PendingTarget = 'evento' | 'camara' | 'senado' | 'supremo' | 'promessas' | 'cobrancas' | 'licitacao'
+export type PendingTarget = 'evento' | 'camara' | 'senado' | 'supremo' | 'promessas' | 'cobrancas' | 'licitacao' | 'caso'
 
 export interface Pendencia {
   id: string
@@ -83,6 +84,17 @@ export function pendencias(s: GameState): Pendencia[] {
       title: `Licitação: ${BILL_BY_ID[l.bill].name}`,
       detail: `Escolha quem executa (${l.empresas.length} empresas) · ${leftText(left)} · sem escolha, fica a empresa de sempre`,
       urgency: urgencyOf(left, false), weight: 45 - left * 6,
+    })
+  }
+
+  // Etapa 5B (v0.28.1): caso aberto (na PF ou no Supremo). Sem prazo: deixar passar também é uma decisão.
+  for (const k of casosAbertos(s)) {
+    const grave = faixaGravidade(k.gravidade) === 'grave'
+    out.push({
+      id: `caso-${k.id}`, icon: k.fase === 'supremo' ? '🏛️' : '🕵️', target: 'caso',
+      title: `${k.fase === 'supremo' ? 'Caso no Supremo' : 'Caso na PF'}: ${k.alvo}`,
+      detail: `Provas ${Math.round(k.provas)}/100 · caso ${grave ? 'grave' : faixaGravidade(k.gravidade) === 'medio' ? 'médio' : 'leve'} · agir ou deixar passar`,
+      urgency: grave || k.provas >= 60 ? 'red' : 'yellow', weight: 47 + (grave ? 5 : 0),
     })
   }
 

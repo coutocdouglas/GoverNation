@@ -1,5 +1,16 @@
 # Novidades
 
+## 0.28.1 (08/11/2026)
+- **Etapa 5B, bloco 2 (telas): os escândalos agora acontecem.** O vazamento foi ligado, e todo caso chega com o que você precisa para responder.
+  - **Casos na investigação:** cartão próprio no Painel, com o alvo, a gravidade, a barra de provas, a pista de quanto o caso chega perto de você e a origem na Ficha. **Agir** mostra cada saída com o ganho, o custo e o espaço de agenda; **Deixar passar** não escolhe nada. A decisão vale ao encerrar o mês.
+  - **Pendência** "Caso na PF" ou "Caso no Supremo" na central, que leva ao cartão.
+  - **Chance de algo vazar** no cartão Integridade, em palavras, com o motivo quando nada pode vazar.
+  - **Agenda do presidente:** contador de 2 espaços nos cartões do caso e do advogado.
+  - **Seu advogado:** cartão com perfil, Elo e troca. Na proposta de setor, ele dá o parecer: o risco e a confiança nessa opinião.
+  - **Interino:** selo na aba Ministérios, com o motivo.
+  - **Licitação:** com a IA ligada, as empresas ganham nomes próprios ao abrir a janela. Sem IA ou com falha, ficam os de reserva.
+- 394 testes. Sem mudança no save. Simulador com o vazamento ligado: 3,1 a 4,5 casos por mandato, nunca mais de 2 abertos.
+
 ## 0.28.0 (08/11/2026)
 - **Etapa 5B, bloco 1 (regras): vazamento, Polícia Federal e advogado do presidente.** As regras estão prontas, mas **o vazamento fica desligado até a v0.28.1**, que traz as telas. Sem tela, o escândalo apareceria sem você poder responder.
   - **Vazamento:** só vaza o que existe, um esquema escondido nascido de uma escolha registrada na Ficha. A chance do mês sobe com a gravidade dos esquemas, a exposição a escândalo e a força da oposição; um Controle do Estado alto acha mais rápido o que existe. No máximo 2 casos abertos e 4 meses entre um vazamento e outro.
