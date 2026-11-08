@@ -1227,3 +1227,8 @@ Pedido do Douglas (08/11/2026): interface mais sofisticada, aproveitando a tela 
 - **Pendência "acordo para vencer"** (`pendencias.ts`, id `acordo-<medida>`): acordo com `month` gravado e `canRenew` (força abaixo de `DEALS.validade.renewBelow`), na Câmara (acordos da Câmara e do Senado juntos) ou na fila do Senado. Urgência pelos meses que faltam (`dealMonthsLeft`).
 - **35% do Senado:** `scripts/medir-senado.ts` compara `SENADO.dealCarry` de 0,2 a 1 em leis disputadas. Com 0,35, o acordo da Câmara rende +4 votos e +12,7 pontos de chance no Senado, contra +12 votos e +14,8 pontos do acordo fechado direto lá. Mantido; confirmar no playtest.
 - **Visual:** `.pn .portrait` ganha o filtro de foto do tema; `.pn-sheet`, `.pn-vanim` e `.detail__box` ganham vidro (`color-mix` com `--pn-well`), desfoque e borda reta.
+
+### 27.30 Bloco 6B da Etapa 6: a tela do "Por quê?" (v0.33.0)
+- **Janela "Por quê?"** (`src/ui/PorQue.tsx`): id `pq:indicador:<chave>` ou `pq:grupo:<id>`, aberta pelos mesmos clicks de antes; substitui o `DetailPanel`. Lê `porque` (soma dos últimos 3 meses por motivo) e `causasDe` (linha do tempo) de `causas.ts`. Tela nova de detalhe segue o Teste da interface: resumo no painel, detalhe na janela.
+- **Antes → depois:** a ficha da medida (`MeasureSheet`) soma a diferença em pontos ao antes → depois de cada grupo (a curva do ganho de `efeitos.ts` já era usada).
+- **"Precisa de você"** (`src/game/alertas.ts`, `data/alertas.ts`): só leitura; escândalo ≥ 40, primário ≤ −1,5% do PIB, confiança ≤ 35, promessa de posse "longe" depois do mês 12. No máximo 3, graves primeiro (Teste da sobrecarga). Linha própria no Radar e janela com a lista.

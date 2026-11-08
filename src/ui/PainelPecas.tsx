@@ -3,20 +3,17 @@ import { billBlockedReason } from '../game/congress'
 import { BILL_BY_ID, BILLS, type BillDef } from '../game/data/bills'
 import { NewBadge } from './NewBill'
 import { ACTION_BY_ID, ACTIONS, ACTIONS_PER_MONTH, blockedReason } from '../game/actions'
-import { GROUP_BY_ID } from '../game/data/groups'
 import { guardarParecer } from '../game/rodada'
-import { econPull } from '../game/groups'
 import type { MeasureRef } from '../game/interpret'
 import { readText } from '../lib/aiActions'
 import { MeasureSheet } from './MeasureSheet'
 import { aiReady } from '../lib/ai'
-import type { ActionId, BillId, Cause, GameState, GroupId, IndicatorKey } from '../game/types'
+import type { ActionId, BillId, Cause, GameState } from '../game/types'
 import { ACTION_ICON, INDICATOR_ICON } from './icons'
-import { INDICATORS, num, signed, type IndicatorMeta } from './format'
+import { num, signed, type IndicatorMeta } from './format'
 import { Sparkline } from './Sparkline'
 
 /** v0.32.1 (6.0): peças do Painel tiradas do GameScreen (só mudou de lugar). */
-export type Detail = { kind: 'indicator'; key: IndicatorKey } | { kind: 'group'; id: GroupId } | null
 export type Step = 1 | 2 | 3 | 4
 
 export const tone = (v: number) => (v >= 50 ? 'var(--pn-green)' : v >= 35 ? 'var(--pn-gold)' : 'var(--pn-red)')
@@ -221,7 +218,7 @@ export function Delta({ value, good, d = 1 }: { value: number; good: 1 | -1 | 0;
   return <span className={`delta delta--${tone}`}>{value > 0 ? '▲' : '▼'} {num(Math.abs(value), d)}</span>
 }
 
-function CauseList({ causes, decimals = 2, unit = '' }: { causes: Cause[]; decimals?: number; unit?: string }) {
+export function CauseList({ causes, decimals = 2, unit = '' }: { causes: Cause[]; decimals?: number; unit?: string }) {
   const list = causes.filter((c) => Math.abs(c.value) >= Math.pow(10, -decimals) / 2)
   if (list.length === 0) return <p className="muted">Nada relevante mudou neste mês.</p>
   return (
@@ -233,56 +230,5 @@ function CauseList({ causes, decimals = 2, unit = '' }: { causes: Cause[]; decim
         </li>
       ))}
     </ul>
-  )
-}
-
-export function DetailPanel({ state, detail, onClose }: { state: GameState; detail: NonNullable<Detail>; onClose: () => void }) {
-  const report = state.lastReport
-  const now = state.history[state.history.length - 1]
-
-  if (detail.kind === 'indicator') {
-    const meta = INDICATORS.find((m) => m.key === detail.key)!
-    const values = state.history.map((h) => h.indicators[detail.key])
-    const causes = report?.causes[detail.key] ?? []
-    return (
-      <aside className="detail" onClick={onClose}>
-        <div className="detail__box" onClick={(e) => e.stopPropagation()}>
-          <button className="detail__close" onClick={onClose}>×</button>
-          <h2>{meta.label}</h2>
-          <div className="detail__value">{meta.format(values[values.length - 1])}</div>
-          <Sparkline values={values} width={420} height={80} />
-          <p>{meta.explain}</p>
-          <h3>O que mexeu no último mês</h3>
-          {report ? <CauseList causes={causes} decimals={meta.decimals === 0 ? 1 : 2} /> : <p className="muted">O mandato ainda não começou.</p>}
-        </div>
-      </aside>
-    )
-  }
-
-  const def = GROUP_BY_ID[detail.id]
-  const g = state.groups[detail.id]
-  const pulls = econPull(detail.id, now.indicators).filter((p) => Math.abs(p.value) >= 0.5)
-  return (
-    <aside className="detail" onClick={onClose}>
-      <div className="detail__box" onClick={(e) => e.stopPropagation()}>
-        <button className="detail__close" onClick={onClose}>×</button>
-        <h2>{def.name}</h2>
-        <div className="detail__value">{num(g.approval, 0)}% de aprovação</div>
-        <Sparkline values={state.history.map((h) => h.groups[detail.id])} width={420} height={80} />
-        <p>Se importa com: {def.cares}. Representa {Math.round(def.weight * 100)}% da população.</p>
-        <h3>O que mexeu no último mês</h3>
-        {report ? <CauseList causes={report.groupCauses[detail.id]} decimals={1} /> : <p className="muted">O mandato ainda não começou.</p>}
-        <h3>Como a economia pesa para eles hoje</h3>
-        <p className="muted">A aprovação caminha aos poucos na direção desses valores.</p>
-        <CauseList causes={pulls} decimals={1} unit=" pts" />
-        {g.memory.length > 0 && (
-          <>
-            <h3>O que eles ainda lembram</h3>
-            <p className="muted">Ganhos são esquecidos em cerca de 9 meses; perdas, em cerca de 2 anos.</p>
-            <CauseList causes={g.memory} decimals={1} unit=" pts" />
-          </>
-        )}
-      </div>
-    </aside>
   )
 }

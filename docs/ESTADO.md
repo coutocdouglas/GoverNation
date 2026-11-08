@@ -3,13 +3,13 @@
 > **Leia este arquivo primeiro.** Ele diz onde o projeto está e qual é o próximo passo.
 > Atualize-o a cada mudança: seção "Estado atual", "Próximo passo" e uma linha no "Histórico".
 
-**Última atualização:** 08/11/2026 · **Versão publicada:** v0.31.1 (redesenho visual) · **Pronta para publicar:** v0.32.1 (inclui a v0.32.0, telas da inteligência)
+**Última atualização:** 08/11/2026 · **Versão publicada:** v0.31.1 (redesenho visual) · **Pronta para publicar:** v0.33.0 (6B, "Por quê?")
 
 ---
 
 ## Próximo passo
 
-**Etapa 6 aprovada (plano em `docs/projeto/plano-etapa-6.md`, 08/11/2026).** Ordem: 6.0 (arrumar a casa: partir o `GameScreen.tsx`, pendências do lote A2, pendências de visual, e o playtest da 5B/5C pelo Douglas) → 6B ("Por quê?") → 6A (agenda e ações) → 6C → 6D → 6E → 6F. **6.0 itens 1 a 3 feitos na v0.32.1** (GameScreen partido, aviso "acordo para vencer", 35% do Senado medido e mantido, fotos P&B e vidro nas janelas). Falta o item 4: o Douglas joga a partida completa e anota. Depois, 6B ("Por quê?", Sonnet).
+**Etapa 6 aprovada (plano em `docs/projeto/plano-etapa-6.md`, 08/11/2026).** Ordem: 6.0 (arrumar a casa: partir o `GameScreen.tsx`, pendências do lote A2, pendências de visual, e o playtest da 5B/5C pelo Douglas) → 6B ("Por quê?") → 6A (agenda e ações) → 6C → 6D → 6E → 6F. **6.0 itens 1 a 3 feitos na v0.32.1** (GameScreen partido, aviso "acordo para vencer", 35% do Senado medido e mantido, fotos P&B e vidro nas janelas). **6B feito na v0.33.0** (janela "Por quê?", antes → depois na ficha, alertas "Precisa de você"). Falta o item 4 do 6.0: o Douglas joga a partida completa e anota. Próximo: 6A (agenda e ações, Opus nas regras).
 
 **Etapa 5C fechada no código (v0.32.0, pronta para publicar):** telas do serviço de inteligência e dos dossiês (DESIGN.md 27.28). Falta o Douglas jogar a partida completa da 5B e da 5C. Próximo: Etapa 6 (Opus nas regras, Sonnet nas telas).
 
@@ -38,7 +38,7 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 **Base técnica**
 - App de Windows (Tauri 2 + React + TypeScript). O instalador é gerado pelo GitHub Actions e o jogo se atualiza sozinho, com atualização assinada.
 - O motor do jogo (`src/game/`) fica separado das telas (`src/ui/`). Os números de balanceamento ficam em `src/game/data/`.
-- 439 testes automáticos. Saves antigos são migrados (versão atual do save: 31).
+- 441 testes automáticos. Saves antigos são migrados (versão atual do save: 31).
 
 **Jogabilidade**
 - Mandato de 48 meses (jan/2027 a dez/2030), com o mês em 4 passos: notícias, fato do mês, decisões e encerrar.
@@ -125,6 +125,8 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 ---
 
 ## Histórico
+
+- 08/11/2026 · v0.33.0 · Bloco 6B: janela "Por quê?" (indicadores e grupos), antes → depois em pontos na ficha da medida, alertas "Precisa de você" no Radar; 441 testes; sem mudança no save.
 
 - 08/11/2026 · Comparação com o jogo de referência (histórico de versões 1.01 a 1.34). Plano da Etapa 6 ganha: ação de imprensa (6A) e resposta aos grupos que se organizam (6D). Etapa 8 passa a incluir campanha de 13 semanas e práticas ilegais (fictícios); parlamentarismo e golpe com junta militar ficam como modo futuro depois da Etapa 9 (Caixa de ideias).
 

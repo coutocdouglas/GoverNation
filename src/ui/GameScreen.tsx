@@ -33,7 +33,7 @@ import { FichasView } from './FichasView'
 import { LicitacaoSheet } from './LicitacaoSheet'
 import { ACAO_NOME_CURTO } from './casoTexto'
 import type { OrdemIntel } from '../game/data/inteligencia'
-import { JanelasLayer } from './Janelas'
+import { JanelasLayer, type JanelaDef } from './Janelas'
 import { ACAO_CPI_CURTO } from './cpiTexto'
 import type { AcaoCpi } from '../game/data/cpi'
 import { ADVOGADOS } from '../game/data/caso'
@@ -52,7 +52,8 @@ import { absMonth } from '../game/memory'
 import { NOMINEE_BY_ID, SUPREMO } from '../game/data/supremo'
 import { justiceName } from '../game/supremo'
 import { RadarCard, conteudoDaJanela, janelaDefsDoRadar } from './Radar'
-import { ApprovalRing, DetailPanel, Delta, KpiCard, MeasureBox, StepButton, confetti, tone, type Detail, type Step } from './PainelPecas'
+import { ApprovalRing, Delta, KpiCard, MeasureBox, StepButton, confetti, tone, type Step } from './PainelPecas'
+import { PorQueJanela, alvoPorQue, defPorQue, idPorQue } from './PorQue'
 import './painel.css'
 
 /** Depois de encerrar o mês: painel de votação animado e página de reação de cada lei (etapa 4B). */
@@ -76,7 +77,6 @@ export function GameScreen({ state, onChange, onExit }: {
   onExit: () => void
 }) {
   const [selected, setSelected] = useState<ActionId[]>([])
-  const [detail, setDetail] = useState<Detail>(null)
   const [step, setStep] = useState<Step>(1)
   const [turning, setTurning] = useState(false)
   const [toasts, setToasts] = useState<{ id: number; text: string }[]>([])
@@ -387,15 +387,15 @@ export function GameScreen({ state, onChange, onExit }: {
   )
 
   /** v0.31 (V3): as janelas de detalhe do Radar (v0.32.1: o conteúdo mora em Radar.tsx). */
-  const janelaDefs = janelaDefsDoRadar(state)
-  const renderJanela = (id: string) => conteudoDaJanela(id, {
+  const janelaDefs: Record<string, JanelaDef> = { ...janelaDefsDoRadar(state), ...Object.fromEntries(abertas.flatMap((id) => { const d = defPorQue(id); return d ? [[id, d] as const] : [] })) }
+  const renderJanela = (id: string) => { const alvo = alvoPorQue(id); return alvo ? <PorQueJanela state={state} alvo={alvo} /> : conteudoDaJanela(id, {
     state, casoDecisoes, advogado, cpiDecisao, intelOrdem, ultimoMes,
     onCaso: (d) => { setCasoDecisoes(d); if (d.length > casoDecisoes.length) toast('🕵️ Decisão do caso anotada: vale ao encerrar o mês.') },
     onCpi: (a) => { setCpiDecisao(a); if (a) toast('🏛️ Decisão sobre a CPI anotada: vale ao encerrar o mês.') },
     onIntel: (o) => { setIntelOrdem(o); if (o) toast('📡 Ordem ao serviço anotada: vale ao encerrar o mês.') },
     onAdvogado: (aid) => { setAdvogado(aid); if (aid) toast('💼 Troca de advogado anotada: vale ao encerrar o mês.') },
     onAbrirReputacao: () => { fechar('reputacao'); setTab('fichas') },
-  })
+  }) }
 
   return (
     <div className={`pn ${claro ? 'pn--claro' : ''}`}>
@@ -546,7 +546,7 @@ export function GameScreen({ state, onChange, onExit }: {
               key={`${m.key}-${state.month}`}
               meta={m}
               values={history.map((h) => h.indicators[m.key])}
-              onClick={() => setDetail({ kind: 'indicator', key: m.key })}
+              onClick={() => abrir(idPorQue({ kind: 'indicator', key: m.key }))}
             />
           ))}
         </section>
@@ -791,7 +791,7 @@ export function GameScreen({ state, onChange, onExit }: {
                   const v = now.groups[g.id]
                   const d = prev ? v - prev.groups[g.id] : 0
                   return (
-                    <button key={g.id} className="pn-group" onClick={() => setDetail({ kind: 'group', id: g.id })}>
+                    <button key={g.id} className="pn-group" onClick={() => abrir(idPorQue({ kind: 'group', id: g.id }))}>
                       <span className="pn-group__ic">{GROUP_ICON[g.id]}</span>
                       <span className="pn-group__body">
                         <span className="pn-group__head">
@@ -871,7 +871,6 @@ export function GameScreen({ state, onChange, onExit }: {
       )}
       <div className="pn-toasts">{toasts.map((t) => <div key={t.id} className="pn-toast">{t.text}</div>)}</div>
 
-      {detail && <DetailPanel state={state} detail={detail} onClose={() => setDetail(null)} />}
     </div>
   )
 }

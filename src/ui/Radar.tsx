@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { alertas } from '../game/alertas'
 import { casosAbertos, type DecisaoCaso } from '../game/caso'
 import { cpiAtual } from '../game/cpi'
 import { intelOf, servicoAtivo } from '../game/inteligencia'
@@ -27,7 +28,9 @@ function linhasDoRadar(state: GameState, intelOrdem: OrdemIntel | null): Linha[]
   const cpiRec = (state.comissoes?.encerradas ?? []).filter((x) => nowAbs - x.fim <= 3)
   const ctrl = Math.round(riscoOf(state).controle)
   const escand = Math.round(state.congress.scandal)
+  const precisa = alertas(state)
   return [
+    ...(precisa.length ? [{ id: 'precisa', icone: '🚨', titulo: 'Precisa de você', texto: precisa[0].texto, tag: `${precisa.length} alerta${precisa.length > 1 ? 's' : ''}`, tom: precisa.some((a) => a.grave) ? ('dn' as Tom) : ('warn' as Tom) }] : []),
     ...(casosAb.length || casosRec.length ? [{ id: 'casos', icone: '🕵️', titulo: 'Casos na investigação', texto: casosAb.length ? `${casosAb[0].alvo}: provas ${Math.round(casosAb[0].provas)}/100` : 'Casos encerrados há pouco', tag: casosAb.length ? `${casosAb.length} aberto${casosAb.length > 1 ? 's' : ''}` : 'encerrado', tom: casosAb.length ? ('dn' as Tom) : undefined }] : []),
     ...(cpiNow || cpiRec.length ? [{ id: 'cpi', icone: '🏛️', titulo: 'CPI na Câmara', texto: cpiNow ? (cpiNow.fase === 'coleta' ? `Assinaturas ${Math.round(cpiNow.assinaturas)}/171` : 'Instalada: em andamento') : 'CPI encerrada há pouco', tag: cpiNow ? (cpiNow.fase === 'coleta' ? 'coleta' : 'instalada') : 'encerrada', tom: cpiNow ? ('warn' as Tom) : undefined }] : []),
     {
@@ -58,6 +61,7 @@ export function RadarCard({ state, intelOrdem, onOpen }: { state: GameState; int
 export function janelaDefsDoRadar(state: GameState): Record<string, JanelaDef> {
   const mudou = state.lastReport ? 'O que mudou no mês passado' : 'Bem-vindo ao Planalto'
   return {
+    precisa: { id: 'precisa', titulo: 'Precisa de você', icone: '🚨', largura: 560 },
     casos: { id: 'casos', titulo: 'Casos na investigação', icone: '🕵️', largura: 720 },
     cpi: { id: 'cpi', titulo: 'CPI na Câmara', icone: '🏛️', largura: 720 },
     inteligencia: { id: 'inteligencia', titulo: 'Serviço de inteligência', icone: '📡', largura: 700 },
@@ -90,7 +94,19 @@ export function conteudoDaJanela(id: string, p: {
     case 'integridade': return <IntegridadeCard state={state} />
     case 'reputacao': return <ReputationCard state={state} onOpen={p.onAbrirReputacao} />
     case 'advogado': return <AdvogadoCard state={state} decisoes={casoDecisoes} advogado={advogado} cpi={cpiDecisao} intel={intelOrdem} onChange={p.onAdvogado} />
+    case 'precisa': return <AlertasLista state={state} />
     case 'mudou': return p.ultimoMes
     default: return null
   }
+}
+
+/** v0.33.0 (6B): a lista de "Precisa de você" (o que está fora do normal agora e por quê). */
+function AlertasLista({ state }: { state: GameState }) {
+  const lista = alertas(state)
+  if (!lista.length) return <p className="pn-hint">Nada fora do normal agora.</p>
+  return (
+    <ul className="causes">
+      {lista.map((a) => <li key={a.id}><span>{a.icone} {a.texto}</span><span className={a.grave ? 'neg' : ''}>{a.grave ? 'grave' : 'atenção'}</span></li>)}
+    </ul>
+  )
 }

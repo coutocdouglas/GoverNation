@@ -2,7 +2,7 @@
 
 Jogo de simulação política (governar o Brasil) para Windows, do Douglas (arquiteto, dono do projeto). Mecânicas inspiradas no jogo de referência planalto.fun. **Só a mecânica entra: nomes, textos, imagens e políticos reais do jogo de referência ficam de fora. Tudo no GoverNation é fictício.**
 
-Versão atual: **v0.32.1**. Documentação técnica: `docs/DESIGN.md` (seção 27; 27.15 Fase A, 27.16 a 27.18 lote A2, 27.19 a 27.21 Etapa 5A, 27.22 e 27.23 Etapa 5B, 27.24 a 27.26 Etapa 5C, 27.27 redesenho visual, 27.28 telas da inteligência, 27.29 bloco 6.0). Plano da Etapa 5: `docs/projeto/plano-etapa-5.pdf`; o plano completo por etapas (`plano-de-desenvolvimento.md`) ficou no Cowork. Este arquivo traz o essencial.
+Versão atual: **v0.33.0**. Documentação técnica: `docs/DESIGN.md` (seção 27; 27.15 Fase A, 27.16 a 27.18 lote A2, 27.19 a 27.21 Etapa 5A, 27.22 e 27.23 Etapa 5B, 27.24 a 27.26 Etapa 5C, 27.27 redesenho visual, 27.28 telas da inteligência, 27.29 bloco 6.0, 27.30 bloco 6B). Plano da Etapa 5: `docs/projeto/plano-etapa-5.pdf`; o plano completo por etapas (`plano-de-desenvolvimento.md`) ficou no Cowork. Este arquivo traz o essencial.
 
 ## Como trabalhar com o Douglas
 - Responder em português do Brasil.

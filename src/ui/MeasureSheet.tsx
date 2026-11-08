@@ -17,7 +17,7 @@ import { ForecastRow } from './CongressView'
 import { GROUP_ICON } from './icons'
 import { NewBadge, NewBillNotes } from './NewBill'
 import { LegalRiskLine } from './SupremoView'
-import { num } from './format'
+import { num, signed } from './format'
 import { contratoDe, previsaoControle, riscoOf } from '../game/risco'
 
 const pct = (x: number) => `${Math.round(x * 100)}%`
@@ -158,7 +158,7 @@ export function MeasureSheet({ state, id, ids, request, constraints, speech, not
                   {groups.map(([g, v]) => {
                     const before = state.groups[g].approval
                     const after = Math.max(0, Math.min(100, before + curvaGanho(v)))
-                    return <span key={g} className={v > 0 ? 'up' : 'dn'}>{GROUP_ICON[g]} {GROUP_BY_ID[g].name} {Math.round(before)}% → {Math.round(after)}%</span>
+                    return <span key={g} className={v > 0 ? 'up' : 'dn'}>{GROUP_ICON[g]} {GROUP_BY_ID[g].name} {Math.round(before)}% → {Math.round(after)}% <small>({signed(after - before, 1)} pts)</small></span>
                   })}
                 </div>
                 <p className="pn-hint" style={{ margin: '4px 0 0' }}>Aprovação geral no dia do anúncio: <b>{num(ap.before, 1)}% → {num(ap.after, 1)}%</b> (sem contar o resto do mês).</p>

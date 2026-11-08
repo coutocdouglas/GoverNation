@@ -1,5 +1,12 @@
 # Novidades
 
+## 0.33.0 (08/11/2026)
+- **Bloco 6B da Etapa 6: a tela do "Por quê?".** Sem regra nova de jogo; só leitura do registro de causas.
+  - **Janela "Por quê?"** ao clicar num indicador ou num grupo (no lugar do painel lateral). Mostra o que mais pesou nos últimos 3 meses (somado por motivo, com a origem: medida, acordo, economia, Supremo, sua escolha…) e a linha do tempo de quem mexeu, quando e quanto. Continuam o gráfico, o que mexeu no último mês, o peso da economia e o que o grupo ainda lembra. Dá para deixar várias abertas e arrastar.
+  - **Ficha da medida:** cada grupo que sente mostra agora o antes → depois e a diferença em pontos (ex.: 58% → 60% (+2,0 pts)). A página de reação da sociedade já mostrava o antes → depois.
+  - **"Precisa de você" no Radar:** até 3 alertas, dos mais graves ao menos (exposição a escândalo alta, contas no vermelho, mercado nervoso, promessa de posse longe da meta). Limites em `src/game/data/alertas.ts`. O "Enquanto você decidia" continua na janela "O que mudou no mês passado".
+- Sem mudança no save (continua na versão 31). 441 testes (2 novos).
+
 ## 0.32.1 (08/11/2026)
 - **Bloco 6.0 da Etapa 6 (arrumar a casa), itens 1 a 3.** Sem regra nova de jogo.
   - **`GameScreen.tsx` partido:** de 1.203 para cerca de 880 linhas. As peças do Painel (medida do mês, indicadores, janelas de indicador e grupo, anel de aprovação) foram para `src/ui/PainelPecas.tsx`; o Radar e o conteúdo das janelas do Radar para `src/ui/Radar.tsx`. Só mudou de lugar.
