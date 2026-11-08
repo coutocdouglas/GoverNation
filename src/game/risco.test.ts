@@ -5,17 +5,18 @@ import { migrate } from './save'
 import { buildCustomBill } from './custom'
 import { nominationLean } from './supremo'
 import { NOMINEES, SUPREMO } from './data/supremo'
-import { BILLS, BILL_BY_ID } from './data/bills'
+import { BILL_BY_ID } from './data/bills'
 import { GROUPS } from './data/groups'
 import { CONTRATO, CONTROLE, ELO, PROPOSTAS, SEMENTE } from './data/risco'
 import { causasDe } from './causas'
 import { absMonth } from './memory'
 import {
-  contratoDe, custoEmpresa, eloInfo, empresasPara, garantirPessoa, golpeElo, guardarEmpresa, imprensaPorElo, medidaEmVigorRisco,
+  contratoDe, custoEmpresa, eloInfo, empresasPara, escolherLicitacao, garantirPessoa, golpeElo, imprensaPorElo, licitacaoBlockedReason, licitacoesAbertas, medidaEmVigorRisco,
   nivelDaNota, notaElo, pessoaPadrao, pessoasAtuais, pistaRastro, plantarSemente, propostaAtual, proximoNivel, responderProposta, riscoOf,
-  sabatinaPorElo, sementeDeAcordo, soltarEmpresa, sortearProposta, stepRisco, type Pessoa,
+  prazoLicitacao, sabatinaPorElo, sementeDeAcordo, sortearProposta, stepRisco, vencerLicitacoes, type Pessoa,
 } from './risco'
 import { Rng } from './rng'
+import { pendencias } from './pendencias'
 import type { GameState, GroupId, Impulse } from './types'
 
 const empty = () => Object.fromEntries(GROUPS.map((g) => [g.id, [] as Impulse[]])) as unknown as Record<GroupId, Impulse[]>
@@ -222,7 +223,8 @@ describe('5A: Controle do Estado', () => {
 })
 
 describe('5A: contrato e licitação', () => {
-  const obra = BILLS.find((b) => (b.instrument === 'decreto' || b.instrument === 'mp') && (b.effects.temp?.amount ?? 0) >= 0.05 && !b.controle)!
+  // v0.27.2: decreto com obra e licitação (a renegociação de dívidas deixou de ter contrato).
+  const obra = BILL_BY_ID.saneamentoObras
 
   it('medida com obra gera 3 ou 4 empresas, sempre as mesmas no mesmo mês, com a padrão primeiro', () => {
     const s = fresh()
@@ -241,41 +243,87 @@ describe('5A: contrato e licitação', () => {
     expect(empresasPara(s, BILL_BY_ID.fortalecerCgu)).toEqual([])
   })
 
-  it('a empresa mais barata economiza, mas planta semente pesada; a de primeira linha custa mais e quase não planta', () => {
-    const barata = fresh()
-    const n0 = riscoOf(barata).sementes.length
-    const t0 = barata.economy.tempSpending.length
-    sendInto(barata, obra.id, { empresa: 'barata' })
+  /** Decreto com obra assinado: a licitação abre (v0.27.2), sem contrato ainda. */
+  const comLicitacao = () => {
+    const s = fresh()
+    sendInto(s, obra.id)
+    return s
+  }
+
+  it('v0.27.2: só obra ou compra de verdade tem licitação; gasto grande sozinho não', () => {
+    for (const id of ['salarioMinimo', 'pisoProfessores', 'segDesemprego', 'renegociarDividas', 'programaSocial'] as const) expect(contratoDe(BILL_BY_ID[id])).toBeNull()
+    for (const id of ['saneamentoObras', 'ferrovias', 'fomeZero', 'filasCirurgias', 'moradiaPopular'] as const) expect(contratoDe(BILL_BY_ID[id])).not.toBeNull()
+  })
+
+  it('a medida passa a valer e abre a licitação: nada é assinado nem pago antes da escolha', () => {
+    const s = fresh()
+    const n0 = riscoOf(s).sementes.length
+    const t0 = s.economy.tempSpending.length
+    sendInto(s, obra.id)
+    const lic = licitacoesAbertas(s)
+    expect(lic.map((l) => l.bill)).toEqual([obra.id])
+    expect(lic[0].empresas[0].perfil).toBe('padrao')
+    expect(riscoOf(s).sementes.slice(n0).some((x) => x.fonte === 'contrato')).toBe(false)
+    expect(s.economy.tempSpending.slice(t0).some((t) => /Contrato/.test(t.label))).toBe(false)
+    // A licitação aparece nas pendências, com o prazo.
+    expect(pendencias(s).find((p) => p.licitacao === obra.id)?.left).toBe(1)
+    // A mesma medida não abre duas licitações.
+    medidaEmVigorRisco(s, s.economy, obra.id)
+    expect(licitacoesAbertas(s).length).toBe(1)
+  })
+
+  it('escolher a mais barata economiza, mas planta semente pesada; a de primeira linha custa mais e quase não planta', () => {
+    const a = comLicitacao()
+    const n0 = riscoOf(a).sementes.length
+    const t0 = a.economy.tempSpending.length
+    const barata = escolherLicitacao(a, obra.id, 'barata')
+    expect(licitacoesAbertas(barata)).toEqual([])
     const semB = riscoOf(barata).sementes.slice(n0).find((x) => x.fonte === 'contrato')!
     expect(semB.bill).toBe(obra.id)
     expect(barata.economy.tempSpending.slice(t0).some((t) => t.amount < 0 && /economia/.test(t.label))).toBe(true)
-    const segura = fresh()
-    const m0 = riscoOf(segura).sementes.length
-    sendInto(segura, obra.id, { empresa: 'segura' })
-    const semS = riscoOf(segura).sementes.slice(m0).find((x) => x.fonte === 'contrato')
+    const segura = escolherLicitacao(a, obra.id, 'segura')
+    const semS = riscoOf(segura).sementes.slice(n0).find((x) => x.fonte === 'contrato')
     expect(semS?.peso ?? 0).toBeLessThan(semB.peso)
     expect(segura.reputation.record.some((e) => e.kind === 'risco' && e.text.includes(obra.name))).toBe(true)
+    // A Ficha registra todo contrato, mesmo o da empresa segura (que quase nunca planta semente).
+    expect(segura.reputation.record.filter((e) => e.text.startsWith(`Contrato de “${obra.name}”`)).length).toBe(1)
+    // O estado original não muda, e não dá para escolher duas vezes.
+    expect(licitacoesAbertas(a).length).toBe(1)
+    expect(licitacaoBlockedReason(segura, obra.id, 'barata')).not.toBeNull()
   })
 
-  it('sem escolha, vale a empresa padrão (sem custo extra)', () => {
-    const s = fresh()
-    const t0 = s.economy.tempSpending.length
-    sendInto(s, obra.id)
-    expect(s.economy.tempSpending.slice(t0).some((t) => /Contrato/.test(t.label))).toBe(false)
+  it('sem escolha até o fim do mês seguinte, vale a empresa de sempre (sem custo extra), com aviso', () => {
+    const s = comLicitacao()
+    const m1 = advanceMonth(s, [])
+    expect(licitacoesAbertas(m1).length).toBe(1)
+    expect(prazoLicitacao(licitacoesAbertas(m1)[0])).toBe(absMonth(m1))
+    const m2 = advanceMonth(m1, [])
+    expect(licitacoesAbertas(m2)).toEqual([])
+    expect(riscoOf(m2).sementes.some((x) => x.fonte === 'contrato' && x.bill === obra.id)).toBe(true)
+    expect(m2.economy.tempSpending.some((t) => /Contrato/.test(t.label))).toBe(false)
+    expect(m2.lastReport!.headlines.some((h) => /Prazo da licitação vence/.test(h.text))).toBe(true)
   })
 
-  it('lei: a empresa escolhida no envio fica guardada até a lei passar, e sai se a lei cair', () => {
-    const lei = BILLS.find((b) => b.instrument === 'lei' && contratoDe(b))!
-    const s = fresh()
-    guardarEmpresa(s, lei.id, 'segura')
-    expect(riscoOf(s).empresas[lei.id]?.perfil).toBe('segura')
-    soltarEmpresa(s, lei.id)
-    expect(riscoOf(s).empresas[lei.id]).toBeUndefined()
-    guardarEmpresa(s, lei.id, 'barata')
+  it('medida que deixa de valer leva a licitação junto, sem contrato', () => {
+    const s = comLicitacao()
+    s.congress.laws = s.congress.laws.filter((x) => x !== obra.id)
+    expect(licitacoesAbertas(s)).toEqual([])
     const n0 = riscoOf(s).sementes.length
-    medidaEmVigorRisco(s, s.economy, lei.id)
-    expect(riscoOf(s).empresas[lei.id]).toBeUndefined()
-    expect(riscoOf(s).sementes.slice(n0).some((x) => x.fonte === 'contrato')).toBe(true)
+    vencerLicitacoes(s, s.economy, [])
+    expect(riscoOf(s).licitacoes).toEqual([])
+    expect(riscoOf(s).sementes.length).toBe(n0)
+  })
+
+  it('save da v0.27.1 (versão 26): a escolha guardada no envio sai e a licitação começa vazia', () => {
+    const s = fresh()
+    ;(s as unknown as { saveVersion: number }).saveVersion = 26
+    const R = riscoOf(s) as unknown as Record<string, unknown>
+    delete R.licitacoes
+    R.empresas = { [obra.id]: { perfil: 'barata' } }
+    const m = migrate(JSON.parse(JSON.stringify(s)))!
+    expect(m.saveVersion).toBe(27)
+    expect((m.risco as unknown as Record<string, unknown>).empresas).toBeUndefined()
+    expect(m.risco.licitacoes).toEqual([])
   })
 })
 
@@ -358,7 +406,7 @@ describe('5A: save 26', () => {
     delete (s as Partial<GameState>).risco
     ;(s as unknown as { saveVersion: number }).saveVersion = 25
     const m = migrate(JSON.parse(JSON.stringify(s)))!
-    expect(m.saveVersion).toBe(26)
+    expect(m.saveVersion).toBe(27)
     expect(m.risco.controle).toBe(CONTROLE.inicio.normal)
     expect(m.risco.sementes.length).toBe(0)
     expect(m.risco.rastro).toBe(0)

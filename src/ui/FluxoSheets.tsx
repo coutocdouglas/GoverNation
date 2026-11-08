@@ -5,7 +5,7 @@ import { pendencias, type PendingTarget } from '../game/pendencias'
 import { authorLabel, forecastCase, motives, fundamentoText, justiceInfo, justiceName, leakChance, RISK_LABEL, TIPO_LABEL, voteReasons, workCandidates } from '../game/supremo'
 import { DOCTRINE_ICON, DOCTRINE_LABEL, SUPREMO } from '../game/data/supremo'
 import { num } from './format'
-import type { CourtNow, GameState } from '../game/types'
+import type { BillId, CourtNow, GameState } from '../game/types'
 import { Art } from './Art'
 import { ChainSteps } from './Chain'
 import type { ChainInfo } from './corrente'
@@ -174,7 +174,7 @@ function useDraw(state: GameState, relator: string | undefined, animate: boolean
 const DOT = { red: '🔴', yellow: '🟡', green: '🟢' } as const
 
 /** Etapa 2B: central de pendências, por urgência, com o clique que leva ao lugar. */
-export function PendenciasCard({ state, onGo, onAttend }: { state: GameState; onGo: (t: PendingTarget) => void; onAttend?: (order: string) => void }) {
+export function PendenciasCard({ state, onGo, onAttend, onLicitacao }: { state: GameState; onGo: (t: PendingTarget) => void; onAttend?: (order: string) => void; onLicitacao?: (id: BillId) => void }) {
   const [all, setAll] = useState(false)
   const list = pendencias(state)
   const shown = all ? list : list.slice(0, 6)
@@ -184,7 +184,7 @@ export function PendenciasCard({ state, onGo, onAttend }: { state: GameState; on
       {list.length === 0 && <p className="pn-hint">Nada esperando você agora. Aproveite para governar nos seus termos.</p>}
       {shown.map((p) => (
         <div key={p.id} className="pn-pend__wrap">
-          <button className={`pn-pend__row ${p.urgency}`} onClick={() => onGo(p.target)}>
+          <button className={`pn-pend__row ${p.urgency}`} onClick={() => (p.licitacao && onLicitacao ? onLicitacao(p.licitacao) : onGo(p.target))}>
             <span className="pn-pend__dot">{DOT[p.urgency]}</span>
             <span className="pn-pend__ic">{p.icon}</span>
             <span className="pn-pend__body"><b>{p.title}</b><small>{p.detail}</small></span>
@@ -192,6 +192,9 @@ export function PendenciasCard({ state, onGo, onAttend }: { state: GameState; on
           </button>
           {p.order && onAttend && (
             <button className="pn-btn pn-btn--small" title={`Leva “${p.order}” para a medida do mês; você ainda pode editar antes de pedir a leitura do gabinete`} onClick={() => onAttend(p.order!)}>✍️ Atender</button>
+          )}
+          {p.licitacao && onLicitacao && (
+            <button className="pn-btn pn-btn--small" title="Abre a licitação para escolher a empresa" onClick={() => onLicitacao(p.licitacao!)}>🏗️ Escolher</button>
           )}
         </div>
       ))}

@@ -10,7 +10,7 @@ import { ensureAlas, openMesa } from './partidos'
 import { CAMARA } from './data/camara'
 import { BASE } from './data/base'
 import { ensureStates } from './estados'
-import { garantirPessoa, initialRisco, pessoasAtuais } from './risco'
+import { garantirPessoa, initialRisco, pessoasAtuais, type RiscoState } from './risco'
 import type { GameState } from './types'
 
 // O jogo instalado guarda o localStorage na pasta de dados do usuário no Windows
@@ -231,7 +231,17 @@ export function migrate(raw: unknown): GameState | null {
       for (const { name, ctx } of pessoasAtuais(g)) garantirPessoa(g, name, ctx)
       s.saveVersion = 26
     }
-    if (s.saveVersion !== 26) return null
+    if (s.saveVersion === 26) {
+      // v0.27.1 → v0.27.2: a empresa deixa de ser escolhida no envio e passa a ser escolhida na licitação, quando a
+      // medida vale. A escolha guardada para lei ainda na fila sai (nada foi pago); quando a lei passar, abre a
+      // licitação e o presidente escolhe de novo. Contratos já assinados não mudam.
+      const g = s as GameState
+      const R = (g.risco ??= initialRisco(g.difficulty ?? 'normal')) as RiscoState & { empresas?: unknown }
+      delete R.empresas
+      R.licitacoes ??= []
+      s.saveVersion = 27
+    }
+    if (s.saveVersion !== 27) return null
     syncCustomBills(s as GameState)
     return s as GameState
   } catch {

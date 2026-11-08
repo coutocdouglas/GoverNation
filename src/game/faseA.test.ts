@@ -104,7 +104,7 @@ describe('Fase A: registro de causas', () => {
     raw.saveVersion = 22
     delete raw.causas
     const m = migrate(raw)
-    expect(m?.saveVersion).toBe(26)
+    expect(m?.saveVersion).toBe(27)
     expect(m?.causas).toEqual([])
   })
 })

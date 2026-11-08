@@ -45,8 +45,7 @@ import type { MonthPlan } from './game'
 import type { AreaId } from './data/ministers'
 import type { Articulation, Parecer, BillId, Cause, CourtNow, Deal, DealTerms, Economy, GameState, GroupId, Headline, Impulse, PendingBill, RoundBuffer, ReactionRoll, MesaSenadoAcao, SenatorBuy, VoteRecord } from './types'
 import { bumpScandal } from './causas'
-import { guardarEmpresa, medidaEmVigorRisco, nomeacaoDePasta, sementeDeAcordo, soltarEmpresa } from './risco'
-import type { PerfilEmpresa } from './data/risco'
+import { medidaEmVigorRisco, nomeacaoDePasta, sementeDeAcordo } from './risco'
 
 export type House = 'camara' | 'senado'
 
@@ -64,8 +63,6 @@ export interface FloorOptions {
   title?: string
   /** Etapa 3: senadores indecisos comprados para a votação no Senado (até 3 por rodada). */
   senadores?: SenatorBuy[]
-  /** Etapa 5A: empresa escolhida para executar a medida (perfil); sem escolha, a padrão (preço de mercado). */
-  empresa?: PerfilEmpresa
 }
 
 /** Contexto de trabalho: o estado e os acumuladores da rodada. */
@@ -383,7 +380,6 @@ export function rejectBill(ctx: RoundCtx, p: PendingBill, house: House | 'caduco
   const bill = BILL_BY_ID[p.id]
   const senado = house === 'senado'
   c.blockedUntil[p.id] = s.month + RESUBMIT_COOLDOWN
-  soltarEmpresa(s, p.id)
   // Etapa 2B: o mercado tinha precificado parte da lei no envio; barrada, desfaz.
   if (p.priced) ctx.conf.v -= p.priced
   if (bill.instrument === 'mp') {
@@ -442,8 +438,8 @@ function enactBill(ctx: RoundCtx, p: PendingBill, placarS: string): void {
     plantSeeds(s, p.id, bill.name, s.presidentName, s.playerParty, ctx.rng)
     const scale = (am?.scale ?? 1) * k * conc.reduce((x, d) => x * (d.concession ? CONCESSION_BY_ID[d.concession.type].scale : 1), 1)
     noteInForce(s, p.id, s.presidentName, scale !== 1 ? scale : undefined)
-    // Etapa 5A: Controle do Estado e contrato com a empresa escolhida no envio.
-    medidaEmVigorRisco(s, e, p.id, undefined, headlines)
+    // Etapa 5A: Controle do Estado; com contrato, abre a licitação (v0.27.2: a empresa é escolhida depois).
+    medidaEmVigorRisco(s, e, p.id, headlines)
     // Etapa 3: a lei mexe com a relação dos estados pelo grupo que mais pesa em cada um.
     statesOnMeasure(s, bill, scale)
     courtToday(ctx, p.id)
@@ -909,7 +905,7 @@ export function sendInto(s: GameState, id: BillId, opts: FloorOptions = {}, resp
     c.laws.push(id)
     noteInForce(s, id, s.presidentName)
     plantSeeds(s, id, bill.name, s.presidentName, s.playerParty, ctx.rng)
-    medidaEmVigorRisco(s, ctx.e, id, opts.empresa, ctx.headlines)
+    medidaEmVigorRisco(s, ctx.e, id, ctx.headlines)
     addBio(s, s.presidentName, `Assinou o decreto: ${bill.name}.`)
     addChronicle(s, `Decreto: ${bill.name}, no governo ${s.presidentName} (${PARTY_BY_ID[s.playerParty].sigla})`, 'neutral')
     if (!response) ctx.taken.push(`Assinou o decreto: ${bill.name}`)
@@ -930,8 +926,6 @@ export function sendInto(s: GameState, id: BillId, opts: FloorOptions = {}, resp
     }
     if (opts.original) p.original = true
     c.pending.push(p)
-    // Etapa 5A: lei e PEC guardam a empresa escolhida até passar (MP assina o contrato abaixo, na hora).
-    if (bill.instrument !== 'mp') guardarEmpresa(s, id, opts.empresa)
     applyDeals(ctx, (opts.deals ?? []).map((d) => ({ ...d, bill: id })))
     ctx.conf.v += payBuys(s, id, opts.senadores ?? [], ctx.headlines, ctx.taken)
     if (bill.instrument === 'mp') {
@@ -939,7 +933,7 @@ export function sendInto(s: GameState, id: BillId, opts: FloorOptions = {}, resp
       ctx.conf.v += applyEffects(ctx.e, ctx.impulses, bill.effects, bill.name, 1, 1, true)
       plantSeeds(s, id, bill.name, s.presidentName, s.playerParty, ctx.rng)
       noteInForce(s, id, s.presidentName)
-      medidaEmVigorRisco(s, ctx.e, id, opts.empresa, ctx.headlines)
+      medidaEmVigorRisco(s, ctx.e, id, ctx.headlines)
       addBio(s, s.presidentName, `Editou a medida provisória: ${bill.name}.`)
       ctx.mm.enacted.push(bill.area)
       if (!response) ctx.taken.push(`Editou a MP: ${bill.name}`)
@@ -1073,7 +1067,6 @@ export function archiveStale(ctx: RoundCtx): void {
     c.pending = c.pending.filter((x) => x !== p)
     c.senate.pending = c.senate.pending.filter((x) => x !== p)
     c.blockedUntil[p.id] = s.month + ESFRIA.resubmit
-    soltarEmpresa(s, p.id)
     if (p.priced) ctx.conf.v -= p.priced
     // Lote A2: avisa quanto foi pago nos acordos que se perdem com o arquivamento.
     const lost = [...(p.deals ?? []), ...(p.senateDeals ?? [])]

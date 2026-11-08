@@ -43,7 +43,7 @@ import { applyAssessoria, lostCreditValue, softenEffects, statementBlockedReason
 import { buildMeanwhile } from './entretanto'
 import { driftAlas, internalElections, leaderOf, openMesa, runMesa, speakerOf } from './partidos'
 import { TALK } from './data/negociacao'
-import { initialRisco, posseRisco, propostaAtual, propostaBlockedReason, responderProposta, sortearProposta, stepRisco } from './risco'
+import { initialRisco, posseRisco, propostaAtual, propostaBlockedReason, responderProposta, sortearProposta, stepRisco, vencerLicitacoes } from './risco'
 
 import type { ActionId, Deal, Articulation, BillId, Cause, GameState, GroupId, Headline, Impulse, MonthReport, PartyId, SanctionItem, Snapshot, VetoItem, VoteRecord } from './types'
 
@@ -90,7 +90,7 @@ export function newGame(
   const rngState = seed ?? Math.floor(Math.random() * 2 ** 31)
   const bonus = DIFFICULTY[difficulty].approvalBonus
   const state: GameState = {
-    saveVersion: 26,
+    saveVersion: 27,
     risco: initialRisco(difficulty),
     month: 0,
     presidentName: presidentName.trim() || 'Presidente',
@@ -822,6 +822,8 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
   // Sorteio próprio, para não mudar o resto do mês. Nada vaza na 5A.
   // v0.27.1: a resposta do jogador à proposta de setor vale antes; sem resposta, a proposta vence como recusa.
   if (plan.proposta && propostaAtual(s)) actionConfidence += responderProposta(s, plan.proposta === 'aceitar', impulses, headlines)
+  // v0.27.2: licitação sem escolha no prazo assina com a empresa de sempre; a de medida que caiu some.
+  vencerLicitacoes(s, e, headlines)
   stepRisco(s, new Rng((absMonth(s) * 69069) ^ s.rngState ^ 0x5a17e5), impulses, headlines)
 
   // 2. Copom (antes da economia andar, com os dados do mês anterior)

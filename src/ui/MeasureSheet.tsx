@@ -18,8 +18,7 @@ import { GROUP_ICON } from './icons'
 import { NewBadge, NewBillNotes } from './NewBill'
 import { LegalRiskLine } from './SupremoView'
 import { num } from './format'
-import { contratoDe, custoEmpresa, empresasPara, previsaoControle, riscoOf } from '../game/risco'
-import { CONTRATO, type PerfilEmpresa } from '../game/data/risco'
+import { contratoDe, previsaoControle, riscoOf } from '../game/risco'
 
 const pct = (x: number) => `${Math.round(x * 100)}%`
 const STANCE_CLS = {
@@ -51,7 +50,7 @@ export function MeasureSheet({ state, id, ids, request, constraints, speech, not
   startStep?: 1 | 2
   onClose: () => void
   /** Confirma: manda para a votação (lei) ou assina (decreto, MP), com o nome dado. */
-  onConfirm: (id: BillId, title?: string, empresa?: PerfilEmpresa) => void
+  onConfirm: (id: BillId, title?: string) => void
   consult?: BillId | null
   onConsult?: (id: BillId | null) => void
   backLabel?: string
@@ -105,11 +104,10 @@ export function MeasureSheet({ state, id, ids, request, constraints, speech, not
     onRewrite(`${request.trim()}\n\nIncorporando o parecer de ${minister.name}:\n${saved.suggestions.map((x) => `- ${x}`).join('\n')}`)
   }
   const nCls = (x: number) => (x >= 7 ? 'up' : x >= 4 ? 'warn' : 'dn')
-  const swap = (x: BillId) => { setCur(x); setTitle(state.names?.[x] ?? ''); setPerfil('padrao') }
-  // Etapa 5A: a empresa que executa o contrato (a de sempre vem marcada) e o efeito no Controle do Estado.
-  const [perfil, setPerfil] = useState<PerfilEmpresa>('padrao')
-  const confirm = () => onConfirm(cur, title.trim() || undefined, contratoDe(b) ? perfil : undefined)
-  const contratoBox = <ContratoBox state={state} id={cur} perfil={perfil} onPerfil={setPerfil} acts={acts} />
+  const swap = (x: BillId) => { setCur(x); setTitle(state.names?.[x] ?? '') }
+  // Etapa 5A: efeito no Controle do Estado e aviso de licitação (a empresa é escolhida depois, v0.27.2).
+  const confirm = () => onConfirm(cur, title.trim() || undefined)
+  const contratoBox = <ContratoBox state={state} id={cur} acts={acts} />
   return (
     <aside className="detail pn-sheet-back" onClick={onClose}>
       <div className="pn-sheet pn-sheet--wide" onClick={(e) => e.stopPropagation()}>
@@ -281,15 +279,14 @@ export function MeasureSheet({ state, id, ids, request, constraints, speech, not
 }
 
 /**
- * Etapa 5A (v0.27.1): Controle do Estado e escolha da empresa, com o custo à vista antes de assinar.
- * A de sempre vem marcada (preço de mercado). O risco da empresa não aparece em número: só a descrição.
+ * Etapa 5A: efeito no Controle do Estado e aviso de licitação, antes de assinar.
+ * v0.27.2: a empresa não é escolhida aqui. A licitação abre quando a medida passa a valer (pendência no Painel).
  */
-function ContratoBox({ state, id, perfil, onPerfil, acts }: { state: GameState; id: BillId; perfil: PerfilEmpresa; onPerfil: (p: PerfilEmpresa) => void; acts: boolean }) {
+function ContratoBox({ state, id, acts }: { state: GameState; id: BillId; acts: boolean }) {
   const b = BILL_BY_ID[id]
   const ctl = previsaoControle(state, b)
   const c = contratoDe(b)
-  const list = c ? empresasPara(state, b) : []
-  if (!ctl && !list.length) return null
+  if (!ctl && !c) return null
   const now = Math.round(riscoOf(state).controle)
   return (
     <>
@@ -300,25 +297,10 @@ function ContratoBox({ state, id, perfil, onPerfil, acts }: { state: GameState; 
           {b.rastro ? ' ⚠️ Deixa rastro em você.' : ''}
         </p>
       )}
-      {list.length > 0 && c && (
-        <>
-          <div className="pn-label">🏗️ Quem executa o contrato</div>
-          <p className="pn-hint" style={{ margin: '2px 0' }}>
-            A medida contrata cerca de R$ {num(c.amount * GDP_BILLIONS / 100, 0)} bi por ano durante {c.months} meses. {acts ? 'O contrato é assinado junto com a medida.' : 'A escolha fica guardada e o contrato só é assinado se a lei passar.'}
-          </p>
-          <div className="pn-empresas">
-            {list.map((e) => {
-              const extra = custoEmpresa(b, e)
-              return (
-                <button key={e.perfil} type="button" className={`pn-empresa ${perfil === e.perfil ? 'on' : ''}`} onClick={() => onPerfil(e.perfil)}>
-                  <span>{perfil === e.perfil ? '🔘' : '⚪'}</span>
-                  <span><b>{e.nome}</b> · {CONTRATO.perfis[e.perfil].rotulo.toLowerCase()}<small>{e.desc}{e.perfil === 'aliada' ? ' ⚠️ Deixa rastro em você.' : ''}</small></span>
-                  <span className={`pn-empresa__custo ${extra > 0 ? 'dn' : extra < 0 ? 'up' : ''}`}>{extra > 0 ? `+R$ ${num(extra * GDP_BILLIONS / 100, 1)} bi por ano` : extra < 0 ? `economia de R$ ${num(-extra * GDP_BILLIONS / 100, 1)} bi por ano` : 'preço de mercado'}</span>
-                </button>
-              )
-            })}
-          </div>
-        </>
+      {c && (
+        <p className="pn-hint" style={{ margin: '6px 0 0' }}>
+          🏗️ <b>Esta medida terá licitação</b> (cerca de R$ {num((c.amount * GDP_BILLIONS * c.months) / 1200, 1)} bi em {c.months} meses): você escolhe a empresa quando ela passar a valer{acts ? ', ainda neste mês' : ''}. A escolha aparece nas Pendências.
+        </p>
       )}
     </>
   )

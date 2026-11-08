@@ -1,5 +1,15 @@
 # Novidades
 
+## 0.27.2 (07/11/2026)
+- **Licitação depois que a medida vale (decisão do Douglas).** A empresa que executa a obra não é mais escolhida na leitura do gabinete.
+  - Quando a medida passa a valer (decreto e MP na hora; lei e PEC quando passam no Congresso), abre uma **licitação** nas Pendências: "🏗️ Licitação: …", com o botão **Escolher**.
+  - A janela mostra as 3 ou 4 empresas, a descrição e o custo de cada uma **no contrato inteiro** (ex.: "R$ 4,2 bi em 8 meses"; "+R$ 0,5 bi no contrato"). A escolha vale na hora e fica na Ficha.
+  - **Prazo:** até encerrar o mês seguinte. Sem escolha, fica a empresa de sempre, pelo preço de mercado, com aviso no noticiário. Se a medida cair antes, a licitação some, sem custo.
+  - A leitura do gabinete agora só avisa "Esta medida terá licitação" (com o valor total) e continua mostrando o efeito no Controle do Estado.
+- **Só obra ou compra de verdade tem licitação.** Gasto grande sozinho não basta: reajuste do salário mínimo, pisos (professores e enfermagem), seguro-desemprego, programa de renda, renegociação de dívidas, crédito do banco de fomento, verba da saúde e tarifa zero deixam de oferecer empresas. Ficam: saneamento, ferrovias, moradia popular, usina nuclear, creches, reconstrução de cidades, hospitais de campanha, filas de cirurgias, escola integral e plano contra a fome.
+- Correção: o contrato com a empresa de primeira linha não ficava registrado na Ficha. Agora todo contrato fica.
+- **Save versão 27:** em mandatos salvos, a empresa escolhida no envio de uma lei ainda na fila sai (nada tinha sido pago); quando a lei passar, abre a licitação. Contratos já assinados não mudam. 364 testes. Simuladores sem mudança relevante.
+
 ## 0.27.1 (07/11/2026)
 - **Etapa 5A, bloco 2 (telas): Elos, integridade, empresas e propostas na tela.** Fecha a Etapa 5A. Nada vaza ainda (o vazamento é da 5B).
   - **Elo na tela:** medalha (Bronze, Prata, Ouro, Platina e a divisão) na ficha e na lista de personagens, no cartão de cada ministro, nos ministros do Supremo e nos indicados à vaga.

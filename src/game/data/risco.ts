@@ -132,9 +132,10 @@ export const SEMENTE = {
 export type PerfilEmpresa = 'padrao' | 'segura' | 'barata' | 'aliada'
 
 export const CONTRATO = {
-  /** A medida gera contrato se tiver obra (gasto temporário) ou gasto novo acima disto (% do PIB ao ano). */
+  /** A medida gera contrato se tiver obra (gasto temporário acima disto, % do PIB ao ano) ou a marca `contrato` (compra de verdade). */
   tempMin: 0.04,
-  gastoMin: 0.08,
+  /** v0.27.2: a licitação abre quando a medida passa a valer e espera a escolha até o fim do mês seguinte. */
+  prazoMeses: 1,
   /** Perfis: preço (multiplica o custo do contrato) e faixa de risco. */
   perfis: {
     padrao: { preco: 1, risco: [25, 40], rotulo: 'Consórcio de sempre', desc: 'Preço de mercado, histórico comum: alguns aditivos, nada grave.' },

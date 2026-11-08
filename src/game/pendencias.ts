@@ -16,12 +16,13 @@ import { promiseStatus } from './promises'
 import { TERM_MONTHS } from './game'
 import { baseMembers, fidelityOf } from './base'
 import { BASE, ESFRIA } from './data/base'
-import type { GameState } from './types'
+import type { BillId, GameState } from './types'
+import { licitacoesAbertas, prazoLicitacao } from './risco'
 import { deAuthor, justiceName } from './supremo'
 import { TSE_BY_ID } from './data/supremo'
 
 export type Urgency = 'red' | 'yellow' | 'green'
-export type PendingTarget = 'evento' | 'camara' | 'senado' | 'supremo' | 'promessas' | 'cobrancas'
+export type PendingTarget = 'evento' | 'camara' | 'senado' | 'supremo' | 'promessas' | 'cobrancas' | 'licitacao'
 
 export interface Pendencia {
   id: string
@@ -37,6 +38,8 @@ export interface Pendencia {
   weight: number
   /** Fase A: texto do pedido que o botão "Atender" leva para o campo da medida do dia. */
   order?: string
+  /** v0.27.2: licitação aberta (o clique abre a janela para escolher a empresa). */
+  licitacao?: BillId
 }
 
 const urgencyOf = (left: number | undefined, grave: boolean): Urgency =>
@@ -69,6 +72,17 @@ export function pendencias(s: GameState): Pendencia[] {
       detail: `${GROUP_BY_ID[def.group].name} cobra · ${leftText(left)} · +${def.reward} / −${def.penalty} · atende: ${def.satisfiedBy.map((x) => (x in BILL_BY_ID ? BILL_BY_ID[x as keyof typeof BILL_BY_ID].name : ACTION_BY_ID[x as keyof typeof ACTION_BY_ID]?.name ?? x)).join(' ou ')}`,
       urgency: urgencyOf(left, def.penalty >= 4), weight: 50 - left * 6 + def.penalty,
       order: orderOfDemand(def),
+    })
+  }
+
+  // v0.27.2: licitação aberta (a medida passou a valer e espera a escolha da empresa).
+  for (const l of licitacoesAbertas(s)) {
+    const left = prazoLicitacao(l) - now
+    out.push({
+      id: `lic-${l.bill}`, icon: '🏗️', target: 'licitacao', left, licitacao: l.bill,
+      title: `Licitação: ${BILL_BY_ID[l.bill].name}`,
+      detail: `Escolha quem executa (${l.empresas.length} empresas) · ${leftText(left)} · sem escolha, fica a empresa de sempre`,
+      urgency: urgencyOf(left, false), weight: 45 - left * 6,
     })
   }
 

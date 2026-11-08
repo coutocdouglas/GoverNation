@@ -144,7 +144,7 @@ import type { ReputationState } from './reputacao'
 import type { RiscoState } from './risco'
 
 export interface GameState {
-  saveVersion: 26
+  saveVersion: 27
   /** Etapa 5A (v0.27): Controle do Estado, rastro do presidente (oculto), fichas das pessoas (Elo e risco), sementes de risco. Ver risco.ts. */
   risco: RiscoState
   /** v0.26: efeito de medidas que passou do teto do mês num grupo e entra no mês seguinte (ganho > 0, perda < 0). */

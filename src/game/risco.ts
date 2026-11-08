@@ -108,15 +108,24 @@ export interface RiscoState {
   proposta: PropostaSetor | null
   /** Mês absoluto da última proposta de setor (aceita, recusada ou vencida). */
   ultimaProposta: number
-  /** Empresas escolhidas para medidas na fila (a escolha vale quando a lei passa). */
-  empresas: Partial<Record<BillId, Empresa>>
+  /** v0.27.2: licitações abertas (a medida passou a valer e espera a escolha da empresa). */
+  licitacoes?: Licitacao[]
+}
+
+/** Uma licitação aberta: a medida passou a valer e o presidente escolhe quem executa (até o fim do mês seguinte). */
+export interface Licitacao {
+  bill: BillId
+  /** Mês absoluto em que abriu. */
+  at: number
+  /** As empresas na disputa (fixas desde a abertura; a primeira é a de sempre). */
+  empresas: Empresa[]
 }
 
 const clamp = (x: number, lo = 0, hi = 100) => Math.max(lo, Math.min(hi, x))
 const round1 = (x: number) => Math.round(x * 10) / 10
 
 export function initialRisco(difficulty: GameState['difficulty']): RiscoState {
-  return { controle: CONTROLE.inicio[difficulty], controleLog: [], rastro: 0, pessoas: {}, sementes: [], proposta: null, ultimaProposta: -99, empresas: {} }
+  return { controle: CONTROLE.inicio[difficulty], controleLog: [], rastro: 0, pessoas: {}, sementes: [], proposta: null, ultimaProposta: -99, licitacoes: [] }
 }
 
 /** O estado da 5A, criado se faltar (saves e testes antigos). */
@@ -399,11 +408,15 @@ export function aplicarControle(s: GameState, b: BillDef): number {
 
 // ─── Contrato e licitação ─────────────────────────────────────────────────────
 
-/** Quanto a medida contrata (% do PIB ao ano) e por quantos meses, ou null se não gera contrato. */
+/**
+ * Quanto a medida contrata (% do PIB ao ano) e por quantos meses, ou null se não gera contrato.
+ * v0.27.2 (decisão do Douglas): só obra (gasto temporário) ou compra de verdade (marca `contrato`). Gasto grande
+ * sozinho não basta: salário mínimo, piso e seguro-desemprego vão para pessoas, não para empresas.
+ */
 export function contratoDe(b: Pick<BillDef, 'effects' | 'contrato'>): { amount: number; months: number } | null {
   const fx = b.effects
+  if (b.contrato === false) return null
   if (fx.temp && fx.temp.amount >= CONTRATO.tempMin) return { amount: fx.temp.amount, months: fx.temp.months }
-  if ((fx.spending ?? 0) >= CONTRATO.gastoMin) return { amount: fx.spending!, months: 12 }
   if (b.contrato) return { amount: Math.max(fx.temp?.amount ?? 0, fx.spending ?? 0, CONTRATO.tempMin), months: fx.temp?.months ?? 12 }
   return null
 }
@@ -447,13 +460,6 @@ export const custoEmpresa = (b: Pick<BillDef, 'effects' | 'contrato'>, e: Pick<E
 }
 const round2 = (x: number) => Math.round(x * 100) / 100
 
-/** A empresa escolhida (por perfil), ou a padrão. */
-export function escolherEmpresa(s: GameState, b: BillDef, perfil?: PerfilEmpresa): Empresa | null {
-  const list = empresasPara(s, b)
-  if (!list.length) return null
-  return list.find((e) => e.perfil === perfil) ?? list[0]
-}
-
 /**
  * O contrato é assinado (a medida passou a valer): paga a diferença de preço, agrada o aliado, planta a semente.
  * Empresa ligada a aliado deixa rastro no presidente (foi um favor).
@@ -473,8 +479,9 @@ export function assinarContrato(s: GameState, e: Economy, b: BillDef, emp: Empre
   plantarSemente(s, {
     fonte: 'contrato', quem: emp.nome, por: s.presidentName, porque: `Contratada para executar “${b.name}”`, peso: emp.risco * size,
     presidente: !!aliada, bill: b.id, area: b.area, party: emp.party,
-    ficha: `Contrato de “${b.name}”: ${emp.nome} (${CONTRATO.perfis[emp.perfil].rotulo.toLowerCase()})`,
   })
+  // v0.27.2: a Ficha registra todo contrato (antes, só quando nascia semente; a empresa segura sumia da memória).
+  noteRecord(s, { text: `Contrato de “${b.name}”: ${emp.nome} (${CONTRATO.perfis[emp.perfil].rotulo.toLowerCase()})`, tone: 'neutral', kind: 'risco', bill: b.id })
   addBio(s, emp.nome, `Venceu o contrato de “${b.name}”, no governo ${s.presidentName}.`)
   if (headlines && emp.perfil === 'barata') headlines.push({ text: `${emp.nome} vence a licitação de ${lowerFirst(b.name)} com a proposta mais barata`, tone: 'neutral' })
 }
@@ -489,31 +496,85 @@ export function subirRastro(s: GameState, v: number, why: string, bill?: BillId)
 }
 
 /**
- * Uma medida passou a valer (decreto, MP ou lei): Controle do Estado e contrato.
- * `perfil` é a empresa escolhida no envio; sem escolha, a padrão (preço de mercado, sem custo extra).
+ * Uma medida passou a valer (decreto, MP ou lei): Controle do Estado e, se houver contrato, abre a licitação.
+ * v0.27.2: a empresa não é mais escolhida no envio. A licitação vira pendência e o presidente escolhe até o fim
+ * do mês seguinte; sem escolha, vale a empresa de sempre (`vencerLicitacoes`).
  */
-export function medidaEmVigorRisco(s: GameState, e: Economy, id: BillId, perfil?: PerfilEmpresa, headlines?: Headline[]): void {
+export function medidaEmVigorRisco(s: GameState, _e: Economy, id: BillId, headlines?: Headline[]): void {
   const b = BILL_BY_ID[id]
   if (!b) return
   aplicarControle(s, b)
   if (b.rastro) subirRastro(s, b.rastro, `Assinou “${b.name}”`, id)
+  abrirLicitacao(s, b, headlines)
+}
+
+/** Abre a licitação da medida (as empresas ficam guardadas: as mesmas até a escolha). Uma por medida. */
+export function abrirLicitacao(s: GameState, b: BillDef, headlines?: Headline[]): Licitacao | null {
+  if (!contratoDe(b)) return null
   const R = riscoOf(s)
-  const guardada = R.empresas[id]
-  delete R.empresas[id]
-  const emp = guardada ?? escolherEmpresa(s, b, perfil)
-  if (emp) assinarContrato(s, e, b, emp, headlines)
+  R.licitacoes ??= []
+  if (R.licitacoes.some((l) => l.bill === b.id)) return null
+  const lic: Licitacao = { bill: b.id, at: absMonth(s), empresas: empresasPara(s, b) }
+  R.licitacoes.push(lic)
+  headlines?.push({ text: `Licitação aberta: ${lowerFirst(b.name)}. O governo escolhe quem executa`, tone: 'neutral' })
+  return lic
 }
 
-/** Lei e PEC: a empresa escolhida no envio fica guardada até a lei passar. */
-export function guardarEmpresa(s: GameState, id: BillId, perfil?: PerfilEmpresa): void {
-  const b = BILL_BY_ID[id]
-  const emp = b ? escolherEmpresa(s, b, perfil) : null
-  if (emp) riscoOf(s).empresas[id] = emp
+/** Licitações à espera da escolha (só de medidas que ainda valem). */
+export function licitacoesAbertas(s: GameState): Licitacao[] {
+  return (s.risco?.licitacoes ?? []).filter((l) => medidaVale(s, l.bill))
 }
 
-/** A medida saiu da fila sem passar: a empresa guardada sai junto. */
-export function soltarEmpresa(s: GameState, id: BillId): void {
-  if (s.risco?.empresas[id]) delete s.risco.empresas[id]
+/** Mês absoluto em que a licitação vence (no fim dele, vale a empresa de sempre). */
+export const prazoLicitacao = (l: Pick<Licitacao, 'at'>) => l.at + CONTRATO.prazoMeses
+
+const medidaVale = (s: GameState, id: BillId) => {
+  const c = s.congress
+  if (c.laws.includes(id)) return true
+  return BILL_BY_ID[id]?.instrument === 'mp' && (c.pending.some((p) => p.id === id) || c.senate.pending.some((p) => p.id === id))
+}
+
+export function licitacaoBlockedReason(s: GameState, id: BillId, perfil: PerfilEmpresa): string | null {
+  if (s.finished) return 'O mandato já terminou.'
+  const lic = licitacoesAbertas(s).find((l) => l.bill === id)
+  if (!lic) return 'Não há licitação aberta para esta medida.'
+  if (!lic.empresas.some((x) => x.perfil === perfil)) return 'Esta empresa não está na disputa.'
+  return null
+}
+
+/**
+ * O presidente escolhe a empresa (vale na hora): o contrato é assinado, a diferença de preço entra nas contas,
+ * a semente nasce e a Ficha registra. Devolve um estado novo.
+ */
+export function escolherLicitacao(prev: GameState, id: BillId, perfil: PerfilEmpresa): GameState {
+  const why = licitacaoBlockedReason(prev, id, perfil)
+  if (why) throw new Error(why)
+  const s = structuredClone(prev)
+  const R = riscoOf(s)
+  const lic = R.licitacoes!.find((l) => l.bill === id)!
+  R.licitacoes = R.licitacoes!.filter((l) => l !== lic)
+  assinarContrato(s, s.economy, BILL_BY_ID[id], lic.empresas.find((x) => x.perfil === perfil)!)
+  return s
+}
+
+/**
+ * Fechamento do mês: licitação de medida que caiu some sem custo; a que venceu o prazo assina com a empresa de
+ * sempre (preço de mercado), com aviso. Ninguém fica preso numa escolha que não fez.
+ */
+export function vencerLicitacoes(s: GameState, e: Economy, headlines: Headline[]): void {
+  const R = riscoOf(s)
+  if (!R.licitacoes?.length) return
+  const now = absMonth(s)
+  const ficam: Licitacao[] = []
+  for (const l of R.licitacoes) {
+    const b = BILL_BY_ID[l.bill]
+    if (!b || !medidaVale(s, l.bill)) continue
+    if (now < prazoLicitacao(l)) { ficam.push(l); continue }
+    const emp = l.empresas[0]
+    assinarContrato(s, e, b, emp)
+    headlines.push({ text: `Prazo da licitação vence: ${emp.nome} (a de sempre) fica com ${lowerFirst(b.name)}`, tone: 'neutral' })
+  }
+  R.licitacoes = ficam
 }
 
 // ─── Proposta de setor ────────────────────────────────────────────────────────
