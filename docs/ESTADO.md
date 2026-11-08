@@ -9,7 +9,7 @@
 
 ## Próximo passo
 
-**Etapa 5C em andamento.** Blocos 1 e 2 prontos: a CPI e a meta da oposição estão ligadas e com tela (v0.29.0 e v0.29.1, DESIGN.md 27.24 e 27.25). **Próximo: v0.30.0 e v0.30.1 (inteligência e dossiês)** · complexidade muito alta · **Opus** nas regras, **Sonnet** nas telas. Decisão pendente do Douglas: ligar ou retirar o ataque 20% maior da meta de aprovação da oposição (número previsto, mas sem efeito no motor).
+**Etapa 5C em andamento.** Blocos 1 e 2 prontos: a CPI e a meta da oposição estão ligadas e com tela (v0.29.0 e v0.29.1, DESIGN.md 27.24 e 27.25). **Próximo: v0.30.0 e v0.30.1 (inteligência e dossiês)** · complexidade muito alta · **Opus** nas regras, **Sonnet** nas telas.
 
 **Etapa 5B fechada na v0.28.1** (DESIGN.md 27.22 e 27.23): o vazamento está ligado e os casos têm tela própria (cartão com Agir ou Deixar passar, pendência, faixa de vazamento, agenda, advogado, parecer, interino e nomes das empresas pela IA). **Falta o Douglas jogar uma partida completa** (portão de playtest), de olho em quantos casos aparecem, no peso deles e nos nomes das empresas com a IA ligada, que ainda não foram vistos na tela.
 
@@ -32,7 +32,7 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 **Base técnica**
 - App de Windows (Tauri 2 + React + TypeScript). O instalador é gerado pelo GitHub Actions e o jogo se atualiza sozinho, com atualização assinada.
 - O motor do jogo (`src/game/`) fica separado das telas (`src/ui/`). Os números de balanceamento ficam em `src/game/data/`.
-- 412 testes automáticos. Saves antigos são migrados (versão atual do save: 30).
+- 413 testes automáticos. Saves antigos são migrados (versão atual do save: 30).
 
 **Jogabilidade**
 - Mandato de 48 meses (jan/2027 a dez/2030), com o mês em 4 passos: notícias, fato do mês, decisões e encerrar.
@@ -179,3 +179,4 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 | 08/11/2026 | v0.28.1 | Etapa 5B, bloco 2 (telas): vazamento ligado, cartão do caso com Agir ou Deixar passar, pendência, faixa de vazamento, agenda, advogado e parecer, selo de interino, nomes das empresas pela IA; sem mudança no save; 394 testes; falta a partida completa do Douglas |
 | 08/11/2026 | v0.29.0 | Etapa 5C, bloco 1 (regras, desligadas até as telas): objetivo da oposição, requerimento com 171 assinaturas, CPI de 6 meses com tom pela base, oitivas e relatório; save 29; 410 testes; `npm run sim5c` (1,1 a 1,8 CPIs por mandato). Douglas decidiu começar a 5C antes da partida da 5B |
 | 08/11/2026 | v0.29.1 | Etapa 5C, bloco 2 (telas): CPI e meta da oposição ligadas, cartão da CPI, pendência, agenda dividida, comissões encerradas na aba Câmara; conversa vazada com o relator não se repete; save 30; 412 testes; ciclo da CPI conferido no navegador até o relatório |
+| 08/11/2026 | v0.29.2 | Decisão do Douglas: ataque 20% maior ligado enquanto a meta da oposição for baixar a aprovação; cartão da Oposição mostra o efeito; sem mudança no save; 413 testes |

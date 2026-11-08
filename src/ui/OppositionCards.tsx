@@ -7,7 +7,7 @@ import { RIVAL } from '../game/data/rival'
 import { OBJETIVO } from '../game/data/cpi'
 import { absMonth } from '../game/memory'
 import { formatPromiseValue, promiseStatus, STATUS_LABEL, type PromiseStatus } from '../game/promises'
-import { attackSize, rivalDefOf, STANCE_LABEL, textoObjetivo } from '../game/rival'
+import { ataqueDoMes, rivalDefOf, STANCE_LABEL, textoObjetivo } from '../game/rival'
 import type { GameState, Poll } from '../game/types'
 import { Portrait } from './Portrait'
 
@@ -39,7 +39,7 @@ function MetaOposicao({ state }: { state: GameState }) {
     ? `${o.alvo} sofre +${n1(OBJETIVO.desgaste)} de desgaste por mês. Se sair do cargo, até por troca sua, ela comemora.`
     : o.tipo === 'votacao'
       ? `Qualquer derrota do governo em plenário conta.${r.stance === 'obstrucao' ? ` Enquanto isso, o ${PARTY_BY_ID[r.party].sigla} orienta ainda mais contra.` : ''}`
-      : 'Conta se a aprovação chegar a esse número.'
+      : `Conta se a aprovação chegar a esse número.${r.stance === 'observa' ? '' : ` Enquanto isso, os ataques do mês ficam ${Math.round((OBJETIVO.ataque - 1) * 100)}% mais fortes.`}`
   return (
     <div className="pn-rival__meta" style={{ marginTop: 8 }}>
       <div className="pn-group__head"><span>🎯 Meta: <b>{textoObjetivo(o)}</b></span><span className="pn-badge">{left === 0 ? 'vence este mês' : `${left} ${left === 1 ? 'mês' : 'meses'}`}</span></div>
@@ -92,8 +92,8 @@ export function RivalCard({ state }: { state: GameState }) {
         )}
         <p className="pn-hint">
           {r.stance === 'observa' && `Abaixo de ${RIVAL.desgasteAt}, só fala. A partir de ${RIVAL.desgasteAt}, ataca todo mês o grupo mais insatisfeito ou uma promessa fora do rumo.`}
-          {r.stance === 'desgaste' && `Ataca todo mês (−${n1(attackSize(r.strength))} no grupo atingido). A partir de ${RIVAL.obstrucaoAt}, ${party.sigla} e aliados passam a obstruir na Câmara.`}
-          {r.stance === 'obstrucao' && `Ataca todo mês (−${n1(attackSize(r.strength))}) e ${party.sigla}${def.allies.length ? ` com ${def.allies.map((a) => PARTY_BY_ID[a].sigla).join(' e ')}` : ''} vota mais contra o governo na Câmara.`}
+          {r.stance === 'desgaste' && `Ataca todo mês (−${n1(ataqueDoMes(r))} no grupo atingido). A partir de ${RIVAL.obstrucaoAt}, ${party.sigla} e aliados passam a obstruir na Câmara.`}
+          {r.stance === 'obstrucao' && `Ataca todo mês (−${n1(ataqueDoMes(r))}) e ${party.sigla}${def.allies.length ? ` com ${def.allies.map((a) => PARTY_BY_ID[a].sigla).join(' e ')}` : ''} vota mais contra o governo na Câmara.`}
         </p>
       </div>
     </section>

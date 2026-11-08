@@ -69,6 +69,10 @@ export function rivalBoost(s: GameState): Partial<Record<PartyId, number>> {
 }
 
 /** Tamanho do ataque mensal do rival, pela força. */
+/** Tamanho do ataque do mês: a meta de baixar a aprovação deixa os ataques mais fortes (Etapa 5C). */
+export const ataqueDoMes = (r: Pick<RivalState, 'strength' | 'objetivo'>): number =>
+  round1(attackSize(r.strength) * (r.objetivo?.tipo === 'aprovacao' ? OBJETIVO.ataque : 1))
+
 export function attackSize(strength: number): number {
   const t = clamp((strength - RIVAL.desgasteAt) / (RIVAL.obstrucaoAt - RIVAL.desgasteAt), 0, 1)
   return round1(RIVAL.attackMin + (RIVAL.attackMax - RIVAL.attackMin) * t)
@@ -81,7 +85,7 @@ export function attackSize(strength: number): number {
 export function rivalAttack(s: GameState, rng: Rng, impulses: Record<GroupId, Impulse[]>, headlines: Headline[]): void {
   const r = s.rival
   if (!r || r.stance === 'observa') return
-  const size = attackSize(r.strength)
+  const size = ataqueDoMes(r)
   const off = s.promises.map((id) => PROMISE_BY_ID[id]).filter((p) => p && promiseStatus(s, p).status === 'longe')
   let group: GroupId
   let text: string

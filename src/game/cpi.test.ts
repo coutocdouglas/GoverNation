@@ -5,7 +5,7 @@ import { GROUPS } from './data/groups'
 import { ACOES_CPI, CPI, OBJETIVO, RELATORIO } from './data/cpi'
 import { agendaUsada, invOf, ligarVazamento, type Caso } from './caso'
 import { aplicarDecisaoCpi, comissoesOf, cpiBlockedReason, ligarCpi, potencialAssinaturas, ritmoOitiva, stepCpi, tomDaCpi, type Cpi } from './cpi'
-import { atualizarObjetivo, rivalBoost } from './rival'
+import { ataqueDoMes, atualizarObjetivo, rivalBoost } from './rival'
 import { riscoOf } from './risco'
 import { pendencias } from './pendencias'
 import { absMonth } from './memory'
@@ -186,6 +186,13 @@ describe('CPI: relatório', () => {
 })
 
 describe('Oposição com objetivo', () => {
+  it('a meta de aprovação deixa os ataques mais fortes; as outras não', () => {
+    const forca = 70
+    const sem = ataqueDoMes({ strength: forca })
+    expect(ataqueDoMes({ strength: forca, objetivo: { tipo: 'votacao', desde: 0 } })).toBe(sem)
+    expect(ataqueDoMes({ strength: forca, objetivo: { tipo: 'aprovacao', meta: 40, desde: 0 } })).toBeCloseTo(sem * OBJETIVO.ataque, 0)
+    expect(ataqueDoMes({ strength: forca, objetivo: { tipo: 'aprovacao', meta: 40, desde: 0 } })).toBeGreaterThan(sem)
+  })
   it('escolhe, cumpre, desiste e pesa no voto', () => {
     const s = fresh(); const r = s.rival!; const h: Headline[] = []
     atualizarObjetivo(s, { approval: 50, defeats: 0 }, h)

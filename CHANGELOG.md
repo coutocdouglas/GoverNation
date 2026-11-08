@@ -1,5 +1,9 @@
 # Novidades
 
+## 0.29.2 (08/11/2026)
+- **Meta de aprovação da oposição com efeito de verdade:** enquanto a meta dela for baixar a sua aprovação, os ataques do mês ficam 20% mais fortes (estava previsto, mas não fora ligado). O cartão da Oposição mostra o efeito e o tamanho do ataque.
+- Sem mudança no save. 413 testes. Simulador: aprovação final entre 0,0 e −0,4 ponto em relação à v0.29.1.
+
 ## 0.29.1 (08/11/2026)
 - **Etapa 5C, bloco 2 (telas): a CPI e a meta da oposição agora acontecem.**
   - **Cartão "CPI na Câmara" no Painel:** na coleta, as assinaturas até 171, o prazo e até onde o pedido pode chegar. Instalada, se a comissão é branda, equilibrada ou dura e por quê, quem preside e relata, as provas, quanto a oitiva deve render, a chance do relatório e o desgaste do mês.
