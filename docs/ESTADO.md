@@ -3,15 +3,15 @@
 > **Leia este arquivo primeiro.** Ele diz onde o projeto está e qual é o próximo passo.
 > Atualize-o a cada mudança: seção "Estado atual", "Próximo passo" e uma linha no "Histórico".
 
-**Última atualização:** 08/11/2026 · **Versão publicada:** v0.34.0 (6A, regras desligadas)
+**Última atualização:** 08/11/2026 · **Versão publicada:** v0.34.1 (6A, telas; agenda ligada)
 
 ---
 
 ## Próximo passo
 
-**Próximo: v0.34.1, telas do bloco 6A** (janela "Agenda do presidente", menu de "Sua agenda está limpa", custo à vista de cada ação; as telas ligam `AGENDA_ACOES.ativo`). Complexidade média · **Sonnet**. A prévia do efeito usa `ganhoDaAcao` e o bloqueio vem de `acaoBlockedReason`; o `MonthPlan` da tela precisa incluir `acao`. Depois: 6C (Opus nas regras).
+**Próximo: bloco 6C** (credibilidade, discurso, pesquisa, medida explosiva). Complexidade alta · **Opus** nas regras, **Sonnet** nas telas. O peso da fala por tipo de crise entra aqui.
 
-**Etapa 6 aprovada (plano em `docs/projeto/plano-etapa-6.md`, 08/11/2026).** Ordem: 6.0 → 6B → 6A → 6C → 6D → 6E → 6F. **6.0 feito na v0.32.1**, **6B feito na v0.33.0**, **6A regras feitas na v0.34.0** (DESIGN.md 27.31). **Portão de playtest da 5B e da 5C dispensado pelo Douglas em 08/11/2026: considerado fechado.**
+**Etapa 6 aprovada (plano em `docs/projeto/plano-etapa-6.md`, 08/11/2026).** Ordem: 6.0 → 6B → 6A → 6C → 6D → 6E → 6F. **6.0 feito na v0.32.1**, **6B feito na v0.33.0**, **6A feito** (regras na v0.34.0, telas na v0.34.1; DESIGN.md 27.31). **Portão de playtest da 5B e da 5C dispensado pelo Douglas em 08/11/2026: considerado fechado.**
 
 **Etapa 5C fechada no código (v0.32.0):** telas do serviço de inteligência e dos dossiês (DESIGN.md 27.28).
 
@@ -40,7 +40,7 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 **Base técnica**
 - App de Windows (Tauri 2 + React + TypeScript). O instalador é gerado pelo GitHub Actions e o jogo se atualiza sozinho, com atualização assinada.
 - O motor do jogo (`src/game/`) fica separado das telas (`src/ui/`). Os números de balanceamento ficam em `src/game/data/`.
-- 458 testes automáticos. Saves antigos são migrados (versão atual do save: 32).
+- 461 testes automáticos. Saves antigos são migrados (versão atual do save: 32).
 
 **Jogabilidade**
 - Mandato de 48 meses (jan/2027 a dez/2030), com o mês em 4 passos: notícias, fato do mês, decisões e encerrar.
@@ -127,6 +127,8 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 ---
 
 ## Histórico
+
+- 08/11/2026 · v0.34.1 · Bloco 6A (telas): janela "Agenda do presidente" no Radar e em "Sua agenda está limpa", ação no lugar da medida, agenda ligada; ciclo escolher, trocar, desfazer e encerrar conferido no navegador; sem mudança no save; 461 testes.
 
 - 08/11/2026 · v0.34.0 · Bloco 6A (regras, desligadas): ação política no lugar da medida (post, rua, receber líder, cobrar ministro, falar à nação, imprensa), cansaço, cobertura da imprensa; save 32; 458 testes; `npm run sim6a` (só falar 446 contra 585 de responder aos fatos). Portão de playtest da 5B e da 5C dispensado pelo Douglas.
 

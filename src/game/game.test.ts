@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest'
+import { beforeAll, describe, expect, it } from 'vitest'
+import { ligarAgenda } from './data/agenda'
 import { blockedReason } from './actions'
 import { MACRO } from './data/balance'
 import { GROUPS } from './data/groups'
@@ -11,6 +12,8 @@ const play = (seed: number, choose: (s: GameState) => ActionId[] = () => []) => 
   while (!s.finished) s = advanceMonth(s, choose(s))
   return s
 }
+
+beforeAll(() => ligarAgenda(false))
 
 describe('mandato completo', () => {
   it('dura 48 meses e registra o histórico', () => {

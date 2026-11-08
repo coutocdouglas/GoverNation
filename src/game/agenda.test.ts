@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { advanceMonth, newGame, validatePlan } from './game'
 import { migrate } from './save'
 import { blockedReason } from './actions'
-import { acaoBlockedReason, adversarioDe, agendaOf, cancelarAcao, coberturaFator, escolherAcao, fadigaDe, ganhoDaAcao, initialAgenda, ruaOpcoes, stepAgenda, type AcaoAgenda } from './agenda'
+import { previaAcao, rotuloAcao, acaoBlockedReason, adversarioDe, agendaOf, cancelarAcao, coberturaFator, escolherAcao, fadigaDe, ganhoDaAcao, initialAgenda, ruaOpcoes, stepAgenda, type AcaoAgenda } from './agenda'
 import { agendaUsada } from './caso'
 import { sendBlockedReason } from './rodada'
 import { AGENDA_ACOES, COBRAR, IMPRENSA, LIDER, ligarAgenda, VOZES } from './data/agenda'
@@ -84,6 +84,27 @@ describe('efeitos', () => {
   })
   it('mês calmo tem visitas no lugar das ações de crise', () => {
     expect(ruaOpcoes(fresh())).toEqual(RUA_LIMPO)
+  })
+})
+
+describe('a prévia mostra o que vai acontecer', () => {
+  it('líder: mesma relação na prévia e no fechamento', () => {
+    const s = fresh()
+    const p = previaAcao(s, lider)!
+    const r = advanceMonth(s, [], { acao: lider })
+    expect(r.causas.find((c) => c.subject === 'partido:psn')?.delta).toBe(p.parties.psn)
+    expect(rotuloAcao(s, lider)).toMatch(/PSN/)
+  })
+  it('ministro em público mostra o desgaste e o custo no partido', () => {
+    const p = previaAcao(fresh(), { tipo: 'ministro', area: 'saude', tom: 'publico' })!
+    expect(p.extras[0].bom).toBe(false)
+    expect(Object.values(p.parties)[0]).toBe(COBRAR.publico.partido)
+  })
+  it('uma ação marcada na rodada entra no fechamento sem constar do plano', () => {
+    const s = escolherAcao(fresh(), lider)
+    const r = advanceMonth(s, [], {})
+    expect(r.agendaPres.log.some((x) => x.tipo === 'lider')).toBe(true)
+    expect(r.agendaPres.seguidas).toBe(1)
   })
 })
 

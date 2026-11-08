@@ -6,11 +6,11 @@
  * vice-versa). Os efeitos valem no fechamento do mês. Números em data/agenda.ts; desenho em DESIGN.md 27.31.
  */
 import type { ActionEffects } from './actions'
-import { baseGroupsOf, fatigued, monthKind, speechScale, statementBlockedReason, streetOptions } from './assessoria'
+import { baseGroupsOf, comGanho, fatigued, monthKind, speechScale, statementBlockedReason, statementEffect, streetOptions, type Scaled } from './assessoria'
 import { ministerOf } from './camara'
 import { bumpScandal, registrarCausa } from './causas'
-import { ASSESSORIA, type StatementId } from './data/assessoria'
-import { AGENDA_ACOES, agendaLigada, COBRAR, IMPRENSA, LIDER, VOZ_BY_ID, VOZES } from './data/agenda'
+import { ASSESSORIA, STATEMENT_BY_ID, type StatementId } from './data/assessoria'
+import { AGENDA_ACOES, agendaLigada, COBRAR, IMPRENSA, LIDER, VOZ_BY_ID, VOZES, type VozDef } from './data/agenda'
 import { AREA_GROUP } from './data/ministerios'
 import type { AreaId } from './data/ministers'
 import { PARTIES, PARTY_BY_ID } from './data/parties'
@@ -47,13 +47,18 @@ export const initialAgenda = (): AgendaState => ({
 })
 export const agendaOf = (s: GameState): AgendaState => (s.agendaPres ??= initialAgenda())
 
+const ao = (v: VozDef) => `${v.fem ? 'à' : 'ao'} ${v.nome}`
+const doV = (v: VozDef) => `${v.fem ? 'da' : 'do'} ${v.nome}`
+const comV = (v: VozDef) => `com ${v.fem ? 'a' : 'o'} ${v.nome}`
+const menos = (x: number) => `−${Math.abs(x).toLocaleString('pt-BR')}`
+
 const clamp = (x: number, lo = 0, hi = 100) => Math.max(lo, Math.min(hi, x))
 const round1 = (x: number) => Math.round(x * 10) / 10
 
 const recente = (s: GameState, tipo: AcaoAgenda['tipo'], alvo: string, meses: number) =>
   agendaOf(s).log.some((x) => x.tipo === tipo && x.alvo === alvo && absMonth(s) - x.at < meses)
 
-const mesma = (a: AcaoAgenda, b: AcaoAgenda) => JSON.stringify(a) === JSON.stringify(b)
+export const mesma = (a: AcaoAgenda, b: AcaoAgenda) => JSON.stringify(a) === JSON.stringify(b)
 
 /** Ações de presença disponíveis no mês: as da crise ou, em mês calmo, as visitas. A fala ao país é a ação "nacao". */
 export function ruaOpcoes(s: GameState): StreetDef[] {
@@ -135,6 +140,66 @@ export function ganhoDaAcao(s: GameState, a: AcaoAgenda): number {
 export function adversarioDe(partido: PartyId): PartyId {
   const p = PARTY_BY_ID[partido]
   return PARTIES.filter((x) => x.id !== partido).sort((a, b) => Math.abs(b.econ - p.econ) - Math.abs(a.econ - p.econ))[0].id
+}
+
+export interface PreviaAcao extends Scaled {
+  /** O que não cabe nos grupos e partidos (desgaste, cobertura, exposição). */
+  extras: { texto: string; bom: boolean }[]
+}
+
+const deRua = (def: StreetDef): Scaled => ({ fx: def.effects, parties: def.parties ?? {}, rival: def.rival ?? 0, soften: def.soften, confidence: 0 })
+
+/** O que a ação faz neste mês, para mostrar antes de escolher (Efeitos visíveis). Null se ela não existe no mês. */
+export function previaAcao(s: GameState, a: AcaoAgenda): PreviaAcao | null {
+  const k = ganhoDaAcao(s, a)
+  const vazio: PreviaAcao = { fx: {}, parties: {}, rival: 0, soften: 0, confidence: 0, extras: [] }
+  switch (a.tipo) {
+    case 'post':
+      return { ...comGanho(statementEffect(s, a.id), k), extras: [] }
+    case 'rua': {
+      const def = ruaOpcoes(s).find((x) => x.id === a.id)
+      return def ? { ...comGanho(deRua(def), k), extras: [] } : null
+    }
+    case 'nacao':
+      return { ...comGanho(deRua(CADEIA), k * speechScale(s)), extras: [] }
+    case 'lider':
+      return { ...vazio, parties: { [a.partido]: round1(LIDER.relacao * k), [adversarioDe(a.partido)]: LIDER.ciume } }
+    case 'ministro':
+      if (a.tom === 'particular') return { ...vazio, extras: [{ texto: `desgaste do ministro ${menos(round1(COBRAR.particular.desgaste * k))}`, bom: true }] }
+      return {
+        ...vazio,
+        fx: { groups: { [AREA_GROUP[a.area]]: round1(COBRAR.publico.grupo * k) } },
+        parties: { [s.cabinet?.[a.area]?.party ?? s.playerParty]: COBRAR.publico.partido },
+        extras: [{ texto: `desgaste do ministro +${COBRAR.publico.desgaste}`, bom: false }],
+      }
+    case 'imprensa': {
+      const v = VOZ_BY_ID[a.voz]
+      if (!v) return null
+      if (a.modo === 'apoio') return {
+        ...vazio,
+        fx: { groups: Object.fromEntries(v.grupos.map((g) => [g, round1(IMPRENSA.apoio.grupos * k)])) as ActionEffects['groups'] },
+        extras: [{ texto: `cobertura +${round1(IMPRENSA.apoio.cobertura * k)}`, bom: true }, { texto: `exposição a escândalo +${IMPRENSA.apoio.exposicao}`, bom: false }],
+      }
+      return {
+        ...vazio,
+        fx: { groups: Object.fromEntries(baseGroupsOf(s).map((g) => [g, round1(IMPRENSA.romper.base * k)])) as ActionEffects['groups'] },
+        rival: IMPRENSA.romper.rival,
+        extras: [{ texto: `cobertura ${menos(IMPRENSA.romper.cobertura)}`, bom: false }],
+      }
+    }
+  }
+}
+
+/** Nome da ação numa frase curta, para resumos e para a Ficha. */
+export function rotuloAcao(s: GameState, a: AcaoAgenda): string {
+  switch (a.tipo) {
+    case 'post': return `Post: ${STATEMENT_BY_ID[a.id].label}`
+    case 'rua': return ruaOpcoes(s).find((x) => x.id === a.id)?.label ?? 'Ação de rua'
+    case 'nacao': return 'Falar à nação'
+    case 'lider': return `Receber ${leaderOf(s, a.partido).name} (${PARTY_BY_ID[a.partido].sigla})`
+    case 'ministro': return `Cobrar ${ministerOf(s, a.area).name} ${a.tom === 'publico' ? 'em público' : 'em particular'}`
+    case 'imprensa': return a.modo === 'apoio' ? `Pedir apoio ${ao(VOZ_BY_ID[a.voz])}` : `Romper ${comV(VOZ_BY_ID[a.voz])}`
+  }
 }
 
 export interface AcaoResultado {
@@ -248,18 +313,18 @@ export function aplicarAcao(
       const antes = ag.cobertura[a.voz] ?? IMPRENSA.inicio
       if (a.modo === 'apoio') {
         ag.cobertura[a.voz] = clamp(antes + round1(IMPRENSA.apoio.cobertura * k))
-        out.confidence += applyEffects(e, impulses, { groups: Object.fromEntries(v.grupos.map((g) => [g, round1(IMPRENSA.apoio.grupos * k)])) as ActionEffects['groups'] }, `Apoio do ${v.nome}`)
-        bumpScandal(s, IMPRENSA.apoio.exposicao, `Favor pedido ao ${v.nome}`, 'escolha')
+        out.confidence += applyEffects(e, impulses, { groups: Object.fromEntries(v.grupos.map((g) => [g, round1(IMPRENSA.apoio.grupos * k)])) as ActionEffects['groups'] }, `Apoio ${doV(v)}`)
+        bumpScandal(s, IMPRENSA.apoio.exposicao, `Favor pedido ${ao(v)}`, 'escolha')
         headlines.push({ text: `${v.nome} abre espaço para o governo depois de conversa no Planalto`, tone: 'good' })
-        taken.push(`Pediu apoio ao ${v.nome}`)
-        noteRecord(s, { text: `Pediu apoio ao ${v.nome}`, tone: 'neutral', kind: 'outro' })
+        taken.push(`Pediu apoio ${ao(v)}`)
+        noteRecord(s, { text: `Pediu apoio ${ao(v)}`, tone: 'neutral', kind: 'outro' })
       } else {
         ag.cobertura[a.voz] = clamp(antes + IMPRENSA.romper.cobertura)
-        out.confidence += applyEffects(e, impulses, { groups: Object.fromEntries(baseGroupsOf(s).map((g) => [g, round1(IMPRENSA.romper.base * k)])) as ActionEffects['groups'] }, `Rompeu com o ${v.nome}`)
-        rivalExtra.push({ label: `Presidente rompe com o ${v.nome}`, value: IMPRENSA.romper.rival })
-        headlines.push({ text: `Presidente rompe com o ${v.nome} e chama a cobertura de injusta`, tone: 'bad' })
-        taken.push(`Rompeu com o ${v.nome}`)
-        noteRecord(s, { text: `Rompeu com o ${v.nome}`, tone: 'bad', kind: 'outro' })
+        out.confidence += applyEffects(e, impulses, { groups: Object.fromEntries(baseGroupsOf(s).map((g) => [g, round1(IMPRENSA.romper.base * k)])) as ActionEffects['groups'] }, `Rompeu ${comV(v)}`)
+        rivalExtra.push({ label: `Presidente rompe ${comV(v)}`, value: IMPRENSA.romper.rival })
+        headlines.push({ text: `Presidente rompe ${comV(v)} e chama a cobertura de injusta`, tone: 'bad' })
+        taken.push(`Rompeu ${comV(v)}`)
+        noteRecord(s, { text: `Rompeu ${comV(v)}`, tone: 'bad', kind: 'outro' })
       }
       registrarCausa(s, { subject: `imprensa:${a.voz}`, delta: ag.cobertura[a.voz] - antes, why: a.modo === 'apoio' ? 'O presidente pediu apoio' : 'O presidente rompeu', source: 'escolha' })
       ag.log.push({ tipo: 'imprensa', alvo: a.voz, at })

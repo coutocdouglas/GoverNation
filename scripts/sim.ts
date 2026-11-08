@@ -9,7 +9,11 @@ import { billBlockedReason, forecastVote } from '../src/game/congress'
 import { legalRiskOf } from '../src/game/supremo'
 import { gavetaReason, queueHouse, voteNow, voteNowBlockedReason } from '../src/game/rodada'
 import { monthKind, statementBlockedReason, statementsFor, streetBlockedReason, streetOptions } from '../src/game/assessoria'
+import { ligarAgenda } from '../src/game/data/agenda'
 import type { ActionId, GameState } from '../src/game/types'
+
+// Este simulador mede o motor antigo (post e rua avulsos); a agenda ligada é medida em sim6a.
+ligarAgenda(false)
 
 /** Responde ao fato do mês com o decreto mais barato da área (etapa 3A). */
 export const respond = (s: GameState): MonthPlan => {

@@ -7,8 +7,8 @@ import type { GroupId } from '../types'
  * Regra de ouro: a ação gasta espaço da agenda e entra NO LUGAR da medida nova do mês, não soma.
  */
 export const AGENDA_ACOES = {
-  /** Desligada até as telas da v0.34.1: o jogador precisa conseguir ver e escolher. Testes e simulador usam `ligarAgenda`. */
-  ativo: false,
+  /** Ligada na v0.34.1, junto com a janela "Agenda do presidente". Testes e simulador podem desligar com `ligarAgenda(false)`. */
+  ativo: true,
   /** Espaços da agenda que uma ação gasta. */
   espacos: 1,
   /** Quanto rende a ação conforme os meses seguidos que já vêm só de ação (retorno decrescente). */
@@ -57,6 +57,8 @@ export const IMPRENSA = {
 export interface VozDef {
   id: string
   nome: string
+  /** Para a concordância: "à Rede", "ao Diário". */
+  fem?: boolean
   desc: string
   grupos: GroupId[]
 }
@@ -64,10 +66,10 @@ export interface VozDef {
 /** Veículos fictícios (sem retrato: quem fala é a redação, não uma pessoa do elenco). */
 export const VOZES: VozDef[] = [
   { id: 'alvorada', nome: 'Diário da Alvorada', desc: 'O jornal de referência. Lido por quem decide.', grupos: ['classeMedia', 'servidores'] },
-  { id: 'meridiano', nome: 'Rede Meridiano', desc: 'A maior audiência da televisão aberta.', grupos: ['trabalhadores', 'baixaRenda'] },
+  { id: 'meridiano', nome: 'Rede Meridiano', fem: true, desc: 'A maior audiência da televisão aberta.', grupos: ['trabalhadores', 'baixaRenda'] },
   { id: 'contraponto', nome: 'Portal Contraponto', desc: 'Nativo das redes, rápido e barulhento.', grupos: ['jovens'] },
   { id: 'capital', nome: 'Boletim Capital', desc: 'Economia e negócios, com o mercado na linha.', grupos: ['empresarios'] },
-  { id: 'interior', nome: 'Rádio Interior', desc: 'Presente em cada município e na lavoura.', grupos: ['agro', 'baixaRenda'] },
+  { id: 'interior', nome: 'Rádio Interior', fem: true, desc: 'Presente em cada município e na lavoura.', grupos: ['agro', 'baixaRenda'] },
 ]
 
 export const VOZ_BY_ID = Object.fromEntries(VOZES.map((x) => [x.id, x])) as Record<string, VozDef>

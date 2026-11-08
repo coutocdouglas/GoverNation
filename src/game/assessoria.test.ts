@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest'
+import { beforeAll, describe, expect, it } from 'vitest'
+import { ligarAgenda } from './data/agenda'
 import { fatigued, monthKind, speechScale, statementBlockedReason, statementEffect, statementsFor, streetBlockedReason, streetOptions, softenEffects, repeatFactor } from './assessoria'
 import { ASSESSORIA, STATEMENTS } from './data/assessoria'
 import { ALL_EVENTS, EVENT_BY_ID } from './data/events'
@@ -6,6 +7,9 @@ import { RUA } from './data/rua'
 import { advanceMonth, newGame, responseBlockedReason, validatePlan } from './game'
 import { migrate } from './save'
 import type { GameState } from './types'
+
+// O motor antigo do post e da rua avulsos (com a agenda ligada, eles só entram como ação da agenda).
+beforeAll(() => ligarAgenda(false))
 
 const withEvent = (s: GameState, id: string, origin?: GameState['event'] extends infer E ? (E extends { origin?: infer O } ? O : never) : never) =>
   ({ ...structuredClone(s), event: { id, month: s.month, origin } }) as GameState

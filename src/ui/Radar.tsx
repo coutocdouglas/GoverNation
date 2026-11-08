@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react'
 import { alertas } from '../game/alertas'
+import { rotuloAcao } from '../game/agenda'
+import { peekRound } from '../game/rodada'
 import { casosAbertos, type DecisaoCaso } from '../game/caso'
 import { cpiAtual } from '../game/cpi'
 import { intelOf, servicoAtivo } from '../game/inteligencia'
@@ -29,8 +31,10 @@ function linhasDoRadar(state: GameState, intelOrdem: OrdemIntel | null): Linha[]
   const ctrl = Math.round(riscoOf(state).controle)
   const escand = Math.round(state.congress.scandal)
   const precisa = alertas(state)
+  const acao = peekRound(state)?.acao
   return [
     ...(precisa.length ? [{ id: 'precisa', icone: '🚨', titulo: 'Precisa de você', texto: precisa[0].texto, tag: `${precisa.length} alerta${precisa.length > 1 ? 's' : ''}`, tom: precisa.some((a) => a.grave) ? ('dn' as Tom) : ('warn' as Tom) }] : []),
+    { id: 'agenda', icone: '🗓️', titulo: 'Agenda do presidente', texto: acao ? rotuloAcao(state, acao) : peekRound(state)?.measure ? 'A medida do mês já foi: ação só no mês que vem' : 'Uma ação política no lugar da medida', tag: acao ? 'ação do mês' : undefined, tom: acao ? ('up' as Tom) : undefined },
     ...(casosAb.length || casosRec.length ? [{ id: 'casos', icone: '🕵️', titulo: 'Casos na investigação', texto: casosAb.length ? `${casosAb[0].alvo}: provas ${Math.round(casosAb[0].provas)}/100` : 'Casos encerrados há pouco', tag: casosAb.length ? `${casosAb.length} aberto${casosAb.length > 1 ? 's' : ''}` : 'encerrado', tom: casosAb.length ? ('dn' as Tom) : undefined }] : []),
     ...(cpiNow || cpiRec.length ? [{ id: 'cpi', icone: '🏛️', titulo: 'CPI na Câmara', texto: cpiNow ? (cpiNow.fase === 'coleta' ? `Assinaturas ${Math.round(cpiNow.assinaturas)}/171` : 'Instalada: em andamento') : 'CPI encerrada há pouco', tag: cpiNow ? (cpiNow.fase === 'coleta' ? 'coleta' : 'instalada') : 'encerrada', tom: cpiNow ? ('warn' as Tom) : undefined }] : []),
     {
@@ -62,6 +66,7 @@ export function janelaDefsDoRadar(state: GameState): Record<string, JanelaDef> {
   const mudou = state.lastReport ? 'O que mudou no mês passado' : 'Bem-vindo ao Planalto'
   return {
     precisa: { id: 'precisa', titulo: 'Precisa de você', icone: '🚨', largura: 560 },
+    agenda: { id: 'agenda', titulo: 'Agenda do presidente', icone: '🗓️', largura: 720 },
     casos: { id: 'casos', titulo: 'Casos na investigação', icone: '🕵️', largura: 720 },
     cpi: { id: 'cpi', titulo: 'CPI na Câmara', icone: '🏛️', largura: 720 },
     inteligencia: { id: 'inteligencia', titulo: 'Serviço de inteligência', icone: '📡', largura: 700 },
@@ -80,6 +85,7 @@ export function conteudoDaJanela(id: string, p: {
   cpiDecisao: AcaoCpi | null
   intelOrdem: OrdemIntel | null
   ultimoMes: ReactNode
+  agenda: ReactNode
   onCaso: (d: DecisaoCaso[]) => void
   onCpi: (a: AcaoCpi | null) => void
   onIntel: (o: OrdemIntel | null) => void
@@ -96,6 +102,7 @@ export function conteudoDaJanela(id: string, p: {
     case 'advogado': return <AdvogadoCard state={state} decisoes={casoDecisoes} advogado={advogado} cpi={cpiDecisao} intel={intelOrdem} onChange={p.onAdvogado} />
     case 'precisa': return <AlertasLista state={state} />
     case 'mudou': return p.ultimoMes
+    case 'agenda': return p.agenda
     default: return null
   }
 }

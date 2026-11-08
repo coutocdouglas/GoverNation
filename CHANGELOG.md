@@ -1,5 +1,13 @@
 # Novidades
 
+## 0.34.1 (08/11/2026)
+- **Bloco 6A da Etapa 6: as telas. A agenda do presidente está ligada.**
+  - **Janela "Agenda do presidente"**, aberta pelo Radar ou por "Sua agenda está limpa": mostra o que ocupa os 2 espaços do mês e o custo de cada ação antes de escolher (post, rua, falar à nação, receber líder, cobrar ministro, imprensa).
+  - **A ação entra no lugar da medida:** o cartão da medida do mês mostra a ação escolhida, com "Trocar" e "Desfazer e mandar uma medida". Casos, CPI, advogado e inteligência passam a contar o espaço que a ação gasta.
+  - O decreto rápido "Pronunciamento" sai de cena: agora é "Falar à nação".
+  - Correção de visual: a aba selecionada ficava ilegível no tema claro.
+- Sem mudança no save (continua na versão 32). 461 testes (3 novos).
+
 ## 0.34.0 (08/11/2026)
 - **Bloco 6A da Etapa 6: agenda e ação política (regras).** Ainda **desligado**: nada muda na partida até as telas da v0.34.1.
   - **Uma medida nova ou uma ação política por mês**, nunca as duas. A ação gasta 1 espaço da agenda e pode ser desfeita até encerrar o mês.

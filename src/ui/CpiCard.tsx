@@ -1,3 +1,4 @@
+import { peekRound } from '../game/rodada'
 import { useState } from 'react'
 import type { OrdemIntel } from '../game/data/inteligencia'
 import { AGENDA } from '../game/data/caso'
@@ -145,7 +146,7 @@ export function CpiCard({ state, decisoes, advogado, escolha, intel, onPick }: {
   const now = absMonth(state)
   const recentes = (state.comissoes?.encerradas ?? []).filter((x) => now - x.fim <= 3)
   if (!c && !recentes.length) return null
-  const plan = { casos: decisoes, advogado: advogado ?? undefined, cpi: escolha ?? undefined, inteligencia: intel ?? undefined }
+  const plan = { acao: peekRound(state)?.acao, casos: decisoes, advogado: advogado ?? undefined, cpi: escolha ?? undefined, inteligencia: intel ?? undefined }
   return (
     <section className="pn-card pn-card--red" id="cpi">
       <h3>🏛️ CPI na Câmara {c && <AgendaBadge plan={plan} />}</h3>

@@ -1,3 +1,4 @@
+import { peekRound } from '../game/rodada'
 import { useState } from 'react'
 import { agendaLivre, faixaChance, type DecisaoCaso } from '../game/caso'
 import { ABAFAR, AGENDA_INTEL, DOSSIE, INTELIGENCIA, type AcaoIntel, type OrdemIntel } from '../game/data/inteligencia'
@@ -32,7 +33,7 @@ export function InteligenciaCard({ state, ordem, decisoes, advogado, cpi, onOrde
   const I = intelOf(state)
   const now = absMonth(state)
   const [pessoa, setPessoa] = useState('')
-  const base = { casos: decisoes, advogado: advogado ?? undefined, cpi: cpi ?? undefined }
+  const base = { acao: peekRound(state)?.acao, casos: decisoes, advogado: advogado ?? undefined, cpi: cpi ?? undefined }
   const livre = agendaLivre(base)
   const plan = { ...base, inteligencia: ordem ?? undefined }
   /** Motivo de a ordem não valer agora (regra do motor ou agenda cheia), ou null. */

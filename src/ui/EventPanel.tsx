@@ -20,8 +20,10 @@ import { askEventBrief } from '../lib/aiActions'
  * Fase A (02/11/2026): saíram daqui o catálogo e os "Outros caminhos" (post e rua), que eram bônus fácil demais
  * (Teste do atalho); voltam na Etapa 6 como ações de agenda, que substituem a medida em vez de somar com ela.
  */
-export function EventPanel({ state, choice, onChoose, response, onRespond, plannedBill, onAddBill }: {
+export function EventPanel({ state, choice, onChoose, response, onRespond, plannedBill, onAddBill, onAgenda }: {
   state: GameState
+  /** Bloco 6A: abre a janela "Agenda do presidente" (o menu do mês sem crise). */
+  onAgenda: () => void
   /** Põe no catálogo do mandato uma medida nova montada pela IA (etapa 3C). */
   onAddBill: (b: BillDef) => BillId
   choice: number | null
@@ -42,7 +44,8 @@ export function EventPanel({ state, choice, onChoose, response, onRespond, plann
           <span className="pn-ill">🗓️</span>
           <div>
             <h2>Nenhuma crise na mesa este mês</h2>
-            <p className="pn-hint">É a chance de liderar nos seus termos: escreva a medida do mês ou articule com os partidos e com o Senado.</p>
+            <p className="pn-hint">É a chance de liderar nos seus termos: escreva a medida do mês, articule com os partidos e com o Senado ou use a agenda.</p>
+            <button type="button" className="pn-btn pn-btn--small" onClick={onAgenda}>🗓️ Abrir a agenda do presidente</button>
           </div>
         </div>
       </section>

@@ -140,7 +140,7 @@ export function streetEffect(s: GameState, id: string): Scaled | null {
 }
 
 /** Etapa 6A: escala só o que é ganho; quem perde perde igual, e o que o rival ganha não diminui. */
-function comGanho(x: Scaled, k: number): Scaled {
+export function comGanho(x: Scaled, k: number): Scaled {
   if (k === 1) return x
   const sobe = (v: number) => round1(v > 0 ? v * k : v)
   return {
