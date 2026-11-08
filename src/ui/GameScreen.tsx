@@ -33,6 +33,8 @@ import { STATEMENT_BY_ID } from '../game/data/assessoria'
 import { streetOptions } from '../game/assessoria'
 import { FichasView } from './FichasView'
 import { ReputationCard } from './ReputationView'
+import { IntegridadeCard, PropostaCard } from './IntegridadeCard'
+import type { PerfilEmpresa } from '../game/data/risco'
 import { Portrait } from './Portrait'
 import { ACTION_ICON, GROUP_ICON, INDICATOR_ICON } from './icons'
 import { INDICATORS, lowerFirst, num, signed, type IndicatorMeta } from './format'
@@ -101,6 +103,10 @@ export function GameScreen({ state, onChange, onExit }: {
   const [consult, setConsult] = useState<BillId | null>(null)
   /** Etapa 2: nome que o presidente deu à medida na janela em etapas (vai junto quando votar ou assinar). */
   const [titles, setTitles] = useState<Record<BillId, string>>({})
+  /** Etapa 5A: empresa escolhida na leitura do gabinete para executar o contrato (vai junto quando votar ou assinar). */
+  const [empresas, setEmpresas] = useState<Record<BillId, PerfilEmpresa>>({})
+  /** Etapa 5A: resposta à proposta de setor do mês (vale ao encerrar). */
+  const [proposta, setProposta] = useState<'aceitar' | 'recusar' | null>(null)
   /** Etapa 2B: resposta ao fato esperando a ficha (etapa 2 da corrente) antes de assinar ou votar. */
   const [respSheet, setRespSheet] = useState<BillId | null>(null)
   /** Etapa 2B: "O que mudou no mês passado" fica no fim da página, recolhido. */
@@ -110,7 +116,7 @@ export function GameScreen({ state, onChange, onExit }: {
   const plan: MonthPlan = {
     bill: bill ?? undefined, articulations, eventChoice: eventChoice ?? undefined, eventResponse: eventResponse ?? undefined, deals,
     hold: proc.hold, urgent: proc.urgent, original: proc.original, symbolic: proc.symbolic, sanctions, ministry: ministry ?? undefined, nominee: nominee ?? undefined, consult: consult ?? undefined,
-    statement: statement ?? undefined, street: street ?? undefined,
+    statement: statement ?? undefined, street: street ?? undefined, proposta: proposta ?? undefined,
   }
   const onProcedure = (kind: ProcedureKind, id: BillId, on: boolean) => setProc((cur) => {
     const next = { ...cur }
@@ -160,7 +166,7 @@ export function GameScreen({ state, onChange, onExit }: {
   }
   const gavetaOf = (id: BillId) => gavetaReason(state, id, queueHouse(state, id) ?? 'camara', { urgent: proc.urgent.includes(id) || undefined })
   /** Votar agora: manda a medida do mês (ou a resposta ao fato) ou pauta um projeto da fila. */
-  const runNow = (id: BillId, as: 'measure' | 'response' | 'queue' = roleOf(id), title?: string) => {
+  const runNow = (id: BillId, as: 'measure' | 'response' | 'queue' = roleOf(id), title?: string, empresa?: PerfilEmpresa) => {
     const opts: FloorOptions = {
       title: as !== 'queue' ? (title ?? titles[id]) : undefined,
       deals: deals.filter((d) => d.bill === id).map(({ bill: _b, ...terms }) => terms),
@@ -168,6 +174,7 @@ export function GameScreen({ state, onChange, onExit }: {
       original: proc.original.includes(id) || undefined,
       symbolic: proc.symbolic.includes(id) || undefined,
       senadores: buys[id]?.length ? buys[id] : undefined,
+      empresa: as !== 'queue' ? (empresa ?? empresas[id]) : undefined,
     }
     try {
       const r = as === 'queue' ? voteNow(state, id, opts) : sendMeasure(state, id, opts, as === 'response')
@@ -245,6 +252,8 @@ export function GameScreen({ state, onChange, onExit }: {
       setNominee(null)
       setConsult(null)
       setTitles({})
+      setEmpresas({})
+      setProposta(null)
       setTab('painel')
       setStep(1)
       setTurning(false)
@@ -507,7 +516,7 @@ export function GameScreen({ state, onChange, onExit }: {
                     <div>
                       <h2>Tudo pronto para virar o mês?</h2>
                       <p className="pn-hint">
-                        {selected.length === 0 && !bill && !eventResponse && !statement && !street && !round && (peekRound(state)?.articulations ?? []).length === 0 && !nominee && !consult && !ministry
+                        {selected.length === 0 && !bill && !eventResponse && !statement && !street && !round && (peekRound(state)?.articulations ?? []).length === 0 && !nominee && !consult && !ministry && !proposta
                           ? 'Você não tomou nenhuma decisão. O país segue sozinho este mês.'
                           : [
                               selected.length ? `Decretos: ${selected.map((id) => lowerFirst(ACTION_BY_ID[id].name)).join(' e ')}.` : '',
@@ -517,6 +526,7 @@ export function GameScreen({ state, onChange, onExit }: {
                               (peekRound(state)?.articulations ?? []).length ? `Articulação: ${(peekRound(state)?.articulations ?? []).map((a) => a.kind === 'presidente' ? 'conversa com o presidente da Câmara' : a.kind === 'senado' ? 'conversa com a presidente do Senado' : `${a.kind === 'conversar' ? 'conversa com' : 'emendas para'} ${PARTY_BY_ID[a.party].sigla}`).join(' e ')}.` : '',
                               nominee ? `Supremo: indicar ${NOMINEE_BY_ID[nominee].name} (sabatina no Senado).` : '',
                               ministry ? (ministry.party ? `Ministério: ${state.cabinet[ministry.area] ? 'trocar' : 'ceder'} ${ministry.area} ${state.cabinet[ministry.area] ? 'pelo' : 'ao'} ${PARTY_BY_ID[ministry.party].sigla}.` : `Ministério: retomar ${ministry.area}.`) : '',
+                              proposta ? `Proposta de setor: ${proposta === 'aceitar' ? 'aceitar' : 'recusar'}.` : '',
                               consult ? `Supremo: pedir parecer sobre ${lowerFirst(BILL_BY_ID[consult].name)}.` : '',
                               statement ? `Post da assessoria: ${lowerFirst(STATEMENT_BY_ID[statement].label)}.` : '',
                               street ? `Rua: ${lowerFirst(streetOptions(state).find((x) => x.id === street)?.label ?? street)}.` : '',
@@ -558,11 +568,12 @@ export function GameScreen({ state, onChange, onExit }: {
               {respSheet && (
                 <MeasureSheet state={state} id={respSheet} request="" startStep={2} backLabel="Voltar"
                   onClose={() => setRespSheet(null)}
-                  onConfirm={(id, title) => {
+                  onConfirm={(id, title, empresa) => {
+                    if (empresa) setEmpresas((m) => ({ ...m, [id]: empresa }))
                     setRespSheet(null)
                     if (title) setTitles((t) => ({ ...t, [id]: title }))
                     if (eventResponse && eventResponse !== id) dropDeals(eventResponse)
-                    if (actsNowUi(id)) { runNow(id, 'response', title); return }
+                    if (actsNowUi(id)) { runNow(id, 'response', title, empresa); return }
                   setEventResponse(id)
                   if (id && goesToVote(id)) setVoteSheet(id)
                   if (id) {
@@ -599,12 +610,13 @@ export function GameScreen({ state, onChange, onExit }: {
                 selected={selected}
                 bill={bill}
                 onAddBill={addBill}
-                onSend={(id, title) => {
+                onSend={(id, title, empresa) => {
+                  if (empresa) setEmpresas((m) => ({ ...m, [id]: empresa }))
                   if (bill && bill !== id) dropDeals(bill)
                   const ins = BILL_BY_ID[id].instrument
                   if (title) setTitles((t) => ({ ...t, [id]: title }))
                   // Etapa 0: decreto e MP valem na hora; projeto abre a janela de votação (votar agora).
-                  if (ins === 'decreto' || ins === 'mp') { runNow(id, 'measure', title); return }
+                  if (ins === 'decreto' || ins === 'mp') { runNow(id, 'measure', title, empresa); return }
                   setBill(id)
                   setVoteSheet(id)
                 }}
@@ -703,6 +715,7 @@ export function GameScreen({ state, onChange, onExit }: {
           </div>
 
           <div className="pn-col">
+            <PropostaCard state={state} value={proposta} onChange={(v) => { setProposta(v); if (v) toast(v === 'aceitar' ? '🤝 Proposta aceita: vale ao encerrar o mês.' : '🙅 Proposta recusada: vale ao encerrar o mês.') }} />
             <PendenciasCard state={state} onGo={goPending} onAttend={attend} />
 
             <section className="pn-card">
@@ -712,6 +725,7 @@ export function GameScreen({ state, onChange, onExit }: {
             </section>
 
             <ReputationCard state={state} onOpen={() => setTab('fichas')} />
+            <IntegridadeCard state={state} />
             <RivalCard state={state} />
             <PromisesCard state={state} />
             <SupremoMini state={state} onOpen={() => { setTab('governo'); setGovTab('supremo') }} />
@@ -865,7 +879,7 @@ function MeasureBox({ state, onState, draft, selected, onSign, onSend, onAddBill
   selected: ActionId[]
   bill: BillId | null
   onSign: (id: ActionId) => void
-  onSend: (id: BillId, title?: string) => void
+  onSend: (id: BillId, title?: string, empresa?: PerfilEmpresa) => void
 }) {
   const [text, setText] = useState(draft?.text ?? '')
   const [result, setResult] = useState<{ matches: MeasureRef[]; speech: string; fallback: string | null; notes: string[]; constraints: string[] } | null>(null)
@@ -903,7 +917,7 @@ function MeasureBox({ state, onState, draft, selected, onSign, onSend, onAddBill
       <div className="pn-row">
         <button className="pn-btn" disabled={!text.trim() || busy} onClick={read}>{busy ? '⏳ Lendo…' : '📋 Pedir leitura do gabinete'}</button>
       </div>
-      {sheet && <MeasureSheet state={state} id={sheet} ids={billIds} request={text} constraints={result?.constraints} speech={result?.speech} notes={result?.notes} consult={consult} onConsult={setConsult} onClose={() => setSheet(null)} onConfirm={(id, title) => { setSheet(null); onSend(id, title) }} onParecer={(p) => onState(guardarParecer(state, p))} onRewrite={(t) => { setText(t); setResult(null); setSheet(null) }} />}
+      {sheet && <MeasureSheet state={state} id={sheet} ids={billIds} request={text} constraints={result?.constraints} speech={result?.speech} notes={result?.notes} consult={consult} onConsult={setConsult} onClose={() => setSheet(null)} onConfirm={(id, title, empresa) => { setSheet(null); onSend(id, title, empresa) }} onParecer={(p) => onState(guardarParecer(state, p))} onRewrite={(t) => { setText(t); setResult(null); setSheet(null) }} />}
       {result && (
         <div className="pn-preview">
           {result.fallback && <p className="pn-hint">⚠️ {result.fallback} Lido por palavras-chave.</p>}

@@ -18,6 +18,9 @@ import { DOCTRINES, DOCTRINE_PULL, FUNDAMENTOS, type Doctrine, type FundamentoId
 import type { BillId, CourtCase, GameState, JusticeSeat, Ruling } from '../game/types'
 import { Portrait } from './Portrait'
 import { num } from './format'
+import { EloOf } from './Elo'
+import { pistaDe } from './eloTexto'
+import { sabatinaPorElo } from '../game/risco'
 
 const RISK_CLS = { baixo: 'up', medio: 'warn', alto: 'dn' } as const
 const MONTHS = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez']
@@ -128,6 +131,7 @@ export function SupremoView({ state, nominee, onNominee, onState, onToast }: { s
                 <b>{info.name}{j.id === presiding ? ' · presidente' : ''}</b>
                 <span title={DOCTRINE_HINT[info.doctrine]}>{DOCTRINE_ICON[info.doctrine]} {DOCTRINE_LABEL[info.doctrine]}</span>
                 <span className={rel.c}>{rel.t} ({Math.round(j.relation)})</span>
+                <EloOf state={state} name={info.name} ctx={{ papel: 'supremo' }} small />
               </button>
             )
           })}
@@ -145,7 +149,7 @@ export function SupremoView({ state, nominee, onNominee, onState, onToast }: { s
           const age = info.retireAt !== undefined ? 75 - Math.ceil((info.retireAt - now) / 12) : undefined
           return (
             <div className="pn-reading">
-              <b>{info.feminine ? 'Ministra' : 'Ministro'} {info.name}</b>
+              <b>{info.feminine ? 'Ministra' : 'Ministro'} {info.name}</b> <EloOf state={state} name={info.name} ctx={{ papel: 'supremo' }} small />
               <p className="pn-hint" style={{ margin: '2px 0' }}>{info.blurb}</p>
               <p className="pn-hint" style={{ margin: '2px 0' }}>
                 {DOCTRINE_ICON[info.doctrine]} {DOCTRINE_LABEL[info.doctrine]}: {DOCTRINE_HINT[info.doctrine]} Indicad{info.feminine ? 'a' : 'o'} por {info.appointedBy} em {info.year}.
@@ -442,6 +446,9 @@ function VacancyCard({ state, nominee, onNominee }: { state: GameState; nominee:
                 <div>
                   <b>{n.name}</b>
                   <div className="pn-hint" style={{ margin: 0 }}>{n.title}</div>
+                  {/* Etapa 5A: o Elo pesa na sabatina; o risco oculto só aparece como pista em palavras. */}
+                  <div style={{ margin: '3px 0' }}><EloOf state={state} name={n.name} ctx={{ papel: 'supremo' }} small /> <EloSabatina v={sabatinaPorElo(state, n.name)} /></div>
+                  <small className="pn-pista">🔎 {pistaDe(state, n.name, { papel: 'supremo' })}</small>
                   <div className="pn-hint" style={{ margin: 0 }}>{DOCTRINE_ICON[n.doctrine]} {n.kind === 'aliado' ? 'Aliada do governo' : DOCTRINE_LABEL[n.doctrine]} · {pos.econ < -15 ? 'estatista' : pos.econ > 15 ? 'liberal' : 'centro'} na economia · relação {n.relation}</div>
                 </div>
               </div>
@@ -558,4 +565,10 @@ export function RulingAnimation({ ruling, onNext, nextLabel, chain }: { ruling: 
       </div>
     </div>
   )
+}
+
+/** Etapa 5A: quanto o Elo do indicado pesa na sabatina, em palavras (o número já está nos votos previstos). */
+function EloSabatina({ v }: { v: number }) {
+  if (Math.abs(v) < 0.01) return <small className="pn-hint" style={{ margin: 0 }}>o Elo não pesa na sabatina</small>
+  return <small className={v > 0 ? 'up' : 'dn'}>{v > 0 ? 'o Elo ajuda' : 'o Elo atrapalha'} na sabatina{Math.abs(v) >= 0.1 ? ' (bastante)' : ''}</small>
 }

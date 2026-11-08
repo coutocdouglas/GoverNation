@@ -839,3 +839,27 @@
 .pn-acordao__v p { margin: 2px 0; font-size: 13px; font-style: italic; }
 .pn-acordao__why { display: flex; flex-wrap: wrap; gap: 4px; }
 .pn-acordao__why span { font-size: 10.5px; padding: 1px 6px; border-radius: 8px; background: #152030; }
+
+/* Etapa 5A (v0.27.1): Elo de reputação, Integridade do governo, empresas do contrato e proposta de setor. */
+.pn-elo { display: inline-flex; width: fit-content; align-self: flex-start; align-items: center; gap: 4px; font-size: 11.5px; font-weight: 600; border-radius: 999px; padding: 2px 8px; border: 1px solid currentColor; white-space: nowrap; }
+.pn-elo--small { font-size: 10.5px; padding: 1px 6px; }
+.pn-elo--bronze { color: #d08a52; background: rgba(208, 138, 82, 0.12); }
+.pn-elo--prata { color: #c3ccd6; background: rgba(195, 204, 214, 0.1); }
+.pn-elo--ouro { color: var(--pn-gold); background: rgba(245, 197, 66, 0.12); }
+.pn-elo--platina { color: var(--pn-teal); background: rgba(34, 211, 238, 0.12); }
+.pn-elo--suspeita { color: var(--pn-red); background: rgba(255, 90, 95, 0.12); }
+.pn-integ__row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 6px 0; }
+.pn-integ__pista { font-style: italic; color: var(--pn-ink); }
+.pn-integ__list { margin: 6px 0 0; padding-left: 18px; font-size: 12.5px; color: var(--pn-mut); }
+.pn-integ__list li { margin: 3px 0; }
+.pn-empresas { display: grid; gap: 6px; margin: 8px 0; }
+.pn-empresa { display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: start; text-align: left; background: var(--pn-panel2); border: 1px solid var(--pn-line); border-radius: 8px; padding: 8px 10px; color: var(--pn-ink); cursor: pointer; font: inherit; }
+.pn-empresa.on { border-color: var(--pn-gold); box-shadow: 0 0 0 1px var(--pn-gold) inset; }
+.pn-empresa small { display: block; color: var(--pn-mut); font-size: 11.5px; margin-top: 2px; }
+.pn-empresa__custo { font-size: 12px; white-space: nowrap; }
+.pn-proposta__pede { margin: 6px 0; }
+.pn-proposta__cols { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12.5px; }
+.pn-proposta__cols > div { background: var(--pn-panel2); border: 1px solid var(--pn-line); border-radius: 8px; padding: 8px; }
+.pn-proposta__cols > div.on { border-color: var(--pn-gold); }
+.pn-pista { display: block; font-size: 11.5px; color: var(--pn-mut); font-style: italic; }
+.pn-justice .pn-elo { align-self: center; }

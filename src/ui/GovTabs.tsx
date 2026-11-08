@@ -16,6 +16,8 @@ import { BancadasEstaduaisCard, LideresSenadoCard, SenadoHojeCard, SenadoVotosCa
 import { ForecastRow } from './CongressView'
 import { Portrait } from './Portrait'
 import { num } from './format'
+import { EloOf } from './Elo'
+import { pistaDe } from './eloTexto'
 
 const MONTHS = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez']
 const when = (at: number) => `${MONTHS[at % 12]}/${yearOf(at)}`
@@ -96,6 +98,7 @@ export function MinistriosView({ state, change, onChange, done }: { state: GameS
                   <small>{base.icon} {base.areaName} · no cargo desde {when(ms.since)}</small>
                   <b>{m.name}</b>
                   <small style={{ color: PARTY_BY_ID[m.party].color }}>{PARTY_BY_ID[m.party].sigla}{seat ? ' · pasta cedida' : ''}</small>
+                  <span><EloOf state={state} name={m.name} ctx={{ papel: 'ministro', party: m.party, area }} small /></span>
                 </div>
                 <div className="pn-minister__act">
                   {pending ? (
@@ -126,7 +129,12 @@ export function MinistriosView({ state, change, onChange, done }: { state: GameS
                       return (
                         <button key={n.party} disabled={!!r} title={r ?? n.style} onClick={() => { onChange({ area, party: n.party }); setOpen(null) }}>
                           <Portrait name={n.name} feminine={n.feminine} color={p.color} size={28} title={n.name} />
-                          <span><b style={{ color: p.color }}>{p.sigla}</b> {n.name}<small>{r ?? `${p.seats} deputados · relação ${Math.round(state.congress.parties[n.party].relation)}`}</small></span>
+                          <span>
+                            <b style={{ color: p.color }}>{p.sigla}</b> {n.name} <EloOf state={state} name={n.name} ctx={{ papel: 'ministro', party: n.party, area }} small />
+                            <small>{r ?? `${p.seats} deputados · relação ${Math.round(state.congress.parties[n.party].relation)}`}</small>
+                            {/* Etapa 5A: pista do risco oculto de quem vai assumir (o número fica escondido). */}
+                            {!r && <small className="pn-pista">🔎 {pistaDe(state, n.name, { papel: 'ministro', party: n.party, area })}</small>}
+                          </span>
                         </button>
                       )
                     })}

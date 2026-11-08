@@ -43,7 +43,7 @@ import { applyAssessoria, lostCreditValue, softenEffects, statementBlockedReason
 import { buildMeanwhile } from './entretanto'
 import { driftAlas, internalElections, leaderOf, openMesa, runMesa, speakerOf } from './partidos'
 import { TALK } from './data/negociacao'
-import { initialRisco, posseRisco, sortearProposta, stepRisco } from './risco'
+import { initialRisco, posseRisco, propostaAtual, propostaBlockedReason, responderProposta, sortearProposta, stepRisco } from './risco'
 
 import type { ActionId, Deal, Articulation, BillId, Cause, GameState, GroupId, Headline, Impulse, MonthReport, PartyId, SanctionItem, Snapshot, VetoItem, VoteRecord } from './types'
 
@@ -220,6 +220,8 @@ export interface MonthPlan {
   statement?: StatementId
   /** Etapa 1B: ação de rua na crise (id de data/rua.ts, ou 'cadeia'). */
   street?: string
+  /** Etapa 5A (v0.27.1): resposta à proposta de setor do mês (sem resposta, vence como recusa). */
+  proposta?: 'aceitar' | 'recusar'
 }
 
 /** Ficha do que foi aprovado e espera sanção ou veto (pauta-bomba inteira ou o jabuti enxertado). */
@@ -332,6 +334,10 @@ export function validatePlan(s: GameState, plan: MonthPlan): string | null {
   if (plan.ministry) {
     const r = ministryBlockedReason(s, plan.ministry)
     if (r) return `Ministério: ${r}`
+  }
+  if (plan.proposta) {
+    const r = propostaBlockedReason(s)
+    if (r) return `Proposta de setor: ${r}`
   }
   for (const id of Object.keys(plan.sanctions ?? {})) {
     if (!s.congress.toSanction.some((x) => x.id === id)) return 'Não há esse projeto para sancionar.'
@@ -814,6 +820,8 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
 
   // 1i. Etapa 5A: fichas (Elo com histerese), sementes que viram esquema escondido, proposta de setor vencida.
   // Sorteio próprio, para não mudar o resto do mês. Nada vaza na 5A.
+  // v0.27.1: a resposta do jogador à proposta de setor vale antes; sem resposta, a proposta vence como recusa.
+  if (plan.proposta && propostaAtual(s)) actionConfidence += responderProposta(s, plan.proposta === 'aceitar', impulses, headlines)
   stepRisco(s, new Rng((absMonth(s) * 69069) ^ s.rngState ^ 0x5a17e5), impulses, headlines)
 
   // 2. Copom (antes da economia andar, com os dados do mês anterior)

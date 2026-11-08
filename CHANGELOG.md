@@ -1,5 +1,15 @@
 # Novidades
 
+## 0.27.1 (07/11/2026)
+- **Etapa 5A, bloco 2 (telas): Elos, integridade, empresas e propostas na tela.** Fecha a Etapa 5A. Nada vaza ainda (o vazamento é da 5B).
+  - **Elo na tela:** medalha (Bronze, Prata, Ouro, Platina e a divisão) na ficha e na lista de personagens, no cartão de cada ministro, nos ministros do Supremo e nos indicados à vaga.
+  - **Cartão "Integridade do governo" no Painel:** o seu Elo, uma frase sobre o que pesa sobre você (o número continua escondido) e o Controle do Estado numa barra. "Ver o detalhe" mostra como funciona, as medidas que mexem no controle e as últimas escolhas que ficaram na Ficha.
+  - **Escolha da empresa na leitura do gabinete:** medida com obra ou gasto grande mostra 3 ou 4 empresas, com a descrição e o custo extra (ou a economia) em reais por ano. A de sempre vem marcada. Decreto e MP assinam o contrato na hora; a lei guarda a escolha até passar. A leitura também mostra quanto a medida muda o Controle do Estado.
+  - **Proposta de setor ligada:** quando um setor faz uma proposta, um cartão no Painel mostra o que você ganha se aceitar (e que fica registrado e pesa sobre você) e quem se afasta se recusar. A resposta vale ao encerrar o mês; sem resposta, conta como recusa. No máximo uma a cada 3 meses, nunca em mês de fato grave.
+  - **Pista do risco:** na troca de ministro e na sabatina do Supremo, cada nome traz uma pista em palavras ("Ficha limpa", "O nome circula em conversas de bastidor"…). Na sabatina, o cartão diz se o Elo do indicado ajuda ou atrapalha.
+- Correção: a economia da empresa mais barata sumia em contrato pequeno (o custo era arredondado para zero). Agora a diferença de preço vale também nesses casos.
+- Sem mudança no save (continua na versão 26). 361 testes. Simuladores sem mudança relevante (`npm run sim`: passivo 434 → 435, populista 295, responde aos fatos 614).
+
 ## 0.27.0 (07/11/2026)
 - **Etapa 5A, bloco 1 (regras): Elos e semente de risco.** O escândalo deixa de ser sorteio solto e passa a ter origem nas escolhas do governo. **Nada vaza ainda** (o vazamento é da Etapa 5B), e as telas vêm na v0.27.1.
   - **Elo de reputação:** o presidente, os ministros, os ministros do Supremo e os líderes dos partidos ganham um Elo (Bronze, Prata, Ouro, Platina, com 3 divisões cada, e "sob suspeita"). Subir é mais difícil que cair. Ministro com Elo baixo apanha mais da imprensa (desgasta mais rápido); o Elo do indicado ao Supremo pesa na sabatina do Senado.

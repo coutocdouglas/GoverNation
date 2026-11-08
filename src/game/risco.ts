@@ -442,7 +442,8 @@ export function empresasPara(s: GameState, b: Pick<BillDef, 'id' | 'effects' | '
 /** Custo extra (ou economia, se negativo) de contratar esta empresa, em % do PIB ao ano. */
 export const custoEmpresa = (b: Pick<BillDef, 'effects' | 'contrato'>, e: Pick<Empresa, 'preco'>) => {
   const c = contratoDe(b)
-  return c ? round2(c.amount * (e.preco - 1)) : 0
+  // v0.27.1: quatro casas (com duas, a diferença de um contrato pequeno sumia: 0,06 × −8% virava 0).
+  return c ? Math.round(c.amount * (e.preco - 1) * 10000) / 10000 : 0
 }
 const round2 = (x: number) => Math.round(x * 100) / 100
 

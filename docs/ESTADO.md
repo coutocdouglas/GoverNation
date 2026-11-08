@@ -3,17 +3,19 @@
 > **Leia este arquivo primeiro.** Ele diz onde o projeto está e qual é o próximo passo.
 > Atualize-o a cada mudança: seção "Estado atual", "Próximo passo" e uma linha no "Histórico".
 
-**Última atualização:** 07/11/2026 · **Versão publicada:** v0.27.0
+**Última atualização:** 07/11/2026 · **Versão publicada:** v0.27.1
 
 ---
 
 ## Próximo passo
 
-**Etapa 5A, bloco 1 (regras) feito na v0.27.0** (DESIGN.md 27.19; plano em `docs/projeto/plano-etapa-5.pdf`): Elos, risco oculto, rastro do presidente, Controle do Estado, sementes de risco das três fontes (pessoa nomeada, contrato, proposta de setor) mais estatal, cargos e obra, e esquema escondido. Nada vaza ainda. **Próximo: Etapa 5A, bloco 2 (telas, v0.27.1)**: Elo nas fichas e no Painel, pista do rastro, Controle do Estado resumido no Painel, escolha da empresa na leitura do gabinete (custo à vista; nomes pela IA com reserva), cartão da proposta de setor na página inicial (ligar `PROPOSTAS.ativo` em `data/risco.ts`), pista do risco na sabatina e na troca de ministro. Lista completa no fim da seção 27.19. Depois 5B (vazamento, PF e advogado, com o núcleo mínimo da agenda) e 5C (oposição, CPI e inteligência).
+**Etapa 5A fechada** (regras na v0.27.0, DESIGN.md 27.19; telas na v0.27.1, DESIGN.md 27.20; plano em `docs/projeto/plano-etapa-5.pdf`). Na tela: Elo nas fichas, ministérios e Supremo; cartão "Integridade do governo" no Painel; escolha da empresa na leitura do gabinete; proposta de setor ligada (cartão no Painel); pista do risco na troca de ministro e na sabatina. Nada vaza ainda.
 
-Complexidade do bloco 2: **média** · Sonnet nas telas (Opus só se precisar mexer em regra). Pendências do lote A2: aviso "acordo para vencer" na central de pendências; rebalancear o 35% do Senado no playtest.
+**Próximo: Etapa 5B** (vazamento dos esquemas, investigação da PF com provas de 0 a 100, advogado do presidente, delação, núcleo mínimo da agenda). Complexidade **alta** · Opus nas regras, Sonnet nas telas. Antes, vale decidir os itens da Caixa de ideias da 5A (DESIGN.md 27.1): quais medidas geram contrato (hoje até o salário mínimo gera) e os nomes de empresa pela IA (pede save novo).
 
-Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdouglas/GoverNation. Leia CLAUDE.md, docs/ESTADO.md e docs/DESIGN.md (seção 27). Quero fazer a etapa 5A, bloco 2 (telas)."*
+Pendências do lote A2: aviso "acordo para vencer" na central de pendências; rebalancear o 35% do Senado no playtest.
+
+Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdouglas/GoverNation. Leia CLAUDE.md, docs/ESTADO.md e docs/DESIGN.md (seção 27). Quero fazer a etapa 5B."*
 
 **Sugestão (opcional, 1B):** pedir a um Opus uma revisão final dos números da assessoria (`data/assessoria.ts`: `postScale`, `omissoShare`, `fatigueFactor`, `softenMax`; e `data/rua.ts`). O simulador mostra que ficou equilibrado (DESIGN.md 27.4), mas é a primeira etapa balanceada fora do Opus.
 
@@ -28,7 +30,7 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 **Base técnica**
 - App de Windows (Tauri 2 + React + TypeScript). O instalador é gerado pelo GitHub Actions e o jogo se atualiza sozinho, com atualização assinada.
 - O motor do jogo (`src/game/`) fica separado das telas (`src/ui/`). Os números de balanceamento ficam em `src/game/data/`.
-- 360 testes automáticos. Saves antigos são migrados (versão atual do save: 26).
+- 361 testes automáticos. Saves antigos são migrados (versão atual do save: 26).
 
 **Jogabilidade**
 - Mandato de 48 meses (jan/2027 a dez/2030), com o mês em 4 passos: notícias, fato do mês, decisões e encerrar.
@@ -70,7 +72,7 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 - **Supremo profundo, parte 2 (v0.23):** índice "A seu favor" da Corte (0 a 100), que multiplica liminar, vista e projeto travado; precedente de cada julgamento por 24 meses (a favor protege o fundamento; contra o deixa mais arriscado, e a leitura do gabinete avisa); depois da derrubada, seis saídas com o custo à vista (acatar, nova proposta, criticar, **embargos**, **o ministro da área sai**, **descumprir**); **"O Supremo pede você"**: a cada 2 anos, a cadeira de jurista no tribunal eleitoral, com 4 juristas, rigor e preço (o rigor fica guardado para a eleição).
 - **Fase A (v0.24):** medida barrada por inconstitucionalidade (CCJ ou Supremo) agora marca a reputação e derruba a aprovação como qualquer derrota; parecer do ministro da pasta na medida do mês (um por mês por ministro, com texto de reserva sem IA); botão "Atender" nas pendências de cobrança; sem catálogo nem "Outros caminhos" no fato do mês; plenário do Senado com anel único de relação e filtros; acordo da Câmara rende 35% no Senado; **registro de causas** (`src/game/causas.ts`) por baixo; **texto de reserva da IA** (`src/game/reserva.ts`) com o erro real no gasto medido.
 - **Tamanho dos efeitos (v0.26):** ganho de medida nos grupos com curva (pequeno visível, grande com retorno decrescente); lei, LC e PEC que machucam já pesam no envio em quem atingem (aviso na leitura do gabinete, descontado se virar lei); teto por grupo no mês (+6 / −8), com a sobra no mês seguinte.
-- **Elos e semente de risco (v0.27, só regras; telas na v0.27.1):** Elo de reputação (Bronze a Platina, 3 divisões, "sob suspeita") para presidente, ministros, Supremo e líderes, com histerese e crédito; risco oculto de cada pessoa; rastro oculto do presidente; Controle do Estado (0 a 100) com 4 medidas novas; sementes de risco com origem na Ficha (nomeação, contrato com 3 ou 4 empresas, proposta de setor, estatal, cargos, obra) que podem virar esquema escondido. Nada vaza até a 5B.
+- **Elos e semente de risco (v0.27 regras, v0.27.1 telas):** na tela, medalha do Elo nas fichas, ministérios e Supremo; cartão "Integridade do governo" no Painel (Elo, pista do rastro, Controle do Estado, detalhe num clique); escolha da empresa com custo em reais na leitura do gabinete; cartão da proposta de setor (Aceitar ou Recusar, vale ao encerrar o mês); pista do risco na troca de ministro e na sabatina. Elo de reputação (Bronze a Platina, 3 divisões, "sob suspeita") para presidente, ministros, Supremo e líderes, com histerese e crédito; risco oculto de cada pessoa; rastro oculto do presidente; Controle do Estado (0 a 100) com 4 medidas novas; sementes de risco com origem na Ficha (nomeação, contrato com 3 ou 4 empresas, proposta de setor, estatal, cargos, obra) que podem virar esquema escondido. Nada vaza até a 5B.
 - **Logos dos partidos (v0.19.1):** arte do Douglas em `public/logos/`, na posse, no Painel, na Câmara, nas lideranças e no cartão da oposição; número na urna de cada partido.
 - **Retratos:** 110 fotos, cada uma usada por uma pessoa só, e 88 retratos ilustrados (111 a 198) feitos pelo Douglas. 97 rostos livres para personagens novos e para o presidente (18 foram para os chefes de ala na v0.18 e 9 para os líderes de bancada do Senado na v0.21). O presidente escolhe o rosto na posse (41 livres) e 15 retratos ficam reservados para Defesa, povos indígenas, campo e tradições.
 
@@ -78,7 +80,7 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 
 **Onde está cada coisa**
 - `CLAUDE.md`: regras do projeto e quando abrir uma conversa nova.
-- `docs/DESIGN.md`: decisões de desenho, seções 1 a 27 (Fase A em 27.15; Supremo em 24.2, 24.2.1 e 26; como ficou a 4C3 em 26.8; plano novo por etapas na seção 27, com a 1A em 27.3, a 1B em 27.4, a 2 em 27.5, o plano da 2B e da 2C em 27.6, como ficou a 2B em 27.7 e a 2C em 27.8; plano da Etapa 3 em 27.9, como ficou em 27.10 e os ajustes em 27.11; plano da Etapa 4 em 27.12, como ficou a v0.22 em 27.13 e a v0.23 em 27.14; lote A2 em 27.16 a 27.18; Etapa 5A em 27.19).
+- `docs/DESIGN.md`: decisões de desenho, seções 1 a 27 (Fase A em 27.15; Supremo em 24.2, 24.2.1 e 26; como ficou a 4C3 em 26.8; plano novo por etapas na seção 27, com a 1A em 27.3, a 1B em 27.4, a 2 em 27.5, o plano da 2B e da 2C em 27.6, como ficou a 2B em 27.7 e a 2C em 27.8; plano da Etapa 3 em 27.9, como ficou em 27.10 e os ajustes em 27.11; plano da Etapa 4 em 27.12, como ficou a v0.22 em 27.13 e a v0.23 em 27.14; lote A2 em 27.16 a 27.18; Etapa 5A em 27.19 e 27.20).
 - `docs/projeto/plano-etapa-5.pdf`: plano da Etapa 5 (5A, 5B e 5C), exportado do Cowork.
 - `docs/levantamento-video-1.md`: o que o jogo de referência tem e nós não (vídeo 1).
 - `docs/levantamento-congresso.md`: o mesmo para o Congresso, a medida do dia e o Supremo (prints de 31/10), com a proposta da Etapa 2B.
@@ -97,7 +99,7 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 4C. ✅ **4C1** Senado votando (v0.12.0) · ✅ **4C2** Supremo julgando medidas (v0.13.0)
 4C3. ✅ **4C3** Supremo no caminho das medidas e abas (v0.14.0). As etapas 4D, 4E e 4F foram fundidas no plano novo (abaixo).
 
-**Plano novo (DESIGN.md, seção 27):** ✅ **0** a rodada (v0.15) · ✅ **1A** causa e consequência (v0.16) · ✅ **1B** o mês mais vivo (v0.17) · ✅ **2** Câmara e partidos (v0.18) · ✅ **2B** página inicial e fluxo do dia (v0.19) · ✅ **2C** mesa de negociação e base (v0.20) · ✅ **3** Senado (v0.21) · ✅ **4** Supremo profundo (v0.22 e v0.23) · **5** oposição, escândalos e CPI (5A regras na v0.27.0) · **6** vice e governo · **7** estados e governadores · **8** começo, sociedade e fim · **9** arte final
+**Plano novo (DESIGN.md, seção 27):** ✅ **0** a rodada (v0.15) · ✅ **1A** causa e consequência (v0.16) · ✅ **1B** o mês mais vivo (v0.17) · ✅ **2** Câmara e partidos (v0.18) · ✅ **2B** página inicial e fluxo do dia (v0.19) · ✅ **2C** mesa de negociação e base (v0.20) · ✅ **3** Senado (v0.21) · ✅ **4** Supremo profundo (v0.22 e v0.23) · **5** oposição, escândalos e CPI (✅ 5A: regras na v0.27.0, telas na v0.27.1) · **6** vice e governo · **7** estados e governadores · **8** começo, sociedade e fim · **9** arte final
 6. Depois: Senado com poderes próprios (impeachment), imprensa e pesquisas, orçamento anual, ícones próprios
 
 ## Decisões já tomadas (resumo; detalhes no DESIGN.md)
@@ -167,3 +169,4 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 | 07/11/2026 | v0.26.0 | Lote A2, item 2: curva do ganho, "só de mandar já pesa" (lei, LC e PEC) com aviso na leitura, teto por grupo no mês com sobra adiada; absurda barrada −1,3 → −4,5 a −6; decreto bom +0,6 → +0,9; simulador estável; save 25; 334 testes. Ideia do Douglas "medida explosiva" na Caixa de ideias da Etapa 6 |
 | 07/11/2026 | v0.26.1 | Lote A2, item 3: logo do partido no miolo de cada bolinha do mapa do Senado (cor sólida se o arquivo faltar, cada logo carregado uma vez), bolinhas e mapa um pouco maiores; anel e filtros iguais. Fecha o lote A2; 334 testes |
 | 07/11/2026 | v0.27.0 | Etapa 5A, bloco 1 (regras): Elos com histerese e crédito, risco oculto, rastro do presidente, Controle do Estado (4 medidas novas e efeito nas que já existiam), sementes de risco com origem (nomeação, contrato com escolha de empresa, proposta de setor desligada até a tela, estatal, cargos, obra, bancadas estaduais), esquema escondido; ficha da IA com controle e contrato; simulador `sim5a` (3 a 4 esquemas por mandato, 1 grave); save 26; 360 testes. Plano da Etapa 5 em `docs/projeto/` |
+| 07/11/2026 | v0.27.1 | Etapa 5A, bloco 2 (telas): Elo nas fichas, ministérios e Supremo; cartão "Integridade do governo" no Painel (Elo, pista do rastro, Controle do Estado, detalhe num clique); escolha da empresa com custo em reais e previsão do Controle na leitura do gabinete; proposta de setor ligada (cartão no Painel, `MonthPlan.proposta`); pista do risco na troca de ministro e na sabatina; correção do arredondamento do custo da empresa; save sem mudança (26); 361 testes. Fecha a 5A |

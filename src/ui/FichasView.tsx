@@ -13,6 +13,8 @@ import { PartyLogo } from './PartyLogo'
 import { partyBalance } from '../game/base'
 import { BILL_BY_ID } from '../game/data/bills'
 import { GROUP_BY_ID } from '../game/data/groups'
+import { EloOf } from './Elo'
+import { eloContextos } from './eloTexto'
 
 const MONTHS = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez']
 const when = (at: number) => `${MONTHS[at % 12]}/${yearOf(at)}`
@@ -37,6 +39,9 @@ export function FichasView({ state, onChange }: { state: GameState; onChange: (s
   const [sel, setSel] = useState(people[0].name)
   const person = people.find((p) => p.name === sel) ?? people[0]
   const bio = [...(state.bios[person.name] ?? [])].reverse()
+  // Etapa 5A: quem tem Elo hoje (presidente, ministros, Supremo e líderes).
+  const elos = eloContextos(state)
+  const eloSel = elos.get(person.name)
 
   return (
     <div className="pn-grid">
@@ -49,6 +54,7 @@ export function FichasView({ state, onChange }: { state: GameState; onChange: (s
             <div>
               <h2>{person.name}</h2>
               <p className="pn-hint">{person.role}</p>
+              {eloSel && <p style={{ margin: '4px 0' }}><EloOf state={state} name={person.name} ctx={eloSel} /></p>}
               {person.name === state.presidentName && (state.profile?.traits.length || state.profile?.habits.length) ? (
                 <div className="pn-ficha__traits">
                   {[...state.profile.traits, ...state.profile.habits].map((id) => PROFILE_BY_ID[id]).filter(Boolean).map((p) => (
@@ -77,7 +83,7 @@ export function FichasView({ state, onChange }: { state: GameState; onChange: (s
             {people.map((p) => (
               <button key={p.name} className={`pn-person ${p.name === person.name ? 'on' : ''}`} onClick={() => setSel(p.name)}>
                 <Portrait id={p.portrait} color={p.color} size={40} />
-                <span><b>{p.name}</b><small>{p.role}</small></span>
+                <span><b>{p.name}</b><small>{p.role}</small>{elos.has(p.name) && <EloOf state={state} name={p.name} ctx={elos.get(p.name)!} small />}</span>
                 <span className="pn-person__n">{state.bios[p.name]?.length ?? 0}</span>
               </button>
             ))}

@@ -175,8 +175,8 @@ export interface PropostaDef {
 }
 
 export const PROPOSTAS = {
-  /** Liga na v0.27.1, junto com a tela da página inicial (sem tela, a proposta venceria sem o jogador ver). */
-  ativo: false,
+  /** Ligada na v0.27.1, junto com o cartão no Painel (sem tela, a proposta venceria sem o jogador ver). */
+  ativo: true,
   /** No máximo uma a cada N meses, e nunca no mês de um fato grave (importância ≥ graveDesde). */
   intervalo: 3,
   graveDesde: 3,

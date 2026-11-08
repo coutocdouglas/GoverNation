@@ -7,7 +7,7 @@ import { nominationLean } from './supremo'
 import { NOMINEES, SUPREMO } from './data/supremo'
 import { BILLS, BILL_BY_ID } from './data/bills'
 import { GROUPS } from './data/groups'
-import { CONTROLE, ELO, PROPOSTAS, SEMENTE } from './data/risco'
+import { CONTRATO, CONTROLE, ELO, PROPOSTAS, SEMENTE } from './data/risco'
 import { causasDe } from './causas'
 import { absMonth } from './memory'
 import {
@@ -234,6 +234,9 @@ describe('5A: contrato e licitação', () => {
     expect(custoEmpresa(obra, a.find((e) => e.perfil === 'segura')!)).toBeGreaterThan(0)
     expect(custoEmpresa(obra, a.find((e) => e.perfil === 'barata')!)).toBeLessThan(0)
     expect(custoEmpresa(obra, a[0])).toBe(0)
+    // v0.27.1: contrato pequeno também mostra a economia da mais barata (antes o arredondamento zerava).
+    const peq = BILL_BY_ID.saneamentoObras
+    expect(custoEmpresa(peq, { preco: CONTRATO.perfis.barata.preco })).toBeLessThan(0)
     // Medida sem gasto não contrata ninguém.
     expect(empresasPara(s, BILL_BY_ID.fortalecerCgu)).toEqual([])
   })
@@ -284,12 +287,29 @@ describe('5A: proposta de setor', () => {
     return s
   }
 
-  it('fica desligada até a tela chegar (v0.27.1)', () => {
+  it('ligada na v0.27.1 (com o cartão no Painel); desligada, não sorteia', () => {
+    expect(PROPOSTAS.ativo).toBe(true)
     const s = fresh()
     s.event = null
-    sortearProposta(s, fixed(0))
-    expect(PROPOSTAS.ativo).toBe(false)
+    sortearProposta(s, fixed(0), false)
     expect(propostaAtual(s)).toBeNull()
+    sortearProposta(s, fixed(0))
+    expect(propostaAtual(s)).not.toBeNull()
+  })
+
+  it('a resposta vai no plano do mês: aceitar sobe o rastro; recusar não; sem proposta, o plano é recusado', () => {
+    const a = comProposta()
+    const def = propostaAtual(a)!
+    const na = advanceMonth(a, [], { proposta: 'aceitar' })
+    expect(riscoOf(na).rastro).toBeGreaterThanOrEqual(def.rastro)
+    expect(na.reputation.record.some((e) => e.text.includes('Aceitou a proposta'))).toBe(true)
+    const r = comProposta()
+    const nr = advanceMonth(r, [], { proposta: 'recusar' })
+    expect(riscoOf(nr).rastro).toBe(0)
+    expect(nr.reputation.record.some((e) => e.text.includes('Recusou a proposta'))).toBe(true)
+    const vazio = fresh()
+    riscoOf(vazio).proposta = null
+    expect(() => advanceMonth(vazio, [], { proposta: 'aceitar' })).toThrow(/Proposta de setor/)
   })
 
   it('no máximo uma a cada 3 meses e nunca com fato grave', () => {
