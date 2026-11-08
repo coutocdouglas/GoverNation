@@ -119,6 +119,17 @@ export const CAST: CastMember[] = [
   { name: 'Heráclito Dantas', role: 'Jurista indicável ao tribunal eleitoral', gender: 'm', portrait: 198, alt: 16 },
   { name: 'Marisa Fontoura', role: 'Jurista indicável ao tribunal eleitoral', gender: 'f', portrait: 184, alt: 23 },
   { name: 'Gilberto Sá', role: 'Jurista indicável ao tribunal eleitoral', gender: 'm', portrait: 177, alt: 16 },
+  // Etapa 5B (v0.28, data/caso.ts): advogados do presidente e técnicos de carreira que assumem pasta como interinos.
+  { name: 'Dr. Álvaro Montenegro', role: 'Advogado criminalista', gender: 'm', portrait: 133, alt: 16 },
+  { name: 'Dra. Mirela Sanches', role: 'Advogada criminalista', gender: 'f', portrait: 134, alt: 23 },
+  { name: 'Dr. Osmar Paiva', role: 'Advogado', gender: 'm', portrait: 136, alt: 16 },
+  { name: 'Dra. Renata Lacerda', role: 'Advogada', gender: 'f', portrait: 141, alt: 23 },
+  { name: 'Otacílio Rangel', role: 'Técnico de carreira (ministro interino)', gender: 'm', portrait: 138, alt: 16 },
+  { name: 'Cláudia Seixas', role: 'Técnica de carreira (ministra interina)', gender: 'f', portrait: 142, alt: 23 },
+  { name: 'Teodoro Lins', role: 'Técnico de carreira (ministro interino)', gender: 'm', portrait: 139, alt: 16 },
+  { name: 'Patrícia Moraes Leal', role: 'Técnica de carreira (ministra interina)', gender: 'f', portrait: 144, alt: 23 },
+  { name: 'Valter Guimarães', role: 'Técnico de carreira (ministro interino)', gender: 'm', portrait: 140, alt: 16 },
+  { name: 'Débora Sarmento', role: 'Técnica de carreira (ministra interina)', gender: 'f', portrait: 145, alt: 23 },
 ]
 
 /**

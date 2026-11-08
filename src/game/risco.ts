@@ -21,6 +21,7 @@ import { MINISTER_BY_AREA, type AreaId } from './data/ministers'
 import { NOMINEE_BY_PARTY } from './data/camara'
 import { PARTIES, PARTY_BY_ID } from './data/parties'
 import { CONTRATO, CONTROLE, ELO, ELO_TIERS, PASTA_RISCO, PROPOSTAS, RASTRO, RISCO_PESSOA, SEMENTE, type FonteRisco, type PerfilEmpresa, type PropostaDef } from './data/risco'
+import { ADVOGADOS, NOMES_EMPRESA } from './data/caso'
 import { registrarOrigemRisco } from './causas'
 import { ministerOf } from './camara'
 import { leaderOf } from './partidos'
@@ -33,7 +34,7 @@ import type { BillId, Economy, GameState, GroupId, Headline, Impulse, PartyId } 
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
-export type PapelPessoa = 'ministro' | 'supremo' | 'lider' | 'presidente'
+export type PapelPessoa = 'ministro' | 'supremo' | 'lider' | 'presidente' | 'advogado'
 
 export interface Pessoa {
   papel: PapelPessoa
@@ -74,6 +75,8 @@ export interface SementeRisco {
   bill?: BillId
   party?: PartyId
   area?: AreaId
+  /** Etapa 5B: o esquema vazou e virou este caso (não vaza de novo). */
+  caso?: string
   /** A semente virou esquema (escondido): quando e com que gravidade (0 a 100, cresce sem controle). */
   esquema?: { at: number; gravidade: number }
 }
@@ -117,6 +120,8 @@ export interface Licitacao {
   bill: BillId
   /** Mês absoluto em que abriu. */
   at: number
+  /** Etapa 5B: os nomes já vieram da IA (ou a IA já foi tentada e ficaram os de reserva). */
+  nomeada?: boolean
   /** As empresas na disputa (fixas desde a abertura; a primeira é a de sempre). */
   empresas: Empresa[]
 }
@@ -263,6 +268,9 @@ export function pessoasAtuais(s: GameState): { name: string; ctx: ContextoPessoa
   }
   for (const j of s.supremo?.justices ?? []) out.push({ name: justiceInfo(j).name, ctx: { papel: 'supremo' } })
   for (const p of PARTIES) if (s.congress?.parties[p.id]) out.push({ name: leaderOf(s, p.id).name, ctx: { papel: 'lider', party: p.id } })
+  // Etapa 5B: o advogado do presidente também tem Elo.
+  const adv = s.investigacao ? ADVOGADOS.find((a) => a.id === s.investigacao.advogado) : undefined
+  if (adv) out.push({ name: adv.name, ctx: { papel: 'advogado' } })
   return out
 }
 
@@ -701,3 +709,33 @@ export function stepRisco(s: GameState, rng: Rng, impulses: Record<GroupId, Impu
 
 /** Esquemas escondidos agora (para o simulador e, na 5B, o vazamento). */
 export const esquemasAtivos = (s: GameState) => (s.risco?.sementes ?? []).filter((x) => x.esquema)
+
+// ─── Nomes das empresas (Etapa 5B) ────────────────────────────────────────────
+
+/** Confere um nome de empresa vindo da IA: tamanho, palavras proibidas (marcas e órgãos reais). Null se recusado. */
+export function limparNomeEmpresa(nome: string): string | null {
+  const n = nome.replace(/\s+/g, ' ').replace(/["“”]/g, '').trim()
+  if (n.length < NOMES_EMPRESA.min || n.length > NOMES_EMPRESA.max) return null
+  const low = n.toLowerCase()
+  if (NOMES_EMPRESA.proibidas.some((p) => low.includes(p))) return null
+  return n
+}
+
+/**
+ * Guarda os nomes da IA nas empresas de uma licitação aberta (na ordem das empresas). Recusa tudo se algum nome
+ * não passar, se houver repetição ou se o nome já for de outra empresa do mandato: ficam os nomes de reserva.
+ * Marca a licitação como nomeada nos dois casos (a IA não é chamada de novo). Devolve um estado novo.
+ */
+export function nomearEmpresas(prev: GameState, bill: BillId, nomes: string[]): { ok: boolean; motivo?: string; state: GameState } {
+  const s = structuredClone(prev)
+  const lic = riscoOf(s).licitacoes?.find((l) => l.bill === bill)
+  if (!lic) return { ok: false, motivo: 'licitação não está aberta', state: prev }
+  lic.nomeada = true
+  const limpos = nomes.slice(0, lic.empresas.length).map(limparNomeEmpresa)
+  if (limpos.length < lic.empresas.length || limpos.some((x) => !x)) return { ok: false, motivo: 'nome recusado pelo motor', state: s }
+  const usados = new Set([...(s.risco.sementes ?? []).map((x) => x.quem.toLowerCase()), ...Object.keys(s.bios ?? {}).map((x) => x.toLowerCase())])
+  const set = new Set(limpos.map((x) => x!.toLowerCase()))
+  if (set.size !== limpos.length || [...set].some((x) => usados.has(x))) return { ok: false, motivo: 'nome repetido', state: s }
+  lic.empresas.forEach((e, i) => { e.nome = limpos[i]! })
+  return { ok: true, state: s }
+}

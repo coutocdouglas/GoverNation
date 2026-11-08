@@ -1,5 +1,18 @@
 # Novidades
 
+## 0.28.0 (08/11/2026)
+- **Etapa 5B, bloco 1 (regras): vazamento, Polícia Federal e advogado do presidente.** As regras estão prontas, mas **o vazamento fica desligado até a v0.28.1**, que traz as telas. Sem tela, o escândalo apareceria sem você poder responder.
+  - **Vazamento:** só vaza o que existe, um esquema escondido nascido de uma escolha registrada na Ficha. A chance do mês sobe com a gravidade dos esquemas, a exposição a escândalo e a força da oposição; um Controle do Estado alto acha mais rápido o que existe. No máximo 2 casos abertos e 4 meses entre um vazamento e outro.
+  - **Investigação da PF:** cada caso tem provas de 0 a 100 que sobem todo mês. Termina em denúncia (o alvo fica "sob suspeita" e, se for ministro, sai e assume um interino), em arquivo por falta de provas ou, se chegar ao presidente com rastro alto, no Supremo, que decide pela força das provas e pelo índice "A seu favor".
+  - **Suas saídas (uma por caso por mês):** trocar a diretoria da PF, soltar a mão do alvo, entregar toda a documentação (estando limpo, dá imagem de honestidade), entregar com o advogado delimitando o escopo ou "limpando" a sua parte (se descobrirem, vira obstrução) e exonerar o ministro. Deixar passar continua valendo.
+  - **Delação:** quem sabe de algo seu pode delatar, mais ainda se você soltou a mão dele.
+  - **Advogado do presidente:** um de 4 personagens novos, sorteado no começo, com eficiência, estilo, lealdade e Elo. Avisa o risco antes de aceitar uma proposta e prepara a entrega de documentos. Trocar é possível a cada 6 meses.
+  - **Agenda do presidente:** 2 espaços por mês. Trocar a PF, entregar documentos, exonerar e trocar de advogado gastam espaço.
+  - **Nomes das empresas pela IA:** com a IA ligada, as empresas da licitação ganham nomes próprios, guardados no save. Sem IA, valem os nomes da lista de reserva.
+- Saiu o sorteio solto "Escândalo de indicações políticas". Todo escândalo agora tem origem na Ficha.
+- 10 personagens novos no elenco, com retrato próprio: 4 advogados e 6 técnicos de carreira que assumem pastas como interinos.
+- **Save versão 28:** mandatos salvos ganham a investigação vazia e o advogado sorteado. 391 testes. Simulador novo (`npm run sim5b`): 3,1 a 4,5 casos por mandato, 0,6 a 1,3 graves, nunca mais de 2 abertos, todos com origem na Ficha.
+
 ## 0.27.2 (07/11/2026)
 - **Licitação depois que a medida vale (decisão do Douglas).** A empresa que executa a obra não é mais escolhida na leitura do gabinete.
   - Quando a medida passa a valer (decreto e MP na hora; lei e PEC quando passam no Congresso), abre uma **licitação** nas Pendências: "🏗️ Licitação: …", com o botão **Escolher**.

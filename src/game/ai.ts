@@ -316,3 +316,28 @@ export function parseShortText(raw: string, max = 700): string | null {
   const t = raw.replace(/```[\s\S]*?```/g, '').replace(/^\s*[{[][\s\S]*$/, '').trim()
   return t ? t.slice(0, max) : null
 }
+
+/**
+ * Etapa 5B: nomes fictícios para as empresas de uma licitação (a IA só nomeia; perfil, preço e risco são do motor).
+ * Pede um nome por perfil, na ordem dada.
+ */
+export function empresaNamesPrompt(state: GameState, billId: BillId, perfis: { rotulo: string; desc: string }[]): AiRequest {
+  const b = BILL_BY_ID[billId]
+  return {
+    system: [
+      'Você nomeia empresas fictícias num jogo de simulação política. Tudo é fictício: nunca use nomes de empresas, grupos, bancos ou órgãos reais, nem sobrenomes de pessoas famosas.',
+      'Dê um nome curto e verossímil (2 a 4 palavras, em português do Brasil) para cada empresa, combinando com o tipo de obra ou compra e com o perfil dela.',
+      `Responda só com JSON: {"nomes":["...", "..."]}, com exatamente ${perfis.length} nomes diferentes, na ordem dos perfis.`,
+    ].join('\n'),
+    user: `Medida: ${b?.name ?? billId}. ${b?.summary ?? ''}\nPerfis, na ordem:\n${perfis.map((p, i) => `${i + 1}. ${p.rotulo}: ${p.desc}`).join('\n')}\n(Jogo de ${state.presidentName}.)`,
+    maxTokens: 200,
+  }
+}
+
+/** Lê os nomes da IA (o motor ainda confere tamanho, repetição e palavras proibidas). */
+export function parseEmpresaNames(raw: string, n: number): string[] | null {
+  const j = extractJson(raw) as { nomes?: unknown } | null
+  if (!j || !Array.isArray(j.nomes) || j.nomes.length < n) return null
+  const nomes = j.nomes.slice(0, n).map((x) => cleanText(x, 60))
+  return nomes.every(Boolean) ? nomes : null
+}

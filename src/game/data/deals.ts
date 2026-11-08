@@ -65,9 +65,7 @@ export const DEALS = {
   promiseMonths: 3,
   promiseKept: 5,
   promiseBroken: -20,
-  /** Escândalo: chance por mês = risco / scandalOdds; derruba a aprovação de todos os grupos. */
-  scandalOdds: 260,
-  scandalHit: -2.5,
+  /** Etapa 5B: exposição a escândalo (0 a 100) só pesa na chance de vazar um esquema (data/caso.ts). Some um pouco por mês (decay) e, quando algo vaza, cai para a fração scandalAfter. */
   scandalDecay: 0.96,
   scandalAfter: 0.4,
   /** Fatias de bancada que já votam com o governo: não há preço. */

@@ -43,6 +43,8 @@ import { applyAssessoria, lostCreditValue, softenEffects, statementBlockedReason
 import { buildMeanwhile } from './entretanto'
 import { driftAlas, internalElections, leaderOf, openMesa, runMesa, speakerOf } from './partidos'
 import { TALK } from './data/negociacao'
+import { acaoCasoBlockedReason, advogadoBlockedReason, agendaUsada, aplicarDecisoes, initialInvestigacao, stepCasos, trocarAdvogado, type DecisaoCaso } from './caso'
+import { AGENDA } from './data/caso'
 import { initialRisco, posseRisco, propostaAtual, propostaBlockedReason, responderProposta, sortearProposta, stepRisco, vencerLicitacoes } from './risco'
 
 import type { ActionId, Deal, Articulation, BillId, Cause, GameState, GroupId, Headline, Impulse, MonthReport, PartyId, SanctionItem, Snapshot, VetoItem, VoteRecord } from './types'
@@ -90,7 +92,8 @@ export function newGame(
   const rngState = seed ?? Math.floor(Math.random() * 2 ** 31)
   const bonus = DIFFICULTY[difficulty].approvalBonus
   const state: GameState = {
-    saveVersion: 27,
+    saveVersion: 28,
+    investigacao: undefined as unknown as GameState['investigacao'],
     risco: initialRisco(difficulty),
     month: 0,
     presidentName: presidentName.trim() || 'Presidente',
@@ -133,6 +136,8 @@ export function newGame(
   state.ministries = initialMinistries(state)
   state.reputation = initialReputation()
   // Etapa 5A: o ministério da posse e os líderes ganham ficha (Elo e risco oculto); ministro de risco planta semente.
+  // Etapa 5B: o advogado do presidente é sorteado (fixo pela semente) e ganha ficha.
+  state.investigacao = initialInvestigacao(state.avatarSeed)
   posseRisco(state)
   syncCustomBills(state)
   for (const b of promiseSideBoosts(promises, playerParty)) {
@@ -222,6 +227,10 @@ export interface MonthPlan {
   street?: string
   /** Etapa 5A (v0.27.1): resposta à proposta de setor do mês (sem resposta, vence como recusa). */
   proposta?: 'aceitar' | 'recusar'
+  /** Etapa 5B (v0.28): saídas escolhidas para os casos abertos (uma por caso; ignorar é não escolher). Gastam a agenda. */
+  casos?: DecisaoCaso[]
+  /** Etapa 5B: trocar o advogado do presidente (id de data/caso.ts). Gasta a agenda. */
+  advogado?: string
 }
 
 /** Ficha do que foi aprovado e espera sanção ou veto (pauta-bomba inteira ou o jabuti enxertado). */
@@ -334,6 +343,17 @@ export function validatePlan(s: GameState, plan: MonthPlan): string | null {
   if (plan.ministry) {
     const r = ministryBlockedReason(s, plan.ministry)
     if (r) return `Ministério: ${r}`
+  }
+  // Etapa 5B: saídas dos casos e troca de advogado, dentro do núcleo mínimo da agenda.
+  if (agendaUsada(plan) > AGENDA.espacos) return `A agenda do presidente tem ${AGENDA.espacos} espaços por mês.`
+  for (const d of plan.casos ?? []) {
+    const r = acaoCasoBlockedReason(s, d.caso, d.acao)
+    if (r) return `Caso: ${r}`
+  }
+  if (new Set((plan.casos ?? []).map((d) => d.caso)).size !== (plan.casos ?? []).length) return 'Uma decisão por caso por mês.'
+  if (plan.advogado) {
+    const r = advogadoBlockedReason(s, plan.advogado)
+    if (r) return `Advogado: ${r}`
   }
   if (plan.proposta) {
     const r = propostaBlockedReason(s)
@@ -573,15 +593,10 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
       addBio(s, leaderOf(s, pr.party).name, `Rompeu com o governo depois de uma promessa não cumprida (“${BILL_BY_ID[pr.bill].name}”).`)
     }
   }
-  let scandalHit = false
-  if (c.scandal > 0 && rng.next() < c.scandal / DEALS.scandalOdds) {
-    scandalHit = true
-    for (const g of GROUPS) impulses[g.id].push({ label: 'Escândalo de indicações políticas', value: DEALS.scandalHit })
-    headlines.push({ text: 'Escândalo: indicados políticos em estatais viram alvo de investigação', tone: 'bad' })
-    addChronicle(s, `Escândalo de indicações no governo ${s.presidentName} (${PARTY_BY_ID[s.playerParty].sigla})`, 'bad')
-    addBio(s, s.presidentName, 'Enfrentou um escândalo de indicações políticas.')
-    c.scandal *= DEALS.scandalAfter
-  }
+  // Etapa 5B (decisão do Douglas, 08/11/2026): saiu o sorteio solto "Escândalo de indicações políticas". Todo
+  // escândalo agora vem de um esquema com origem na Ficha (stepCasos, no passo 1i); a exposição só pesa na chance
+  // de vazar. O sorteio continua consumido aqui para não mudar a sequência do resto do mês.
+  if (c.scandal > 0) rng.next()
   c.scandal *= DEALS.scandalDecay
   // Etapa 2C: pactos que vencem e bancadas grandes que pedem mais.
   stepBase(s, headlines)
@@ -825,6 +840,15 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
   // v0.27.2: licitação sem escolha no prazo assina com a empresa de sempre; a de medida que caiu some.
   vencerLicitacoes(s, e, headlines)
   stepRisco(s, new Rng((absMonth(s) * 69069) ^ s.rngState ^ 0x5a17e5), impulses, headlines)
+  // 1j. Etapa 5B: as saídas dos casos e a troca de advogado (agenda), a PF junta provas, desfechos e o vazamento.
+  const rngCaso = new Rng((absMonth(s) * 48271) ^ s.rngState ^ 0xca5e5b)
+  actionConfidence += aplicarDecisoes(s, plan.casos ?? [], rngCaso, impulses, headlines, taken)
+  if (plan.advogado) trocarAdvogado(s, plan.advogado, headlines, taken)
+  const casos = stepCasos(s, rngCaso, impulses, headlines)
+  actionConfidence += casos.confidence
+  const scandalHit = !!casos.vazou
+  // O que vazou deixa de ser exposição: a imprensa já publicou.
+  if (scandalHit) c.scandal *= DEALS.scandalAfter
 
   // 2. Copom (antes da economia andar, com os dados do mês anterior)
   const selicCauses: Cause[] = []

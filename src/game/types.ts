@@ -144,7 +144,11 @@ import type { ReputationState } from './reputacao'
 import type { RiscoState } from './risco'
 
 export interface GameState {
-  saveVersion: 27
+  saveVersion: 28
+  /** Etapa 5B (v0.28): casos vazados, investigação da PF, advogado do presidente. Ver caso.ts. */
+  investigacao: import('./caso').InvestigacaoState
+  /** Etapa 5B (v0.28): pastas com ministro interino (técnico de carreira), depois de exoneração ou denúncia. */
+  interinos?: Partial<Record<import('./data/ministers').AreaId, string>>
   /** Etapa 5A (v0.27): Controle do Estado, rastro do presidente (oculto), fichas das pessoas (Elo e risco), sementes de risco. Ver risco.ts. */
   risco: RiscoState
   /** v0.26: efeito de medidas que passou do teto do mês num grupo e entra no mês seguinte (ganho > 0, perda < 0). */

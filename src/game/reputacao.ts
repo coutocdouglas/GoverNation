@@ -11,7 +11,6 @@ import { MARKS, MARK_BY_ID, REPUTACAO, type MarkId } from './data/marks'
 import { EVENT_BY_ID } from './data/events'
 import { BILL_BY_ID } from './data/bills'
 import { GROUPS } from './data/groups'
-import { DEALS } from './data/deals'
 import { absMonth } from './memory'
 import type { Rng } from './rng'
 import type { BillDef } from './data/bills'
@@ -197,5 +196,3 @@ export function maybeCloseChapter(s: GameState, approvalNow: number): Chapter | 
   return ch
 }
 
-/** Exposição a escândalo: chance de algo vazar no fechamento deste mês (a mesma conta do motor). */
-export const leakChance = (s: Pick<GameState, 'congress'>) => Math.min(1, s.congress.scandal / DEALS.scandalOdds)

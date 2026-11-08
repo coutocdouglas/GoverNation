@@ -36,7 +36,8 @@ describe('mandato completo', () => {
         expect(h.approval).toBeLessThan(85)
       }
     }
-  })
+    // 20 mandatos inteiros: sozinho leva uns 3 s; com a suíte em paralelo passava dos 5 s do limite padrão.
+  }, 20_000)
 
   it('é reproduzível com a mesma semente', () => {
     expect(play(42).history).toEqual(play(42).history)

@@ -3,25 +3,25 @@
 > **Leia este arquivo primeiro.** Ele diz onde o projeto está e qual é o próximo passo.
 > Atualize-o a cada mudança: seção "Estado atual", "Próximo passo" e uma linha no "Histórico".
 
-**Última atualização:** 07/11/2026 · **Versão publicada:** v0.27.2
+**Última atualização:** 08/11/2026 · **Versão publicada:** v0.28.0
 
 ---
 
 ## Próximo passo
 
-**Etapa 5A fechada** (regras na v0.27.0, DESIGN.md 27.19; telas na v0.27.1, DESIGN.md 27.20; licitação na v0.27.2, DESIGN.md 27.21; plano em `docs/projeto/plano-etapa-5.pdf`). Na tela: Elo nas fichas, ministérios e Supremo; cartão "Integridade do governo" no Painel; licitação nas Pendências quando a medida com obra passa a valer (janela para escolher a empresa, prazo até o fim do mês seguinte); proposta de setor ligada (cartão no Painel); pista do risco na troca de ministro e na sabatina. Nada vaza ainda.
+**Etapa 5B, bloco 1 (regras) feito na v0.28.0** (DESIGN.md 27.22): vazamento, investigação da PF (provas de 0 a 100, solidez, denúncia, arquivo), saídas do presidente (trocar a PF, soltar a mão, entregar tudo, delimitar o escopo, "limpar", exonerar com interino), delação, Supremo para o caso do presidente, advogado (4 personagens, sorteado), agenda de 2 espaços e nomes das empresas pela IA com reserva. Saiu o sorteio solto de escândalo. **O vazamento está desligado (`VAZAMENTO.ativo = false`) até as telas**, para ninguém sofrer um caso sem poder agir.
 
-**Próximo: Etapa 5B** (vazamento dos esquemas, investigação da PF com provas de 0 a 100, advogado do presidente, delação, núcleo mínimo da agenda). Complexidade **alta** · Opus nas regras, Sonnet nas telas. Na 5B entram também os nomes das empresas escritos pela IA (decisão do Douglas, guardados no save).
+**Próximo: Etapa 5B, bloco 2 (telas, v0.28.1).** Complexidade **média** · **Sonnet**. Ligar `VAZAMENTO.ativo`; faixa "chance de algo vazar" no cartão Integridade; cartão do caso (provas, pista, origem, Agir com as saídas e o custo à vista, ou Deixar passar) e pendência; contador da agenda; cartão do advogado (perfil, Elo, trocar) e parecer dele na proposta de setor; interino na tela de Ministérios; `askEmpresaNames` ao abrir a licitação. Decidir com o Douglas se o caso aparece como fato do mês ou como cartão próprio (Caixa de ideias da 5B). A lista completa está no fim da seção 27.22 do DESIGN.md. Depois disso, partida no navegador e a Etapa 5B fecha.
 
 Pendências do lote A2: aviso "acordo para vencer" na central de pendências; rebalancear o 35% do Senado no playtest.
 
-Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdouglas/GoverNation. Leia CLAUDE.md, docs/ESTADO.md e docs/DESIGN.md (seção 27). Quero fazer a etapa 5B."*
+Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdouglas/GoverNation. Leia CLAUDE.md, docs/ESTADO.md e docs/DESIGN.md (seção 27). Quero fazer a etapa 5B, bloco 2 (telas)."*
 
 **Sugestão (opcional, 1B):** pedir a um Opus uma revisão final dos números da assessoria (`data/assessoria.ts`: `postScale`, `omissoShare`, `fatigueFactor`, `softenMax`; e `data/rua.ts`). O simulador mostra que ficou equilibrado (DESIGN.md 27.4), mas é a primeira etapa balanceada fora do Opus.
 
 **Material de campanha guardado** (para a Etapa 8): `arte/campanha/` (kit por partido, caminhadas, editor de cartazes; ver o LEIAME).
 
-**Pendência do Douglas:** mandar as ilustrações dos slots (`public/art/LEIAME.md`) quando quiser. Retratos: 198 no total, 97 livres; para gerar provisórios de quem ainda não tem rosto, `scripts/retratos-provisorios.py` (sai em `scripts/retratos-provisorios/`, a partir do 199).
+**Pendência do Douglas:** mandar as ilustrações dos slots (`public/art/LEIAME.md`) quando quiser. Retratos: 198 no total, 87 livres; para gerar provisórios de quem ainda não tem rosto, `scripts/retratos-provisorios.py` (sai em `scripts/retratos-provisorios/`, a partir do 199).
 
 ---
 
@@ -30,7 +30,7 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 **Base técnica**
 - App de Windows (Tauri 2 + React + TypeScript). O instalador é gerado pelo GitHub Actions e o jogo se atualiza sozinho, com atualização assinada.
 - O motor do jogo (`src/game/`) fica separado das telas (`src/ui/`). Os números de balanceamento ficam em `src/game/data/`.
-- 364 testes automáticos. Saves antigos são migrados (versão atual do save: 27).
+- 391 testes automáticos. Saves antigos são migrados (versão atual do save: 28).
 
 **Jogabilidade**
 - Mandato de 48 meses (jan/2027 a dez/2030), com o mês em 4 passos: notícias, fato do mês, decisões e encerrar.
@@ -73,8 +73,9 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 - **Fase A (v0.24):** medida barrada por inconstitucionalidade (CCJ ou Supremo) agora marca a reputação e derruba a aprovação como qualquer derrota; parecer do ministro da pasta na medida do mês (um por mês por ministro, com texto de reserva sem IA); botão "Atender" nas pendências de cobrança; sem catálogo nem "Outros caminhos" no fato do mês; plenário do Senado com anel único de relação e filtros; acordo da Câmara rende 35% no Senado; **registro de causas** (`src/game/causas.ts`) por baixo; **texto de reserva da IA** (`src/game/reserva.ts`) com o erro real no gasto medido.
 - **Tamanho dos efeitos (v0.26):** ganho de medida nos grupos com curva (pequeno visível, grande com retorno decrescente); lei, LC e PEC que machucam já pesam no envio em quem atingem (aviso na leitura do gabinete, descontado se virar lei); teto por grupo no mês (+6 / −8), com a sobra no mês seguinte.
 - **Elos e semente de risco (v0.27 regras, v0.27.1 telas):** na tela, medalha do Elo nas fichas, ministérios e Supremo; cartão "Integridade do governo" no Painel (Elo, pista do rastro, Controle do Estado, detalhe num clique); licitação nas Pendências com janela para escolher a empresa (custo em reais); cartão da proposta de setor (Aceitar ou Recusar, vale ao encerrar o mês); pista do risco na troca de ministro e na sabatina. Elo de reputação (Bronze a Platina, 3 divisões, "sob suspeita") para presidente, ministros, Supremo e líderes, com histerese e crédito; risco oculto de cada pessoa; rastro oculto do presidente; Controle do Estado (0 a 100) com 4 medidas novas; sementes de risco com origem na Ficha (nomeação, contrato com 3 ou 4 empresas, proposta de setor, estatal, cargos, obra) que podem virar esquema escondido. Nada vaza até a 5B.
+- **Vazamento, PF e advogado (v0.28.0, regras; vazamento desligado até as telas da v0.28.1):** esquema escondido vaza (chance pela gravidade, exposição, oposição e Controle do Estado; no máximo 2 casos abertos, 4 meses entre vazamentos); PF junta provas de 0 a 100 até a denúncia (alvo "sob suspeita", ministro sai e assume um interino) ou o arquivo; saídas do presidente (trocar a PF, soltar a mão, entregar tudo, delimitar o escopo ou "limpar" com o advogado, exonerar), uma por caso por mês; delação; caso do presidente com rastro alto sobe ao Supremo; advogado sorteado (4 personagens) com parecer e chances em faixas; agenda de 2 espaços; nomes das empresas pela IA com reserva. Saiu o sorteio solto de escândalo.
 - **Logos dos partidos (v0.19.1):** arte do Douglas em `public/logos/`, na posse, no Painel, na Câmara, nas lideranças e no cartão da oposição; número na urna de cada partido.
-- **Retratos:** 110 fotos, cada uma usada por uma pessoa só, e 88 retratos ilustrados (111 a 198) feitos pelo Douglas. 97 rostos livres para personagens novos e para o presidente (18 foram para os chefes de ala na v0.18 e 9 para os líderes de bancada do Senado na v0.21). O presidente escolhe o rosto na posse (41 livres) e 15 retratos ficam reservados para Defesa, povos indígenas, campo e tradições.
+- **Retratos:** 110 fotos, cada uma usada por uma pessoa só, e 88 retratos ilustrados (111 a 198) feitos pelo Douglas. 87 rostos livres para personagens novos e para o presidente (10 foram para os advogados e interinos da 5B na v0.28; 18 foram para os chefes de ala na v0.18 e 9 para os líderes de bancada do Senado na v0.21). O presidente escolhe o rosto na posse (41 livres) e 15 retratos ficam reservados para Defesa, povos indígenas, campo e tradições.
 
 **Telas:** Posse em 3 passos, Painel (com cara de jogo, animações, plantão de notícias, fato do mês em destaque, central de pendências, cartões de Oposição, Promessas e Supremo), Governo com quatro abas: **Câmara** (mesa de sanção, presidente da Câmara, pauta com a chance nas duas casas, partidos e articulação, frentes, leis com reação), **Senado** (casa, presidente, como está hoje, bancadas por estado, líderes, pauta e votações), **Supremo** (ministros, ações, liminares, projetos travados, consultas, decisões, vaga) e **Ministérios** (desgaste, meta e reforma), e Fichas. Nação, Economia, Diplomacia, Programas e Vida pessoal aparecem bloqueadas.
 
@@ -171,3 +172,4 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 | 07/11/2026 | v0.27.0 | Etapa 5A, bloco 1 (regras): Elos com histerese e crédito, risco oculto, rastro do presidente, Controle do Estado (4 medidas novas e efeito nas que já existiam), sementes de risco com origem (nomeação, contrato com escolha de empresa, proposta de setor desligada até a tela, estatal, cargos, obra, bancadas estaduais), esquema escondido; ficha da IA com controle e contrato; simulador `sim5a` (3 a 4 esquemas por mandato, 1 grave); save 26; 360 testes. Plano da Etapa 5 em `docs/projeto/` |
 | 07/11/2026 | v0.27.1 | Etapa 5A, bloco 2 (telas): Elo nas fichas, ministérios e Supremo; cartão "Integridade do governo" no Painel (Elo, pista do rastro, Controle do Estado, detalhe num clique); escolha da empresa com custo em reais e previsão do Controle na leitura do gabinete; proposta de setor ligada (cartão no Painel, `MonthPlan.proposta`); pista do risco na troca de ministro e na sabatina; correção do arredondamento do custo da empresa; save sem mudança (26); 361 testes. Fecha a 5A |
 | 07/11/2026 | v0.27.2 | Licitação depois do vigor (decisão do Douglas): a medida com obra abre uma licitação nas Pendências quando passa a valer, com janela para escolher a empresa (custo no contrato inteiro) e prazo até o fim do mês seguinte (sem escolha, a de sempre); só obra ou compra de verdade tem licitação (saem salário mínimo, pisos, seguro-desemprego e outras); a Ficha registra todo contrato; save 27; 364 testes |
+| 08/11/2026 | v0.28.0 | Etapa 5B, bloco 1 (regras): vazamento (desligado até as telas), investigação da PF com provas e solidez, saídas do presidente, delação, Supremo para o caso do presidente, advogado do presidente, agenda de 2 espaços, interinos, nomes das empresas pela IA; saiu o sorteio solto de escândalo; save 28; `npm run sim5b` (3,1 a 4,5 casos por mandato) |

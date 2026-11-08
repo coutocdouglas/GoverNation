@@ -116,7 +116,7 @@ export const SEMENTE = {
   /** Nomeação só vira semente se o risco da pessoa passar disto (ministro limpo não planta nada). */
   nomeacaoMin: 30,
   /** Chance por mês de a semente virar esquema: peso/100 × (1 − controle/100) × k. */
-  esquemaK: 0.07,
+  esquemaK: 0.09,
   /** O esquema cresce por mês (quanto menos controle, mais), até 100. */
   cresce: 1,
   /** Gravidade do esquema que nasce: peso × [min, max]. */

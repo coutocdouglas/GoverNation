@@ -1,4 +1,4 @@
-import { briefingPrompt, eventBriefPrompt, parseShortText, concessionPrompt, interpretPrompt, ministerAdvicePrompt, ministerReviewPrompt, parseAdvice, parseConcession, parseInterpretation, parseReview, type Advice, type Review } from '../game/ai'
+import { briefingPrompt, empresaNamesPrompt, parseEmpresaNames, eventBriefPrompt, parseShortText, concessionPrompt, interpretPrompt, ministerAdvicePrompt, ministerReviewPrompt, parseAdvice, parseConcession, parseInterpretation, parseReview, type Advice, type Review } from '../game/ai'
 import type { BillId } from '../game/types'
 import type { EventDef } from '../game/data/events'
 import type { AreaId } from '../game/data/ministers'
@@ -7,6 +7,8 @@ import type { GameState } from '../game/types'
 import { aiReady, AiError, callAi, noteAiFailure } from './ai'
 import { reservaAdvice, reservaBrief, reservaReview } from '../game/reserva'
 import { buildCustomBill } from '../game/custom'
+import { licitacoesAbertas, nomearEmpresas } from '../game/risco'
+import { CONTRATO } from '../game/data/risco'
 import type { BillDef } from '../game/data/bills'
 
 /**
@@ -120,5 +122,28 @@ export async function askBriefing(state: GameState, bill: BillId, facts: string)
     return t
   } catch {
     return null
+  }
+}
+
+/**
+ * Etapa 5B: a IA dá nome às empresas de uma licitação aberta e o motor guarda no save. Sem IA, com falha ou com
+ * nome recusado pelo motor, ficam os nomes da lista de reserva (já guardados na abertura). Nunca falha.
+ */
+export async function askEmpresaNames(state: GameState, bill: BillId): Promise<GameState> {
+  const lic = licitacoesAbertas(state).find((l) => l.bill === bill)
+  if (!lic || lic.nomeada || !aiReady()) return state
+  try {
+    const perfis = lic.empresas.map((e) => ({ rotulo: CONTRATO.perfis[e.perfil].rotulo, desc: e.desc }))
+    const nomes = parseEmpresaNames(await callAi('fala', empresaNamesPrompt(state, bill, perfis)), perfis.length)
+    if (!nomes) {
+      noteAiFailure('fala', 'nomes das empresas: a IA respondeu fora do formato (ficam os nomes de reserva)')
+      return state
+    }
+    const r = nomearEmpresas(state, bill, nomes)
+    if (!r.ok) noteAiFailure('fala', `nomes das empresas: ${r.motivo} (ficam os nomes de reserva)`)
+    return r.state
+  } catch (e) {
+    if (!(e instanceof AiError)) noteAiFailure('fala', `nomes das empresas: ${String(e)}`)
+    return state
   }
 }

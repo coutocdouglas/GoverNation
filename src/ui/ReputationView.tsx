@@ -3,7 +3,8 @@ import { useState } from 'react'
 import { MARK_BY_ID, REPUTACAO } from '../game/data/marks'
 import { chapterRequest } from '../game/ai'
 import { absMonth } from '../game/memory'
-import { activeMarks, leakChance, type Chapter } from '../game/reputacao'
+import { activeMarks, type Chapter } from '../game/reputacao'
+import { chanceVazamento } from '../game/caso'
 import type { GameState } from '../game/types'
 import { aiReady, callAi } from '../lib/ai'
 
@@ -32,7 +33,7 @@ function MarkChips({ state, full }: { state: GameState; full?: boolean }) {
 
 /** Cartão do Painel: a reputação do governo e a exposição a escândalo. */
 export function ReputationCard({ state, onOpen }: { state: GameState; onOpen: () => void }) {
-  const leak = leakChance(state)
+  const leak = chanceVazamento(state)
   const ch = state.reputation.chapters.at(-1)
   return (
     <section className="pn-card">
@@ -40,7 +41,7 @@ export function ReputationCard({ state, onOpen }: { state: GameState; onOpen: ()
       <MarkChips state={state} />
       <div className="pn-leak">
         <span>🕵️ Exposição a escândalo <b className={state.congress.scandal >= 40 ? 'dn' : state.congress.scandal >= 15 ? 'warn' : 'up'}>{Math.round(state.congress.scandal)}/100</b></span>
-        <small>{Math.round(leak * 100)}% de chance de algo vazar neste mês (acordos com cargos e emendas sobem; o tempo baixa).</small>
+        <small>{Math.round(leak * 100)}% de chance de algo vazar neste mês (esquemas escondidos, exposição e oposição sobem; a imprensa descansa 4 meses depois de um caso).</small>
       </div>
       {ch && <p className="pn-hint">📖 Último capítulo: <b>{ch.title}</b></p>}
       <div className="pn-row"><button className="pn-btn pn-btn--ghost" onClick={onOpen}>Abrir a Ficha de governo →</button></div>

@@ -1,6 +1,7 @@
 import { baseBoost } from './base'
 import type { ActionEffects } from './actions'
 import { BILL_BY_ID, type BillDef } from './data/bills'
+import { INTERINOS } from './data/caso'
 import { CAMARA, CCJ, COMMITTEES, FRENTES, JABUTIS, NOMINEE_BY_PARTY, type FrenteDef, type FrenteId } from './data/camara'
 import { MINISTER_BY_AREA, type AreaId, type Minister } from './data/ministers'
 import { PARTIES, PARTY_BY_ID } from './data/parties'
@@ -162,11 +163,18 @@ export function committeeOf(bill: BillDef): { name: string; chair: PartyId } {
 // ---------------------------------------------------------------------------
 
 /** O ministro da área agora: o original ou o indicado do partido que recebeu a pasta. */
-export function ministerOf(s: Pick<GameState, 'cabinet'> | null | undefined, area: AreaId): Minister {
+export function ministerOf(s: (Pick<GameState, 'cabinet'> & Partial<Pick<GameState, 'interinos' | 'playerParty'>>) | null | undefined, area: AreaId): Minister {
   const base = MINISTER_BY_AREA[area]
   const seat = s?.cabinet?.[area]
   const n = seat ? NOMINEE_BY_PARTY[seat.party] : undefined
-  if (!n) return base
+  if (!n) {
+    // Etapa 5B: pasta com interino (o ministro foi exonerado ou caiu numa denúncia). Técnico de carreira, do governo.
+    const it = INTERINOS.find((x) => x.name === s?.interinos?.[area])
+    if (!it) return base
+    const party = s?.playerParty ?? base.party
+    const role = base.role.replace(/^Ministr[oa]|^Secretári[oa]/, (w) => (w.startsWith('Sec') ? (it.feminine ? 'Secretária interina' : 'Secretário interino') : it.feminine ? 'Ministra interina' : 'Ministro interino'))
+    return { ...base, name: it.name, role, feminine: it.feminine, party, color: PARTY_BY_ID[party].color, style: 'Técnico de carreira, discreto e cuidadoso; segura a pasta sem barulho e evita tudo o que pareça política.' }
+  }
   const role = base.role.replace(/^Ministr[oa]|^Secretári[oa]/, (w) => (w.startsWith('Sec') ? (n.feminine ? 'Secretária' : 'Secretário') : n.feminine ? 'Ministra' : 'Ministro'))
   return { ...base, name: n.name, role, feminine: n.feminine, party: n.party, style: n.style, color: PARTY_BY_ID[n.party].color }
 }

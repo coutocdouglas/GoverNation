@@ -11,6 +11,7 @@ import { CAMARA } from './data/camara'
 import { BASE } from './data/base'
 import { ensureStates } from './estados'
 import { garantirPessoa, initialRisco, pessoasAtuais, type RiscoState } from './risco'
+import { initialInvestigacao } from './caso'
 import type { GameState } from './types'
 
 // O jogo instalado guarda o localStorage na pasta de dados do usuário no Windows
@@ -241,7 +242,18 @@ export function migrate(raw: unknown): GameState | null {
       R.licitacoes ??= []
       s.saveVersion = 27
     }
-    if (s.saveVersion !== 27) return null
+    if (s.saveVersion === 27) {
+      // v0.27.2 → v0.28 (Etapa 5B): sem casos abertos; o advogado é sorteado pela semente do presidente (o mesmo de
+      // um mandato novo) e ganha ficha; nenhuma pasta com interino. Os esquemas escondidos da 5A seguem como estão
+      // e podem vazar a partir de agora (a imprensa começa sem caso recente). O sorteio antigo de escândalo saiu.
+      const g = s as GameState
+      g.investigacao ??= initialInvestigacao(g.avatarSeed ?? g.presidentName, absMonth(g))
+      g.interinos ??= {}
+      g.risco ??= initialRisco(g.difficulty ?? 'normal')
+      for (const { name, ctx } of pessoasAtuais(g)) garantirPessoa(g, name, ctx)
+      s.saveVersion = 28
+    }
+    if (s.saveVersion !== 28) return null
     syncCustomBills(s as GameState)
     return s as GameState
   } catch {
