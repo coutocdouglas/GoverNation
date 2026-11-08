@@ -1,5 +1,15 @@
 # Novidades
 
+## 0.31.0 (08/11/2026)
+- **Visual novo, mais sofisticado e que usa a tela toda.** Só a apresentação mudou; as regras do jogo são as mesmas.
+  - **Tema claro (papel) por padrão**, com títulos em serifa, cartões suaves e fotos em preto e branco. O botão ☾ Escuro / ☀ Claro no topo troca de tema, e a escolha fica lembrada.
+  - **Trilho lateral** de ícones no lugar das abas de cima (Painel, Governo, Fichas, seções futuras esmaecidas, IA e Menu). O nome aparece ao passar o mouse.
+  - **Painel em 3 colunas** (sua agenda, o país, radar), em vez de uma página que só crescia para baixo. Em tela média a terceira coluna desce; em tela pequena vira uma coluna.
+  - **Janelas de detalhe:** casos, CPI, integridade, reputação, advogado e "o que mudou no mês passado" abrem em janelas que você arrasta e empilha, com a barra "Janelas abertas" embaixo e Esc para fechar a de cima. O painel mostra só um cartão **Radar** com o resumo de cada um. As decisões dentro das janelas valem como antes.
+  - **O Elo virou elo de verdade:** uma corrente de 12 elos em volta da foto, na cor do metal (bronze, prata, ouro, platina). "Sob suspeita" é a corrente rompida em vermelho. Três pontinhos mostram a divisão e, ao passar o mouse, o Elo aparece por escrito com a explicação. Já está no presidente, nas Fichas, nos ministros e nos ministros do Supremo; nos lugares pequenos (indicados a ministro, advogado, Integridade) continua a etiqueta.
+- Sem mudança no save. 434 testes.
+
+
 ## 0.30.0 (08/11/2026)
 - **Etapa 5C, bloco 3 (regras): serviço de inteligência e dossiês.** As regras estão prontas, mas **ficam desligadas até a v0.30.1**, que traz as telas. Sem tela, você não teria como responder.
   - **Montar o serviço:** gasta agenda e passa a custar dinheiro todo mês. Dá para fechar quando quiser; para reabrir, espera 6 meses.

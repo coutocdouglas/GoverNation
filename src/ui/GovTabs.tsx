@@ -16,7 +16,7 @@ import { BancadasEstaduaisCard, LideresSenadoCard, SenadoHojeCard, SenadoVotosCa
 import { ForecastRow } from './CongressView'
 import { Portrait } from './Portrait'
 import { num } from './format'
-import { EloOf } from './Elo'
+import { EloOf, eloDe } from './Elo'
 import { pistaDe } from './eloTexto'
 
 const MONTHS = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez']
@@ -93,12 +93,11 @@ export function MinistriosView({ state, change, onChange, done }: { state: GameS
             const fmt = (v: number) => goal.count ? `${Math.round(v)}` : num(v, goal.unit === '%' ? 1 : 0)
             return (
               <div key={area} className={`pn-minister pn-minister--full ${seat ? 'ceded' : ''} ${pending ? 'pending' : ''} ${wear >= MINISTERIOS.worn ? 'worn' : ''}`}>
-                <Portrait name={m.name} feminine={m.feminine} color={m.color} size={48} title={m.name} />
+                <Portrait name={m.name} feminine={m.feminine} color={m.color} size={64} title={m.name} elo={eloDe(state, m.name, { papel: 'ministro', party: m.party, area })} />
                 <div className="pn-minister__txt">
                   <small>{base.icon} {base.areaName} · no cargo desde {when(ms.since)}</small>
                   <b>{m.name}</b>
                   <small style={{ color: PARTY_BY_ID[m.party].color }}>{PARTY_BY_ID[m.party].sigla}{seat ? ' · pasta cedida' : ''}</small>
-                  <span><EloOf state={state} name={m.name} ctx={{ papel: 'ministro', party: m.party, area }} small /></span>
                   {!seat && state.interinos?.[area] === m.name && (
                     <small className="pn-pista" title="Técnico de carreira que assumiu depois que o ministro saiu por causa de um caso. Fica até você ceder a pasta a um partido.">
                       <span className="pn-badge warn">interino</span> Técnico de carreira: assumiu quando o ministro saiu por causa de um caso. Fica até você ceder a pasta.

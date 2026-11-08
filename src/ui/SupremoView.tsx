@@ -18,7 +18,7 @@ import { DOCTRINES, DOCTRINE_PULL, FUNDAMENTOS, type Doctrine, type FundamentoId
 import type { BillId, CourtCase, GameState, JusticeSeat, Ruling } from '../game/types'
 import { Portrait } from './Portrait'
 import { num } from './format'
-import { EloOf } from './Elo'
+import { EloOf, eloDe } from './Elo'
 import { pistaDe } from './eloTexto'
 import { sabatinaPorElo } from '../game/risco'
 
@@ -127,11 +127,10 @@ export function SupremoView({ state, nominee, onNominee, onState, onToast }: { s
             const rel = relLabel(j.relation)
             return (
               <button key={j.id} className={`pn-justice ${open === j.id ? 'sel' : ''}`} onClick={() => setOpen(open === j.id ? null : j.id)}>
-                <Portrait name={info.name} feminine={info.feminine} size={56} color={j.appointedBy === state.presidentName ? 'var(--pn-gold)' : '#8a97a8'} title={info.name} />
+                <Portrait name={info.name} feminine={info.feminine} size={72} color={j.appointedBy === state.presidentName ? 'var(--pn-gold)' : '#8a97a8'} title={info.name} elo={eloDe(state, info.name, { papel: 'supremo' })} />
                 <b>{info.name}{j.id === presiding ? ' · presidente' : ''}</b>
                 <span title={DOCTRINE_HINT[info.doctrine]}>{DOCTRINE_ICON[info.doctrine]} {DOCTRINE_LABEL[info.doctrine]}</span>
                 <span className={rel.c}>{rel.t} ({Math.round(j.relation)})</span>
-                <EloOf state={state} name={info.name} ctx={{ papel: 'supremo' }} small />
               </button>
             )
           })}

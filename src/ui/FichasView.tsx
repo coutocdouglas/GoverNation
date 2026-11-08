@@ -13,7 +13,7 @@ import { PartyLogo } from './PartyLogo'
 import { partyBalance } from '../game/base'
 import { BILL_BY_ID } from '../game/data/bills'
 import { GROUP_BY_ID } from '../game/data/groups'
-import { EloOf } from './Elo'
+import { eloDe } from './Elo'
 import { eloContextos } from './eloTexto'
 
 const MONTHS = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez']
@@ -44,17 +44,16 @@ export function FichasView({ state, onChange }: { state: GameState; onChange: (s
   const eloSel = elos.get(person.name)
 
   return (
-    <div className="pn-grid">
+    <div className="pn-grid pn-grid--2">
       <div className="pn-col">
         <GovernmentRecord state={state} onChange={onChange} />
         <section className="pn-card">
           <h3>📇 Ficha de {person.name}</h3>
           <div className="pn-ficha__head">
-            <Portrait id={person.portrait} color={person.color} size={110} title={person.name} />
+            <Portrait id={person.portrait} color={person.color} size={124} title={person.name} elo={eloSel ? eloDe(state, person.name, eloSel) : undefined} />
             <div>
               <h2>{person.name}</h2>
               <p className="pn-hint">{person.role}</p>
-              {eloSel && <p style={{ margin: '4px 0' }}><EloOf state={state} name={person.name} ctx={eloSel} /></p>}
               {person.name === state.presidentName && (state.profile?.traits.length || state.profile?.habits.length) ? (
                 <div className="pn-ficha__traits">
                   {[...state.profile.traits, ...state.profile.habits].map((id) => PROFILE_BY_ID[id]).filter(Boolean).map((p) => (
@@ -82,8 +81,8 @@ export function FichasView({ state, onChange }: { state: GameState; onChange: (s
           <div className="pn-people">
             {people.map((p) => (
               <button key={p.name} className={`pn-person ${p.name === person.name ? 'on' : ''}`} onClick={() => setSel(p.name)}>
-                <Portrait id={p.portrait} color={p.color} size={40} />
-                <span><b>{p.name}</b><small>{p.role}</small>{elos.has(p.name) && <EloOf state={state} name={p.name} ctx={elos.get(p.name)!} small />}</span>
+                <Portrait id={p.portrait} color={p.color} size={50} elo={elos.has(p.name) ? eloDe(state, p.name, elos.get(p.name)!) : undefined} />
+                <span><b>{p.name}</b><small>{p.role}</small></span>
                 <span className="pn-person__n">{state.bios[p.name]?.length ?? 0}</span>
               </button>
             ))}

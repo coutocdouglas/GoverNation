@@ -38,6 +38,10 @@ import { LicitacaoSheet } from './LicitacaoSheet'
 import { AdvogadoCard, CasosCard } from './CasoCard'
 import { ACAO_NOME_CURTO } from './casoTexto'
 import { CpiCard } from './CpiCard'
+import { JanelasLayer, ResumoLinha, type JanelaDef } from './Janelas'
+import { casosAbertos } from '../game/caso'
+import { cpiAtual } from '../game/cpi'
+import { riscoOf } from '../game/risco'
 import { ACAO_CPI_CURTO } from './cpiTexto'
 import type { AcaoCpi } from '../game/data/cpi'
 import { ADVOGADOS } from '../game/data/caso'
@@ -45,6 +49,7 @@ import type { DecisaoCaso } from '../game/caso'
 import { escolherLicitacao, licitacoesAbertas, nomearEmpresas } from '../game/risco'
 import { CONTRATO } from '../game/data/risco'
 import { Portrait } from './Portrait'
+import { eloDe } from './Elo'
 import { ACTION_ICON, GROUP_ICON, INDICATOR_ICON } from './icons'
 import { INDICATORS, lowerFirst, num, signed, type IndicatorMeta } from './format'
 import { Sparkline } from './Sparkline'
@@ -95,6 +100,9 @@ export function GameScreen({ state, onChange, onExit }: {
   const [statement, setStatement] = useState<StatementId | null>(null)
   const [street, setStreet] = useState<string | null>(null)
   const [showAi, setShowAi] = useState(false)
+  /** v0.31: tema do painel (claro por padrão), lembrado entre as partidas. */
+  const [claro, setClaroState] = useState(() => { try { return localStorage.getItem('gn-tema') !== 'escuro' } catch { return true } })
+  const setClaro = (v: boolean) => { setClaroState(v); try { localStorage.setItem('gn-tema', v ? 'claro' : 'escuro') } catch { /* sem armazenamento */ } }
   const [deals, setDeals] = useState<Deal[]>([])
   /** Etapa 3: senadores indecisos comprados por projeto (pagos ao votar). */
   const [buys, setBuys] = useState<Record<BillId, SenatorBuy[]>>({})
@@ -124,8 +132,15 @@ export function GameScreen({ state, onChange, onExit }: {
   /** Etapa 2B: resposta ao fato esperando a ficha (etapa 2 da corrente) antes de assinar ou votar. */
   const [respSheet, setRespSheet] = useState<BillId | null>(null)
   /** Etapa 2B: "O que mudou no mês passado" fica no fim da página, recolhido. */
-  const [lastOpen, setLastOpen] = useState(false)
-  const lastRef = useRef<HTMLElement>(null)
+  /** v0.31 (V3): janelas abertas (a última fica por cima). */
+  const [abertas, setAbertas] = useState<string[]>([])
+  const abrir = (id: string) => setAbertas((a) => [...a.filter((x) => x !== id), id])
+  const fechar = (id: string) => setAbertas((a) => a.filter((x) => x !== id))
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setAbertas((a) => a.slice(0, -1)) }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
   setPresidentPortrait(playerPortraitId(state))
   const stateRef = useRef(state)
   useEffect(() => { stateRef.current = state }, [state])
@@ -229,7 +244,7 @@ export function GameScreen({ state, onChange, onExit }: {
 
   const goStep = (s: Step) => {
     setStep(s)
-    if (s === 1) { setLastOpen(true); setTimeout(() => lastRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50) }
+    if (s === 1) abrir('mudou')
     if (s === 2) eventRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
     if (s === 3) medidaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
   }
@@ -327,37 +342,116 @@ export function GameScreen({ state, onChange, onExit }: {
     })
   }
   const goPending = (t: PendingTarget) => {
-    if (t === 'caso' || t === 'cpi') { document.getElementById(t === 'caso' ? 'casos' : 'cpi')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); return }
+    if (t === 'caso' || t === 'cpi') { abrir(t === 'caso' ? 'casos' : 'cpi'); return }
     if (t === 'camara' || t === 'senado' || t === 'supremo') { setTab('governo'); setGovTab(t); window.scrollTo({ top: 0, behavior: 'smooth' }); return }
     const el = document.getElementById(t === 'promessas' ? 'promessas' : t === 'evento' ? 'fato-do-mes' : 'fato-do-mes')
     if (t === 'cobrancas') { medidaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }); return }
     el?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
+  /** Conteúdo da janela "O que mudou no mês passado". */
+  const ultimoMes = (
+        <div className="pn-pane" key={`p1-${state.month}`}>
+          {report && report.votes.length > 0 && report.votes.map((v, i) => <Scoreboard key={i} v={v} />)}
+          {report ? (
+            <ul className="pn-news">
+              {report.actionsTaken.map((t, i) => (
+                <li key={`a${i}`} className="neutral">🖊️ {t}</li>
+              ))}
+              {report.headlines.map((h, i) => (
+                <li key={i} className={h.tone} style={{ animationDelay: `${i * 90}ms` }}>
+                  {h.tone === 'good' ? '🟢' : h.tone === 'bad' ? '🔴' : '📰'} {h.text}
+                </li>
+              ))}
+              {report.headlines.length === 0 && report.actionsTaken.length === 0 && (
+                <li className="neutral">☕ Mês tranquilo em Brasília.</li>
+              )}
+            </ul>
+          ) : (
+            <p className="pn-hint">
+              A economia vem de juros altos e inflação acima da meta, e a dívida cresce. Todo mês você pode
+              tomar até {ACTIONS_PER_MONTH} decisões por decreto. Escreva a medida do mês abaixo ou escolha no
+              catálogo, e encerre o mês para ver o país reagir.
+            </p>
+          )}
+          {report?.meanwhile && report.meanwhile.length > 0 && (
+            <div className="pn-meanwhile">
+              <h3>👀 Enquanto você decidia</h3>
+              {report.meanwhile.map((m, i) => (
+                <div key={i} className={`pn-meanwhile__row ${m.tone}`}>
+                  <span>{m.icon}</span>
+                  <div>{m.text}{m.why && <small>Por quê: {m.why}</small>}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+  )
+
+  /** v0.31 (V3): resumos do Radar e as janelas de detalhe. */
+  const nowAbs = absMonth(state)
+  const casosAb = casosAbertos(state)
+  const casosRec = (state.investigacao?.casos ?? []).filter((c) => c.fase === 'encerrado' && c.fim !== undefined && nowAbs - c.fim <= 3)
+  const cpiNow = cpiAtual(state)
+  const cpiRec = (state.comissoes?.encerradas ?? []).filter((x) => nowAbs - x.fim <= 3)
+  const ctrl = Math.round(riscoOf(state).controle)
+  const escand = Math.round(state.congress.scandal)
+  type Tom = 'dn' | 'warn' | 'up'
+  const radar: { id: string; icone: string; titulo: string; texto?: string; tag?: string; tom?: Tom }[] = [
+    ...(casosAb.length || casosRec.length ? [{ id: 'casos', icone: '🕵️', titulo: 'Casos na investigação', texto: casosAb.length ? `${casosAb[0].alvo}: provas ${Math.round(casosAb[0].provas)}/100` : 'Casos encerrados há pouco', tag: casosAb.length ? `${casosAb.length} aberto${casosAb.length > 1 ? 's' : ''}` : 'encerrado', tom: casosAb.length ? ('dn' as Tom) : undefined }] : []),
+    ...(cpiNow || cpiRec.length ? [{ id: 'cpi', icone: '🏛️', titulo: 'CPI na Câmara', texto: cpiNow ? (cpiNow.fase === 'coleta' ? `Assinaturas ${Math.round(cpiNow.assinaturas)}/171` : 'Instalada: em andamento') : 'CPI encerrada há pouco', tag: cpiNow ? (cpiNow.fase === 'coleta' ? 'coleta' : 'instalada') : 'encerrada', tom: cpiNow ? ('warn' as Tom) : undefined }] : []),
+    { id: 'integridade', icone: '🧭', titulo: 'Integridade do governo', texto: 'Seu Elo, o que pesa sobre você e o Controle do Estado', tag: `controle ${ctrl}`, tom: ctrl >= 70 ? 'up' : ctrl >= 45 ? 'warn' : 'dn' },
+    { id: 'reputacao', icone: '🪞', titulo: 'Reputação do governo', texto: 'Como o país te vê e a exposição a escândalo', tag: `escândalo ${escand}/100`, tom: escand >= 40 ? 'dn' : escand >= 15 ? 'warn' : 'up' },
+    { id: 'advogado', icone: '💼', titulo: 'Seu advogado', texto: 'Parecer nas propostas e documentos dos casos' },
+    { id: 'mudou', icone: '🗞️', titulo: report ? 'O que mudou no mês passado' : 'Bem-vindo ao Planalto', texto: report ? `${report.headlines.length} notícias${report.meanwhile?.length ? ' · enquanto você decidia' : ''}` : 'primeiro mês' },
+  ]
+  const janelaDefs: Record<string, JanelaDef> = {
+    casos: { id: 'casos', titulo: 'Casos na investigação', icone: '🕵️', largura: 720 },
+    cpi: { id: 'cpi', titulo: 'CPI na Câmara', icone: '🏛️', largura: 720 },
+    integridade: { id: 'integridade', titulo: 'Integridade do governo', icone: '🧭', largura: 640 },
+    reputacao: { id: 'reputacao', titulo: 'Reputação do governo', icone: '🪞', largura: 600 },
+    advogado: { id: 'advogado', titulo: 'Seu advogado', icone: '💼', largura: 560 },
+    mudou: { id: 'mudou', titulo: report ? 'O que mudou no mês passado' : 'Bem-vindo ao Planalto', icone: '🗞️', largura: 720 },
+  }
+  const renderJanela = (id: string) => {
+    switch (id) {
+      case 'casos': return <CasosCard state={state} decisoes={casoDecisoes} advogado={advogado} cpi={cpiDecisao} onChange={(d) => { setCasoDecisoes(d); if (d.length > casoDecisoes.length) toast('🕵️ Decisão do caso anotada: vale ao encerrar o mês.') }} />
+      case 'cpi': return <CpiCard state={state} decisoes={casoDecisoes} advogado={advogado} escolha={cpiDecisao} onPick={(a) => { setCpiDecisao(a); if (a) toast('🏛️ Decisão sobre a CPI anotada: vale ao encerrar o mês.') }} />
+      case 'integridade': return <IntegridadeCard state={state} />
+      case 'reputacao': return <ReputationCard state={state} onOpen={() => { fechar('reputacao'); setTab('fichas') }} />
+      case 'advogado': return <AdvogadoCard state={state} decisoes={casoDecisoes} advogado={advogado} cpi={cpiDecisao} onChange={(aid) => { setAdvogado(aid); if (aid) toast('💼 Troca de advogado anotada: vale ao encerrar o mês.') }} />
+      case 'mudou': return ultimoMes
+      default: return null
+    }
+  }
+
   return (
-    <div className="pn">
+    <div className={`pn ${claro ? 'pn--claro' : ''}`}>
+      <nav className="pn-rail" aria-label="Seções do jogo">
+        <div className="pn-rail__logo">G<b>N</b></div>
+        <button className={tab === 'painel' ? 'on' : ''} onClick={() => setTab('painel')}>🏠<span className="pn-rail__tip">Painel</span></button>
+        <button className={tab === 'governo' ? 'on' : ''} onClick={() => setTab('governo')}>
+          🏛️<span className="pn-rail__tip">Governo</span>
+          {state.congress.pending.length + state.congress.senate.pending.length + (bill ? 1 : 0) + state.congress.toSanction.length > 0 && <span className="pn-dot">{state.congress.pending.length + state.congress.senate.pending.length + (bill ? 1 : 0) + state.congress.toSanction.length}</span>}
+        </button>
+        <button className={tab === 'fichas' ? 'on' : ''} onClick={() => setTab('fichas')}>📇<span className="pn-rail__tip">Fichas</span></button>
+        {SECTIONS.map((s) => (
+          <button key={s.name} className="off" aria-disabled="true">{s.icon}<span className="pn-rail__tip">{s.name} · {s.soon}</span></button>
+        ))}
+        <div className="pn-rail__sp" />
+        <button onClick={() => setShowAi(true)}>🤖<span className="pn-rail__tip">IA {aiReady() ? 'ligada' : 'desligada'}: configurar</span></button>
+        <button onClick={onExit}>☰<span className="pn-rail__tip">Menu</span></button>
+      </nav>
       <header className="pn-top">
-        <div className="pn-flag" />
         <div className="pn-bar">
-          <div className="pn-logo">GOVER<span>NATION</span></div>
+          <div className="pn-logo">Palácio do Planalto<small>{state.presidentName} · {monthLabel(state.month)}</small></div>
           <div className="pn-chips">
             <span className="pn-chip" title="Juros básicos definidos pelo Banco Central">🏦 Selic <b>{num(now.indicators.selic, 2)}%</b></span>
             {isCopomMonth(state.month) && <span className="pn-chip pn-chip--hot" title="O Banco Central decide os juros no fim deste mês">📅 Copom este mês</span>}
             <span className="pn-chip" title="Decisões que você ainda pode tomar neste mês">✍️ Decisões <b>{ACTIONS_PER_MONTH - selected.length}/{ACTIONS_PER_MONTH}</b></span>
-            <button className="pn-chip pn-chip--btn" onClick={() => setShowAi(true)} title="Configurar a inteligência artificial dos ministros">🤖 IA {aiReady() ? 'ligada' : 'desligada'}</button>
-            <button className="pn-chip pn-chip--btn" onClick={onExit}>☰ Menu</button>
+            <button className="pn-chip pn-chip--btn" onClick={() => setClaro(!claro)} title="Alternar entre o tema claro e o escuro">{claro ? '☾ Escuro' : '☀ Claro'}</button>
           </div>
         </div>
-        <nav className="pn-nav">
-          <a className={tab === 'painel' ? 'on' : ''} onClick={() => setTab('painel')}>🏠 Painel</a>
-          <a className={tab === 'governo' ? 'on' : ''} onClick={() => setTab('governo')}>
-            🏛️ Governo {state.congress.pending.length + state.congress.senate.pending.length + (bill ? 1 : 0) + state.congress.toSanction.length > 0 && <span className="pn-dot">{state.congress.pending.length + state.congress.senate.pending.length + (bill ? 1 : 0) + state.congress.toSanction.length}</span>}
-          </a>
-          <a className={tab === 'fichas' ? 'on' : ''} onClick={() => setTab('fichas')}>📇 Fichas</a>
-          {SECTIONS.map((s) => (
-            <a key={s.name} className="off" title={s.soon}>{s.icon} {s.name} <span className="pn-lock">🔒</span></a>
-          ))}
-        </nav>
       </header>
       {showAi && <AiSettings onClose={() => setShowAi(false)} />}
       {state.supremo.tse?.open && tseSeen !== absMonth(state) && !voteSheet && post.length === 0 && (
@@ -441,9 +535,11 @@ export function GameScreen({ state, onChange, onExit }: {
       })()}
       {reactionView && post.length === 0 && <ReactionSheet state={state} bill={reactionView} onClose={() => setReactionView(null)} />}
 
+      <JanelasLayer abertas={abertas} defs={janelaDefs} onFocus={abrir} onClose={fechar} render={renderJanela} />
+
       <main className="pn-main">
         <section className="pn-hero">
-          <Portrait id={playerPortraitId(state)} color={PARTY_BY_ID[state.playerParty].color} size={96} title={state.presidentName} />
+          <Portrait id={playerPortraitId(state)} color={PARTY_BY_ID[state.playerParty].color} size={112} title={state.presidentName} elo={eloDe(state, state.presidentName, { papel: 'presidente', party: state.playerParty })} />
           <div>
             <div className="pn-sub">🇧🇷 Presidente da República · <PartyLogo party={state.playerParty} size={22} />{PARTY_BY_ID[state.playerParty].name} ({PARTY_BY_ID[state.playerParty].sigla} {PARTY_BY_ID[state.playerParty].number})</div>
             <h1>{state.presidentName.toUpperCase()}</h1>
@@ -541,7 +637,7 @@ export function GameScreen({ state, onChange, onExit }: {
 
               {step !== 4 && (
                 <p className="pn-hint pn-steps__hint">
-                  {report ? <>O resumo do mês passado está no fim da página. <a className="pn-link" onClick={() => goStep(1)}>Ver o que mudou ↓</a></> : 'Primeiro mês: comece pelo fato do mês logo abaixo.'}
+                  {report ? <>O resumo do mês passado abre numa janela. <a className="pn-link" onClick={() => goStep(1)}>Ver o que mudou ↗</a></> : 'Primeiro mês: comece pelo fato do mês logo abaixo.'}
                 </p>
               )}
 
@@ -705,78 +801,14 @@ export function GameScreen({ state, onChange, onExit }: {
             ) : (
               <div className="pn-row"><button className="pn-btn" onClick={() => goStep(4)}>Pronto, ir para o encerramento →</button></div>
             )}
-
-            <section className={`pn-card pn-lastmonth ${lastOpen ? 'open' : ''}`} ref={lastRef}>
-              <h3 onClick={() => setLastOpen((v) => !v)} style={{ cursor: 'pointer' }}>
-                🗞️ {report ? 'O que mudou no mês passado' : 'Bem-vindo ao Planalto'}
-                <span className="pn-badge">{report ? `${report.headlines.length} notícias${report.meanwhile?.length ? ' · enquanto você decidia' : ''}` : 'primeiro mês'} · {lastOpen ? 'recolher ▲' : 'abrir ▼'}</span>
-              </h3>
-              {lastOpen && (
-                <div className="pn-pane" key={`p1-${state.month}`}>
-                  {report && report.votes.length > 0 && report.votes.map((v, i) => <Scoreboard key={i} v={v} />)}
-                  {report ? (
-                    <ul className="pn-news">
-                      {report.actionsTaken.map((t, i) => (
-                        <li key={`a${i}`} className="neutral">🖊️ {t}</li>
-                      ))}
-                      {report.headlines.map((h, i) => (
-                        <li key={i} className={h.tone} style={{ animationDelay: `${i * 90}ms` }}>
-                          {h.tone === 'good' ? '🟢' : h.tone === 'bad' ? '🔴' : '📰'} {h.text}
-                        </li>
-                      ))}
-                      {report.headlines.length === 0 && report.actionsTaken.length === 0 && (
-                        <li className="neutral">☕ Mês tranquilo em Brasília.</li>
-                      )}
-                    </ul>
-                  ) : (
-                    <p className="pn-hint">
-                      A economia vem de juros altos e inflação acima da meta, e a dívida cresce. Todo mês você pode
-                      tomar até {ACTIONS_PER_MONTH} decisões por decreto. Escreva a medida do mês abaixo ou escolha no
-                      catálogo, e encerre o mês para ver o país reagir.
-                    </p>
-                  )}
-                  {report?.meanwhile && report.meanwhile.length > 0 && (
-                    <div className="pn-meanwhile">
-                      <h3>👀 Enquanto você decidia</h3>
-                      {report.meanwhile.map((m, i) => (
-                        <div key={i} className={`pn-meanwhile__row ${m.tone}`}>
-                          <span>{m.icon}</span>
-                          <div>{m.text}{m.why && <small>Por quê: {m.why}</small>}</div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-            </section>
           </div>
 
           <div className="pn-col">
-            <PropostaCard state={state} value={proposta} onChange={(v) => { setProposta(v); if (v) toast(v === 'aceitar' ? '🤝 Proposta aceita: vale ao encerrar o mês.' : '🙅 Proposta recusada: vale ao encerrar o mês.') }} />
-            <CasosCard state={state} decisoes={casoDecisoes} advogado={advogado} cpi={cpiDecisao} onChange={(d) => { setCasoDecisoes(d); if (d.length > casoDecisoes.length) toast('🕵️ Decisão do caso anotada: vale ao encerrar o mês.') }} />
-            <CpiCard state={state} decisoes={casoDecisoes} advogado={advogado} escolha={cpiDecisao} onPick={(a) => { setCpiDecisao(a); if (a) toast('🏛️ Decisão sobre a CPI anotada: vale ao encerrar o mês.') }} />
-            <PendenciasCard state={state} onGo={goPending} onAttend={attend} onLicitacao={openLicitacao} />
-            {licSheet && (
-              <LicitacaoSheet state={state} id={licSheet} onClose={() => setLicSheet(null)} onChoose={(perfil) => {
-                const next = escolherLicitacao(state, licSheet, perfil)
-                onChange(next)
-                toast(`🏗️ Contrato assinado: ${BILL_BY_ID[licSheet].name} (${CONTRATO.perfis[perfil].rotulo.toLowerCase()}).`)
-                setLicSheet(null)
-              }} />
-            )}
-
             <section className="pn-card">
               <h3>❤️ Aprovação do governo</h3>
               <ApprovalRing value={now.approval} />
               <p className="pn-hint">É a média dos grupos abaixo, pesada pelo tamanho de cada um.</p>
             </section>
-
-            <ReputationCard state={state} onOpen={() => setTab('fichas')} />
-            <IntegridadeCard state={state} />
-            <AdvogadoCard state={state} decisoes={casoDecisoes} advogado={advogado} cpi={cpiDecisao} onChange={(id) => { setAdvogado(id); if (id) toast('💼 Troca de advogado anotada: vale ao encerrar o mês.') }} />
-            <RivalCard state={state} />
-            <PromisesCard state={state} />
-            <SupremoMini state={state} onOpen={() => { setTab('governo'); setGovTab('supremo') }} />
 
             <section className="pn-card">
               <h3>👥 Grupos sociais</h3>
@@ -801,7 +833,6 @@ export function GameScreen({ state, onChange, onExit }: {
               </div>
             </section>
 
-
             <section className="pn-card">
               <h3>🏛️ Na Câmara</h3>
               {state.congress.pending.length === 0 && !bill ? (
@@ -814,12 +845,37 @@ export function GameScreen({ state, onChange, onExit }: {
               <div className="pn-row"><button className="pn-btn pn-btn--ghost" onClick={() => setTab('governo')}>Abrir a Câmara e articular →</button></div>
             </section>
 
+            <RivalCard state={state} />
+            <PromisesCard state={state} />
+            <SupremoMini state={state} onOpen={() => { setTab('governo'); setGovTab('supremo') }} />
+
             <section className="pn-card">
               <h3>🔜 Ainda não está no jogo</h3>
               <p className="pn-hint">
                 Imprensa, governadores, diplomacia, os 27 estados e a apuração da eleição chegam nas próximas versões.
               </p>
             </section>
+          </div>
+
+          <div className="pn-col">
+            <PropostaCard state={state} value={proposta} onChange={(v) => { setProposta(v); if (v) toast(v === 'aceitar' ? '🤝 Proposta aceita: vale ao encerrar o mês.' : '🙅 Proposta recusada: vale ao encerrar o mês.') }} />
+            <section className="pn-card">
+              <h3>📡 Radar <span className="pn-badge">clique para abrir os detalhes</span></h3>
+              <div className="pn-resumos">
+                {radar.map((r) => <ResumoLinha key={r.id} icone={r.icone} titulo={r.titulo} texto={r.texto} tag={r.tag} tom={r.tom} onClick={() => abrir(r.id)} />)}
+              </div>
+            </section>
+
+            <PendenciasCard state={state} onGo={goPending} onAttend={attend} onLicitacao={openLicitacao} />
+            {licSheet && (
+              <LicitacaoSheet state={state} id={licSheet} onClose={() => setLicSheet(null)} onChoose={(perfil) => {
+                const next = escolherLicitacao(state, licSheet, perfil)
+                onChange(next)
+                toast(`🏗️ Contrato assinado: ${BILL_BY_ID[licSheet].name} (${CONTRATO.perfis[perfil].rotulo.toLowerCase()}).`)
+                setLicSheet(null)
+              }} />
+            )}
+
           </div>
         </div>
         )}

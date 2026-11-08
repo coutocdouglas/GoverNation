@@ -2,7 +2,7 @@
 
 Jogo de simulação política (governar o Brasil) para Windows, do Douglas (arquiteto, dono do projeto). Mecânicas inspiradas no jogo de referência planalto.fun. **Só a mecânica entra: nomes, textos, imagens e políticos reais do jogo de referência ficam de fora. Tudo no GoverNation é fictício.**
 
-Versão atual: **v0.30.0**. Documentação técnica: `docs/DESIGN.md` (seção 27; 27.15 Fase A, 27.16 a 27.18 lote A2, 27.19 a 27.21 Etapa 5A, 27.22 e 27.23 Etapa 5B, 27.24 a 27.26 Etapa 5C). Plano da Etapa 5: `docs/projeto/plano-etapa-5.pdf`; o plano completo por etapas (`plano-de-desenvolvimento.md`) ficou no Cowork. Este arquivo traz o essencial.
+Versão atual: **v0.31.0**. Documentação técnica: `docs/DESIGN.md` (seção 27; 27.15 Fase A, 27.16 a 27.18 lote A2, 27.19 a 27.21 Etapa 5A, 27.22 e 27.23 Etapa 5B, 27.24 a 27.26 Etapa 5C, 27.27 redesenho visual). Plano da Etapa 5: `docs/projeto/plano-etapa-5.pdf`; o plano completo por etapas (`plano-de-desenvolvimento.md`) ficou no Cowork. Este arquivo traz o essencial.
 
 ## Como trabalhar com o Douglas
 - Responder em português do Brasil.
@@ -66,6 +66,7 @@ Testes passando · partida simulada sem erro · balanceamento revisado · efeito
 - `src/game/caso.ts`, `data/caso.ts`: Etapa 5B (vazamento, caso com provas e solidez, saídas do presidente em `MonthPlan.casos`, delação, Supremo para o caso do presidente, advogado em `MonthPlan.advogado`, agenda `AGENDA.espacos`, interinos em `GameState.interinos`). Vazamento ligado desde a v0.28.1 (`VAZAMENTO.ativo`; testes podem usar `ligarVazamento`). Telas: `src/ui/CasoCard.tsx` (`CasosCard`, `AdvogadoCard`, `AgendaBadge`) e `casoTexto.ts`. Nomes das empresas pela IA: `askEmpresaNames` (src/lib/aiActions.ts) e `nomearEmpresas`.
 - `src/game/cpi.ts`, `data/cpi.ts`: Etapa 5C (objetivo da oposição em `rival.ts`, requerimento, CPI, relatório; `MonthPlan.cpi`; ligada desde a v0.29.1: `CPI.ativo`, testes podem usar `ligarCpi`). Telas: `src/ui/CpiCard.tsx` (`CpiCard`, `CpisEncerradasCard`) e `cpiTexto.ts`; meta da oposição em `OppositionCards.tsx`.
 - `src/game/inteligencia.ts`, `data/inteligencia.ts`: Etapa 5C, bloco 3 (serviço, avisos, abafar, dossiês; `MonthPlan.inteligencia`, `FloorOptions.dossie`; desligado até a v0.30.1, testes podem usar `ligarInteligencia`).
+- Visual (v0.31.0, DESIGN.md 27.27): tema claro/escuro, trilho lateral, painel em 3 colunas, janelas de detalhe (`src/ui/Janelas.tsx`; resumo no cartão Radar, detalhe na janela) e Elo em corrente na foto (`EloRing`, `Portrait elo=`). Tela nova entra como resumo + janela.
 - Save na versão 31.
 
 ## Situação

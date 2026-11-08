@@ -3,11 +3,13 @@
 > **Leia este arquivo primeiro.** Ele diz onde o projeto está e qual é o próximo passo.
 > Atualize-o a cada mudança: seção "Estado atual", "Próximo passo" e uma linha no "Histórico".
 
-**Última atualização:** 08/11/2026 · **Versão publicada:** v0.29.2 · **Pronta para publicar:** v0.30.0
+**Última atualização:** 08/11/2026 · **Versão publicada:** v0.31.0 (redesenho visual)
 
 ---
 
 ## Próximo passo
+
+**Redesenho visual publicado na v0.31.0** (DESIGN.md 27.27): tema claro/escuro, trilho lateral, painel em 3 colunas, janelas de detalhe e Elo em corrente na foto. Ajustes finos de visual que o Douglas anotar jogando entram como v0.31.x. Depois, voltar à v0.30.1 (telas da inteligência).
 
 **Etapa 5C em andamento.** Blocos 1 e 2 prontos: a CPI e a meta da oposição estão ligadas e com tela (v0.29.0 e v0.29.1, DESIGN.md 27.24 e 27.25). Bloco 3, regras prontas e desligadas: serviço de inteligência e dossiês (v0.30.0, DESIGN.md 27.26). **Próximo: v0.30.1 (telas da inteligência e dos dossiês)** · complexidade média · **Sonnet**.
 
@@ -118,6 +120,8 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 ---
 
 ## Histórico
+
+- 08/11/2026 · v0.31.0 · Redesenho visual V1, V2 e V3: tema claro/escuro, trilho lateral, Elo em corrente na foto, painel em 3 colunas, janelas de detalhe.
 
 | Data | Versão | O que mudou |
 | --- | --- | --- |
