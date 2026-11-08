@@ -6,6 +6,7 @@ import { dealBlockedReason, offerFor } from './deals'
 import { advanceMonth, newGame } from './game'
 import { archiveStale, applyDeals, openCtx } from './rodada'
 import { migrate } from './save'
+import { pendencias } from './pendencias'
 import { PARTIES } from './data/parties'
 import type { BillId, DealTerms, GameState, PartyId } from './types'
 
@@ -97,5 +98,25 @@ describe('lote A2: acordos que esfriam', () => {
     const m = migrate(JSON.parse(JSON.stringify(s)))!
     expect(m.saveVersion).toBe(31)
     expect(m.congress.pending[0].deals![0].month).toBe(7)
+  })
+})
+
+describe('v0.32.1: pendência "acordo para vencer"', () => {
+  it('só aparece quando o acordo esfriou, e some se o projeto sai da fila', () => {
+    const { s, bill } = withDeal()
+    expect(pendencias(s).some((p) => p.id === `acordo-${bill}`)).toBe(false)
+    s.month += 5 // força 25%: abaixo de 50%
+    const p = pendencias(s).find((x) => x.id === `acordo-${bill}`)!
+    expect(p).toBeTruthy()
+    expect(p.target).toBe('camara')
+    expect(p.detail).toContain('renovar custa 70%')
+    s.congress.pending = []
+    expect(pendencias(s).some((x) => x.id === `acordo-${bill}`)).toBe(false)
+  })
+
+  it('fica vermelha quando falta 1 mês ou menos', () => {
+    const { s, bill } = withDeal()
+    s.month += 6 // força 10%: vence no mês que vem
+    expect(pendencias(s).find((x) => x.id === `acordo-${bill}`)!.urgency).toBe('red')
   })
 })

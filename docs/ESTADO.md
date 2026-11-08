@@ -3,11 +3,13 @@
 > **Leia este arquivo primeiro.** Ele diz onde o projeto está e qual é o próximo passo.
 > Atualize-o a cada mudança: seção "Estado atual", "Próximo passo" e uma linha no "Histórico".
 
-**Última atualização:** 08/11/2026 · **Versão publicada:** v0.31.1 (redesenho visual) · **Pronta para publicar:** v0.32.0 (telas da inteligência)
+**Última atualização:** 08/11/2026 · **Versão publicada:** v0.31.1 (redesenho visual) · **Pronta para publicar:** v0.32.1 (inclui a v0.32.0, telas da inteligência)
 
 ---
 
 ## Próximo passo
+
+**Etapa 6 aprovada (plano em `docs/projeto/plano-etapa-6.md`, 08/11/2026).** Ordem: 6.0 (arrumar a casa: partir o `GameScreen.tsx`, pendências do lote A2, pendências de visual, e o playtest da 5B/5C pelo Douglas) → 6B ("Por quê?") → 6A (agenda e ações) → 6C → 6D → 6E → 6F. **6.0 itens 1 a 3 feitos na v0.32.1** (GameScreen partido, aviso "acordo para vencer", 35% do Senado medido e mantido, fotos P&B e vidro nas janelas). Falta o item 4: o Douglas joga a partida completa e anota. Depois, 6B ("Por quê?", Sonnet).
 
 **Etapa 5C fechada no código (v0.32.0, pronta para publicar):** telas do serviço de inteligência e dos dossiês (DESIGN.md 27.28). Falta o Douglas jogar a partida completa da 5B e da 5C. Próximo: Etapa 6 (Opus nas regras, Sonnet nas telas).
 
@@ -19,7 +21,7 @@
 
 **Próximo: Etapa 5C** (oposição como personagem, CPI, serviço de inteligência com dossiês). Complexidade **alta** · **Opus** nas regras, **Sonnet** nas telas.
 
-Pendências do lote A2: aviso "acordo para vencer" na central de pendências; rebalancear o 35% do Senado no playtest.
+Lote A2: aviso "acordo para vencer" feito na v0.32.1; o 35% do Senado foi medido (`scripts/medir-senado.ts`) e mantido, a confirmação final é do playtest do Douglas.
 
 Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdouglas/GoverNation. Leia CLAUDE.md, docs/ESTADO.md e docs/DESIGN.md (seção 27). Quero fazer a etapa 5C."*
 
@@ -36,7 +38,7 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 **Base técnica**
 - App de Windows (Tauri 2 + React + TypeScript). O instalador é gerado pelo GitHub Actions e o jogo se atualiza sozinho, com atualização assinada.
 - O motor do jogo (`src/game/`) fica separado das telas (`src/ui/`). Os números de balanceamento ficam em `src/game/data/`.
-- 434 testes automáticos. Saves antigos são migrados (versão atual do save: 31).
+- 439 testes automáticos. Saves antigos são migrados (versão atual do save: 31).
 
 **Jogabilidade**
 - Mandato de 48 meses (jan/2027 a dez/2030), com o mês em 4 passos: notícias, fato do mês, decisões e encerrar.
@@ -116,12 +118,17 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 - Campanha contínua entre mandatos, com painel de eleição.
 - IA entra na etapa 3B, com chave de API própria e plano B por palavras-chave. Modelo local descartado por ora (DESIGN.md, seção 17).
 - O Senado vota leis desde a v0.12 (substitui a decisão antiga de não votar). Poderes próprios (sabatinas, impeachment) e negociação por bancada estadual vêm depois.
+- Confirmado pelo Douglas em 08/11/2026: candidatos, veículos de imprensa e sabatinas da campanha (Etapa 8) seguem **fictícios**, com nomes inventados. Ideias tiradas da comparação com o jogo de referência estão em `docs/projeto/plano-etapa-6.md` (imprensa no 6A, resposta aos grupos no 6D, campanha de 13 semanas na Etapa 8, parlamentarismo e golpe como modo futuro depois da Etapa 9).
 - Retratos: um por pessoa, sem repetir. Chegaram 110 (o plano era 200).
 - Uma etapa por vez, fechada antes da próxima, integrando ao jogo a cada etapa.
 
 ---
 
 ## Histórico
+
+- 08/11/2026 · Comparação com o jogo de referência (histórico de versões 1.01 a 1.34). Plano da Etapa 6 ganha: ação de imprensa (6A) e resposta aos grupos que se organizam (6D). Etapa 8 passa a incluir campanha de 13 semanas e práticas ilegais (fictícios); parlamentarismo e golpe com junta militar ficam como modo futuro depois da Etapa 9 (Caixa de ideias).
+
+- 08/11/2026 · Plano da Etapa 6 escrito e aprovado (sem código).
 
 - 08/11/2026 · v0.32.0 · Etapa 5C, bloco 3 (telas): serviço de inteligência, avisos, abafar, dossiês na votação (pronta, sem publicar).
 

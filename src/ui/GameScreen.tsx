@@ -1,28 +1,26 @@
 import { useEffect, useRef, useState } from 'react'
+import { isRecess } from '../game/congress'
+import { askEmpresaNames } from '../lib/aiActions'
+import { PropostaCard } from './IntegridadeCard'
 import { PartyLogo } from './PartyLogo'
-import { billBlockedReason, isRecess } from '../game/congress'
-import { BILL_BY_ID, BILLS, type BillDef } from '../game/data/bills'
+import { BILL_BY_ID, type BillDef } from '../game/data/bills'
 import { addCustomBill } from '../game/custom'
-import { NewBadge } from './NewBill'
 import { playerPortraitId, setPresidentPortrait } from '../game/data/cast'
 import { EVENT_BY_ID } from '../game/data/events'
 import { PARTY_BY_ID } from '../game/data/parties'
 import { ACTION_BY_ID, ACTIONS, ACTIONS_PER_MONTH, blockedReason, effectMultiplier } from '../game/actions'
-import { GROUPS, GROUP_BY_ID } from '../game/data/groups'
+import { GROUPS } from '../game/data/groups'
 import { advanceMonth, isCopomMonth, monthLabel, TERM_MONTHS, type MonthPlan } from '../game/game'
-import { articulate, articulateBlockedReason, gavetaReason, guardarParecer, ministryNow, peekRound, plenaryToday, queueHouse, sendBlockedReason, sendMeasure, voteNow, voteNowBlockedReason, type FloorOptions } from '../game/rodada'
+import { articulate, articulateBlockedReason, gavetaReason, ministryNow, peekRound, plenaryToday, queueHouse, sendBlockedReason, sendMeasure, voteNow, voteNowBlockedReason, type FloorOptions } from '../game/rodada'
 import { Art } from './Art'
 import type { MinistryChange } from '../game/camara'
 import { VoteAnimation } from './VoteAnimation'
 import { ReactionSheet } from './ReactionSheet'
-import { econPull } from '../game/groups'
-import type { MeasureRef } from '../game/interpret'
-import { askEmpresaNames, readText } from '../lib/aiActions'
 import { AiSettings } from './AiSettings'
 import { VoteSheet, type ProcedureKind } from './VoteSheet'
 import { MeasureSheet } from './MeasureSheet'
 import { aiReady } from '../lib/ai'
-import type { ActionId, Articulation, BillId, Cause, CourtNow, Deal, GameState, GroupId, IndicatorKey, PartyId, SenatorBuy, VoteRecord } from '../game/types'
+import type { ActionId, Articulation, BillId, CourtNow, Deal, GameState, PartyId, SenatorBuy, VoteRecord } from '../game/types'
 import { CongressView, ForecastRow, Scoreboard } from './CongressView'
 import { EventPanel } from './EventPanel'
 import { chainAt, chainLabels, type ChainInfo } from './corrente'
@@ -32,19 +30,10 @@ import type { StatementId } from '../game/data/assessoria'
 import { STATEMENT_BY_ID } from '../game/data/assessoria'
 import { streetOptions } from '../game/assessoria'
 import { FichasView } from './FichasView'
-import { ReputationCard } from './ReputationView'
-import { IntegridadeCard, PropostaCard } from './IntegridadeCard'
 import { LicitacaoSheet } from './LicitacaoSheet'
-import { AdvogadoCard, CasosCard } from './CasoCard'
 import { ACAO_NOME_CURTO } from './casoTexto'
-import { CpiCard } from './CpiCard'
-import { InteligenciaCard } from './InteligenciaCard'
-import { intelOf, servicoAtivo } from '../game/inteligencia'
 import type { OrdemIntel } from '../game/data/inteligencia'
-import { JanelasLayer, ResumoLinha, type JanelaDef } from './Janelas'
-import { casosAbertos } from '../game/caso'
-import { cpiAtual } from '../game/cpi'
-import { riscoOf } from '../game/risco'
+import { JanelasLayer } from './Janelas'
 import { ACAO_CPI_CURTO } from './cpiTexto'
 import type { AcaoCpi } from '../game/data/cpi'
 import { ADVOGADOS } from '../game/data/caso'
@@ -53,9 +42,8 @@ import { escolherLicitacao, licitacoesAbertas, nomearEmpresas } from '../game/ri
 import { CONTRATO } from '../game/data/risco'
 import { Portrait } from './Portrait'
 import { eloDe } from './Elo'
-import { ACTION_ICON, GROUP_ICON, INDICATOR_ICON } from './icons'
-import { INDICATORS, lowerFirst, num, signed, type IndicatorMeta } from './format'
-import { Sparkline } from './Sparkline'
+import { ACTION_ICON, GROUP_ICON } from './icons'
+import { INDICATORS, lowerFirst, num } from './format'
 import { PromisesCard, RivalCard } from './OppositionCards'
 import { RulingAnimation, SupremoMini, SupremoView, TseCard } from './SupremoView'
 import { MinistriosView, SenadoView } from './GovTabs'
@@ -63,10 +51,10 @@ import { ministriesInTrouble } from '../game/ministerios'
 import { absMonth } from '../game/memory'
 import { NOMINEE_BY_ID, SUPREMO } from '../game/data/supremo'
 import { justiceName } from '../game/supremo'
+import { RadarCard, conteudoDaJanela, janelaDefsDoRadar } from './Radar'
+import { ApprovalRing, DetailPanel, Delta, KpiCard, MeasureBox, StepButton, confetti, tone, type Detail, type Step } from './PainelPecas'
 import './painel.css'
 
-type Detail = { kind: 'indicator'; key: IndicatorKey } | { kind: 'group'; id: GroupId } | null
-type Step = 1 | 2 | 3 | 4
 /** Depois de encerrar o mês: painel de votação animado e página de reação de cada lei (etapa 4B). */
 /** Etapa 2B: cada janela da corrente do dia leva a posição ("Etapa N de M"); a última oferece encerrar o mês. */
 type Post = ({ kind: 'vote'; v: VoteRecord; i?: number; n?: number } | { kind: 'reaction'; bill: BillId; month: number; fresh?: boolean } | { kind: 'ruling'; id: string } | { kind: 'court'; entry: CourtNow }) & { chain?: ChainInfo | null }
@@ -398,50 +386,16 @@ export function GameScreen({ state, onChange, onExit }: {
         </div>
   )
 
-  /** v0.31 (V3): resumos do Radar e as janelas de detalhe. */
-  const nowAbs = absMonth(state)
-  const casosAb = casosAbertos(state)
-  const casosRec = (state.investigacao?.casos ?? []).filter((c) => c.fase === 'encerrado' && c.fim !== undefined && nowAbs - c.fim <= 3)
-  const cpiNow = cpiAtual(state)
-  const cpiRec = (state.comissoes?.encerradas ?? []).filter((x) => nowAbs - x.fim <= 3)
-  const ctrl = Math.round(riscoOf(state).controle)
-  const escand = Math.round(state.congress.scandal)
-  type Tom = 'dn' | 'warn' | 'up'
-  const radar: { id: string; icone: string; titulo: string; texto?: string; tag?: string; tom?: Tom }[] = [
-    ...(casosAb.length || casosRec.length ? [{ id: 'casos', icone: '🕵️', titulo: 'Casos na investigação', texto: casosAb.length ? `${casosAb[0].alvo}: provas ${Math.round(casosAb[0].provas)}/100` : 'Casos encerrados há pouco', tag: casosAb.length ? `${casosAb.length} aberto${casosAb.length > 1 ? 's' : ''}` : 'encerrado', tom: casosAb.length ? ('dn' as Tom) : undefined }] : []),
-    ...(cpiNow || cpiRec.length ? [{ id: 'cpi', icone: '🏛️', titulo: 'CPI na Câmara', texto: cpiNow ? (cpiNow.fase === 'coleta' ? `Assinaturas ${Math.round(cpiNow.assinaturas)}/171` : 'Instalada: em andamento') : 'CPI encerrada há pouco', tag: cpiNow ? (cpiNow.fase === 'coleta' ? 'coleta' : 'instalada') : 'encerrada', tom: cpiNow ? ('warn' as Tom) : undefined }] : []),
-    {
-      id: 'inteligencia', icone: '📡', titulo: 'Serviço de inteligência',
-      texto: intelOrdem ? 'Ordem do mês anotada' : servicoAtivo(state) ? (intelOf(state).aviso || intelOf(state).avisoCpi ? 'Há um aviso do serviço' : 'Montado e de olho') : 'Não montado: avisa antes de vazamentos e CPIs',
-      tag: intelOrdem ? 'ordem' : servicoAtivo(state) ? (intelOf(state).aviso || intelOf(state).avisoCpi ? 'aviso' : 'ativo') : 'desligado',
-      tom: intelOf(state).aviso || intelOf(state).avisoCpi ? ('warn' as Tom) : undefined,
-    },
-    { id: 'integridade', icone: '🧭', titulo: 'Integridade do governo', texto: 'Seu Elo, o que pesa sobre você e o Controle do Estado', tag: `controle ${ctrl}`, tom: ctrl >= 70 ? 'up' : ctrl >= 45 ? 'warn' : 'dn' },
-    { id: 'reputacao', icone: '🪞', titulo: 'Reputação do governo', texto: 'Como o país te vê e a exposição a escândalo', tag: `escândalo ${escand}/100`, tom: escand >= 40 ? 'dn' : escand >= 15 ? 'warn' : 'up' },
-    { id: 'advogado', icone: '💼', titulo: 'Seu advogado', texto: 'Parecer nas propostas e documentos dos casos' },
-    { id: 'mudou', icone: '🗞️', titulo: report ? 'O que mudou no mês passado' : 'Bem-vindo ao Planalto', texto: report ? `${report.headlines.length} notícias${report.meanwhile?.length ? ' · enquanto você decidia' : ''}` : 'primeiro mês' },
-  ]
-  const janelaDefs: Record<string, JanelaDef> = {
-    casos: { id: 'casos', titulo: 'Casos na investigação', icone: '🕵️', largura: 720 },
-    cpi: { id: 'cpi', titulo: 'CPI na Câmara', icone: '🏛️', largura: 720 },
-    inteligencia: { id: 'inteligencia', titulo: 'Serviço de inteligência', icone: '📡', largura: 700 },
-    integridade: { id: 'integridade', titulo: 'Integridade do governo', icone: '🧭', largura: 640 },
-    reputacao: { id: 'reputacao', titulo: 'Reputação do governo', icone: '🪞', largura: 600 },
-    advogado: { id: 'advogado', titulo: 'Seu advogado', icone: '💼', largura: 560 },
-    mudou: { id: 'mudou', titulo: report ? 'O que mudou no mês passado' : 'Bem-vindo ao Planalto', icone: '🗞️', largura: 720 },
-  }
-  const renderJanela = (id: string) => {
-    switch (id) {
-      case 'casos': return <CasosCard state={state} decisoes={casoDecisoes} advogado={advogado} cpi={cpiDecisao} intel={intelOrdem} onChange={(d) => { setCasoDecisoes(d); if (d.length > casoDecisoes.length) toast('🕵️ Decisão do caso anotada: vale ao encerrar o mês.') }} />
-      case 'cpi': return <CpiCard state={state} decisoes={casoDecisoes} advogado={advogado} escolha={cpiDecisao} intel={intelOrdem} onPick={(a) => { setCpiDecisao(a); if (a) toast('🏛️ Decisão sobre a CPI anotada: vale ao encerrar o mês.') }} />
-      case 'inteligencia': return <InteligenciaCard state={state} ordem={intelOrdem} decisoes={casoDecisoes} advogado={advogado} cpi={cpiDecisao} onOrdem={(o) => { setIntelOrdem(o); if (o) toast('📡 Ordem ao serviço anotada: vale ao encerrar o mês.') }} />
-      case 'integridade': return <IntegridadeCard state={state} />
-      case 'reputacao': return <ReputationCard state={state} onOpen={() => { fechar('reputacao'); setTab('fichas') }} />
-      case 'advogado': return <AdvogadoCard state={state} decisoes={casoDecisoes} advogado={advogado} cpi={cpiDecisao} intel={intelOrdem} onChange={(aid) => { setAdvogado(aid); if (aid) toast('💼 Troca de advogado anotada: vale ao encerrar o mês.') }} />
-      case 'mudou': return ultimoMes
-      default: return null
-    }
-  }
+  /** v0.31 (V3): as janelas de detalhe do Radar (v0.32.1: o conteúdo mora em Radar.tsx). */
+  const janelaDefs = janelaDefsDoRadar(state)
+  const renderJanela = (id: string) => conteudoDaJanela(id, {
+    state, casoDecisoes, advogado, cpiDecisao, intelOrdem, ultimoMes,
+    onCaso: (d) => { setCasoDecisoes(d); if (d.length > casoDecisoes.length) toast('🕵️ Decisão do caso anotada: vale ao encerrar o mês.') },
+    onCpi: (a) => { setCpiDecisao(a); if (a) toast('🏛️ Decisão sobre a CPI anotada: vale ao encerrar o mês.') },
+    onIntel: (o) => { setIntelOrdem(o); if (o) toast('📡 Ordem ao serviço anotada: vale ao encerrar o mês.') },
+    onAdvogado: (aid) => { setAdvogado(aid); if (aid) toast('💼 Troca de advogado anotada: vale ao encerrar o mês.') },
+    onAbrirReputacao: () => { fechar('reputacao'); setTab('fichas') },
+  })
 
   return (
     <div className={`pn ${claro ? 'pn--claro' : ''}`}>
@@ -879,12 +833,7 @@ export function GameScreen({ state, onChange, onExit }: {
 
           <div className="pn-col">
             <PropostaCard state={state} value={proposta} onChange={(v) => { setProposta(v); if (v) toast(v === 'aceitar' ? '🤝 Proposta aceita: vale ao encerrar o mês.' : '🙅 Proposta recusada: vale ao encerrar o mês.') }} />
-            <section className="pn-card">
-              <h3>📡 Radar <span className="pn-badge">clique para abrir os detalhes</span></h3>
-              <div className="pn-resumos">
-                {radar.map((r) => <ResumoLinha key={r.id} icone={r.icone} titulo={r.titulo} texto={r.texto} tag={r.tag} tom={r.tom} onClick={() => abrir(r.id)} />)}
-              </div>
-            </section>
+            <RadarCard state={state} intelOrdem={intelOrdem} onOpen={abrir} />
 
             <PendenciasCard state={state} onGo={goPending} onAttend={attend} onLicitacao={openLicitacao} />
             {licSheet && (
@@ -934,270 +883,3 @@ function currentEventLabel(s: GameState, i: number) {
   return ev ? ev.options[i].label : ''
 }
 
-const tone = (v: number) => (v >= 50 ? 'var(--pn-green)' : v >= 35 ? 'var(--pn-gold)' : 'var(--pn-red)')
-
-function confetti() {
-  const colors = ['#009c3b', '#ffdf00', '#002776', '#ffffff']
-  for (let i = 0; i < 36; i++) {
-    const c = document.createElement('div')
-    c.className = 'pn-confetti'
-    c.style.left = `${Math.random() * 100}vw`
-    c.style.background = colors[i % colors.length]
-    c.style.animationDelay = `${Math.random() * 0.4}s`
-    document.body.appendChild(c)
-    setTimeout(() => c.remove(), 2400)
-  }
-}
-
-function StepButton({ n, cur, done, icon, title, sub, onClick }: {
-  n: Step; cur: Step; done: boolean; icon: string; title: string; sub: string; onClick: () => void
-}) {
-  return (
-    <button className={`pn-step ${cur === n ? 'on' : ''} ${done ? 'ok' : ''}`} onClick={onClick}>
-      <span className="n">{done ? '✓' : icon}</span>
-      <span><span className="t">{title}</span><span className="s">{sub}</span></span>
-    </button>
-  )
-}
-
-function ApprovalRing({ value }: { value: number }) {
-  const [shown, setShown] = useState(value)
-  const from = useRef(value)
-  useEffect(() => {
-    const start = performance.now()
-    const a = from.current
-    let raf = 0
-    const tick = (t: number) => {
-      const f = Math.min(1, (t - start) / 1000)
-      setShown(a + (value - a) * f)
-      if (f < 1) raf = requestAnimationFrame(tick)
-      else from.current = value
-    }
-    raf = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(raf)
-  }, [value])
-  const p = Math.max(0, Math.min(100, shown))
-  return (
-    <div className="pn-ring">
-      <svg viewBox="0 0 120 120">
-        <circle cx="60" cy="60" r="50" className="bg" />
-        <circle cx="60" cy="60" r="50" className="fg" style={{ strokeDashoffset: 314 - (314 * p) / 100, stroke: tone(p) }} />
-      </svg>
-      <div>
-        <div className="big">{num(p, 1)}%</div>
-        <div className="pn-hint">{p >= 50 ? 'Maioria aprova o governo.' : p >= 35 ? 'País dividido.' : 'Governo impopular: cuidado.'}</div>
-      </div>
-    </div>
-  )
-}
-
-function MeasureBox({ state, onState, draft, selected, onSign, onSend, onAddBill, consult, setConsult }: {
-  state: GameState
-  /** Fase A: grava o estado novo (parecer do ministro). */
-  onState: (s: GameState) => void
-  /** Fase A: pedido levado pelo botão "Atender" das pendências. */
-  draft: { text: string; n: number } | null
-  consult: BillId | null
-  setConsult: (id: BillId | null) => void
-  onAddBill: (b: BillDef) => BillId
-  selected: ActionId[]
-  bill: BillId | null
-  onSign: (id: ActionId) => void
-  onSend: (id: BillId, title?: string) => void
-}) {
-  const [text, setText] = useState(draft?.text ?? '')
-  const [result, setResult] = useState<{ matches: MeasureRef[]; speech: string; fallback: string | null; notes: string[]; constraints: string[] } | null>(null)
-  /** Etapa 2: janela da medida em etapas aberta para esta medida. */
-  const [sheet, setSheet] = useState<BillId | null>(null)
-  const [busy, setBusy] = useState(false)
-  const read = async () => {
-    if (!text.trim() || busy) return
-    setBusy(true)
-    const r = await readText(state, text, null)
-    setBusy(false)
-    const matches = r.matches.slice(0, r.source === 'ia' ? 3 : 2)
-    // Etapa 3C: nada do catálogo servia e a IA redigiu uma medida nova; ela entra no catálogo do mandato.
-    if (r.draft) matches.push({ kind: 'bill', id: onAddBill(r.draft) })
-    setResult({ matches, speech: r.speech, fallback: r.fallback, notes: r.notes, constraints: r.constraints })
-    // Etapa 2B: a leitura do gabinete abre em janela (etapa 1 da corrente do dia).
-    const first = matches.find((m) => m.kind === 'bill')
-    if (first && matches[0].kind === 'bill') setSheet(first.id as BillId)
-  }
-  const billIds = (result?.matches ?? []).filter((m) => m.kind === 'bill').map((m) => m.id as BillId)
-  return (
-    <>
-      <h3>✍️ Medida do mês <span className="pn-badge">escreva com suas palavras</span></h3>
-      <p className="pn-hint">
-        Diga o que quer fazer: reajustar o salário mínimo, isentar o imposto de renda, privatizar, cortar gastos, acelerar obras.
-        O gabinete diz se dá para fazer por decreto ou se precisa da Câmara, quanto custa e qual o placar provável.
-      </p>
-      <textarea
-        className="pn-textarea"
-        value={text}
-        onChange={(e) => { setText(e.target.value); setResult(null) }}
-        onKeyDown={(e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) read() }}
-        placeholder="Ex.: “Isentar do imposto de renda quem ganha até R$ 5 mil” ou “Acelerar as obras de rodovias”"
-      />
-      <div className="pn-row">
-        <button className="pn-btn" disabled={!text.trim() || busy} onClick={read}>{busy ? '⏳ Lendo…' : '📋 Pedir leitura do gabinete'}</button>
-      </div>
-      {sheet && <MeasureSheet state={state} id={sheet} ids={billIds} request={text} constraints={result?.constraints} speech={result?.speech} notes={result?.notes} consult={consult} onConsult={setConsult} onClose={() => setSheet(null)} onConfirm={(id, title) => { setSheet(null); onSend(id, title) }} onParecer={(p) => onState(guardarParecer(state, p))} onRewrite={(t) => { setText(t); setResult(null); setSheet(null) }} />}
-      {result && (
-        <div className="pn-preview">
-          {result.fallback && <p className="pn-hint">⚠️ {result.fallback} Lido por palavras-chave.</p>}
-          {result.matches.length === 0 ? (
-            <>
-              <b>🧑‍💼 O gabinete não encontrou como fazer isso.</b>
-              {result.notes.length > 0 && <p className="pn-hint">⚠️ {result.notes.join(' ')}</p>}
-              <p className="pn-hint">
-                O governo conhece {ACTIONS.length + BILLS.length} medidas, em 13 áreas.{aiReady() ? '' : ' Com a IA ligada, o gabinete redige medidas novas.'} Tente reescrever com
-                outras palavras ou escolha no catálogo abaixo. Para responder ao fato do mês, use o campo “agir” no próprio fato.
-              </p>
-            </>
-          ) : (
-            <>
-              <b>🧑‍💼 Os ministros entenderam assim:</b>
-              {result.speech && <p className="pn-advice">“{result.speech}”</p>}
-              {result.matches.map((m, i) =>
-                m.kind === 'decree' ? (
-                  <DecreeReading key={m.id} state={state} id={m.id} first={i === 0} selected={selected} onSign={onSign} />
-                ) : (
-                  <div key={m.id} className="pn-reading pn-reading--mini">
-                    <div className="pn-reading__head">
-                      <span className="pn-action__ic">📋</span>
-                      <div><strong>{i === 0 ? BILL_BY_ID[m.id].name : `Ou talvez: ${BILL_BY_ID[m.id].name}`} <NewBadge id={m.id} /></strong><div className="pn-hint">{BILL_BY_ID[m.id].summary}</div></div>
-                    </div>
-                    <div className="pn-row"><button className="pn-btn" disabled={!!billBlockedReason(state, m.id)} onClick={() => setSheet(m.id)}>📋 Abrir a leitura do gabinete</button>{billBlockedReason(state, m.id) && <span className="pn-action__blk">⏳ {billBlockedReason(state, m.id)}</span>}</div>
-                  </div>
-                ),
-              )}
-            </>
-          )}
-        </div>
-      )}
-    </>
-  )
-}
-
-function DecreeReading({ state, id, first, selected, onSign }: {
-  state: GameState; id: ActionId; first: boolean; selected: ActionId[]; onSign: (id: ActionId) => void
-}) {
-  const a = ACTION_BY_ID[id]
-  const blocked = blockedReason(state, id)
-  const taken = selected.includes(id)
-  const full = selected.length >= ACTIONS_PER_MONTH
-  return (
-    <div className="pn-reading">
-      <div className="pn-reading__head">
-        <span className="pn-action__ic">{ACTION_ICON[id]}</span>
-        <div>
-          <strong>{first ? a.name : `Ou talvez: ${a.name}`}</strong>
-          <div className="pn-hint">{a.summary}</div>
-        </div>
-      </div>
-      <div className="pn-pv">
-        <div>📜 Vira<b>Decreto</b></div>
-        <div>🗳️ Na Câmara<b>Não precisa</b></div>
-        <div>⏳ Pode repetir<b>{a.cooldown === 1 ? 'todo mês' : `a cada ${a.cooldown} meses`}</b></div>
-      </div>
-      <div className="up">+ {a.pros}</div>
-      <div className="dn">− {a.cons}</div>
-      <div className="pn-row">
-        <button className="pn-btn" disabled={!!blocked || taken || full} onClick={() => onSign(id)}>
-          {taken ? '✔ Já assinada' : '🖊️ Assinar decreto'}
-        </button>
-        {blocked && <span className="pn-action__blk">⏳ {blocked}</span>}
-        {!blocked && full && !taken && <span className="pn-action__blk">✋ Você já usou os {ACTIONS_PER_MONTH} decretos do mês.</span>}
-      </div>
-    </div>
-  )
-}
-
-function KpiCard({ meta, values, onClick }: { meta: IndicatorMeta; values: number[]; onClick: () => void }) {
-  const v = values[values.length - 1]
-  const d = values.length > 1 ? v - values[values.length - 2] : 0
-  const moved = Math.abs(d) >= Math.pow(10, -meta.decimals) / 2
-  const full = meta.format(v)
-  const perGdp = full.endsWith(' do PIB')
-  return (
-    <button className={`pn-kpi ${moved ? 'flash' : ''}`} onClick={onClick} title={meta.explain}>
-      <span className="ic">{INDICATOR_ICON[meta.key]}</span>
-      <span className="v">{full.replace(' do PIB', '')}</span>
-      <span className="l">{meta.label}{perGdp ? ' (do PIB)' : ''}</span>
-      <span className="d">{values.length > 1 ? <Delta value={d} good={meta.goodDirection} d={meta.decimals} /> : 'início do mandato'}</span>
-      <Sparkline values={values.slice(-24)} width={110} height={22} color="var(--pn-teal)" />
-    </button>
-  )
-}
-
-function Delta({ value, good, d = 1 }: { value: number; good: 1 | -1 | 0; d?: number }) {
-  if (Math.abs(value) < Math.pow(10, -d) / 2) return <span className="delta">=</span>
-  const tone = good === 0 ? 'neutral' : value * good > 0 ? 'good' : 'bad'
-  return <span className={`delta delta--${tone}`}>{value > 0 ? '▲' : '▼'} {num(Math.abs(value), d)}</span>
-}
-
-function CauseList({ causes, decimals = 2, unit = '' }: { causes: Cause[]; decimals?: number; unit?: string }) {
-  const list = causes.filter((c) => Math.abs(c.value) >= Math.pow(10, -decimals) / 2)
-  if (list.length === 0) return <p className="muted">Nada relevante mudou neste mês.</p>
-  return (
-    <ul className="causes">
-      {list.map((c, i) => (
-        <li key={i}>
-          <span>{c.label}</span>
-          <span className={c.value > 0 ? 'pos' : 'neg'}>{signed(c.value, decimals)}{unit}</span>
-        </li>
-      ))}
-    </ul>
-  )
-}
-
-function DetailPanel({ state, detail, onClose }: { state: GameState; detail: NonNullable<Detail>; onClose: () => void }) {
-  const report = state.lastReport
-  const now = state.history[state.history.length - 1]
-
-  if (detail.kind === 'indicator') {
-    const meta = INDICATORS.find((m) => m.key === detail.key)!
-    const values = state.history.map((h) => h.indicators[detail.key])
-    const causes = report?.causes[detail.key] ?? []
-    return (
-      <aside className="detail" onClick={onClose}>
-        <div className="detail__box" onClick={(e) => e.stopPropagation()}>
-          <button className="detail__close" onClick={onClose}>×</button>
-          <h2>{meta.label}</h2>
-          <div className="detail__value">{meta.format(values[values.length - 1])}</div>
-          <Sparkline values={values} width={420} height={80} />
-          <p>{meta.explain}</p>
-          <h3>O que mexeu no último mês</h3>
-          {report ? <CauseList causes={causes} decimals={meta.decimals === 0 ? 1 : 2} /> : <p className="muted">O mandato ainda não começou.</p>}
-        </div>
-      </aside>
-    )
-  }
-
-  const def = GROUP_BY_ID[detail.id]
-  const g = state.groups[detail.id]
-  const pulls = econPull(detail.id, now.indicators).filter((p) => Math.abs(p.value) >= 0.5)
-  return (
-    <aside className="detail" onClick={onClose}>
-      <div className="detail__box" onClick={(e) => e.stopPropagation()}>
-        <button className="detail__close" onClick={onClose}>×</button>
-        <h2>{def.name}</h2>
-        <div className="detail__value">{num(g.approval, 0)}% de aprovação</div>
-        <Sparkline values={state.history.map((h) => h.groups[detail.id])} width={420} height={80} />
-        <p>Se importa com: {def.cares}. Representa {Math.round(def.weight * 100)}% da população.</p>
-        <h3>O que mexeu no último mês</h3>
-        {report ? <CauseList causes={report.groupCauses[detail.id]} decimals={1} /> : <p className="muted">O mandato ainda não começou.</p>}
-        <h3>Como a economia pesa para eles hoje</h3>
-        <p className="muted">A aprovação caminha aos poucos na direção desses valores.</p>
-        <CauseList causes={pulls} decimals={1} unit=" pts" />
-        {g.memory.length > 0 && (
-          <>
-            <h3>O que eles ainda lembram</h3>
-            <p className="muted">Ganhos são esquecidos em cerca de 9 meses; perdas, em cerca de 2 anos.</p>
-            <CauseList causes={g.memory} decimals={1} unit=" pts" />
-          </>
-        )}
-      </div>
-    </aside>
-  )
-}

@@ -1,5 +1,13 @@
 # Novidades
 
+## 0.32.1 (08/11/2026)
+- **Bloco 6.0 da Etapa 6 (arrumar a casa), itens 1 a 3.** Sem regra nova de jogo.
+  - **`GameScreen.tsx` partido:** de 1.203 para cerca de 880 linhas. As peças do Painel (medida do mês, indicadores, janelas de indicador e grupo, anel de aprovação) foram para `src/ui/PainelPecas.tsx`; o Radar e o conteúdo das janelas do Radar para `src/ui/Radar.tsx`. Só mudou de lugar.
+  - **Aviso "acordo para vencer" nas Pendências:** acordo guardado numa medida da fila que já esfriou (força abaixo de 50%) aparece com os meses que faltam, a força e o preço da renovação (70%). Fica vermelho com 1 mês ou menos. Vale para Câmara e Senado.
+  - **35% do Senado (`SENADO.dealCarry`):** medido com `npx tsx scripts/medir-senado.ts`: acordo da Câmara dá +51 pontos de chance na Câmara e +12,7 no Senado (fechado direto no Senado: +14,8). Número mantido; falta só o seu playtest.
+  - **Visual:** foto sem Elo também em preto e branco nas listas; vidro e bordas retas nas janelas de votação, medida, decisão, licitação, reação e de indicador/grupo.
+- Sem mudança no save (continua na versão 31). 439 testes (2 novos).
+
 ## 0.32.0 (08/11/2026)
 - **Etapa 5C, bloco 3 (telas): o serviço de inteligência e os dossiês agora existem de verdade.** (Era a "v0.30.1" do plano; virou 0.32.0 porque o redesenho visual tomou os números 0.31.x.) O serviço está **ligado**.
   - **Janela "Serviço de inteligência"** (linha nova no Radar): montar ou fechar o serviço, com o custo à vista (agenda, R$ por ano, exposição). Uma ordem por mês, que vale ao encerrar; dá para desfazer antes.

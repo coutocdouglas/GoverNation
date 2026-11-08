@@ -12,6 +12,8 @@ import { GROUP_BY_ID } from './data/groups'
 import { PARTY_BY_ID } from './data/parties'
 import { PROMISE_BY_ID } from './data/promises'
 import { absMonth } from './memory'
+import { canRenew, dealMonthsLeft, dealStrength } from './congress'
+import { DEALS } from './data/deals'
 import { promiseStatus } from './promises'
 import { TERM_MONTHS } from './game'
 import { baseMembers, fidelityOf } from './base'
@@ -241,6 +243,23 @@ export function pendencias(s: GameState): Pendencia[] {
     const left = ESFRIA.archiveAfter - 1 - (s.month - p.sentMonth)
     if (left > 2) continue
     out.push({ id: `esfria-${p.id}`, icon: '🧊', target: c.pending.includes(p) ? 'camara' : 'senado', left, title: `Esfriando na fila: ${BILL_BY_ID[p.id]?.name ?? p.id}`, detail: left <= 0 ? 'É arquivado no fim deste mês se não for votado.' : `Arquivado em ${leftText(left)} sem votação.`, urgency: urgencyOf(left, false), weight: 36 - left * 6 })
+  }
+
+  // v0.32.1 (6.0): acordo guardado numa medida da fila que esfriou ou está para vencer (renovar custa menos que fechar de novo).
+  for (const p of [...c.pending, ...c.senate.pending]) {
+    const naCamara = c.pending.includes(p)
+    const acordos = naCamara ? [...(p.deals ?? []), ...(p.senateDeals ?? [])] : (p.deals ?? [])
+    const velhos = acordos.filter((d) => d.month !== undefined && canRenew(d, s.month))
+    if (velhos.length === 0) continue
+    const left = Math.min(...velhos.map((d) => dealMonthsLeft(d, s.month)))
+    const siglas = [...new Set(velhos.map((d) => PARTY_BY_ID[d.party].sigla))].join(', ')
+    const forca = Math.round(Math.min(...velhos.map((d) => dealStrength(d, s.month))) * 100)
+    out.push({
+      id: `acordo-${p.id}`, icon: '🤝', target: naCamara ? 'camara' : 'senado', left,
+      title: `Acordo para vencer: ${BILL_BY_ID[p.id]?.name ?? p.id} (${siglas})`,
+      detail: `${left <= 0 ? 'Já não segura voto' : `Perde o efeito em ${leftText(left)}`} · força ${forca}% · renovar custa ${Math.round(DEALS.validade.renewPrice * 100)}% do preço e gasta uma conversa da rodada`,
+      urgency: urgencyOf(left, false), weight: 41 - left * 5,
+    })
   }
 
   // Fila do Congresso (projetos esperando pauta).

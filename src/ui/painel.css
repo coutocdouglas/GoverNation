@@ -279,6 +279,8 @@
 
 /* ---- Retratos (v0.4.1) ---- */
 .portrait { flex: none; border-radius: 50%; object-fit: cover; border: 2.5px solid; background: #0b0f14; filter: drop-shadow(0 4px 8px #0006); display: block; }
+/* v0.32.1: foto sem Elo também em preto e branco (a do anel do Elo tem regra própria, mais abaixo). */
+.pn .portrait { filter: var(--pn-photo) drop-shadow(0 4px 8px #0006); }
 .pn-hero > .portrait { align-self: center; }
 .pn-event__who .portrait { animation: pn-bob 3s ease-in-out infinite; }
 
@@ -999,3 +1001,8 @@
 .pn-select { font: inherit; color: var(--pn-ink); background: var(--pn-panel2); border: 1px solid var(--pn-line); padding: 7px 10px; max-width: 100%; }
 .pn-dossie { border: 1px solid var(--pn-line); padding: 12px 14px; margin: 10px 0; background: var(--pn-panel2); }
 .pn-dossie__row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
+
+/* v0.32.1: vidro e bordas retas também nas janelas de votação, medida, decisão, licitação e reação. */
+.pn-sheet, .pn-vanim { background: color-mix(in srgb, var(--pn-well) 84%, transparent); -webkit-backdrop-filter: blur(22px) saturate(1.1); backdrop-filter: blur(22px) saturate(1.1); border: 1px solid var(--pn-glass-line); border-radius: 0; box-shadow: 0 24px 70px -24px rgba(0,0,0,.55); }
+.pn .detail__box { background: color-mix(in srgb, var(--pn-well) 84%, transparent); -webkit-backdrop-filter: blur(22px) saturate(1.1); backdrop-filter: blur(22px) saturate(1.1); border-radius: 0; border-color: var(--pn-glass-line); }
+.pn-sheet input, .pn-sheet textarea, .pn-sheet button, .pn-vanim button { border-radius: 0; }
