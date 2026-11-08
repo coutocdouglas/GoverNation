@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import type { OrdemIntel } from '../game/data/inteligencia'
 import { AGENDA } from '../game/data/caso'
 import { ACOES_CPI, CPI, RELATORIO, type AcaoCpi, type TomCpi } from '../game/data/cpi'
 import { PARTY_BY_ID } from '../game/data/parties'
@@ -139,12 +140,12 @@ function CpiBox({ state, c, escolha, livre, onPick }: { state: GameState; c: Cpi
  * Etapa 5C (v0.29.1): pedido de CPI ou CPI instalada, num cartão próprio do Painel. A escolha vai em `MonthPlan.cpi`.
  * Só aparece com CPI em andamento ou encerrada há até 3 meses.
  */
-export function CpiCard({ state, decisoes, advogado, escolha, onPick }: { state: GameState; decisoes: DecisaoCaso[]; advogado: string | null; escolha: AcaoCpi | null; onPick: (a: AcaoCpi | null) => void }) {
+export function CpiCard({ state, decisoes, advogado, escolha, intel, onPick }: { state: GameState; decisoes: DecisaoCaso[]; advogado: string | null; escolha: AcaoCpi | null; intel?: OrdemIntel | null; onPick: (a: AcaoCpi | null) => void }) {
   const c = cpiAtual(state)
   const now = absMonth(state)
   const recentes = (state.comissoes?.encerradas ?? []).filter((x) => now - x.fim <= 3)
   if (!c && !recentes.length) return null
-  const plan = { casos: decisoes, advogado: advogado ?? undefined, cpi: escolha ?? undefined }
+  const plan = { casos: decisoes, advogado: advogado ?? undefined, cpi: escolha ?? undefined, inteligencia: intel ?? undefined }
   return (
     <section className="pn-card pn-card--red" id="cpi">
       <h3>🏛️ CPI na Câmara {c && <AgendaBadge plan={plan} />}</h3>

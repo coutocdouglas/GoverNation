@@ -12,8 +12,8 @@ export interface OrdemIntel {
 }
 
 export const INTELIGENCIA = {
-  /** Fica desligado até as telas da v0.30.1 (Teste do beco sem saída). Testes e simulador usam `ligarInteligencia`. */
-  ativo: false,
+  /** Ligado desde que ganhou tela (v0.32.0). Testes e simulador usam `ligarInteligencia`. */
+  ativo: true,
   /** Rótulo do gasto contínuo: é por ele que o gasto sai das contas quando o serviço fecha. */
   rotuloGasto: 'Serviço de inteligência',
   /** Gasto em % do PIB ao ano, enquanto o serviço estiver aberto. */

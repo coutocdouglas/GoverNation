@@ -6,6 +6,8 @@ import { BILL_BY_ID, GDP_BILLIONS, INSTRUMENTS } from '../game/data/bills'
 import { CAMARA } from '../game/data/camara'
 import { DEALS } from '../game/data/deals'
 import { LIDERES_SENADO, PRESIDENTE_SENADO, SENADO } from '../game/data/senado'
+import { DOSSIE } from '../game/data/inteligencia'
+import { dossieBlockedReason, intelOf, reforcoDossie, servicoAtivo } from '../game/inteligencia'
 import { buysBlockedReason, indecisos, isMeiaSessao, mesaDone, senadoComissoes } from '../game/senado'
 import { PARTIES, PARTY_BY_ID } from '../game/data/parties'
 import { COUNTERABLE, emendasAmount, emendasFactor, emendasMoney, offerFor, type AskOption, type DealScope, type Offer } from '../game/deals'
@@ -42,7 +44,10 @@ const KIND_TAG: Record<Offer['kind'], { text: string; cls: string }> = {
  * Votação no Congresso (etapas 4 e 4C1): placar previsto se fosse votado agora, lideranças e negociação,
  * com uma aba para a Câmara e outra para o Senado. O presidente ouve até 3 lideranças por mês na Câmara e 2 no Senado.
  */
-export function VoteSheet({ state, bill, deals, listened, onListen, listenedSenate, onListenSenate, onDeal, onClose, plan, onProcedure, onVoteNow, voteBlocked, gaveta, onState, chain, buys = [], onBuy }: {
+export function VoteSheet({ state, bill, deals, listened, onListen, listenedSenate, onListenSenate, onDeal, onClose, plan, onProcedure, onVoteNow, voteBlocked, gaveta, onState, chain, buys = [], onBuy, dossie = null, onDossie }: {
+  /** v0.32.0: dossiê escolhido para esta votação da Câmara (só com o serviço de inteligência montado). */
+  dossie?: PartyId | null
+  onDossie?: (p: PartyId | null) => void
   /** Etapa 3: senadores indecisos comprados para este projeto (pagos ao votar) e como marcar/desmarcar. */
   buys?: SenatorBuy[]
   onBuy?: (b: SenatorBuy, add: boolean) => void
@@ -79,7 +84,9 @@ export function VoteSheet({ state, bill, deals, listened, onListen, listenedSena
   const mine = deals.filter((d) => d.bill === bill && (d.house ?? 'camara') === house)
   const has = (k: ProcedureKind) => (plan[k] ?? []).includes(bill)
   const original = has('original')
-  const fcCamara = forecastVote(state, bill, deals.filter((d) => d.bill === bill && d.house !== 'senado'), { original })
+  const dealsCamara = deals.filter((d) => d.bill === bill && d.house !== 'senado')
+  const fcCamara = forecastVote(state, bill, dealsCamara, { original, dossie: dossie ?? undefined })
+  const fcSemDossie = dossie ? forecastVote(state, bill, dealsCamara, { original }) : null
   // Etapa 2C: o acordo fechado com o projeto na Câmara vale também no Senado.
   const senDeals = deals.filter((d) => d.bill === bill && (d.house === 'senado' || !inSenate))
   const fcSenado = forecastSenate(state, bill, senDeals, { original, senadores: buys })
@@ -307,6 +314,10 @@ export function VoteSheet({ state, bill, deals, listened, onListen, listenedSena
         </>
         )}
 
+        {onDossie && !senado && !inSenate && servicoAtivo(state) && (
+          <DossieBox state={state} bill={bill} escolhido={dossie} onPick={onDossie} ganho={fcSemDossie ? fcCamara.yes - fcSemDossie.yes : 0} />
+        )}
+
         {onState && b.instrument !== 'decreto' && (
           <RuasBox state={state} bill={bill} onState={onState} />
         )}
@@ -323,6 +334,39 @@ export function VoteSheet({ state, bill, deals, listened, onListen, listenedSena
         <p className="pn-hint">Acordos pagam o preço na hora da votação. Bancadas podem não entregar tudo: a confiabilidade diz a chance de cumprirem. Se deixar para depois, a medida fica na fila; cada rodada parada ela esfria, e depois de {ESFRIA.archiveAfter} rodadas é arquivada.</p>
       </div>
     </aside>
+  )
+}
+
+/**
+ * v0.32.0: dossiê na votação da Câmara. Gasta o material do partido, derruba a relação com ele e alimenta o esquema
+ * escondido com a assinatura do presidente. A previsão acima já mostra o efeito do dossiê escolhido.
+ */
+function DossieBox({ state, bill, escolhido, onPick, ganho }: { state: GameState; bill: BillId; escolhido: PartyId | null; onPick: (p: PartyId | null) => void; ganho: number }) {
+  const I = intelOf(state)
+  const lista = PARTIES.filter((p) => (I.dossies[p.id]?.material ?? 0) > 0)
+  if (!lista.length) return null
+  return (
+    <div className="pn-dossie">
+      <b>🗂️ Dossiê do serviço de inteligência</b>
+      <p className="pn-hint" style={{ margin: '4px 0' }}>
+        Pressiona o líder de uma bancada para virar votos nesta votação. <b>Custo:</b> o material acaba, a relação com o partido cai {Math.abs(DOSSIE.relacao)} pontos, e o pedido alimenta o esquema escondido ligado a você (se vazar, vira caso e CPI). Um dossiê por votação.
+      </p>
+      {lista.map((p) => {
+        const why = dossieBlockedReason(state, p.id, bill)
+        const on = escolhido === p.id
+        const m = Math.round(I.dossies[p.id]?.material ?? 0)
+        return (
+          <div key={p.id} className="pn-dossie__row">
+            <PartyLogo party={p.id} size={22} /> <b style={{ color: p.color }}>{p.sigla}</b>
+            <span className="grow">material {m}/100{m < DOSSIE.usarDesde ? ` · precisa de ${DOSSIE.usarDesde}` : ` · força do dossiê ${Math.round(reforcoDossie(state, p.id) * 100)}%`}</span>
+            <button className={`pn-btn pn-btn--small ${on ? '' : 'pn-btn--ghost'}`} disabled={!!why && !on} title={why ?? undefined} onClick={() => onPick(on ? null : p.id)}>
+              {on ? '✔ Usar neste voto (desfazer)' : why ? `✋ ${why}` : 'Usar neste voto'}
+            </button>
+          </div>
+        )
+      })}
+      {escolhido && <p className="up" style={{ margin: '6px 0 0' }}>✔ Dossiê escolhido: {ganho >= 0 ? `+${ganho}` : ganho} voto{Math.abs(ganho) === 1 ? '' : 's'} na previsão da Câmara. Vale quando você votar.</p>}
+    </div>
   )
 }
 

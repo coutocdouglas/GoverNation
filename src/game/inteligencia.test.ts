@@ -262,3 +262,25 @@ describe('Save e partida', () => {
     expect(s.inteligencia.ativo).toBe(true)
   })
 })
+
+describe('Telas do serviço (v0.32.0)', () => {
+  it('o serviço está ligado por padrão', () => {
+    expect(INTELIGENCIA.ativo).toBe(true)
+  })
+
+  it('o aviso de vazamento vira pendência que leva ao serviço; sem serviço, não aparece', async () => {
+    const { pendencias } = await import('./pendencias')
+    const s = montado()
+    const sem = esquema(s)
+    aviso(s, sem)
+    const p = pendencias(s).find((x) => x.id === `aviso-${sem.id}`)
+    expect(p?.target).toBe('inteligencia')
+    intelOf(s).ativo = false
+    expect(pendencias(s).some((x) => x.id === `aviso-${sem.id}`)).toBe(false)
+  })
+
+  it('a ordem escolhida na tela conta na agenda e o plano com duas ordens de agenda é barrado', () => {
+    const plano: MonthPlan = { inteligencia: { acao: 'revelar', alvo: 'x' }, advogado: 'algum' }
+    expect(agendaUsada(plano)).toBeGreaterThanOrEqual(2)
+  })
+})

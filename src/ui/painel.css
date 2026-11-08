@@ -989,3 +989,13 @@
 /* v0.31.1: combinação de fontes: o nome do presidente (h1) em Corigo, o resto em ZT Nature. */
 .pn h1 { font-family: var(--pn-display); font-weight: 400; letter-spacing: 0; }
 .pn-hero h1 { font-size: 46px; }
+
+/* ---------- v0.32.0: serviço de inteligência ---------- */
+.pn-intel__box { border-top: 1px solid var(--pn-line); padding: 12px 0 4px; margin-top: 8px; }
+.pn-intel__box > b { font-size: 14px; }
+.pn-intel__parties { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }
+.pn-intel__party { display: flex; align-items: center; gap: 12px; padding: 6px 4px; }
+.pn-intel__party .grow { flex: 1; min-width: 0; }
+.pn-select { font: inherit; color: var(--pn-ink); background: var(--pn-panel2); border: 1px solid var(--pn-line); padding: 7px 10px; max-width: 100%; }
+.pn-dossie { border: 1px solid var(--pn-line); padding: 12px 14px; margin: 10px 0; background: var(--pn-panel2); }
+.pn-dossie__row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 8px; }

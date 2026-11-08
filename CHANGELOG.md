@@ -1,5 +1,16 @@
 # Novidades
 
+## 0.32.0 (08/11/2026)
+- **Etapa 5C, bloco 3 (telas): o serviço de inteligência e os dossiês agora existem de verdade.** (Era a "v0.30.1" do plano; virou 0.32.0 porque o redesenho visual tomou os números 0.31.x.) O serviço está **ligado**.
+  - **Janela "Serviço de inteligência"** (linha nova no Radar): montar ou fechar o serviço, com o custo à vista (agenda, R$ por ano, exposição). Uma ordem por mês, que vale ao encerrar; dá para desfazer antes.
+  - **Avisos:** vazamento e pedido de CPI avisados com 2 meses de antecedência, na janela e na **central de pendências** ("O serviço avisa: … deve vazar"). Dá para **tentar abafar**, com a chance de dar errado em palavras (baixa, média, alta) e o que acontece nos dois casos.
+  - **Levantar a vida de alguém:** escolha um ministro, ministro do Supremo ou líder; o risco oculto dele aparece (número e pista) na lista do serviço.
+  - **Dossiês:** investigar o líder de cada bancada, com a barra de material e o aviso do preço (esquema escondido ligado a você). **Queimar os dossiês** e **fechar o serviço** não gastam agenda.
+  - **Na janela de votação da Câmara:** caixa "Dossiê" com o custo (material acaba, relação cai 12) e a previsão já mostrando quantos votos o dossiê vira.
+  - A agenda do presidente ("agenda X de 2") agora conta também a ordem da inteligência nos cartões de casos, CPI e advogado.
+- Sem mudança no save (continua na versão 31). 437 testes (3 novos). Simulador sem mudança: o serviço só liga quando você o monta.
+
+
 ## 0.31.1 (08/11/2026)
 - **Ajustes do visual novo, a pedido do Douglas.**
   - **Modo escuro em preto neutro**, sem o azul de antes.

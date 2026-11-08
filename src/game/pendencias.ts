@@ -20,12 +20,13 @@ import type { BillId, GameState } from './types'
 import { licitacoesAbertas, prazoLicitacao } from './risco'
 import { casosAbertos, faixaGravidade } from './caso'
 import { cpiAtual } from './cpi'
+import { sementeAvisada } from './inteligencia'
 import { CPI } from './data/cpi'
 import { deAuthor, justiceName } from './supremo'
 import { TSE_BY_ID } from './data/supremo'
 
 export type Urgency = 'red' | 'yellow' | 'green'
-export type PendingTarget = 'evento' | 'camara' | 'senado' | 'supremo' | 'promessas' | 'cobrancas' | 'licitacao' | 'caso' | 'cpi'
+export type PendingTarget = 'evento' | 'camara' | 'senado' | 'supremo' | 'promessas' | 'cobrancas' | 'licitacao' | 'caso' | 'cpi' | 'inteligencia'
 
 export interface Pendencia {
   id: string
@@ -86,6 +87,26 @@ export function pendencias(s: GameState): Pendencia[] {
       title: `Licitação: ${BILL_BY_ID[l.bill].name}`,
       detail: `Escolha quem executa (${l.empresas.length} empresas) · ${leftText(left)} · sem escolha, fica a empresa de sempre`,
       urgency: urgencyOf(left, false), weight: 45 - left * 6,
+    })
+  }
+
+  // Etapa 5C (v0.32.0): o serviço de inteligência avisa de um vazamento ou de um pedido de CPI.
+  const intel = s.inteligencia
+  if (intel?.ativo && intel.aviso && sementeAvisada(s)) {
+    const left = Math.max(0, intel.aviso.vazaEm - absMonth(s))
+    out.push({
+      id: `aviso-${intel.aviso.semente}`, icon: '📡', target: 'inteligencia',
+      title: `O serviço avisa: ${sementeAvisada(s)!.quem} deve vazar`,
+      detail: `${left <= 0 ? 'neste fechamento' : `em ${left} mês${left > 1 ? 'es' : ''}`} · dá para tentar abafar (com risco) ou deixar o golpe vir menor`,
+      urgency: left <= 1 ? 'red' : 'yellow', weight: 44,
+    })
+  }
+  if (intel?.ativo && intel.avisoCpi) {
+    out.push({
+      id: `aviso-cpi-${intel.avisoCpi.caso}`, icon: '📡', target: 'inteligencia',
+      title: 'O serviço avisa: a oposição prepara pedido de CPI',
+      detail: 'O pedido começa com menos assinaturas por causa do aviso',
+      urgency: 'yellow', weight: 30,
     })
   }
 

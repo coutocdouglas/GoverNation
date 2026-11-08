@@ -38,6 +38,9 @@ import { LicitacaoSheet } from './LicitacaoSheet'
 import { AdvogadoCard, CasosCard } from './CasoCard'
 import { ACAO_NOME_CURTO } from './casoTexto'
 import { CpiCard } from './CpiCard'
+import { InteligenciaCard } from './InteligenciaCard'
+import { intelOf, servicoAtivo } from '../game/inteligencia'
+import type { OrdemIntel } from '../game/data/inteligencia'
 import { JanelasLayer, ResumoLinha, type JanelaDef } from './Janelas'
 import { casosAbertos } from '../game/caso'
 import { cpiAtual } from '../game/cpi'
@@ -129,6 +132,9 @@ export function GameScreen({ state, onChange, onExit }: {
   const [advogado, setAdvogado] = useState<string | null>(null)
   /** Etapa 5C (v0.29.1): saída escolhida para a CPI (vale ao encerrar). */
   const [cpiDecisao, setCpiDecisao] = useState<AcaoCpi | null>(null)
+  /** v0.32.0: ordem do mês ao serviço de inteligência (vale ao encerrar) e dossiê escolhido por votação da Câmara (vale ao votar). */
+  const [intelOrdem, setIntelOrdem] = useState<OrdemIntel | null>(null)
+  const [dossieSel, setDossieSel] = useState<Record<BillId, PartyId>>({})
   /** Etapa 2B: resposta ao fato esperando a ficha (etapa 2 da corrente) antes de assinar ou votar. */
   const [respSheet, setRespSheet] = useState<BillId | null>(null)
   /** Etapa 2B: "O que mudou no mês passado" fica no fim da página, recolhido. */
@@ -148,7 +154,7 @@ export function GameScreen({ state, onChange, onExit }: {
     bill: bill ?? undefined, articulations, eventChoice: eventChoice ?? undefined, eventResponse: eventResponse ?? undefined, deals,
     hold: proc.hold, urgent: proc.urgent, original: proc.original, symbolic: proc.symbolic, sanctions, ministry: ministry ?? undefined, nominee: nominee ?? undefined, consult: consult ?? undefined,
     statement: statement ?? undefined, street: street ?? undefined, proposta: proposta ?? undefined,
-    casos: casoDecisoes.length ? casoDecisoes : undefined, advogado: advogado ?? undefined, cpi: cpiDecisao ?? undefined,
+    casos: casoDecisoes.length ? casoDecisoes : undefined, advogado: advogado ?? undefined, cpi: cpiDecisao ?? undefined, inteligencia: intelOrdem ?? undefined,
   }
   const onProcedure = (kind: ProcedureKind, id: BillId, on: boolean) => setProc((cur) => {
     const next = { ...cur }
@@ -206,6 +212,7 @@ export function GameScreen({ state, onChange, onExit }: {
       original: proc.original.includes(id) || undefined,
       symbolic: proc.symbolic.includes(id) || undefined,
       senadores: buys[id]?.length ? buys[id] : undefined,
+      dossie: dossieSel[id],
     }
     try {
       const r = as === 'queue' ? voteNow(state, id, opts) : sendMeasure(state, id, opts, as === 'response')
@@ -213,6 +220,7 @@ export function GameScreen({ state, onChange, onExit }: {
       if (as === 'measure') setBill(null)
       if (as === 'response') { setEventResponse(null); setEventChoice(null) }
       setDeals((ds) => ds.filter((d) => d.bill !== id))
+      setDossieSel((cur) => { const n = { ...cur }; delete n[id]; return n })
       setBuys((cur) => { const n = { ...cur }; delete n[id]; return n })
       setProc((cur) => Object.fromEntries(Object.entries(cur).map(([k, ids]) => [k, ids.filter((x) => x !== id)])) as Record<ProcedureKind, BillId[]>)
       setVoteSheet(null)
@@ -288,6 +296,8 @@ export function GameScreen({ state, onChange, onExit }: {
       setCasoDecisoes([])
       setAdvogado(null)
       setCpiDecisao(null)
+      setIntelOrdem(null)
+      setDossieSel({})
       setTab('painel')
       setStep(1)
       setTurning(false)
@@ -342,7 +352,7 @@ export function GameScreen({ state, onChange, onExit }: {
     })
   }
   const goPending = (t: PendingTarget) => {
-    if (t === 'caso' || t === 'cpi') { abrir(t === 'caso' ? 'casos' : 'cpi'); return }
+    if (t === 'caso' || t === 'cpi' || t === 'inteligencia') { abrir(t === 'caso' ? 'casos' : t); return }
     if (t === 'camara' || t === 'senado' || t === 'supremo') { setTab('governo'); setGovTab(t); window.scrollTo({ top: 0, behavior: 'smooth' }); return }
     const el = document.getElementById(t === 'promessas' ? 'promessas' : t === 'evento' ? 'fato-do-mes' : 'fato-do-mes')
     if (t === 'cobrancas') { medidaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }); return }
@@ -400,6 +410,12 @@ export function GameScreen({ state, onChange, onExit }: {
   const radar: { id: string; icone: string; titulo: string; texto?: string; tag?: string; tom?: Tom }[] = [
     ...(casosAb.length || casosRec.length ? [{ id: 'casos', icone: '🕵️', titulo: 'Casos na investigação', texto: casosAb.length ? `${casosAb[0].alvo}: provas ${Math.round(casosAb[0].provas)}/100` : 'Casos encerrados há pouco', tag: casosAb.length ? `${casosAb.length} aberto${casosAb.length > 1 ? 's' : ''}` : 'encerrado', tom: casosAb.length ? ('dn' as Tom) : undefined }] : []),
     ...(cpiNow || cpiRec.length ? [{ id: 'cpi', icone: '🏛️', titulo: 'CPI na Câmara', texto: cpiNow ? (cpiNow.fase === 'coleta' ? `Assinaturas ${Math.round(cpiNow.assinaturas)}/171` : 'Instalada: em andamento') : 'CPI encerrada há pouco', tag: cpiNow ? (cpiNow.fase === 'coleta' ? 'coleta' : 'instalada') : 'encerrada', tom: cpiNow ? ('warn' as Tom) : undefined }] : []),
+    {
+      id: 'inteligencia', icone: '📡', titulo: 'Serviço de inteligência',
+      texto: intelOrdem ? 'Ordem do mês anotada' : servicoAtivo(state) ? (intelOf(state).aviso || intelOf(state).avisoCpi ? 'Há um aviso do serviço' : 'Montado e de olho') : 'Não montado: avisa antes de vazamentos e CPIs',
+      tag: intelOrdem ? 'ordem' : servicoAtivo(state) ? (intelOf(state).aviso || intelOf(state).avisoCpi ? 'aviso' : 'ativo') : 'desligado',
+      tom: intelOf(state).aviso || intelOf(state).avisoCpi ? ('warn' as Tom) : undefined,
+    },
     { id: 'integridade', icone: '🧭', titulo: 'Integridade do governo', texto: 'Seu Elo, o que pesa sobre você e o Controle do Estado', tag: `controle ${ctrl}`, tom: ctrl >= 70 ? 'up' : ctrl >= 45 ? 'warn' : 'dn' },
     { id: 'reputacao', icone: '🪞', titulo: 'Reputação do governo', texto: 'Como o país te vê e a exposição a escândalo', tag: `escândalo ${escand}/100`, tom: escand >= 40 ? 'dn' : escand >= 15 ? 'warn' : 'up' },
     { id: 'advogado', icone: '💼', titulo: 'Seu advogado', texto: 'Parecer nas propostas e documentos dos casos' },
@@ -408,6 +424,7 @@ export function GameScreen({ state, onChange, onExit }: {
   const janelaDefs: Record<string, JanelaDef> = {
     casos: { id: 'casos', titulo: 'Casos na investigação', icone: '🕵️', largura: 720 },
     cpi: { id: 'cpi', titulo: 'CPI na Câmara', icone: '🏛️', largura: 720 },
+    inteligencia: { id: 'inteligencia', titulo: 'Serviço de inteligência', icone: '📡', largura: 700 },
     integridade: { id: 'integridade', titulo: 'Integridade do governo', icone: '🧭', largura: 640 },
     reputacao: { id: 'reputacao', titulo: 'Reputação do governo', icone: '🪞', largura: 600 },
     advogado: { id: 'advogado', titulo: 'Seu advogado', icone: '💼', largura: 560 },
@@ -415,11 +432,12 @@ export function GameScreen({ state, onChange, onExit }: {
   }
   const renderJanela = (id: string) => {
     switch (id) {
-      case 'casos': return <CasosCard state={state} decisoes={casoDecisoes} advogado={advogado} cpi={cpiDecisao} onChange={(d) => { setCasoDecisoes(d); if (d.length > casoDecisoes.length) toast('🕵️ Decisão do caso anotada: vale ao encerrar o mês.') }} />
-      case 'cpi': return <CpiCard state={state} decisoes={casoDecisoes} advogado={advogado} escolha={cpiDecisao} onPick={(a) => { setCpiDecisao(a); if (a) toast('🏛️ Decisão sobre a CPI anotada: vale ao encerrar o mês.') }} />
+      case 'casos': return <CasosCard state={state} decisoes={casoDecisoes} advogado={advogado} cpi={cpiDecisao} intel={intelOrdem} onChange={(d) => { setCasoDecisoes(d); if (d.length > casoDecisoes.length) toast('🕵️ Decisão do caso anotada: vale ao encerrar o mês.') }} />
+      case 'cpi': return <CpiCard state={state} decisoes={casoDecisoes} advogado={advogado} escolha={cpiDecisao} intel={intelOrdem} onPick={(a) => { setCpiDecisao(a); if (a) toast('🏛️ Decisão sobre a CPI anotada: vale ao encerrar o mês.') }} />
+      case 'inteligencia': return <InteligenciaCard state={state} ordem={intelOrdem} decisoes={casoDecisoes} advogado={advogado} cpi={cpiDecisao} onOrdem={(o) => { setIntelOrdem(o); if (o) toast('📡 Ordem ao serviço anotada: vale ao encerrar o mês.') }} />
       case 'integridade': return <IntegridadeCard state={state} />
       case 'reputacao': return <ReputationCard state={state} onOpen={() => { fechar('reputacao'); setTab('fichas') }} />
-      case 'advogado': return <AdvogadoCard state={state} decisoes={casoDecisoes} advogado={advogado} cpi={cpiDecisao} onChange={(aid) => { setAdvogado(aid); if (aid) toast('💼 Troca de advogado anotada: vale ao encerrar o mês.') }} />
+      case 'advogado': return <AdvogadoCard state={state} decisoes={casoDecisoes} advogado={advogado} cpi={cpiDecisao} intel={intelOrdem} onChange={(aid) => { setAdvogado(aid); if (aid) toast('💼 Troca de advogado anotada: vale ao encerrar o mês.') }} />
       case 'mudou': return ultimoMes
       default: return null
     }
@@ -481,6 +499,8 @@ export function GameScreen({ state, onChange, onExit }: {
           }}
           onClose={() => setVoteSheet(null)}
           buys={buys[voteSheet] ?? []}
+          dossie={dossieSel[voteSheet] ?? null}
+          onDossie={(pid) => setDossieSel((cur) => { const n = { ...cur }; if (pid) n[voteSheet] = pid; else delete n[voteSheet]; return n })}
           onBuy={(b, add) => setBuys((cur) => {
             const list = (cur[voteSheet] ?? []).filter((x) => x.index !== b.index)
             return { ...cur, [voteSheet]: add ? [...list, b] : list }

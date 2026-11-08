@@ -3,11 +3,13 @@
 > **Leia este arquivo primeiro.** Ele diz onde o projeto está e qual é o próximo passo.
 > Atualize-o a cada mudança: seção "Estado atual", "Próximo passo" e uma linha no "Histórico".
 
-**Última atualização:** 08/11/2026 · **Versão publicada:** v0.31.1 (redesenho visual)
+**Última atualização:** 08/11/2026 · **Versão publicada:** v0.31.1 (redesenho visual) · **Pronta para publicar:** v0.32.0 (telas da inteligência)
 
 ---
 
 ## Próximo passo
+
+**Etapa 5C fechada no código (v0.32.0, pronta para publicar):** telas do serviço de inteligência e dos dossiês (DESIGN.md 27.28). Falta o Douglas jogar a partida completa da 5B e da 5C. Próximo: Etapa 6 (Opus nas regras, Sonnet nas telas).
 
 **Redesenho visual publicado na v0.31.0 e ajustado na v0.31.1** (escuro preto, contraste, janelas de vidro, fontes) (DESIGN.md 27.27): tema claro/escuro, trilho lateral, painel em 3 colunas, janelas de detalhe e Elo em corrente na foto. Ajustes finos de visual que o Douglas anotar jogando entram como v0.31.x. Depois, voltar à v0.30.1 (telas da inteligência).
 
@@ -120,6 +122,8 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 ---
 
 ## Histórico
+
+- 08/11/2026 · v0.32.0 · Etapa 5C, bloco 3 (telas): serviço de inteligência, avisos, abafar, dossiês na votação (pronta, sem publicar).
 
 - 08/11/2026 · v0.31.1 · Visual: escuro em preto, contraste do claro, janelas de vidro com bordas retas, fontes ZT Nature e Corigo.
 
