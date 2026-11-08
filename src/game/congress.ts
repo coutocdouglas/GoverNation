@@ -8,6 +8,7 @@ import { CAMARA } from './data/camara'
 import { SENADO, SENATE_SEATS } from './data/senado'
 import { affinity, clamp } from './ideology'
 import { amendmentFor, cabinetBoost, effectiveBill, frenteBonuses } from './camara'
+import { dossieBoost } from './inteligencia'
 import { ALAS } from './data/alas'
 import { ESFRIA } from './data/base'
 import { alaByIndex, memberMods, orientSign, speakerOf } from './partidos'
@@ -294,6 +295,8 @@ export interface VoteOptions {
   allBoost?: number
   /** Etapa 3: senadores indecisos comprados (prévia, antes de mandar). */
   senadores?: SenatorBuy[]
+  /** Etapa 5C: dossiê a usar nesta votação da Câmara (prévia, antes de mandar). */
+  dossie?: PartyId
 }
 
 /** Etapa 3: "meia sessão" no Senado (junho e dezembro, antes do recesso). */
@@ -357,6 +360,8 @@ function voteSetup(s: GameState, billId: BillId, deals: DealList, opts: VoteOpti
   const fp = floorPressure(s, billId)
   const all = fp.rua - fp.esfria + (opts.allBoost ?? 0)
   if (all) for (const p of PARTIES) boost[p.id] = (boost[p.id] ?? 0) + all
+  // Etapa 5C: o dossiê pesa só na Câmara.
+  if (house === 'camara') for (const [pid, v] of Object.entries(dossieBoost(s, billId, opts.dossie)) as [PartyId, number][]) boost[pid] = (boost[pid] ?? 0) + v
   // O relator contrariado é da Câmara; no Senado o texto já chega fechado.
   if (house === 'camara' && original && am && am.kind !== 'mantem') boost[am.relator] = (boost[am.relator] ?? 0) + CAMARA.amendment.keepOriginalPenalty
   // Etapa 3: a CAE ou a CCJ do Senado desidrataram o texto.

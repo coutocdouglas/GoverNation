@@ -2,7 +2,7 @@
 
 Jogo de simulação política (governar o Brasil) para Windows, do Douglas (arquiteto, dono do projeto). Mecânicas inspiradas no jogo de referência planalto.fun. **Só a mecânica entra: nomes, textos, imagens e políticos reais do jogo de referência ficam de fora. Tudo no GoverNation é fictício.**
 
-Versão atual: **v0.29.2**. Documentação técnica: `docs/DESIGN.md` (seção 27; 27.15 Fase A, 27.16 a 27.18 lote A2, 27.19 a 27.21 Etapa 5A, 27.22 e 27.23 Etapa 5B, 27.24 e 27.25 Etapa 5C). Plano da Etapa 5: `docs/projeto/plano-etapa-5.pdf`; o plano completo por etapas (`plano-de-desenvolvimento.md`) ficou no Cowork. Este arquivo traz o essencial.
+Versão atual: **v0.30.0**. Documentação técnica: `docs/DESIGN.md` (seção 27; 27.15 Fase A, 27.16 a 27.18 lote A2, 27.19 a 27.21 Etapa 5A, 27.22 e 27.23 Etapa 5B, 27.24 a 27.26 Etapa 5C). Plano da Etapa 5: `docs/projeto/plano-etapa-5.pdf`; o plano completo por etapas (`plano-de-desenvolvimento.md`) ficou no Cowork. Este arquivo traz o essencial.
 
 ## Como trabalhar com o Douglas
 - Responder em português do Brasil.
@@ -65,13 +65,14 @@ Testes passando · partida simulada sem erro · balanceamento revisado · efeito
 - `src/game/risco.ts`, `data/risco.ts`: Etapa 5A (Elos, risco oculto, rastro do presidente, Controle do Estado, sementes de risco, contrato com escolha de empresa, proposta de setor). Telas da 5A: `src/ui/Elo.tsx`, `eloTexto.ts`, `IntegridadeCard.tsx` (Integridade e proposta de setor), `LicitacaoSheet.tsx` (licitação, aberta pela pendência quando a medida com obra passa a valer; prazo até o fim do mês seguinte) e o aviso `ContratoBox` em `MeasureSheet.tsx`; a resposta à proposta vai em `MonthPlan.proposta`. Só obra ou a marca `contrato` geram licitação.
 - `src/game/caso.ts`, `data/caso.ts`: Etapa 5B (vazamento, caso com provas e solidez, saídas do presidente em `MonthPlan.casos`, delação, Supremo para o caso do presidente, advogado em `MonthPlan.advogado`, agenda `AGENDA.espacos`, interinos em `GameState.interinos`). Vazamento ligado desde a v0.28.1 (`VAZAMENTO.ativo`; testes podem usar `ligarVazamento`). Telas: `src/ui/CasoCard.tsx` (`CasosCard`, `AdvogadoCard`, `AgendaBadge`) e `casoTexto.ts`. Nomes das empresas pela IA: `askEmpresaNames` (src/lib/aiActions.ts) e `nomearEmpresas`.
 - `src/game/cpi.ts`, `data/cpi.ts`: Etapa 5C (objetivo da oposição em `rival.ts`, requerimento, CPI, relatório; `MonthPlan.cpi`; ligada desde a v0.29.1: `CPI.ativo`, testes podem usar `ligarCpi`). Telas: `src/ui/CpiCard.tsx` (`CpiCard`, `CpisEncerradasCard`) e `cpiTexto.ts`; meta da oposição em `OppositionCards.tsx`.
-- Save na versão 30.
+- `src/game/inteligencia.ts`, `data/inteligencia.ts`: Etapa 5C, bloco 3 (serviço, avisos, abafar, dossiês; `MonthPlan.inteligencia`, `FloorOptions.dossie`; desligado até a v0.30.1, testes podem usar `ligarInteligencia`).
+- Save na versão 31.
 
 ## Situação
 Etapas feitas: 0, 1A, 1B, 2, 2B, 2C, 3 (Senado, v0.21), 4A e 4B (Supremo profundo, v0.22 e v0.23), **Fase A** (v0.24 e v0.24.1, publicada em 03/11/2026; playtest dispensado pelo Douglas em 07/11/2026), **lote A2 itens 1 a 3** (v0.25.0 acordos que esfriam, v0.26.0 efeitos das medidas, v0.26.1 logos do Senado), **Etapa 5A** (v0.27.0 regras, v0.27.1 telas, v0.27.2 licitação depois do vigor), **Etapa 5B** (v0.28.0 regras, v0.28.1 telas; falta a partida completa do Douglas), **Etapa 5C, blocos 1 e 2** (v0.29.0 regras, v0.29.1 telas da CPI e da meta da oposição).
 
-### Próximo: Etapa 5C, serviço de inteligência
-v0.30.0 (regras) e v0.30.1 (telas): serviço de inteligência com dossiês. Falta o Douglas jogar a partida completa da 5B. **Complexidade muito alta · Opus nas regras, Sonnet nas telas.**
+### Próximo: Etapa 5C, telas da inteligência
+v0.30.0 (regras, desligadas) pronta: serviço de inteligência e dossiês (DESIGN.md 27.26). Falta a v0.30.1 (telas, que ligam `INTELIGENCIA.ativo`). Falta o Douglas jogar a partida completa da 5B. **Complexidade média · Sonnet.**
 
 ### Lote A2 (feito)
 1. ✅ **Feito na v0.25.0** (força cai 15 pontos por mês, renovação por 70%, aviso no arquivamento; DESIGN.md 27.16). Falta o aviso "acordo para vencer" na central de pendências e rebalancear o 35% do Senado no playtest. Texto original: **Acordos que esfriam e travam a bancada** (erro achado pelo Douglas jogando; confirmado no código). Hoje: o acordo fica guardado na medida; a fila esfria todos os partidos (0,04 por rodada, até 0,20), corroendo o reforço; o partido fica travado em "Acordo já fechado" mesmo com o efeito anulado; aos 6 meses a medida é arquivada e o acordo some, enquanto as emendas pagas continuam saindo por 3 meses. Correção: (a) validade visível com força que cai mês a mês e "vence em N meses"; (b) renegociar quando a força cai ou vence, considerando o que já foi pago; (c) o desconto da fila vir do próprio acordo, sem zerar sem aviso; (d) avisar no arquivamento quanto foi pago e perdido; (e) valer para Câmara e Senado (`dealsOf`, `senateDealsOf`, `senado.dealCarry`). Cuidados: renegociar não pode ser grátis (Teste do atalho); manter o limite de 3 conversas por rodada; rebalancear o 35% do Senado. **Complexidade média · Opus** na regra; Sonnet no cartão do partido.

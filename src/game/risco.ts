@@ -79,6 +79,10 @@ export interface SementeRisco {
   caso?: string
   /** A semente virou esquema (escondido): quando e com que gravidade (0 a 100, cresce sem controle). */
   esquema?: { at: number; gravidade: number }
+  /** Etapa 5C: o serviço tentou abafar. Se vier à tona, o caso fica marcado para CPI. */
+  abafada?: boolean
+  /** Etapa 5C: abafado com sucesso, não vaza até este mês. */
+  abafadaAte?: number
 }
 
 /** Uma empresa que disputa o contrato de uma medida. */

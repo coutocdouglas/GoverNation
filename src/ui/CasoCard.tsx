@@ -17,7 +17,7 @@ const when = (at: number) => `${MONTHS[((at % 12) + 12) % 12]}/${yearOf(at)}`
 const meses = (n: number) => `${n} ${n === 1 ? 'mês' : 'meses'}`
 
 const FONTE: Record<FonteRisco, string> = {
-  nomeacao: 'nomeação', contrato: 'contrato', proposta: 'proposta de setor', estatal: 'estatal', cargos: 'cargos', cargoEstadual: 'cargo nos estados', obra: 'obra',
+  nomeacao: 'nomeação', contrato: 'contrato', proposta: 'proposta de setor', estatal: 'estatal', cargos: 'cargos', cargoEstadual: 'cargo nos estados', obra: 'obra', inteligencia: 'serviço de inteligência',
 }
 const GRAV: Record<'leve' | 'medio' | 'grave', { text: string; cls: string }> = {
   leve: { text: 'leve', cls: 'warn' }, medio: { text: 'médio', cls: 'warn' }, grave: { text: 'grave', cls: 'dn' },

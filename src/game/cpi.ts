@@ -10,6 +10,8 @@ import { advogadoAtual, casoPorId, casosAbertos, envolvePresidente, hitTodos, ty
 import { bumpScandal } from './causas'
 import { isRecess } from './congress'
 import { ACOES_CPI, CPI, RELATORIO, type AcaoCpi, type TomCpi } from './data/cpi'
+import { ANTECIPAR } from './data/inteligencia'
+import { detectarCpi } from './inteligencia'
 import { DELACAO } from './data/caso'
 import { PARTIES, PARTY_BY_ID } from './data/parties'
 import { RIVAL_BY_PARTY } from './data/rival'
@@ -330,6 +332,12 @@ export function chanceRequerimento(s: GameState, c: Caso): number {
   return clamp(v * (c.cpi ? A.fatorMarcado : 1), 0, 1)
 }
 
+function protocolar(s: GameState, k: ComissoesState, alvo: Caso, fator: number, headlines: Headline[]): void {
+  k.atual = { caso: alvo.id, alvo: alvo.alvo, at: absMonth(s), fase: 'coleta', assinaturas: Math.round(potencialAssinaturas(s, alvo) * CPI.ritmoColeta * fator), retiradas: 0, trabalhou: 0 }
+  noteRecord(s, { text: `A oposição protocola pedido de CPI sobre o caso ${alvo.alvo} (${lowerFirst(alvo.porque)})`, tone: 'bad', kind: 'risco', bill: alvo.bill })
+  headlines.push({ text: `Oposição começa a colher assinaturas para uma CPI do caso ${alvo.alvo}: ${k.atual.assinaturas} de ${CPI.assinaturas}`, tone: 'bad' })
+}
+
 /** Fechamento do mês: requerimento novo, coleta, oitiva e relatório. Devolve a confiança e a força do rival. */
 export function stepCpi(s: GameState, rng: Rng, impulses: Record<GroupId, Impulse[]>, headlines: Headline[]): { confidence: number; rival: Cause[] } {
   const k = comissoesOf(s)
@@ -340,12 +348,17 @@ export function stepCpi(s: GameState, rng: Rng, impulses: Record<GroupId, Impuls
   let c = k.atual
   if (!c && now - k.ultimaEm >= CPI.intervalo) {
     const opcoes = casosAbertos(s).filter((x) => x.at < now && !k.encerradas.some((y) => y.caso === x.id) && potencialAssinaturas(s, x) >= CPI.abertura.potencialMin).sort((a, b) => b.gravidade - a.gravidade)
-    const alvo = opcoes[0]
-    if (alvo && rng.next() < chanceRequerimento(s, alvo)) {
-      k.atual = { caso: alvo.id, alvo: alvo.alvo, at: now, fase: 'coleta', assinaturas: Math.round(potencialAssinaturas(s, alvo) * CPI.ritmoColeta), retiradas: 0, trabalhou: 0 }
-      noteRecord(s, { text: `A oposição protocola pedido de CPI sobre o caso ${alvo.alvo} (${lowerFirst(alvo.porque)})`, tone: 'bad', kind: 'risco', bill: alvo.bill })
-      headlines.push({ text: `Oposição começa a colher assinaturas para uma CPI do caso ${alvo.alvo}: ${k.atual.assinaturas} de ${CPI.assinaturas}`, tone: 'bad' })
+    // Etapa 5C: pedido avisado pelo serviço chega na data, com menos assinaturas, se o caso ainda estiver aberto.
+    const I = s.inteligencia
+    if (I?.avisoCpi) {
+      if (now < I.avisoCpi.vemEm) return { confidence, rival }
+      const avisado = casosAbertos(s).find((x) => x.id === I.avisoCpi!.caso)
+      I.avisoCpi = null
+      if (avisado) protocolar(s, k, avisado, ANTECIPAR.assinaturas, headlines)
+      return { confidence, rival }
     }
+    const alvo = opcoes[0]
+    if (alvo && rng.next() < chanceRequerimento(s, alvo) && !detectarCpi(s, alvo.id, alvo.alvo, rng)) protocolar(s, k, alvo, 1, headlines)
     return { confidence, rival }
   }
   if (!c) return { confidence, rival }

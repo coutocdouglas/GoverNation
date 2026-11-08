@@ -106,7 +106,7 @@ export const CONTROLE = {
 
 // ─── Sementes de risco e esquemas ─────────────────────────────────────────────
 
-export type FonteRisco = 'nomeacao' | 'contrato' | 'proposta' | 'estatal' | 'cargos' | 'cargoEstadual' | 'obra'
+export type FonteRisco = 'nomeacao' | 'contrato' | 'proposta' | 'estatal' | 'cargos' | 'cargoEstadual' | 'obra' | 'inteligencia'
 
 export const SEMENTE = {
   /** Peso de cada fonte (0 a 100) antes do ajuste pela pessoa ou pelo partido. */

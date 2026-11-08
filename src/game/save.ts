@@ -1,3 +1,4 @@
+import { initialInteligencia } from './inteligencia'
 import { initialComissoes } from './cpi'
 import { initialCongress, initialSenate } from './congress'
 import { syncCustomBills } from './custom'
@@ -263,7 +264,12 @@ export function migrate(raw: unknown): GameState | null {
       // v0.29.0 → v0.29.1: campo novo e opcional `relatorVazou` na CPI; como a CPI estava desligada, nada a converter.
       s.saveVersion = 30
     }
-    if (s.saveVersion !== 30) return null
+    if (s.saveVersion === 30) {
+      // v0.29 → v0.30 (Etapa 5C): serviço fechado, sem dossiês nem avisos.
+      (s as GameState).inteligencia ??= initialInteligencia()
+      s.saveVersion = 31
+    }
+    if (s.saveVersion !== 31) return null
     syncCustomBills(s as GameState)
     return s as GameState
   } catch {

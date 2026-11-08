@@ -16,6 +16,8 @@
  * Regras decidem, a IA só narra. O jogador vê provas, faixas de chance e pistas em palavras; o rastro é oculto.
  */
 import { ACOES_CPI, type AcaoCpi } from './data/cpi'
+import { ANTECIPAR, type OrdemIntel } from './data/inteligencia'
+import { agendaDaOrdem, aoVazarDossies, detectarVazamento, sementeAvisada } from './inteligencia'
 import { ACOES_CASO, ADVOGADO, ADVOGADOS, AGENDA, CPI_MARCA, DELACAO, ESTRAGO, GRAVIDADE, INTERINOS, PF, SUPREMO_CASO, VAZAMENTO, type AcaoCaso, type AdvogadoDef } from './data/caso'
 import { MINISTER_BY_AREA, type AreaId } from './data/ministers'
 import { GROUPS } from './data/groups'
@@ -147,13 +149,14 @@ export function vazamentoTravado(s: GameState): string | null {
   const inv = invOf(s)
   if (casosAbertos(s).length >= VAZAMENTO.maxAtivos) return `Já há ${VAZAMENTO.maxAtivos} casos abertos: o próximo espera na fila.`
   if (absMonth(s) - inv.ultimoVazamento < VAZAMENTO.intervalo) return 'A imprensa ainda está ocupada com o último caso.'
+  if (s.inteligencia?.aviso) return 'O serviço já acompanha um assunto que está para sair.'
   return null
 }
 
 /** Esquemas que podem vazar agora (com idade mínima e sem caso aberto). */
 function candidatos(s: GameState): SementeRisco[] {
   const now = absMonth(s)
-  return (s.risco?.sementes ?? []).filter((x) => x.esquema && !x.caso && now - x.esquema.at >= VAZAMENTO.idadeMin)
+  return (s.risco?.sementes ?? []).filter((x) => x.esquema && !x.caso && now - x.esquema.at >= VAZAMENTO.idadeMin && now >= (x.abafadaAte ?? -99))
 }
 
 /** Multiplicador do vazamento pelo Controle do Estado, pela exposição e pela oposição. */
@@ -201,7 +204,7 @@ export function areaDoAlvo(s: GameState, c: Pick<Caso, 'alvo' | 'area'>): AreaId
 }
 
 /** O vazamento: escolhe um esquema (os mais graves vazam mais), abre o caso e cobra o estrago na hora. */
-function vazar(s: GameState, sem: SementeRisco, rng: Rng, impulses: Record<GroupId, Impulse[]>, headlines: Headline[]): { caso: Caso; confidence: number } {
+function vazar(s: GameState, sem: SementeRisco, rng: Rng, impulses: Record<GroupId, Impulse[]>, headlines: Headline[], preparado = false): { caso: Caso; confidence: number } {
   const inv = invOf(s)
   const now = absMonth(s)
   const caso: Caso = {
@@ -222,12 +225,14 @@ function vazar(s: GameState, sem: SementeRisco, rng: Rng, impulses: Record<Group
   if (sem.bill) caso.bill = sem.bill
   if (sem.party) caso.party = sem.party
   if (sem.area) caso.area = sem.area
-  if (caso.presidente && caso.gravidade >= CPI_MARCA.gravidadeMin) caso.cpi = true
+  // Etapa 5C: dossiê e abafamento que vêm à tona chamam CPI, seja qual for a gravidade.
+  if ((caso.presidente && caso.gravidade >= CPI_MARCA.gravidadeMin) || sem.abafada || sem.fonte === 'inteligencia') caso.cpi = true
+  aoVazarDossies(s, sem)
   sem.caso = caso.id
   inv.casos.push(caso)
   inv.ultimoVazamento = now
   const g = caso.gravidade / 100
-  const f = fatorEnvolvimento(caso)
+  const f = fatorEnvolvimento(caso) * (preparado ? ANTECIPAR.preparado : 1)
   hitTodos(impulses, `Escândalo: ${caso.alvo}`, -g * ESTRAGO.vazaGrupos * f)
   const confidence = round1(-g * ESTRAGO.vazaConfianca * f)
   // O Elo do alvo (se for uma pessoa com ficha) leva o golpe; o do presidente também, se a origem é dele.
@@ -255,11 +260,13 @@ export interface DecisaoCaso {
 export const agendaDaAcao = (a: AcaoCaso) => ACOES_CASO[a].agenda
 
 /** Espaços da agenda usados pelo plano (casos e troca de advogado). */
-export function agendaUsada(plan: { casos?: DecisaoCaso[]; advogado?: string; cpi?: AcaoCpi }): number {
-  return (plan.casos ?? []).reduce((a, d) => a + agendaDaAcao(d.acao), 0) + (plan.advogado ? ADVOGADO.agenda : 0) + (plan.cpi ? ACOES_CPI[plan.cpi].agenda : 0)
+type PlanoAgenda = { casos?: DecisaoCaso[]; advogado?: string; cpi?: AcaoCpi; inteligencia?: OrdemIntel }
+
+export function agendaUsada(plan: PlanoAgenda): number {
+  return (plan.casos ?? []).reduce((a, d) => a + agendaDaAcao(d.acao), 0) + (plan.advogado ? ADVOGADO.agenda : 0) + (plan.cpi ? ACOES_CPI[plan.cpi].agenda : 0) + (plan.inteligencia ? agendaDaOrdem(plan.inteligencia.acao) : 0)
 }
 
-export const agendaLivre = (plan: { casos?: DecisaoCaso[]; advogado?: string; cpi?: AcaoCpi }) => AGENDA.espacos - agendaUsada(plan)
+export const agendaLivre = (plan: PlanoAgenda) => AGENDA.espacos - agendaUsada(plan)
 
 /** O presidente está limpo neste caso (para ganhar imagem cooperando). */
 const limpoNoCaso = (s: GameState, c: Caso) => !envolvePresidente(c) && !c.presidente && riscoOf(s).rastro < DELACAO.rastroMin
@@ -639,8 +646,16 @@ export function stepCasos(s: GameState, rng: Rng, impulses: Record<GroupId, Impu
   }
   // 3. O vazamento do mês.
   let vazou: Caso | null = null
+  // Etapa 5C: o vazamento avisado sai na data (assim que houver lugar), com o governo preparado.
+  const aviso = s.inteligencia?.aviso
+  const avisada = aviso && now >= aviso.vazaEm && vazamentoLigado && casosAbertos(s).length < VAZAMENTO.maxAtivos ? sementeAvisada(s) : undefined
   const p = chanceVazamento(s)
-  if (p > 0 && rng.next() < p) {
+  if (avisada) {
+    const r = vazar(s, avisada, rng, impulses, headlines, !aviso!.queimado)
+    s.inteligencia.aviso = null
+    confidence += r.confidence
+    vazou = r.caso
+  } else if (p > 0 && rng.next() < p) {
     const cand = candidatos(s)
     const f = fatorVazamento(s)
     const pesos = cand.map((x) => chanceDoEsquema(x, f))
@@ -650,9 +665,11 @@ export function stepCasos(s: GameState, rng: Rng, impulses: Record<GroupId, Impu
       roll -= pesos[i]
       if (roll <= 0) { pick = cand[i]; break }
     }
-    const r = vazar(s, pick, rng, impulses, headlines)
-    confidence += r.confidence
-    vazou = r.caso
+    if (!detectarVazamento(s, pick, rng)) {
+      const r = vazar(s, pick, rng, impulses, headlines)
+      confidence += r.confidence
+      vazou = r.caso
+    }
   }
   return { confidence: round1(confidence), vazou }
 }

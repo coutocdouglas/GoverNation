@@ -1,5 +1,15 @@
 # Novidades
 
+## 0.30.0 (08/11/2026)
+- **Etapa 5C, bloco 3 (regras): serviço de inteligência e dossiês.** As regras estão prontas, mas **ficam desligadas até a v0.30.1**, que traz as telas. Sem tela, você não teria como responder.
+  - **Montar o serviço:** gasta agenda e passa a custar dinheiro todo mês. Dá para fechar quando quiser; para reabrir, espera 6 meses.
+  - **Avisos antecipados:** cerca de 70% dos vazamentos são avisados 2 meses antes, com o nome do alvo, e o golpe vem menor. Pedidos de CPI avisados começam com menos assinaturas.
+  - **Revelar uma pessoa:** mostra o risco oculto de um ministro, ministro do Supremo ou líder.
+  - **Abafar um vazamento avisado:** adia 6 meses e reduz a gravidade, mas deixa rastro e, quando vier à tona, chama CPI. Se der errado, vaza na hora, mais grave e chegando em você. Caso já aberto não se abafa.
+  - **Dossiês sobre líderes de bancada:** juntam material de 0 a 100 e, numa votação da Câmara, viram votos do partido. O material se gasta, a relação com o partido cai e cada uso rende menos. Um por votação; o mesmo partido só depois de 12 meses.
+  - **O preço:** cada pedido alimenta um esquema escondido com a sua assinatura, que pode vazar, ir para a PF e virar CPI. O serviço não avisa sobre si mesmo. Dá para mandar queimar os dossiês: perde o material e o risco cai pela metade.
+- **Save versão 31:** mandatos salvos continuam normalmente, com o serviço fechado. 434 testes. Simulador novo (`npm run sim5d`): só com avisos, aprovação final muda de −0,8 a −0,1 ponto; até 2 dossiês, de −2,1 a −3,7 pontos; abusando, 15 a 18 pontos a menos. Com o serviço desligado, nada muda (`sim5c` idêntico).
+
 ## 0.29.2 (08/11/2026)
 - **Meta de aprovação da oposição com efeito de verdade:** enquanto a meta dela for baixar a sua aprovação, os ataques do mês ficam 20% mais fortes (estava previsto, mas não fora ligado). O cartão da Oposição mostra o efeito e o tamanho do ataque.
 - Sem mudança no save. 413 testes. Simulador: aprovação final entre 0,0 e −0,4 ponto em relação à v0.29.1.

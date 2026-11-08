@@ -9,7 +9,8 @@ import { baseCounts, fidelityOf } from '../src/game/base'
 import { mobilize, pactBlocked, ruaPreview, signPact } from '../src/game/mesa'
 import { ministryNow, ministryNowBlockedReason, peekRound, sendBlockedReason, sendMeasure } from '../src/game/rodada'
 import { STRATEGIES, pautarFila } from './sim'
-import type { DealTerms, GameState, PartyId } from '../src/game/types'
+import type { OrdemIntel } from '../src/game/data/inteligencia'
+import type { BillId, DealTerms, GameState, PartyId } from '../src/game/types'
 
 const SIM_PROMISES = ['desemprego6', 'inflacaoMeta', 'crescimento', 'aprovacao50', 'juros10']
 const terms = (party: PartyId, o: AskOption): DealTerms => ({
@@ -21,7 +22,9 @@ const terms = (party: PartyId, o: AskOption): DealTerms => ({
 export const errs: Record<string, number> = {}
 interface Stats { leis: number; derrotas: number; enviadas: number; acordos: number; kinds: Record<string, number>; traicoes: number; entregas: number; pactos: number; ruasCheias: number; ruasVazias: number; arquivados: number; gasto: number }
 
-export function negociador(seed: number, party: PartyId, useDeals: boolean) {
+export interface EspiaoHooks { ordem: (s: GameState) => OrdemIntel | undefined; dossie: (s: GameState, id: BillId) => PartyId | undefined }
+
+export function negociador(seed: number, party: PartyId, useDeals: boolean, espiao?: EspiaoHooks) {
   let s: GameState = newGame('Teste', 'normal', seed, party, undefined, undefined, { promises: SIM_PROMISES })
   const st: Stats = { leis: 0, derrotas: 0, enviadas: 0, acordos: 0, kinds: {}, traicoes: 0, entregas: 0, pactos: 0, ruasCheias: 0, ruasVazias: 0, arquivados: 0, gasto: 0 }
   // Uma pasta para o maior partido fisiológico de fora, no começo.
@@ -70,13 +73,15 @@ export function negociador(seed: number, party: PartyId, useDeals: boolean) {
         }
         st.acordos += deals.length
         try {
-          const r = sendMeasure(s, id, { deals })
+          const dossie = espiao?.dossie(s, id)
+          const r = sendMeasure(s, id, { deals, ...(dossie ? { dossie } : {}) })
           s = r.state
           st.enviadas++
         } catch (e) { errs[(e as Error).message] = (errs[(e as Error).message] ?? 0) + 1 }
       }
     }
-    s = advanceMonth(s, STRATEGIES.equilibrado(s), {})
+    const ordem = espiao?.ordem(s)
+    s = advanceMonth(s, STRATEGIES.equilibrado(s), ordem ? { inteligencia: ordem } : {})
     for (const v of s.congress.votes.filter((x) => x.month === s.month - 1)) {
       for (const c of v.base ?? []) { if (c.result === 'traiu') st.traicoes++; else if (c.result === 'entregou') st.entregas++ }
     }

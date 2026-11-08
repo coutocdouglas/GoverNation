@@ -217,7 +217,7 @@ describe('Save e partida', () => {
     s.saveVersion = 28
     delete s.comissoes
     const m = migrate(s)!
-    expect(m.saveVersion).toBe(30)
+    expect(m.saveVersion).toBe(31)
     expect(m.comissoes.atual).toBeNull()
   })
   it('mandato inteiro com a CPI ligada não quebra', () => {

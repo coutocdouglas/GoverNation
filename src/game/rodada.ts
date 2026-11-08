@@ -6,6 +6,7 @@
  * em cada casa; as articulações valem na hora. Os efeitos na economia e nos grupos ficam guardados em
  * `GameState.round` e são aplicados no fechamento do mês (advanceMonth), junto com o resto.
  */
+import { dossieBlockedReason, usarDossie } from './inteligencia'
 import { attendBlockedReason, attendState, statesOnMeasure } from './estados'
 import type { UfId } from './data/estados'
 import { addMesaWear, applyMesa, buysBlockedReason, favorToStates, meiaSessaoBlocks, mesaBlockedReason, mesaDone, noteSenatorBroke, noteSenatorVotes, payBuys, runSenadoComissoes, senadoComissoes, senadoScale } from './senado'
@@ -43,7 +44,7 @@ import { REPUTACAO } from './data/marks'
 import { Rng } from './rng'
 import type { MonthPlan } from './game'
 import type { AreaId } from './data/ministers'
-import type { Articulation, Parecer, BillId, Cause, CourtNow, Deal, DealTerms, Economy, GameState, GroupId, Headline, Impulse, PendingBill, RoundBuffer, ReactionRoll, MesaSenadoAcao, SenatorBuy, VoteRecord } from './types'
+import type { Articulation, Parecer, BillId, Cause, CourtNow, Deal, DealTerms, Economy, GameState, GroupId, PartyId, Headline, Impulse, PendingBill, RoundBuffer, ReactionRoll, MesaSenadoAcao, SenatorBuy, VoteRecord } from './types'
 import { bumpScandal } from './causas'
 import { medidaEmVigorRisco, nomeacaoDePasta, sementeDeAcordo } from './risco'
 
@@ -63,6 +64,8 @@ export interface FloorOptions {
   title?: string
   /** Etapa 3: senadores indecisos comprados para a votação no Senado (até 3 por rodada). */
   senadores?: SenatorBuy[]
+  /** Etapa 5C: dossiê usado nesta votação da Câmara (um por votação). */
+  dossie?: PartyId
 }
 
 /** Contexto de trabalho: o estado e os acumuladores da rodada. */
@@ -953,6 +956,7 @@ export function sendInto(s: GameState, id: BillId, opts: FloorOptions = {}, resp
         if (Object.keys(custo).length) p.antecipado = custo
       }
       reactToday(ctx, id)
+      if (opts.dossie) usarDossie(s, opts.dossie, id, ctx.headlines, ctx.taken)
       parked = floorCamara(ctx, p, opts) === 'parado'
     }
   }
@@ -993,6 +997,11 @@ function floorOptionsBlocked(s: GameState, id: BillId, opts: FloorOptions, sendi
     if (bill.instrument !== 'lei' && bill.instrument !== 'complementar') return 'Urgência só vale para lei ordinária ou complementar.'
     if (!sending && queueHouse(s, id) !== 'camara') return 'Urgência só vale na Câmara.'
   }
+  if (opts.dossie) {
+    if (sending ? actsNow(id) : queueHouse(s, id) !== 'camara') return 'O dossiê só vale numa votação da Câmara.'
+    const r = dossieBlockedReason(s, opts.dossie, id)
+    if (r) return `Dossiê: ${r}`
+  }
   const deals = opts.deals ?? []
   // Etapa 2C: 3 acordos por rodada no total, somando Câmara e Senado (o da Câmara já vale no Senado).
   const done = peekRound(s)?.dealsDone ?? 0
@@ -1028,6 +1037,7 @@ export function voteNow(prev: GameState, id: BillId, opts: FloorOptions = {}): R
       ctx.taken.push(`Pediu urgência para “${bill.name}”`)
     }
     if (opts.original) p.original = true
+    if (opts.dossie) usarDossie(s, opts.dossie, id, ctx.headlines, ctx.taken)
   }
   applyDeals(ctx, (opts.deals ?? []).map((d) => ({ ...d, bill: id })))
   ctx.conf.v += payBuys(s, id, opts.senadores ?? [], ctx.headlines, ctx.taken)

@@ -20,6 +20,8 @@ import { indicators, initialEconomy, runCopom, stepEconomy, type ShockInput } fr
 import { computeApproval, initialGroups, overallApproval, stepGroup } from './groups'
 import { atualizarObjetivo, createRival, rivalAttack, updateRival } from './rival'
 import { aplicarDecisaoCpi, cpiBlockedReason, cpiLigada, initialComissoes, stepCpi } from './cpi'
+import { aplicarOrdem, initialInteligencia, ordemBlockedReason, stepInteligencia } from './inteligencia'
+import type { OrdemIntel } from './data/inteligencia'
 import type { AcaoCpi } from './data/cpi'
 import { posseBlockedReason, profileOffsets, promiseSideBoosts, promisesScore, STATUS_LABEL, formatPromiseValue, type PosseChoices } from './promises'
 import { PROFILE_BY_ID } from './data/profile'
@@ -94,7 +96,8 @@ export function newGame(
   const rngState = seed ?? Math.floor(Math.random() * 2 ** 31)
   const bonus = DIFFICULTY[difficulty].approvalBonus
   const state: GameState = {
-    saveVersion: 30,
+    saveVersion: 31,
+    inteligencia: initialInteligencia(),
     investigacao: undefined as unknown as GameState['investigacao'],
     comissoes: undefined as unknown as GameState['comissoes'],
     risco: initialRisco(difficulty),
@@ -237,6 +240,8 @@ export interface MonthPlan {
   advogado?: string
   /** Etapa 5C: a decisão do mês sobre a CPI (uma por mês). */
   cpi?: AcaoCpi
+  /** Etapa 5C (v0.30): a ordem do mês ao serviço de inteligência. */
+  inteligencia?: OrdemIntel
 }
 
 /** Ficha do que foi aprovado e espera sanção ou veto (pauta-bomba inteira ou o jabuti enxertado). */
@@ -360,6 +365,10 @@ export function validatePlan(s: GameState, plan: MonthPlan): string | null {
   if (plan.cpi) {
     const r = cpiBlockedReason(s, plan.cpi)
     if (r) return `CPI: ${r}`
+  }
+  if (plan.inteligencia) {
+    const r = ordemBlockedReason(s, plan.inteligencia)
+    if (r) return `Serviço de inteligência: ${r}`
   }
   if (plan.advogado) {
     const r = advogadoBlockedReason(s, plan.advogado)
@@ -852,6 +861,8 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
   stepRisco(s, new Rng((absMonth(s) * 69069) ^ s.rngState ^ 0x5a17e5), impulses, headlines)
   // 1j. Etapa 5B: as saídas dos casos e a troca de advogado (agenda), a PF junta provas, desfechos e o vazamento.
   const rngCaso = new Rng((absMonth(s) * 48271) ^ s.rngState ^ 0xca5e5b)
+  // Etapa 5C: a ordem ao serviço vale antes do vazamento do mês (abafar precisa chegar a tempo).
+  if (plan.inteligencia) aplicarOrdem(s, plan.inteligencia, e, new Rng((absMonth(s) * 40692) ^ s.rngState ^ 0x1a7e1), headlines, taken)
   actionConfidence += aplicarDecisoes(s, plan.casos ?? [], rngCaso, impulses, headlines, taken)
   if (plan.advogado) trocarAdvogado(s, plan.advogado, headlines, taken)
   const casos = stepCasos(s, rngCaso, impulses, headlines)
@@ -862,6 +873,7 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
   const cpiMes = stepCpi(s, rngCpi, impulses, headlines)
   actionConfidence += cpiMes.confidence
   rivalExtra.push(...cpiMes.rival)
+  stepInteligencia(s)
   const scandalHit = !!casos.vazou
   // O que vazou deixa de ser exposição: a imprensa já publicou.
   if (scandalHit) c.scandal *= DEALS.scandalAfter
