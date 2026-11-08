@@ -4,8 +4,10 @@ import { PartyLogo } from './PartyLogo'
 import { PARTY_BY_ID } from '../game/data/parties'
 import { PROMISE_BY_ID } from '../game/data/promises'
 import { RIVAL } from '../game/data/rival'
+import { OBJETIVO } from '../game/data/cpi'
+import { absMonth } from '../game/memory'
 import { formatPromiseValue, promiseStatus, STATUS_LABEL, type PromiseStatus } from '../game/promises'
-import { attackSize, rivalDefOf, STANCE_LABEL } from '../game/rival'
+import { attackSize, rivalDefOf, STANCE_LABEL, textoObjetivo } from '../game/rival'
 import type { GameState, Poll } from '../game/types'
 import { Portrait } from './Portrait'
 
@@ -24,6 +26,25 @@ function PollChart({ polls, color, width = 300, height = 70 }: { polls: Poll[]; 
       <polyline points={pts('rival')} fill="none" stroke={color} strokeWidth="2" strokeLinejoin="round" />
       <polyline points={pts('gov')} fill="none" stroke="#2ecc71" strokeWidth="2" strokeLinejoin="round" />
     </svg>
+  )
+}
+
+/** Etapa 5C (v0.29.1): a meta visível da oposição, o prazo e o que ela já muda. */
+function MetaOposicao({ state }: { state: GameState }) {
+  const r = state.rival
+  const o = r?.objetivo
+  if (!r || !o) return null
+  const left = Math.max(0, OBJETIVO.prazo - (absMonth(state) - o.desde))
+  const efeito = o.tipo === 'ministro'
+    ? `${o.alvo} sofre +${n1(OBJETIVO.desgaste)} de desgaste por mês. Se sair do cargo, até por troca sua, ela comemora.`
+    : o.tipo === 'votacao'
+      ? `Qualquer derrota do governo em plenário conta.${r.stance === 'obstrucao' ? ` Enquanto isso, o ${PARTY_BY_ID[r.party].sigla} orienta ainda mais contra.` : ''}`
+      : 'Conta se a aprovação chegar a esse número.'
+  return (
+    <div className="pn-rival__meta" style={{ marginTop: 8 }}>
+      <div className="pn-group__head"><span>🎯 Meta: <b>{textoObjetivo(o)}</b></span><span className="pn-badge">{left === 0 ? 'vence este mês' : `${left} ${left === 1 ? 'mês' : 'meses'}`}</span></div>
+      <small className="pn-hint">{efeito} Se conseguir, força {sign(OBJETIVO.sucesso)}. Se o prazo vencer, força {sign(OBJETIVO.desiste)}.</small>
+    </div>
   )
 }
 
@@ -49,6 +70,7 @@ export function RivalCard({ state }: { state: GameState }) {
         </div>
       </div>
       {r.quote && <p className="pn-rival__quote">“{r.quote}”</p>}
+      <MetaOposicao state={state} />
       <div className="pn-poll">
         <div className="pn-poll__row"><span>Seu governo</span><b className="up">{poll.gov}%</b>{prev && <small className="pn-hint"> {sign(poll.gov - prev.gov)}</small>}</div>
         <div className="pn-poll__row"><span>{r.name}</span><b style={{ color: party.color }}>{poll.rival}%</b>{prev && <small className="pn-hint"> {sign(poll.rival - prev.rival)}</small>}</div>

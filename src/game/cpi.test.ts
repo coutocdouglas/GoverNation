@@ -7,6 +7,7 @@ import { agendaUsada, invOf, ligarVazamento, type Caso } from './caso'
 import { aplicarDecisaoCpi, comissoesOf, cpiBlockedReason, ligarCpi, potencialAssinaturas, ritmoOitiva, stepCpi, tomDaCpi, type Cpi } from './cpi'
 import { atualizarObjetivo, rivalBoost } from './rival'
 import { riscoOf } from './risco'
+import { pendencias } from './pendencias'
 import { absMonth } from './memory'
 import { Rng } from './rng'
 import type { GameState, GroupId, Headline, Impulse } from './types'
@@ -121,6 +122,21 @@ describe('CPI: instalada', () => {
     expect(kr.provas).toBe(40)
     expect(cpiBlockedReason(r, 'prepararOitiva')).toMatch(/Recesso/)
   })
+  it('conversa com o relator que vazou perde o acerto e não pode ser refeita', () => {
+    const s = fresh(); const c = comCaso(s)
+    const k = comCpi(s, c)
+    aplicarDecisaoCpi(s, 'negociarRelator', structuredClone(s.economy), SEMPRE, empty(), [], [])
+    expect(k.relatorNegociado).toBe(false)
+    k.ultimaAcao = undefined
+    expect(cpiBlockedReason(s, 'negociarRelator')).toMatch(/vazou/)
+  })
+  it('a pendência leva ao cartão da CPI', () => {
+    const s = fresh(); const c = comCaso(s)
+    comCpi(s, c, { fase: 'coleta', assinaturas: 150 })
+    const p = pendencias(s).find((x) => x.target === 'cpi')
+    expect(p?.urgency).toBe('red')
+    expect(p?.title).toMatch(/Pedido de CPI/)
+  })
   it('trocar membros abranda um degrau, uma vez; relator da oposição não negocia', () => {
     const s = fresh(); const c = comCaso(s)
     const k = comCpi(s, c, { tom: 2, relator: s.rival!.party })
@@ -194,7 +210,7 @@ describe('Save e partida', () => {
     s.saveVersion = 28
     delete s.comissoes
     const m = migrate(s)!
-    expect(m.saveVersion).toBe(29)
+    expect(m.saveVersion).toBe(30)
     expect(m.comissoes.atual).toBeNull()
   })
   it('mandato inteiro com a CPI ligada não quebra', () => {

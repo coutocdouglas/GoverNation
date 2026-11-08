@@ -144,7 +144,7 @@ import type { ReputationState } from './reputacao'
 import type { RiscoState } from './risco'
 
 export interface GameState {
-  saveVersion: 29
+  saveVersion: 30
   /** Etapa 5C: CPI em andamento e comissões encerradas. */
   comissoes: import('./cpi').ComissoesState
   /** Etapa 5B (v0.28): casos vazados, investigação da PF, advogado do presidente. Ver caso.ts. */

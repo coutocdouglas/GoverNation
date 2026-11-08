@@ -7,6 +7,7 @@ import { monthLabel } from '../game/game'
 import type { Articulation, BillId, Deal, GameState, PartyId, VoteRecord } from '../game/types'
 import type { MonthPlan } from '../game/game'
 import { FrentesCard, SanctionCard, SpeakerCard } from './CamaraPanels'
+import { CpisEncerradasCard } from './CpiCard'
 import { ccjApplies, isFrozen } from '../game/supremo'
 import { Portrait } from './Portrait'
 import { num } from './format'
@@ -173,6 +174,7 @@ export function CongressView({ state, articulations, onToggle, bill, extraBill, 
       </section>
 
       <FrentesCard state={state} />
+      <CpisEncerradasCard state={state} />
 
       {(c.votes.length > 0 || c.laws.length > 0) && (
         <section className="pn-card">

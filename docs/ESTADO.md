@@ -3,13 +3,13 @@
 > **Leia este arquivo primeiro.** Ele diz onde o projeto está e qual é o próximo passo.
 > Atualize-o a cada mudança: seção "Estado atual", "Próximo passo" e uma linha no "Histórico".
 
-**Última atualização:** 08/11/2026 · **Versão publicada:** v0.28.1 (v0.29.0 pronta, aguardando publicação)
+**Última atualização:** 08/11/2026 · **Versão publicada:** v0.29.1
 
 ---
 
 ## Próximo passo
 
-**Etapa 5C em andamento.** Bloco 1 (v0.29.0, regras da oposição com objetivo e da CPI) pronto e desligado até as telas (DESIGN.md 27.24). **Próximo: v0.29.1, telas da CPI e do objetivo da oposição** · complexidade média · **Sonnet**. Depois, v0.30.0 e v0.30.1 (inteligência e dossiês) · complexidade muito alta · **Opus** nas regras, **Sonnet** nas telas.
+**Etapa 5C em andamento.** Blocos 1 e 2 prontos: a CPI e a meta da oposição estão ligadas e com tela (v0.29.0 e v0.29.1, DESIGN.md 27.24 e 27.25). **Próximo: v0.30.0 e v0.30.1 (inteligência e dossiês)** · complexidade muito alta · **Opus** nas regras, **Sonnet** nas telas. Decisão pendente do Douglas: ligar ou retirar o ataque 20% maior da meta de aprovação da oposição (número previsto, mas sem efeito no motor).
 
 **Etapa 5B fechada na v0.28.1** (DESIGN.md 27.22 e 27.23): o vazamento está ligado e os casos têm tela própria (cartão com Agir ou Deixar passar, pendência, faixa de vazamento, agenda, advogado, parecer, interino e nomes das empresas pela IA). **Falta o Douglas jogar uma partida completa** (portão de playtest), de olho em quantos casos aparecem, no peso deles e nos nomes das empresas com a IA ligada, que ainda não foram vistos na tela.
 
@@ -32,7 +32,7 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 **Base técnica**
 - App de Windows (Tauri 2 + React + TypeScript). O instalador é gerado pelo GitHub Actions e o jogo se atualiza sozinho, com atualização assinada.
 - O motor do jogo (`src/game/`) fica separado das telas (`src/ui/`). Os números de balanceamento ficam em `src/game/data/`.
-- 410 testes automáticos. Saves antigos são migrados (versão atual do save: 29).
+- 412 testes automáticos. Saves antigos são migrados (versão atual do save: 30).
 
 **Jogabilidade**
 - Mandato de 48 meses (jan/2027 a dez/2030), com o mês em 4 passos: notícias, fato do mês, decisões e encerrar.
@@ -76,6 +76,7 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 - **Tamanho dos efeitos (v0.26):** ganho de medida nos grupos com curva (pequeno visível, grande com retorno decrescente); lei, LC e PEC que machucam já pesam no envio em quem atingem (aviso na leitura do gabinete, descontado se virar lei); teto por grupo no mês (+6 / −8), com a sobra no mês seguinte.
 - **Elos e semente de risco (v0.27 regras, v0.27.1 telas):** na tela, medalha do Elo nas fichas, ministérios e Supremo; cartão "Integridade do governo" no Painel (Elo, pista do rastro, Controle do Estado, detalhe num clique); licitação nas Pendências com janela para escolher a empresa (custo em reais); cartão da proposta de setor (Aceitar ou Recusar, vale ao encerrar o mês); pista do risco na troca de ministro e na sabatina. Elo de reputação (Bronze a Platina, 3 divisões, "sob suspeita") para presidente, ministros, Supremo e líderes, com histerese e crédito; risco oculto de cada pessoa; rastro oculto do presidente; Controle do Estado (0 a 100) com 4 medidas novas; sementes de risco com origem na Ficha (nomeação, contrato com 3 ou 4 empresas, proposta de setor, estatal, cargos, obra) que podem virar esquema escondido. Nada vaza até a 5B.
 - **Vazamento, PF e advogado (v0.28.0 regras, v0.28.1 telas):** cartão próprio do caso no Painel, com Agir ou Deixar passar e o custo à vista; pendência; faixa de vazamento; contador da agenda; cartão e parecer do advogado; selo de interino. Regras: esquema escondido vaza (chance pela gravidade, exposição, oposição e Controle do Estado; no máximo 2 casos abertos, 4 meses entre vazamentos); PF junta provas de 0 a 100 até a denúncia (alvo "sob suspeita", ministro sai e assume um interino) ou o arquivo; saídas do presidente (trocar a PF, soltar a mão, entregar tudo, delimitar o escopo ou "limpar" com o advogado, exonerar), uma por caso por mês; delação; caso do presidente com rastro alto sobe ao Supremo; advogado sorteado (4 personagens) com parecer e chances em faixas; agenda de 2 espaços; nomes das empresas pela IA com reserva. Saiu o sorteio solto de escândalo.
+- **CPI e meta da oposição (v0.29.0 regras, v0.29.1 telas):** pedido com 171 assinaturas sobre um caso vazado; CPI de 6 meses branda, equilibrada ou dura conforme a base; oitivas e relatório (aprovado, pizza ou paralelo); cartão no Painel com Agir ou Deixar passar e custo à vista; pendência; agenda dividida com casos e advogado; registro na aba Câmara; meta visível da oposição com prazo.
 - **Logos dos partidos (v0.19.1):** arte do Douglas em `public/logos/`, na posse, no Painel, na Câmara, nas lideranças e no cartão da oposição; número na urna de cada partido.
 - **Retratos:** 110 fotos, cada uma usada por uma pessoa só, e 88 retratos ilustrados (111 a 198) feitos pelo Douglas. 87 rostos livres para personagens novos e para o presidente (10 foram para os advogados e interinos da 5B na v0.28; 18 foram para os chefes de ala na v0.18 e 9 para os líderes de bancada do Senado na v0.21). O presidente escolhe o rosto na posse (41 livres) e 15 retratos ficam reservados para Defesa, povos indígenas, campo e tradições.
 
@@ -177,3 +178,4 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 | 08/11/2026 | v0.28.0 | Etapa 5B, bloco 1 (regras): vazamento (desligado até as telas), investigação da PF com provas e solidez, saídas do presidente, delação, Supremo para o caso do presidente, advogado do presidente, agenda de 2 espaços, interinos, nomes das empresas pela IA; saiu o sorteio solto de escândalo; save 28; `npm run sim5b` (3,1 a 4,5 casos por mandato) |
 | 08/11/2026 | v0.28.1 | Etapa 5B, bloco 2 (telas): vazamento ligado, cartão do caso com Agir ou Deixar passar, pendência, faixa de vazamento, agenda, advogado e parecer, selo de interino, nomes das empresas pela IA; sem mudança no save; 394 testes; falta a partida completa do Douglas |
 | 08/11/2026 | v0.29.0 | Etapa 5C, bloco 1 (regras, desligadas até as telas): objetivo da oposição, requerimento com 171 assinaturas, CPI de 6 meses com tom pela base, oitivas e relatório; save 29; 410 testes; `npm run sim5c` (1,1 a 1,8 CPIs por mandato). Douglas decidiu começar a 5C antes da partida da 5B |
+| 08/11/2026 | v0.29.1 | Etapa 5C, bloco 2 (telas): CPI e meta da oposição ligadas, cartão da CPI, pendência, agenda dividida, comissões encerradas na aba Câmara; conversa vazada com o relator não se repete; save 30; 412 testes; ciclo da CPI conferido no navegador até o relatório |

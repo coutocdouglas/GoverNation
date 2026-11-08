@@ -19,11 +19,13 @@ import { BASE, ESFRIA } from './data/base'
 import type { BillId, GameState } from './types'
 import { licitacoesAbertas, prazoLicitacao } from './risco'
 import { casosAbertos, faixaGravidade } from './caso'
+import { cpiAtual } from './cpi'
+import { CPI } from './data/cpi'
 import { deAuthor, justiceName } from './supremo'
 import { TSE_BY_ID } from './data/supremo'
 
 export type Urgency = 'red' | 'yellow' | 'green'
-export type PendingTarget = 'evento' | 'camara' | 'senado' | 'supremo' | 'promessas' | 'cobrancas' | 'licitacao' | 'caso'
+export type PendingTarget = 'evento' | 'camara' | 'senado' | 'supremo' | 'promessas' | 'cobrancas' | 'licitacao' | 'caso' | 'cpi'
 
 export interface Pendencia {
   id: string
@@ -84,6 +86,18 @@ export function pendencias(s: GameState): Pendencia[] {
       title: `Licitação: ${BILL_BY_ID[l.bill].name}`,
       detail: `Escolha quem executa (${l.empresas.length} empresas) · ${leftText(left)} · sem escolha, fica a empresa de sempre`,
       urgency: urgencyOf(left, false), weight: 45 - left * 6,
+    })
+  }
+
+  // Etapa 5C (v0.29.1): pedido de CPI ou CPI instalada. Sem prazo do jogador: deixar passar também é uma decisão.
+  const cpi = cpiAtual(s)
+  if (cpi) {
+    const coleta = cpi.fase === 'coleta'
+    out.push({
+      id: `cpi-${cpi.caso}`, icon: '🏛️', target: 'cpi',
+      title: `${coleta ? 'Pedido de CPI' : 'CPI em andamento'}: ${cpi.alvo}`,
+      detail: coleta ? `${cpi.assinaturas} de ${CPI.assinaturas} assinaturas · agir ou deixar passar` : `Provas ${Math.round(cpi.provas ?? 0)}/100 · comissão ${CPI.tons[cpi.tom ?? 1].rotulo} · agir ou deixar passar`,
+      urgency: (coleta ? cpi.assinaturas >= CPI.assinaturas * 0.8 : (cpi.provas ?? 0) >= 60) ? 'red' : 'yellow', weight: 46,
     })
   }
 

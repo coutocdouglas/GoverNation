@@ -10,7 +10,7 @@ export type TomCpi = 0 | 1 | 2
 
 export const CPI = {
   /** Ligada na v0.29.1, junto com as telas (Teste do beco sem saída). Testes e simulador usam `ligarCpi`. */
-  ativo: false,
+  ativo: true,
   /** Um terço da Câmara. */
   assinaturas: 171,
   duracao: 6,

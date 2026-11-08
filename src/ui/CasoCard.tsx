@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { ADVOGADO, ADVOGADOS, AGENDA, PF, type AcaoCaso, type AdvogadoDef } from '../game/data/caso'
+import type { AcaoCpi } from '../game/data/cpi'
 import type { FonteRisco } from '../game/data/risco'
 import {
   acaoCasoBlockedReason, advogadoAtual, advogadoBlockedReason, agendaDaAcao, agendaLivre, casosAbertos, faixaGravidade, invOf, pistaCaso, sangriaDoCaso,
@@ -117,12 +118,12 @@ function CasoBox({ state, c, escolha, livre, onPick }: { state: GameState; c: Ca
  * Etapa 5B (v0.28.1): os casos abertos, num cartão próprio do Painel. Cada caso mostra provas, pista e origem;
  * "Agir" abre as saídas com o custo à vista; "Deixar passar" não escolhe nada. A escolha vai em `MonthPlan.casos`.
  */
-export function CasosCard({ state, decisoes, advogado, onChange }: { state: GameState; decisoes: DecisaoCaso[]; advogado: string | null; onChange: (d: DecisaoCaso[]) => void }) {
+export function CasosCard({ state, decisoes, advogado, cpi, onChange }: { state: GameState; decisoes: DecisaoCaso[]; advogado: string | null; cpi: AcaoCpi | null; onChange: (d: DecisaoCaso[]) => void }) {
   const abertos = casosAbertos(state)
   const now = absMonth(state)
   const recentes = (state.investigacao?.casos ?? []).filter((c) => c.fase === 'encerrado' && c.fim !== undefined && now - c.fim <= 3)
   if (!abertos.length && !recentes.length) return null
-  const plan = { casos: decisoes, advogado: advogado ?? undefined }
+  const plan = { casos: decisoes, advogado: advogado ?? undefined, cpi: cpi ?? undefined }
   const livre = agendaLivre(plan)
   const pick = (id: string, a: AcaoCaso | null) => onChange([...decisoes.filter((d) => d.caso !== id), ...(a ? [{ caso: id, acao: a }] : [])])
   return (
@@ -141,21 +142,21 @@ export function CasosCard({ state, decisoes, advogado, onChange }: { state: Game
 }
 
 /** Contador da agenda do presidente (núcleo mínimo da Etapa 6). */
-export function AgendaBadge({ plan }: { plan: { casos?: DecisaoCaso[]; advogado?: string } }) {
+export function AgendaBadge({ plan }: { plan: { casos?: DecisaoCaso[]; advogado?: string; cpi?: AcaoCpi } }) {
   const usada = AGENDA.espacos - agendaLivre(plan)
-  return <span className="pn-badge" title="Trocar a PF, entregar documentos, exonerar e trocar de advogado gastam um espaço">🗓️ agenda {usada} de {AGENDA.espacos}</span>
+  return <span className="pn-badge" title="Trocar a PF, entregar documentos, exonerar, trocar de advogado e a maioria das saídas da CPI gastam um espaço">🗓️ agenda {usada} de {AGENDA.espacos}</span>
 }
 
 /**
  * Etapa 5B (v0.28.1): o advogado do presidente. Perfil, Elo e a troca (a cada 6 meses, gasta agenda).
  * A escolha vai em `MonthPlan.advogado`.
  */
-export function AdvogadoCard({ state, decisoes, advogado, onChange }: { state: GameState; decisoes: DecisaoCaso[]; advogado: string | null; onChange: (id: string | null) => void }) {
+export function AdvogadoCard({ state, decisoes, advogado, cpi, onChange }: { state: GameState; decisoes: DecisaoCaso[]; advogado: string | null; cpi: AcaoCpi | null; onChange: (id: string | null) => void }) {
   const [open, setOpen] = useState(false)
   const adv = advogadoAtual(state)
   const inv = invOf(state)
-  const plan = { casos: decisoes, advogado: advogado ?? undefined }
-  const livre = agendaLivre({ casos: decisoes })
+  const plan = { casos: decisoes, advogado: advogado ?? undefined, cpi: cpi ?? undefined }
+  const livre = agendaLivre({ casos: decisoes, cpi: cpi ?? undefined })
   const perfil = (a: AdvogadoDef) => `${a.estilo} · eficiência ${a.eficiencia >= 0.75 ? 'alta' : a.eficiencia >= 0.55 ? 'média' : 'baixa'} · lealdade ${a.lealdade >= 0.75 ? 'alta' : a.lealdade >= 0.5 ? 'média' : 'baixa'} · R$ ${a.custo} mil por mês`
   return (
     <section className="pn-card">

@@ -44,6 +44,8 @@ export interface Cpi {
   oitivas?: number
   membrosTrocados?: boolean
   relatorNegociado?: boolean
+  /** A conversa com o relator vazou: o acerto se perdeu e não pode ser refeito. */
+  relatorVazou?: boolean
   /** Mês em que o advogado preparou a oitiva. */
   preparadaEm?: number
 }
@@ -142,6 +144,7 @@ export function cpiBlockedReason(s: GameState, acao: AcaoCpi): string | null {
       return null
     case 'negociarRelator':
       if (c.fase !== 'instalada') return 'A CPI ainda não foi instalada.'
+      if (c.relatorVazou) return 'A conversa com o relator vazou: ele não fala mais com o governo.'
       if (c.relatorNegociado) return 'Já houve conversa com o relator.'
       if (c.relator && ladoOposicao(s).includes(c.relator)) return 'O relator é da oposição: não há conversa.'
       return null
@@ -209,6 +212,7 @@ export function aplicarDecisaoCpi(s: GameState, acao: AcaoCpi, e: Economy, rng: 
       taken.push('Negociou com o relator da CPI')
       if (rng.next() < A.vaza) {
         c.relatorNegociado = false
+        c.relatorVazou = true
         c.provas = clamp((c.provas ?? 0) + A.vazaProvas)
         hitTodos(impulses, 'Vazou o acerto com o relator da CPI', A.vazaGrupos)
         headlines.push({ text: `Vaza conversa do governo com o relator da CPI do caso ${c.alvo}`, tone: 'bad' })
@@ -266,11 +270,19 @@ export function ritmoOitiva(c: Pick<Cpi, 'tom' | 'cooperou'>, caso: Pick<Caso, '
   return (O.base + ((caso?.gravidade ?? 30) / 100) * O.porGravidade) * (caso?.solidez ?? 1) * CPI.tons[c.tom ?? 1].provas * (c.cooperou ? O.cooperar : 1)
 }
 
+/** Chance de o relatório ser aprovado, com as provas e o acerto de agora (0 a 1). */
+export const chanceRelatorio = (c: Pick<Cpi, 'provas' | 'tom' | 'relatorNegociado'>) =>
+  clamp((c.provas ?? 0) / 100 + CPI.tons[c.tom ?? 1].aprovar + (c.relatorNegociado ? ACOES_CPI.negociarRelator.aprovar : 0), RELATORIO.min, RELATORIO.max)
+
+/** Quanto a CPI tira de todos os grupos neste mês. */
+export const sangriaCpi = (c: Pick<Cpi, 'tom' | 'cooperou'>, caso: Pick<Caso, 'gravidade'> | undefined) =>
+  ((caso?.gravidade ?? 30) / 100) * CPI.sangria * CPI.tons[c.tom ?? 1].sangria * (c.cooperou ? CPI.sangriaCooperando : 1)
+
 function relatorio(s: GameState, c: Cpi, caso: Caso | undefined, rng: Rng, impulses: Record<GroupId, Impulse[]>, headlines: Headline[], rival: Cause[]): number {
   const R = RELATORIO
   const provas = c.provas ?? 0
   const g = (caso?.gravidade ?? 30) / 100
-  const p = clamp(provas / 100 + CPI.tons[c.tom ?? 1].aprovar + (c.relatorNegociado ? ACOES_CPI.negociarRelator.aprovar : 0), R.min, R.max)
+  const p = chanceRelatorio(c)
   const pv = Math.round(provas)
   if (rng.next() < p) {
     const ind = provas >= R.indiciaDesde ? [c.alvo, ...(provas >= R.indiciaOrigemDesde && caso?.por && caso.por !== s.presidentName ? [caso.por] : [])] : []
@@ -357,8 +369,7 @@ export function stepCpi(s: GameState, rng: Rng, impulses: Record<GroupId, Impuls
     return { confidence, rival }
   }
   // Instalada: oitiva (fora do recesso), sangria e, no último dia, o relatório.
-  const g = (caso?.gravidade ?? 30) / 100
-  hitTodos(impulses, `CPI do caso ${c.alvo} no noticiário`, -g * CPI.sangria * CPI.tons[c.tom ?? 1].sangria * (c.cooperou ? CPI.sangriaCooperando : 1))
+  hitTodos(impulses, `CPI do caso ${c.alvo} no noticiário`, -sangriaCpi(c, caso))
   if (!isRecess(s.month) && now > (c.inicio ?? now)) {
     const prep = c.preparadaEm === now ? 1 - advogadoAtual(s).eficiencia * ACOES_CPI.prepararOitiva.porEficiencia : 1
     const ganho = round1(ritmoOitiva(c, caso) * prep)

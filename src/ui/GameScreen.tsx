@@ -37,6 +37,9 @@ import { IntegridadeCard, PropostaCard } from './IntegridadeCard'
 import { LicitacaoSheet } from './LicitacaoSheet'
 import { AdvogadoCard, CasosCard } from './CasoCard'
 import { ACAO_NOME_CURTO } from './casoTexto'
+import { CpiCard } from './CpiCard'
+import { ACAO_CPI_CURTO } from './cpiTexto'
+import type { AcaoCpi } from '../game/data/cpi'
 import { ADVOGADOS } from '../game/data/caso'
 import type { DecisaoCaso } from '../game/caso'
 import { escolherLicitacao, licitacoesAbertas, nomearEmpresas } from '../game/risco'
@@ -116,6 +119,8 @@ export function GameScreen({ state, onChange, onExit }: {
   /** Etapa 5B (v0.28.1): saídas escolhidas para os casos e troca de advogado (valem ao encerrar; gastam a agenda). */
   const [casoDecisoes, setCasoDecisoes] = useState<DecisaoCaso[]>([])
   const [advogado, setAdvogado] = useState<string | null>(null)
+  /** Etapa 5C (v0.29.1): saída escolhida para a CPI (vale ao encerrar). */
+  const [cpiDecisao, setCpiDecisao] = useState<AcaoCpi | null>(null)
   /** Etapa 2B: resposta ao fato esperando a ficha (etapa 2 da corrente) antes de assinar ou votar. */
   const [respSheet, setRespSheet] = useState<BillId | null>(null)
   /** Etapa 2B: "O que mudou no mês passado" fica no fim da página, recolhido. */
@@ -128,7 +133,7 @@ export function GameScreen({ state, onChange, onExit }: {
     bill: bill ?? undefined, articulations, eventChoice: eventChoice ?? undefined, eventResponse: eventResponse ?? undefined, deals,
     hold: proc.hold, urgent: proc.urgent, original: proc.original, symbolic: proc.symbolic, sanctions, ministry: ministry ?? undefined, nominee: nominee ?? undefined, consult: consult ?? undefined,
     statement: statement ?? undefined, street: street ?? undefined, proposta: proposta ?? undefined,
-    casos: casoDecisoes.length ? casoDecisoes : undefined, advogado: advogado ?? undefined,
+    casos: casoDecisoes.length ? casoDecisoes : undefined, advogado: advogado ?? undefined, cpi: cpiDecisao ?? undefined,
   }
   const onProcedure = (kind: ProcedureKind, id: BillId, on: boolean) => setProc((cur) => {
     const next = { ...cur }
@@ -267,6 +272,7 @@ export function GameScreen({ state, onChange, onExit }: {
       setProposta(null)
       setCasoDecisoes([])
       setAdvogado(null)
+      setCpiDecisao(null)
       setTab('painel')
       setStep(1)
       setTurning(false)
@@ -321,7 +327,7 @@ export function GameScreen({ state, onChange, onExit }: {
     })
   }
   const goPending = (t: PendingTarget) => {
-    if (t === 'caso') { document.getElementById('casos')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); return }
+    if (t === 'caso' || t === 'cpi') { document.getElementById(t === 'caso' ? 'casos' : 'cpi')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); return }
     if (t === 'camara' || t === 'senado' || t === 'supremo') { setTab('governo'); setGovTab(t); window.scrollTo({ top: 0, behavior: 'smooth' }); return }
     const el = document.getElementById(t === 'promessas' ? 'promessas' : t === 'evento' ? 'fato-do-mes' : 'fato-do-mes')
     if (t === 'cobrancas') { medidaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }); return }
@@ -546,7 +552,7 @@ export function GameScreen({ state, onChange, onExit }: {
                     <div>
                       <h2>Tudo pronto para virar o mês?</h2>
                       <p className="pn-hint">
-                        {selected.length === 0 && !bill && !eventResponse && !statement && !street && !round && (peekRound(state)?.articulations ?? []).length === 0 && !nominee && !consult && !ministry && !proposta && !casoDecisoes.length && !advogado
+                        {selected.length === 0 && !bill && !eventResponse && !statement && !street && !round && (peekRound(state)?.articulations ?? []).length === 0 && !nominee && !consult && !ministry && !proposta && !casoDecisoes.length && !advogado && !cpiDecisao
                           ? 'Você não tomou nenhuma decisão. O país segue sozinho este mês.'
                           : [
                               selected.length ? `Decretos: ${selected.map((id) => lowerFirst(ACTION_BY_ID[id].name)).join(' e ')}.` : '',
@@ -558,6 +564,7 @@ export function GameScreen({ state, onChange, onExit }: {
                               ministry ? (ministry.party ? `Ministério: ${state.cabinet[ministry.area] ? 'trocar' : 'ceder'} ${ministry.area} ${state.cabinet[ministry.area] ? 'pelo' : 'ao'} ${PARTY_BY_ID[ministry.party].sigla}.` : `Ministério: retomar ${ministry.area}.`) : '',
                               proposta ? `Proposta de setor: ${proposta === 'aceitar' ? 'aceitar' : 'recusar'}.` : '',
                               ...casoDecisoes.map((d) => `Caso ${state.investigacao?.casos.find((c) => c.id === d.caso)?.alvo ?? ''}: ${ACAO_NOME_CURTO[d.acao]}.`),
+                              cpiDecisao ? `CPI: ${ACAO_CPI_CURTO[cpiDecisao]}.` : '',
                               advogado ? `Advogado: contratar ${ADVOGADOS.find((a) => a.id === advogado)?.name}.` : '',
                               consult ? `Supremo: pedir parecer sobre ${lowerFirst(BILL_BY_ID[consult].name)}.` : '',
                               statement ? `Post da assessoria: ${lowerFirst(STATEMENT_BY_ID[statement].label)}.` : '',
@@ -746,7 +753,8 @@ export function GameScreen({ state, onChange, onExit }: {
 
           <div className="pn-col">
             <PropostaCard state={state} value={proposta} onChange={(v) => { setProposta(v); if (v) toast(v === 'aceitar' ? '🤝 Proposta aceita: vale ao encerrar o mês.' : '🙅 Proposta recusada: vale ao encerrar o mês.') }} />
-            <CasosCard state={state} decisoes={casoDecisoes} advogado={advogado} onChange={(d) => { setCasoDecisoes(d); if (d.length > casoDecisoes.length) toast('🕵️ Decisão do caso anotada: vale ao encerrar o mês.') }} />
+            <CasosCard state={state} decisoes={casoDecisoes} advogado={advogado} cpi={cpiDecisao} onChange={(d) => { setCasoDecisoes(d); if (d.length > casoDecisoes.length) toast('🕵️ Decisão do caso anotada: vale ao encerrar o mês.') }} />
+            <CpiCard state={state} decisoes={casoDecisoes} advogado={advogado} escolha={cpiDecisao} onPick={(a) => { setCpiDecisao(a); if (a) toast('🏛️ Decisão sobre a CPI anotada: vale ao encerrar o mês.') }} />
             <PendenciasCard state={state} onGo={goPending} onAttend={attend} onLicitacao={openLicitacao} />
             {licSheet && (
               <LicitacaoSheet state={state} id={licSheet} onClose={() => setLicSheet(null)} onChoose={(perfil) => {
@@ -765,7 +773,7 @@ export function GameScreen({ state, onChange, onExit }: {
 
             <ReputationCard state={state} onOpen={() => setTab('fichas')} />
             <IntegridadeCard state={state} />
-            <AdvogadoCard state={state} decisoes={casoDecisoes} advogado={advogado} onChange={(id) => { setAdvogado(id); if (id) toast('💼 Troca de advogado anotada: vale ao encerrar o mês.') }} />
+            <AdvogadoCard state={state} decisoes={casoDecisoes} advogado={advogado} cpi={cpiDecisao} onChange={(id) => { setAdvogado(id); if (id) toast('💼 Troca de advogado anotada: vale ao encerrar o mês.') }} />
             <RivalCard state={state} />
             <PromisesCard state={state} />
             <SupremoMini state={state} onOpen={() => { setTab('governo'); setGovTab('supremo') }} />
@@ -809,7 +817,7 @@ export function GameScreen({ state, onChange, onExit }: {
             <section className="pn-card">
               <h3>🔜 Ainda não está no jogo</h3>
               <p className="pn-hint">
-                CPIs, imprensa, governadores, diplomacia, os 27 estados e a apuração da eleição chegam nas próximas versões.
+                Imprensa, governadores, diplomacia, os 27 estados e a apuração da eleição chegam nas próximas versões.
               </p>
             </section>
           </div>

@@ -259,7 +259,11 @@ export function migrate(raw: unknown): GameState | null {
       (s as GameState).comissoes ??= initialComissoes()
       s.saveVersion = 29
     }
-    if (s.saveVersion !== 29) return null
+    if (s.saveVersion === 29) {
+      // v0.29.0 → v0.29.1: campo novo e opcional `relatorVazou` na CPI; como a CPI estava desligada, nada a converter.
+      s.saveVersion = 30
+    }
+    if (s.saveVersion !== 30) return null
     syncCustomBills(s as GameState)
     return s as GameState
   } catch {

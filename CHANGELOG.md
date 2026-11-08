@@ -1,5 +1,16 @@
 # Novidades
 
+## 0.29.1 (08/11/2026)
+- **Etapa 5C, bloco 2 (telas): a CPI e a meta da oposição agora acontecem.**
+  - **Cartão "CPI na Câmara" no Painel:** na coleta, as assinaturas até 171, o prazo e até onde o pedido pode chegar. Instalada, se a comissão é branda, equilibrada ou dura e por quê, quem preside e relata, as provas, quanto a oitiva deve render, a chance do relatório e o desgaste do mês.
+  - **Agir ou Deixar passar:** trabalhar as assinaturas, cooperar, preparar o depoimento, trocar membros ou negociar com o relator, cada saída com ganho, custo e agenda à vista. Uma decisão por mês, valendo ao encerrar o mês.
+  - **Agenda:** os cartões de caso, advogado e CPI dividem os mesmos 2 espaços.
+  - **Pendência** "Pedido de CPI" ou "CPI em andamento" na central, que leva ao cartão.
+  - **Meta da oposição** no cartão da Oposição, com prazo, efeito e o que ela ganha ou perde.
+  - **Comissões encerradas** na aba Câmara, com desfecho, provas e indiciados.
+- **Conversa com o relator que vazou não pode ser refeita** (antes, dava para tentar de novo).
+- **Save versão 30:** mandatos salvos continuam normalmente. 412 testes. Simulador com a CPI ligada: aprovação final das estratégias muda entre −1,3 e +0,2 ponto (passivo 33,2 → 31,9; responde aos fatos 49,0 → 49,2).
+
 ## 0.29.0 (08/11/2026)
 - **Etapa 5C, bloco 1 (regras): oposição com objetivo e CPI na Câmara.** As regras estão prontas, mas **ficam desligadas até a v0.29.1**, que traz as telas. Sem tela, a CPI apareceria sem você poder responder.
   - **Objetivo da oposição:** derrubar um ministro desgastado, impor uma derrota no plenário ou levar a aprovação a uma meta. Cumprir fortalece a oposição; falhar em 8 meses enfraquece.

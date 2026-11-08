@@ -10,7 +10,7 @@ import type { GameState, GroupId } from '../game/types'
 
 const meses = (n: number) => `${n} ${n === 1 ? 'mês' : 'meses'}`
 
-const grupos = (g: Partial<Record<GroupId, number>>, fator = 1) =>
+export const grupos = (g: Partial<Record<GroupId, number>>, fator = 1) =>
   (Object.entries(g) as [GroupId, number][]).map(([id, v]) => `${GROUP_BY_ID[id].name.toLowerCase()} ${signed(v * fator, 1)}`).join(', ')
 
 /** Custo na relação com o partido do alvo (o motor não cobra do partido do presidente nem de alvo sem partido). */

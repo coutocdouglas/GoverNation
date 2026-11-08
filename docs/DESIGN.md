@@ -1159,6 +1159,18 @@ Plano: `docs/projeto/plano-etapa-5.pdf`. O Douglas escolheu começar antes de jo
 
 **Save 29:** `GameState.comissoes`. **Testes:** 410 (16 novos em `cpi.test.ts`). **Não testado no navegador:** não há tela e as regras estão desligadas. **Para a v0.29.1 (telas, Sonnet):** ligar `CPI.ativo`; cartão da coleta (assinaturas, saídas, custo à vista); cartão da CPI (tom, presidente, relator, provas, oitiva, saídas); pendência; objetivo no cartão da oposição; registro de comissões encerradas; `agendaUsada` já conta `plan.cpi`, mas as telas precisam enviá-lo.
 
+### 27.25 Etapa 5C, bloco 2 (telas: v0.29.1)
+
+1. **Ligado** (`CPI.ativo = true`): CPI e meta da oposição. `ligarCpi` continua para testes e simuladores.
+2. **Cartão da CPI** (`CpiCard` em `src/ui/CpiCard.tsx`, abaixo dos casos; só aparece com CPI em andamento ou encerrada há até 3 meses). Coleta: assinaturas, teto possível (`potencialAssinaturas` menos as retiradas) e prazo. Instalada: tom e motivo, presidência e relatoria (partidos), provas com a marca de indiciar, oitiva prevista (`ritmoOitiva`), chance do relatório em faixa (`chanceRelatorio`) e desgaste do mês (`sangriaCpi`), as duas últimas com a mesma fórmula do motor. "Agir" abre as saídas com custo (`custoDaAcaoCpi` em `cpiTexto.ts`); "Deixar passar" não escolhe nada. A escolha vai em `MonthPlan.cpi`.
+3. **Agenda:** `AgendaBadge`, `CasosCard` e `AdvogadoCard` contam `plan.cpi`; a opção que não cabe fica bloqueada.
+4. **Pendência** (`pendencias.ts`, alvo `cpi`), vermelha com 80% das assinaturas ou provas a partir de 60.
+5. **Meta da oposição** no `RivalCard`: objetivo, prazo, efeito e força ganha ou perdida.
+6. **Registro:** `CpisEncerradasCard` na aba Câmara.
+7. **Regra ajustada (decisão do Douglas):** conversa com o relator que vaza marca `relatorVazou` e não pode ser refeita.
+
+**Save 30** (`Cpi.relatorVazou`, opcional; nada a converter, porque a CPI estava desligada). **Testes:** 412. **Simuladores:** `npm run sim` passivo 33,2 → 31,9 de aprovação final, populista 29,1 → 28,3, austero 35,4 → 35,0, responde aos fatos 49,0 → 49,2, equilibrado 35,3 → 34,7, com assessoria 51,3 → 50,7, só assessoria 37,3 → 36,4; `sim5c` sem decisões do jogador: 1,1 a 1,8 CPIs instaladas por mandato. **Navegador:** coleta, CPI instalada, preparo do depoimento, agenda, pendência, resumo de encerrar, duas viradas de mês até o relatório, meta da oposição e registro, com saves de teste. **Não testado na tela:** as saídas de trabalhar assinaturas, trocar membros e negociar (cobertas nos testes do motor). **Achado:** `OBJETIVO.ataque` (× 1,2 da meta de aprovação, item 1 da 27.24) não é usado pelo motor; a tela não promete esse efeito, à espera da decisão do Douglas.
+
 ### 27.1 Caixa de ideias por etapa
 - **Da Etapa 5C, bloco 1 (08/11/2026).** (1) CPI no Senado. (2) Processo de impeachment do presidente usando `comissoes.contraPresidente`, `investigacao.denuncias` e `supremo.defied` (Etapa 6). (3) Ensinar o simulador a escolher saídas da CPI. (4) Presidente e relator com nome próprio, que hoje são só o partido (personagem novo entra no `CAST`).
 - **Da Etapa 5B, bloco 2 (08/11/2026).** (1) Nomear um titular no lugar do interino: hoje ele fica até a pasta ser cedida a um partido. (2) O texto de origem da posse diz "Nomeado na posse: Ministra..." sem concordância de gênero.
