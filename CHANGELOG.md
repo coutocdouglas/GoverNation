@@ -1,5 +1,13 @@
 # Novidades
 
+## 0.31.1 (08/11/2026)
+- **Ajustes do visual novo, a pedido do Douglas.**
+  - **Modo escuro em preto neutro**, sem o azul de antes.
+  - **Contraste no modo claro:** verdes, vermelhos, dourado, azul de destaque e cinzas mais escuros; botões com texto branco; fundos escuros fixos de vários cartões agora seguem o tema.
+  - **Janelas de vidro:** fundo semitransparente com desfoque, bordas retas e cabeçalho discreto, na janela e na barra de janelas abertas.
+  - **Fontes:** ZT Nature (livre para uso comercial) no texto e nos títulos; Corigo só no nome do presidente. Arquivos em `src/assets/fonts/`.
+- Sem mudança no save. 434 testes.
+
 ## 0.31.0 (08/11/2026)
 - **Visual novo, mais sofisticado e que usa a tela toda.** Só a apresentação mudou; as regras do jogo são as mesmas.
   - **Tema claro (papel) por padrão**, com títulos em serifa, cartões suaves e fotos em preto e branco. O botão ☾ Escuro / ☀ Claro no topo troca de tema, e a escolha fica lembrada.
