@@ -2,7 +2,7 @@
 
 Jogo de simulação política (governar o Brasil) para Windows, do Douglas (arquiteto, dono do projeto). Mecânicas inspiradas no jogo de referência planalto.fun. **Só a mecânica entra: nomes, textos, imagens e políticos reais do jogo de referência ficam de fora. Tudo no GoverNation é fictício.**
 
-Versão atual: **v0.28.1**. Documentação técnica: `docs/DESIGN.md` (seção 27; 27.15 Fase A, 27.16 a 27.18 lote A2, 27.19 a 27.21 Etapa 5A, 27.22 e 27.23 Etapa 5B). Plano da Etapa 5: `docs/projeto/plano-etapa-5.pdf`; o plano completo por etapas (`plano-de-desenvolvimento.md`) ficou no Cowork. Este arquivo traz o essencial.
+Versão atual: **v0.29.0**. Documentação técnica: `docs/DESIGN.md` (seção 27; 27.15 Fase A, 27.16 a 27.18 lote A2, 27.19 a 27.21 Etapa 5A, 27.22 e 27.23 Etapa 5B, 27.24 Etapa 5C). Plano da Etapa 5: `docs/projeto/plano-etapa-5.pdf`; o plano completo por etapas (`plano-de-desenvolvimento.md`) ficou no Cowork. Este arquivo traz o essencial.
 
 ## Como trabalhar com o Douglas
 - Responder em português do Brasil.
@@ -64,7 +64,8 @@ Testes passando · partida simulada sem erro · balanceamento revisado · efeito
 - `SENADO.dealCarry` (35%): conversão do acordo da Câmara no Senado, valor ilustrativo a rebalancear.
 - `src/game/risco.ts`, `data/risco.ts`: Etapa 5A (Elos, risco oculto, rastro do presidente, Controle do Estado, sementes de risco, contrato com escolha de empresa, proposta de setor). Telas da 5A: `src/ui/Elo.tsx`, `eloTexto.ts`, `IntegridadeCard.tsx` (Integridade e proposta de setor), `LicitacaoSheet.tsx` (licitação, aberta pela pendência quando a medida com obra passa a valer; prazo até o fim do mês seguinte) e o aviso `ContratoBox` em `MeasureSheet.tsx`; a resposta à proposta vai em `MonthPlan.proposta`. Só obra ou a marca `contrato` geram licitação.
 - `src/game/caso.ts`, `data/caso.ts`: Etapa 5B (vazamento, caso com provas e solidez, saídas do presidente em `MonthPlan.casos`, delação, Supremo para o caso do presidente, advogado em `MonthPlan.advogado`, agenda `AGENDA.espacos`, interinos em `GameState.interinos`). Vazamento ligado desde a v0.28.1 (`VAZAMENTO.ativo`; testes podem usar `ligarVazamento`). Telas: `src/ui/CasoCard.tsx` (`CasosCard`, `AdvogadoCard`, `AgendaBadge`) e `casoTexto.ts`. Nomes das empresas pela IA: `askEmpresaNames` (src/lib/aiActions.ts) e `nomearEmpresas`.
-- Save na versão 28.
+- `src/game/cpi.ts`, `data/cpi.ts`: Etapa 5C (objetivo da oposição em `rival.ts`, requerimento, CPI, relatório; `MonthPlan.cpi`; desligada até as telas: `CPI.ativo`, testes usam `ligarCpi`).
+- Save na versão 29.
 
 ## Situação
 Etapas feitas: 0, 1A, 1B, 2, 2B, 2C, 3 (Senado, v0.21), 4A e 4B (Supremo profundo, v0.22 e v0.23), **Fase A** (v0.24 e v0.24.1, publicada em 03/11/2026; playtest dispensado pelo Douglas em 07/11/2026), **lote A2 itens 1 a 3** (v0.25.0 acordos que esfriam, v0.26.0 efeitos das medidas, v0.26.1 logos do Senado), **Etapa 5A** (v0.27.0 regras, v0.27.1 telas, v0.27.2 licitação depois do vigor), **Etapa 5B** (v0.28.0 regras, v0.28.1 telas; falta a partida completa do Douglas).

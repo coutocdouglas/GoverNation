@@ -15,6 +15,7 @@
  *
  * Regras decidem, a IA só narra. O jogador vê provas, faixas de chance e pistas em palavras; o rastro é oculto.
  */
+import { ACOES_CPI, type AcaoCpi } from './data/cpi'
 import { ACOES_CASO, ADVOGADO, ADVOGADOS, AGENDA, CPI_MARCA, DELACAO, ESTRAGO, GRAVIDADE, INTERINOS, PF, SUPREMO_CASO, VAZAMENTO, type AcaoCaso, type AdvogadoDef } from './data/caso'
 import { MINISTER_BY_AREA, type AreaId } from './data/ministers'
 import { GROUPS } from './data/groups'
@@ -185,7 +186,7 @@ const fatorEnvolvimento = (c: Caso) => (envolvePresidente(c) ? ESTRAGO.president
 export const sangriaDoCaso = (c: Caso) =>
   (c.gravidade / 100) * ESTRAGO.sangria * fatorEnvolvimento(c) * (c.exonerado ? ACOES_CASO.exonerar.sangriaFator : c.solto ? ACOES_CASO.soltar.sangriaFator : 1)
 
-function hitTodos(impulses: Record<GroupId, Impulse[]>, label: string, value: number): void {
+export function hitTodos(impulses: Record<GroupId, Impulse[]>, label: string, value: number): void {
   if (!value) return
   const v = round1(value)
   if (!v) return
@@ -254,11 +255,11 @@ export interface DecisaoCaso {
 export const agendaDaAcao = (a: AcaoCaso) => ACOES_CASO[a].agenda
 
 /** Espaços da agenda usados pelo plano (casos e troca de advogado). */
-export function agendaUsada(plan: { casos?: DecisaoCaso[]; advogado?: string }): number {
-  return (plan.casos ?? []).reduce((a, d) => a + agendaDaAcao(d.acao), 0) + (plan.advogado ? ADVOGADO.agenda : 0)
+export function agendaUsada(plan: { casos?: DecisaoCaso[]; advogado?: string; cpi?: AcaoCpi }): number {
+  return (plan.casos ?? []).reduce((a, d) => a + agendaDaAcao(d.acao), 0) + (plan.advogado ? ADVOGADO.agenda : 0) + (plan.cpi ? ACOES_CPI[plan.cpi].agenda : 0)
 }
 
-export const agendaLivre = (plan: { casos?: DecisaoCaso[]; advogado?: string }) => AGENDA.espacos - agendaUsada(plan)
+export const agendaLivre = (plan: { casos?: DecisaoCaso[]; advogado?: string; cpi?: AcaoCpi }) => AGENDA.espacos - agendaUsada(plan)
 
 /** O presidente está limpo neste caso (para ganhar imagem cooperando). */
 const limpoNoCaso = (s: GameState, c: Caso) => !envolvePresidente(c) && !c.presidente && riscoOf(s).rastro < DELACAO.rastroMin

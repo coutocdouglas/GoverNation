@@ -1,5 +1,14 @@
 # Novidades
 
+## 0.29.0 (08/11/2026)
+- **Etapa 5C, bloco 1 (regras): oposição com objetivo e CPI na Câmara.** As regras estão prontas, mas **ficam desligadas até a v0.29.1**, que traz as telas. Sem tela, a CPI apareceria sem você poder responder.
+  - **Objetivo da oposição:** derrubar um ministro desgastado, impor uma derrota no plenário ou levar a aprovação a uma meta. Cumprir fortalece a oposição; falhar em 8 meses enfraquece.
+  - **Requerimento:** sempre sobre um caso vazado, com 171 assinaturas em até 3 meses. Quanto mais grave o caso, mais forte a oposição e pior a sua relação com os partidos, mais assinaturas. Partido fiel da base assina menos.
+  - **Duas saídas:** trabalhar as assinaturas (emendas, marca na Ficha, no máximo 2 vezes e a segunda rende menos) ou cooperar (provas mais rápidas, menos desgaste e, se você estiver limpo, ganho de imagem quando a CPI instalar). Quem tentou barrar e perdeu ainda pode cooperar.
+  - **CPI instalada, por 6 meses:** a força fiel da base define se ela é branda, equilibrada ou dura, e quem preside e relata. Uma oitiva por mês, menos no recesso. Dá para trocar membros, negociar com o relator (pode vazar) ou preparar o depoimento com o advogado.
+  - **Relatório:** aprovado (indicia e reforça a PF), rejeitado (pizza, que cobra caro se havia provas) ou paralelo da oposição. Tudo fica no registro de comissões encerradas. O que atinge o presidente fica guardado para o impeachment da Etapa 6.
+- **Save versão 29:** mandatos salvos continuam normalmente, sem nenhuma CPI retroativa. 410 testes. Simulador novo (`npm run sim5c`, com a CPI ligada e sem decisões do jogador): 1,1 a 1,8 CPIs instaladas por mandato, nunca mais de uma aberta.
+
 ## 0.28.1 (08/11/2026)
 - **Etapa 5B, bloco 2 (telas): os escândalos agora acontecem.** O vazamento foi ligado, e todo caso chega com o que você precisa para responder.
   - **Casos na investigação:** cartão próprio no Painel, com o alvo, a gravidade, a barra de provas, a pista de quanto o caso chega perto de você e a origem na Ficha. **Agir** mostra cada saída com o ganho, o custo e o espaço de agenda; **Deixar passar** não escolhe nada. A decisão vale ao encerrar o mês.

@@ -144,7 +144,9 @@ import type { ReputationState } from './reputacao'
 import type { RiscoState } from './risco'
 
 export interface GameState {
-  saveVersion: 28
+  saveVersion: 29
+  /** Etapa 5C: CPI em andamento e comissões encerradas. */
+  comissoes: import('./cpi').ComissoesState
   /** Etapa 5B (v0.28): casos vazados, investigação da PF, advogado do presidente. Ver caso.ts. */
   investigacao: import('./caso').InvestigacaoState
   /** Etapa 5B (v0.28): pastas com ministro interino (técnico de carreira), depois de exoneração ou denúncia. */
@@ -512,6 +514,8 @@ export interface RivalState {
   causes: Cause[]
   /** Última fala do rival. */
   quote?: string
+  /** Etapa 5C: o objetivo visível da oposição agora. */
+  objetivo?: { tipo: import('./data/cpi').TipoObjetivo; alvo?: string; area?: import('./data/ministers').AreaId; meta?: number; desde: number }
 }
 
 export type ActionId =

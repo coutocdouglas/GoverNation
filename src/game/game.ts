@@ -18,7 +18,9 @@ import { GROUPS } from './data/groups'
 import { SHOCKS, type ShockDef } from './data/shocks'
 import { indicators, initialEconomy, runCopom, stepEconomy, type ShockInput } from './economy'
 import { computeApproval, initialGroups, overallApproval, stepGroup } from './groups'
-import { createRival, rivalAttack, updateRival } from './rival'
+import { atualizarObjetivo, createRival, rivalAttack, updateRival } from './rival'
+import { aplicarDecisaoCpi, cpiBlockedReason, cpiLigada, initialComissoes, stepCpi } from './cpi'
+import type { AcaoCpi } from './data/cpi'
 import { posseBlockedReason, profileOffsets, promiseSideBoosts, promisesScore, STATUS_LABEL, formatPromiseValue, type PosseChoices } from './promises'
 import { PROFILE_BY_ID } from './data/profile'
 import { PROMISE_BY_ID } from './data/promises'
@@ -92,8 +94,9 @@ export function newGame(
   const rngState = seed ?? Math.floor(Math.random() * 2 ** 31)
   const bonus = DIFFICULTY[difficulty].approvalBonus
   const state: GameState = {
-    saveVersion: 28,
+    saveVersion: 29,
     investigacao: undefined as unknown as GameState['investigacao'],
+    comissoes: undefined as unknown as GameState['comissoes'],
     risco: initialRisco(difficulty),
     month: 0,
     presidentName: presidentName.trim() || 'Presidente',
@@ -138,6 +141,7 @@ export function newGame(
   // Etapa 5A: o ministério da posse e os líderes ganham ficha (Elo e risco oculto); ministro de risco planta semente.
   // Etapa 5B: o advogado do presidente é sorteado (fixo pela semente) e ganha ficha.
   state.investigacao = initialInvestigacao(state.avatarSeed)
+  state.comissoes = initialComissoes()
   posseRisco(state)
   syncCustomBills(state)
   for (const b of promiseSideBoosts(promises, playerParty)) {
@@ -231,6 +235,8 @@ export interface MonthPlan {
   casos?: DecisaoCaso[]
   /** Etapa 5B: trocar o advogado do presidente (id de data/caso.ts). Gasta a agenda. */
   advogado?: string
+  /** Etapa 5C: a decisão do mês sobre a CPI (uma por mês). */
+  cpi?: AcaoCpi
 }
 
 /** Ficha do que foi aprovado e espera sanção ou veto (pauta-bomba inteira ou o jabuti enxertado). */
@@ -351,6 +357,10 @@ export function validatePlan(s: GameState, plan: MonthPlan): string | null {
     if (r) return `Caso: ${r}`
   }
   if (new Set((plan.casos ?? []).map((d) => d.caso)).size !== (plan.casos ?? []).length) return 'Uma decisão por caso por mês.'
+  if (plan.cpi) {
+    const r = cpiBlockedReason(s, plan.cpi)
+    if (r) return `CPI: ${r}`
+  }
   if (plan.advogado) {
     const r = advogadoBlockedReason(s, plan.advogado)
     if (r) return `Advogado: ${r}`
@@ -846,6 +856,12 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
   if (plan.advogado) trocarAdvogado(s, plan.advogado, headlines, taken)
   const casos = stepCasos(s, rngCaso, impulses, headlines)
   actionConfidence += casos.confidence
+  // 1k. Etapa 5C: a decisão sobre a CPI, requerimento, oitiva e relatório.
+  const rngCpi = new Rng((absMonth(s) * 16807) ^ s.rngState ^ 0xc01c1)
+  if (plan.cpi) aplicarDecisaoCpi(s, plan.cpi, e, rngCpi, impulses, headlines, taken)
+  const cpiMes = stepCpi(s, rngCpi, impulses, headlines)
+  actionConfidence += cpiMes.confidence
+  rivalExtra.push(...cpiMes.rival)
   const scandalHit = !!casos.vazou
   // O que vazou deixa de ser exposição: a imprensa já publicou.
   if (scandalHit) c.scandal *= DEALS.scandalAfter
@@ -903,6 +919,7 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
     overrides: votes.filter((v) => v.kind === 'veto' && v.approved).length,
     extra: rivalExtra,
   }, s.month + 1, rng, headlines)
+  if (cpiLigada()) atualizarObjetivo(s, { approval: approvalAfter, defeats: votes.filter((v) => !v.approved && v.kind !== 'veto' && !BOMBS.some((b) => b.id === v.bill)).length }, headlines)
   const rivalLines = [...attackLines, ...headlines.slice(nBeforeRival)]
 
   // 6. Fecha o mês

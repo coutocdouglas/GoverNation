@@ -3,7 +3,10 @@ import { GROUPS, GROUP_BY_ID } from './data/groups'
 import { PARTY_BY_ID } from './data/parties'
 import { POLL, RIVAL, RIVAL_BY_PARTY, RIVAL_PARTY_FOR, RIVALS, type RivalDef } from './data/rival'
 import { PROMISE_BY_ID } from './data/promises'
-import { addBio, addChronicle } from './memory'
+import { OBJETIVO, type TipoObjetivo } from './data/cpi'
+import { ministerOf } from './camara'
+import { AREAS } from './ministerios'
+import { absMonth, addBio, addChronicle } from './memory'
 import { promiseStatus } from './promises'
 import type { Rng } from './rng'
 import type { Cause, GameState, GroupId, Headline, Impulse, Indicators, PartyId, Poll, RivalState } from './types'
@@ -59,7 +62,8 @@ export function rivalBoost(s: GameState): Partial<Record<PartyId, number>> {
   const r = s.rival
   if (!r || r.stance !== 'obstrucao') return {}
   const out: Partial<Record<PartyId, number>> = {}
-  if (r.party !== s.playerParty) out[r.party] = RIVAL.obstructionOwn
+  const extra = r.objetivo?.tipo === 'votacao' ? OBJETIVO.obstrucao : 0
+  if (r.party !== s.playerParty) out[r.party] = RIVAL.obstructionOwn + extra
   for (const a of rivalDefOf(r).allies) if (a !== s.playerParty) out[a] = RIVAL.obstructionAllies
   return out
 }
@@ -148,4 +152,47 @@ export function updateRival(s: GameState, m: RivalMonth, month: number, rng: Rng
     headlines.push({ text: `Pesquisa: governo volta à frente de ${r.name}, ${poll.gov}% a ${poll.rival}%`, tone: 'good' })
     addBio(s, r.name, `Perdeu a liderança nas pesquisas para o governo ${s.presidentName} (${poll.gov}% a ${poll.rival}%).`)
   }
+}
+
+// ─── Etapa 5C: o objetivo visível da oposição ─────────────────────────────────
+
+/** Texto do objetivo, para o noticiário e as telas. */
+export function textoObjetivo(o: NonNullable<RivalState['objetivo']>): string {
+  if (o.tipo === 'ministro') return `derrubar ${o.alvo}`
+  if (o.tipo === 'votacao') return 'impor uma derrota ao governo no plenário'
+  return `levar a aprovação do governo a ${o.meta}%`
+}
+
+function escolherObjetivo(s: GameState, approval: number, ultimo?: TipoObjetivo): NonNullable<RivalState['objetivo']> {
+  const desde = absMonth(s)
+  const area = [...AREAS].filter((a) => (s.ministries?.[a]?.wear ?? 0) >= OBJETIVO.desgasteMin).sort((a, b) => s.ministries[b].wear - s.ministries[a].wear)[0]
+  if (area && ultimo !== 'ministro') return { tipo: 'ministro', area, alvo: ministerOf(s, area).name, desde }
+  if (ultimo !== 'votacao' && s.rival!.stance !== 'observa') return { tipo: 'votacao', desde }
+  return { tipo: 'aprovacao', meta: Math.max(OBJETIVO.pisoAprovacao, Math.round(approval - OBJETIVO.quedaAprovacao)), desde }
+}
+
+/** Fim do mês: confere o objetivo (cumprido, vencido ou em andamento) e escolhe o próximo. */
+export function atualizarObjetivo(s: GameState, m: { approval: number; defeats: number }, headlines: Headline[]): void {
+  const r = s.rival
+  if (!r) return
+  const o = r.objetivo
+  const anuncia = (n: NonNullable<RivalState['objetivo']>) => headlines.push({ text: `${r.name} define a nova meta da oposição: ${textoObjetivo(n)}`, tone: 'neutral' })
+  if (!o) {
+    r.objetivo = escolherObjetivo(s, m.approval)
+    anuncia(r.objetivo)
+    return
+  }
+  const cumpriu = o.tipo === 'aprovacao' ? m.approval <= (o.meta ?? 0) : o.tipo === 'votacao' ? m.defeats > 0 : !!o.area && ministerOf(s, o.area).name !== o.alvo
+  const venceu = absMonth(s) - o.desde >= OBJETIVO.prazo
+  if (cumpriu || venceu) {
+    const dv = cumpriu ? OBJETIVO.sucesso : OBJETIVO.desiste
+    r.strength = round1(clamp(r.strength + dv, RIVAL.min, RIVAL.max))
+    r.causes.push({ label: cumpriu ? `Oposição cumpriu a meta: ${textoObjetivo(o)}` : `Oposição não conseguiu ${textoObjetivo(o)}`, value: dv })
+    headlines.push({ text: cumpriu ? `${r.name} comemora: a oposição conseguiu ${textoObjetivo(o)}` : `${r.name} recua: a oposição não conseguiu ${textoObjetivo(o)}`, tone: cumpriu ? 'bad' : 'good' })
+    addBio(s, r.name, `${cumpriu ? 'Conseguiu' : 'Não conseguiu'} ${textoObjetivo(o)} no governo ${s.presidentName}.`)
+    r.objetivo = escolherObjetivo(s, m.approval, o.tipo)
+    anuncia(r.objetivo)
+    return
+  }
+  if (o.tipo === 'ministro' && o.area && s.ministries?.[o.area]) s.ministries[o.area].wear = clamp(s.ministries[o.area].wear + OBJETIVO.desgaste, 0, 100)
 }

@@ -1,3 +1,4 @@
+import { initialComissoes } from './cpi'
 import { initialCongress, initialSenate } from './congress'
 import { syncCustomBills } from './custom'
 import { RIVAL } from './data/rival'
@@ -253,7 +254,12 @@ export function migrate(raw: unknown): GameState | null {
       for (const { name, ctx } of pessoasAtuais(g)) garantirPessoa(g, name, ctx)
       s.saveVersion = 28
     }
-    if (s.saveVersion !== 28) return null
+    if (s.saveVersion === 28) {
+      // v0.28 → v0.29 (Etapa 5C): sem CPI aberta nem encerrada; casos já abertos podem virar requerimento.
+      (s as GameState).comissoes ??= initialComissoes()
+      s.saveVersion = 29
+    }
+    if (s.saveVersion !== 29) return null
     syncCustomBills(s as GameState)
     return s as GameState
   } catch {
