@@ -30,6 +30,13 @@ export const CADEIA: StreetDef = {
   soften: 0.3, outcome: 'Presidente fala ao país em cadeia nacional sobre a crise', tone: 'neutral',
 }
 
+/** Etapa 6A: visitas de mês calmo, sem crise para amenizar (o menu de "Sua agenda está limpa"). */
+export const RUA_LIMPO: StreetDef[] = [
+  { id: 'obra', icon: '🏗️', label: 'Visitar uma obra em andamento', text: 'Capacete e foto com quem trabalha. Quem espera a obra gosta; os demais mal notam.', effects: { groups: { trabalhadores: 1.5, baixaRenda: 0.5 } }, soften: 0, outcome: 'Presidente visita obra e conversa com os operários', tone: 'good' },
+  { id: 'escola', icon: '🏫', label: 'Passar o dia numa escola', text: 'Conversa com professores e alunos. Boa imagem, nenhum dinheiro novo.', effects: { groups: { jovens: 1.5, servidores: 1 } }, soften: 0, outcome: 'Presidente passa o dia em escola pública e ouve professores', tone: 'good' },
+  { id: 'interior', icon: '🌾', label: 'Percorrer o interior', text: 'Feira agropecuária e prefeitura pequena. O campo gosta; o centro urbano acha que é só foto.', effects: { groups: { agro: 1.5, baixaRenda: 0.5, jovens: -0.3 } }, soften: 0, outcome: 'Presidente percorre o interior e ouve produtores e prefeitos', tone: 'neutral' },
+]
+
 /** Ações de rua de cada crise (2 por crise). */
 export const RUA: Record<string, StreetDef[]> = {
   dengue: [

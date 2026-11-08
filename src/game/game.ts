@@ -49,6 +49,8 @@ import { driftAlas, internalElections, leaderOf, openMesa, runMesa, speakerOf } 
 import { TALK } from './data/negociacao'
 import { acaoCasoBlockedReason, advogadoBlockedReason, agendaUsada, aplicarDecisoes, initialInvestigacao, stepCasos, trocarAdvogado, type DecisaoCaso } from './caso'
 import { AGENDA } from './data/caso'
+import { acaoBlockedReason, aplicarAcao, ganhoDaAcao, initialAgenda, stepAgenda, type AcaoAgenda } from './agenda'
+import { agendaLigada } from './data/agenda'
 import { initialRisco, posseRisco, propostaAtual, propostaBlockedReason, responderProposta, sortearProposta, stepRisco, vencerLicitacoes } from './risco'
 
 import type { ActionId, Deal, Articulation, BillId, Cause, GameState, GroupId, Headline, Impulse, MonthReport, PartyId, SanctionItem, Snapshot, VetoItem, VoteRecord } from './types'
@@ -96,7 +98,8 @@ export function newGame(
   const rngState = seed ?? Math.floor(Math.random() * 2 ** 31)
   const bonus = DIFFICULTY[difficulty].approvalBonus
   const state: GameState = {
-    saveVersion: 31,
+    saveVersion: 32,
+    agendaPres: initialAgenda(),
     inteligencia: initialInteligencia(),
     investigacao: undefined as unknown as GameState['investigacao'],
     comissoes: undefined as unknown as GameState['comissoes'],
@@ -242,6 +245,8 @@ export interface MonthPlan {
   cpi?: AcaoCpi
   /** Etapa 5C (v0.30): a ordem do mês ao serviço de inteligência. */
   inteligencia?: OrdemIntel
+  /** Etapa 6A (v0.34): a ação política do mês, no lugar da medida nova. Gasta a agenda. */
+  acao?: AcaoAgenda
 }
 
 /** Ficha do que foi aprovado e espera sanção ou veto (pauta-bomba inteira ou o jabuti enxertado). */
@@ -356,7 +361,15 @@ export function validatePlan(s: GameState, plan: MonthPlan): string | null {
     if (r) return `Ministério: ${r}`
   }
   // Etapa 5B: saídas dos casos e troca de advogado, dentro do núcleo mínimo da agenda.
-  if (agendaUsada(plan) > AGENDA.espacos) return `A agenda do presidente tem ${AGENDA.espacos} espaços por mês.`
+  // Etapa 6A: a ação política gasta espaço e entra no lugar da medida nova.
+  const acaoDoMes = plan.acao ?? rd?.acao
+  if (plan.acao) {
+    const r = acaoBlockedReason(s, plan.acao)
+    if (r) return `Agenda: ${r}`
+  }
+  if (acaoDoMes && plan.bill) return 'A ação política entra no lugar da medida nova: escolha uma das duas.'
+  if (agendaLigada() && (plan.statement !== undefined || plan.street !== undefined)) return 'Post e rua agora são ações da agenda do presidente.'
+  if (agendaUsada({ ...plan, acao: acaoDoMes }) > AGENDA.espacos) return `A agenda do presidente tem ${AGENDA.espacos} espaços por mês.`
   for (const d of plan.casos ?? []) {
     const r = acaoCasoBlockedReason(s, d.caso, d.acao)
     if (r) return `Caso: ${r}`
@@ -696,8 +709,20 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
 
   // 1d7. Etapa 1B: post da assessoria e ação de rua (valem junto com a medida ou a opção pronta).
   const evNow = currentEvent(s)
-  const assess = applyAssessoria(s, plan, evNow ? fillText(evNow.title, s.event?.origin) : '', e, impulses, headlines, taken, rivalExtra, rng)
+  const tituloFato = evNow ? fillText(evNow.title, s.event?.origin) : ''
+  // Etapa 6A: a ação da agenda. O post passa pela assessoria (desmentido, manchete); as demais, por aplicarAcao.
+  const acao = round?.acao && !acaoBlockedReason(s, round.acao) ? round.acao : undefined
+  const postDaAgenda = acao?.tipo === 'post' ? acao.id : undefined
+  const assess = applyAssessoria(s, postDaAgenda ? { statement: postDaAgenda } : plan, tituloFato, e, impulses, headlines, taken, rivalExtra, rng, postDaAgenda ? ganhoDaAcao(s, acao!) : 1)
   actionConfidence += assess.confidence
+  if (acao) {
+    const r = aplicarAcao(s, acao, tituloFato, e, impulses, headlines, taken, rivalExtra)
+    actionConfidence += r.confidence
+    assess.soften = Math.min(ASSESSORIA.softenMax, assess.soften + r.soften)
+    if (r.presenca) { assess.used = true; assess.street = r.street }
+    if (r.cobranca) mm.cobranca = r.cobranca
+  }
+  stepAgenda(s, !!acao, !!round?.measure)
 
   // 1e. Fato do mês
   let eventReport: MonthReport['event']

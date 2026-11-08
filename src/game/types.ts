@@ -144,7 +144,9 @@ import type { ReputationState } from './reputacao'
 import type { RiscoState } from './risco'
 
 export interface GameState {
-  saveVersion: 31
+  saveVersion: 32
+  /** Etapa 6A (v0.34): ações políticas do presidente (cansaço, intervalos e cobertura da imprensa). Ver agenda.ts. */
+  agendaPres: import('./agenda').AgendaState
   /** Etapa 5C (v0.30): serviço de inteligência e dossiês. */
   inteligencia: import('./inteligencia').InteligenciaState
   /** Etapa 5C: CPI em andamento e comissões encerradas. */
@@ -245,6 +247,8 @@ export interface RoundBuffer {
   /** A medida do mês (uma por rodada) e a resposta ao fato do mês, se já enviadas. */
   measure?: BillId
   response?: BillId
+  /** Etapa 6A: a ação política do mês, no lugar da medida nova. Vale no fechamento; até lá pode ser desfeita. */
+  acao?: import('./agenda').AcaoAgenda
   /** Projeto da fila pautado em cada casa (um por casa por rodada). */
   pautou: { camara?: BillId; senado?: BillId }
   /** Articulações já feitas na rodada. */

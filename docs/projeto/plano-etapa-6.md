@@ -26,7 +26,7 @@ Pequeno, **Sonnet**, sem regra nova. Evita que a Etapa 6 nasça em cima de arqui
 1. **Partir o `GameScreen.tsx`** (hoje com mais de 1.100 linhas): extrair o Radar, as janelas e os cartões da coluna da agenda. Só mover código.
 2. **Fechar as pendências do lote A2:** aviso "acordo para vencer" na central de pendências e rebalancear o 35% do Senado (`SENADO.dealCarry`) com o seu playtest.
 3. **Pendências de visual:** fotos sem Elo em preto e branco nas listas; estender o estilo de vidro e bordas retas às janelas de votação e decisão.
-4. **Portão de playtest:** você joga uma partida completa (5B e 5C) e anota. O que quebrar entra antes do 6A.
+4. ~~**Portão de playtest:** você joga uma partida completa (5B e 5C) e anota.~~ **Dispensado pelo Douglas em 08/11/2026:** considerado fechado.
 
 Versão: **v0.32.x**. Complexidade **baixa a média**.
 

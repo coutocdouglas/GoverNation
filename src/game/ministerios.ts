@@ -51,6 +51,8 @@ export interface MinistryMonth {
   struck: AreaId[]
   liminar: AreaId[]
   barred: AreaId[]
+  /** Etapa 6A: o presidente cobrou o ministro da pasta neste mês. */
+  cobranca?: { area: AreaId; label: string; value: number }
 }
 
 /** Atualiza o desgaste de cada ministro e cobra os desgastados. */
@@ -68,6 +70,7 @@ export function stepMinistries(s: GameState, m: MinistryMonth, impulses: Record<
     if (m.struck.includes(area)) add('Medida da área derrubada no Supremo', MINISTERIOS.struck)
     if (m.liminar.includes(area)) add('Medida da área suspensa por liminar', MINISTERIOS.liminar)
     if (m.barred.includes(area)) add('Projeto da área barrado', MINISTERIOS.barred)
+    if (m.cobranca?.area === area) add(m.cobranca.label, m.cobranca.value)
     const goal = ministryGoal(s, area)
     add(`Meta da pasta: ${goal.status === 'rumo' || goal.status === 'cumprida' ? 'no rumo' : goal.status === 'risco' ? 'em risco' : 'longe'}`, MINISTERIOS.goal[goal.status] ?? 0)
     // Etapa 5A: Elo baixo apanha mais da imprensa; Elo alto, menos.

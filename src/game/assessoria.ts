@@ -139,6 +139,19 @@ export function streetEffect(s: GameState, id: string): Scaled | null {
   }
 }
 
+/** Etapa 6A: escala só o que é ganho; quem perde perde igual, e o que o rival ganha não diminui. */
+function comGanho(x: Scaled, k: number): Scaled {
+  if (k === 1) return x
+  const sobe = (v: number) => round1(v > 0 ? v * k : v)
+  return {
+    ...x,
+    fx: { ...x.fx, groups: Object.fromEntries(Object.entries(x.fx.groups ?? {}).map(([g, v]) => [g, sobe(v as number)])) as ActionEffects['groups'] },
+    parties: Object.fromEntries(Object.entries(x.parties).map(([p, v]) => [p, sobe(v as number)])),
+    soften: round1(x.soften * k * 100) / 100,
+    confidence: sobe(x.confidence),
+  }
+}
+
 /** Amacia as perdas de uma opção (a penalidade de deixar passar). */
 export function softenEffects(fx: ActionEffects, soften: number): ActionEffects {
   if (soften <= 0) return fx
@@ -184,6 +197,8 @@ export function applyAssessoria(
   taken: string[],
   rivalExtra: Cause[],
   rng: Rng,
+  /** Etapa 6A: rendimento do post vindo da agenda (cansaço e cobertura da imprensa). Só escala os ganhos. */
+  ganho = 1,
 ): AssessoriaResult {
   const out: AssessoriaResult = { soften: 0, confidence: 0, used: false }
   const kind = monthKind(s)
@@ -191,7 +206,7 @@ export function applyAssessoria(
   const c = s.congress
   if (plan.statement && !statementBlockedReason(s, plan.statement)) {
     const def = STATEMENT_BY_ID[plan.statement]
-    const eff = statementEffect(s, plan.statement)
+    const eff = comGanho(statementEffect(s, plan.statement), ganho)
     let fx = eff.fx
     let rival = eff.rival
     const own = s.event?.origin?.author === s.presidentName

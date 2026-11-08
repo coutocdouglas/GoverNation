@@ -3,15 +3,17 @@
 > **Leia este arquivo primeiro.** Ele diz onde o projeto está e qual é o próximo passo.
 > Atualize-o a cada mudança: seção "Estado atual", "Próximo passo" e uma linha no "Histórico".
 
-**Última atualização:** 08/11/2026 · **Versão publicada:** v0.31.1 (redesenho visual) · **Pronta para publicar:** v0.33.0 (6B, "Por quê?")
+**Última atualização:** 08/11/2026 · **Versão publicada:** v0.34.0 (6A, regras desligadas)
 
 ---
 
 ## Próximo passo
 
-**Etapa 6 aprovada (plano em `docs/projeto/plano-etapa-6.md`, 08/11/2026).** Ordem: 6.0 (arrumar a casa: partir o `GameScreen.tsx`, pendências do lote A2, pendências de visual, e o playtest da 5B/5C pelo Douglas) → 6B ("Por quê?") → 6A (agenda e ações) → 6C → 6D → 6E → 6F. **6.0 itens 1 a 3 feitos na v0.32.1** (GameScreen partido, aviso "acordo para vencer", 35% do Senado medido e mantido, fotos P&B e vidro nas janelas). **6B feito na v0.33.0** (janela "Por quê?", antes → depois na ficha, alertas "Precisa de você"). Falta o item 4 do 6.0: o Douglas joga a partida completa e anota. Próximo: 6A (agenda e ações, Opus nas regras).
+**Próximo: v0.34.1, telas do bloco 6A** (janela "Agenda do presidente", menu de "Sua agenda está limpa", custo à vista de cada ação; as telas ligam `AGENDA_ACOES.ativo`). Complexidade média · **Sonnet**. A prévia do efeito usa `ganhoDaAcao` e o bloqueio vem de `acaoBlockedReason`; o `MonthPlan` da tela precisa incluir `acao`. Depois: 6C (Opus nas regras).
 
-**Etapa 5C fechada no código (v0.32.0, pronta para publicar):** telas do serviço de inteligência e dos dossiês (DESIGN.md 27.28). Falta o Douglas jogar a partida completa da 5B e da 5C. Próximo: Etapa 6 (Opus nas regras, Sonnet nas telas).
+**Etapa 6 aprovada (plano em `docs/projeto/plano-etapa-6.md`, 08/11/2026).** Ordem: 6.0 → 6B → 6A → 6C → 6D → 6E → 6F. **6.0 feito na v0.32.1**, **6B feito na v0.33.0**, **6A regras feitas na v0.34.0** (DESIGN.md 27.31). **Portão de playtest da 5B e da 5C dispensado pelo Douglas em 08/11/2026: considerado fechado.**
+
+**Etapa 5C fechada no código (v0.32.0):** telas do serviço de inteligência e dos dossiês (DESIGN.md 27.28).
 
 **Redesenho visual publicado na v0.31.0 e ajustado na v0.31.1** (escuro preto, contraste, janelas de vidro, fontes) (DESIGN.md 27.27): tema claro/escuro, trilho lateral, painel em 3 colunas, janelas de detalhe e Elo em corrente na foto. Ajustes finos de visual que o Douglas anotar jogando entram como v0.31.x. Depois, voltar à v0.30.1 (telas da inteligência).
 
@@ -38,7 +40,7 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 **Base técnica**
 - App de Windows (Tauri 2 + React + TypeScript). O instalador é gerado pelo GitHub Actions e o jogo se atualiza sozinho, com atualização assinada.
 - O motor do jogo (`src/game/`) fica separado das telas (`src/ui/`). Os números de balanceamento ficam em `src/game/data/`.
-- 441 testes automáticos. Saves antigos são migrados (versão atual do save: 31).
+- 458 testes automáticos. Saves antigos são migrados (versão atual do save: 32).
 
 **Jogabilidade**
 - Mandato de 48 meses (jan/2027 a dez/2030), com o mês em 4 passos: notícias, fato do mês, decisões e encerrar.
@@ -125,6 +127,8 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 ---
 
 ## Histórico
+
+- 08/11/2026 · v0.34.0 · Bloco 6A (regras, desligadas): ação política no lugar da medida (post, rua, receber líder, cobrar ministro, falar à nação, imprensa), cansaço, cobertura da imprensa; save 32; 458 testes; `npm run sim6a` (só falar 446 contra 585 de responder aos fatos). Portão de playtest da 5B e da 5C dispensado pelo Douglas.
 
 - 08/11/2026 · v0.33.0 · Bloco 6B: janela "Por quê?" (indicadores e grupos), antes → depois em pontos na ficha da medida, alertas "Precisa de você" no Radar; 441 testes; sem mudança no save.
 

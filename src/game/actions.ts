@@ -1,3 +1,4 @@
+import { agendaLigada } from './data/agenda'
 import type { ActionId, GameState, GroupId } from './types'
 
 /**
@@ -175,6 +176,8 @@ export function recentUses(s: GameState, id: ActionId): number {
 
 /** Motivo pelo qual a ação não pode ser usada agora, ou null se pode. */
 export function blockedReason(s: GameState, id: ActionId): string | null {
+  // Etapa 6A: com a agenda ligada, a fala ao país gasta espaço e substitui a medida; o decreto rápido seria atalho.
+  if (id === 'pronunciamento' && agendaLigada()) return 'Agora é “Falar à nação”, na agenda do presidente.'
   const cd = s.cooldowns[id] ?? 0
   if (cd > 0) return `Disponível de novo em ${cd} ${cd === 1 ? 'mês' : 'meses'}.`
   return ACTION_BY_ID[id].canUse?.(s) ?? null

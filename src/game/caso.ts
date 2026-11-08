@@ -18,6 +18,7 @@
 import { ACOES_CPI, type AcaoCpi } from './data/cpi'
 import { ANTECIPAR, type OrdemIntel } from './data/inteligencia'
 import { agendaDaOrdem, aoVazarDossies, detectarVazamento, sementeAvisada } from './inteligencia'
+import { AGENDA_ACOES } from './data/agenda'
 import { ACOES_CASO, ADVOGADO, ADVOGADOS, AGENDA, CPI_MARCA, DELACAO, ESTRAGO, GRAVIDADE, INTERINOS, PF, SUPREMO_CASO, VAZAMENTO, type AcaoCaso, type AdvogadoDef } from './data/caso'
 import { MINISTER_BY_AREA, type AreaId } from './data/ministers'
 import { GROUPS } from './data/groups'
@@ -260,10 +261,10 @@ export interface DecisaoCaso {
 export const agendaDaAcao = (a: AcaoCaso) => ACOES_CASO[a].agenda
 
 /** Espaços da agenda usados pelo plano (casos e troca de advogado). */
-type PlanoAgenda = { casos?: DecisaoCaso[]; advogado?: string; cpi?: AcaoCpi; inteligencia?: OrdemIntel }
+type PlanoAgenda = { casos?: DecisaoCaso[]; advogado?: string; cpi?: AcaoCpi; inteligencia?: OrdemIntel; acao?: unknown }
 
 export function agendaUsada(plan: PlanoAgenda): number {
-  return (plan.casos ?? []).reduce((a, d) => a + agendaDaAcao(d.acao), 0) + (plan.advogado ? ADVOGADO.agenda : 0) + (plan.cpi ? ACOES_CPI[plan.cpi].agenda : 0) + (plan.inteligencia ? agendaDaOrdem(plan.inteligencia.acao) : 0)
+  return (plan.acao ? AGENDA_ACOES.espacos : 0) + (plan.casos ?? []).reduce((a, d) => a + agendaDaAcao(d.acao), 0) + (plan.advogado ? ADVOGADO.agenda : 0) + (plan.cpi ? ACOES_CPI[plan.cpi].agenda : 0) + (plan.inteligencia ? agendaDaOrdem(plan.inteligencia.acao) : 0)
 }
 
 export const agendaLivre = (plan: PlanoAgenda) => AGENDA.espacos - agendaUsada(plan)

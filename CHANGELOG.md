@@ -1,5 +1,15 @@
 # Novidades
 
+## 0.34.0 (08/11/2026)
+- **Bloco 6A da Etapa 6: agenda e ação política (regras).** Ainda **desligado**: nada muda na partida até as telas da v0.34.1.
+  - **Uma medida nova ou uma ação política por mês**, nunca as duas. A ação gasta 1 espaço da agenda e pode ser desfeita até encerrar o mês.
+  - **Seis ações:** post, rua (com visitas novas para mês calmo), receber um líder, cobrar um ministro (em particular ou em público), falar à nação e imprensa.
+  - **Imprensa:** 5 veículos fictícios. Pedir apoio ou romper muda a cobertura, que aumenta ou reduz o efeito de post, rua e fala; favor e briga somem com o tempo.
+  - **Sem atalho:** meses seguidos só de ação rendem 100%, 70% e 40%, e só uma medida nova zera o cansaço. Com a agenda ligada, o decreto rápido "Pronunciamento" sai de cena.
+  - Simulador novo `npm run sim6a`: quem só fala fica em 446 pontos, contra 585 de quem responde aos fatos.
+- O portão de playtest da 5B e da 5C foi dispensado pelo Douglas.
+- Save 32, com migração. 458 testes (17 novos).
+
 ## 0.33.0 (08/11/2026)
 - **Bloco 6B da Etapa 6: a tela do "Por quê?".** Sem regra nova de jogo; só leitura do registro de causas.
   - **Janela "Por quê?"** ao clicar num indicador ou num grupo (no lugar do painel lateral). Mostra o que mais pesou nos últimos 3 meses (somado por motivo, com a origem: medida, acordo, economia, Supremo, sua escolha…) e a linha do tempo de quem mexeu, quando e quanto. Continuam o gráfico, o que mexeu no último mês, o peso da economia e o que o grupo ainda lembra. Dá para deixar várias abertas e arrastar.

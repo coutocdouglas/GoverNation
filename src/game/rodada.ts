@@ -854,6 +854,7 @@ export function sendBlockedReason(s: GameState, id: BillId, response = false): s
     if (bill.area !== ev.area) return `${ministerOf(s, ev.area).name} responde por ${MINISTER_BY_AREA[ev.area].areaName.toLowerCase()}: esta medida é de outra área.`
   } else {
     if (r?.measure) return 'Você já enviou a medida desta rodada. A próxima, só na rodada que vem.'
+    if (r?.acao) return 'Você escolheu uma ação política neste mês: ela entra no lugar da medida nova. Desfaça a ação para mandar uma medida.'
     if (r?.response === id) return 'Esta medida já foi enviada como resposta ao fato do mês.'
   }
   return billBlockedReason(s, id)
@@ -1232,6 +1233,7 @@ export function applyPlanToRound(s: GameState, plan: MonthPlan): void {
     original: (plan.original ?? []).includes(id) || undefined,
     symbolic: (plan.symbolic ?? []).includes(id) || undefined,
   })
+  if (plan.acao) roundOf(s).acao = plan.acao
   if (plan.articulations?.length) {
     const ctx = openCtx(s)
     for (const a of plan.articulations) { applyArticulation(ctx, a); ctx.round.articulations.push(a) }

@@ -1,3 +1,4 @@
+import { initialAgenda } from './agenda'
 import { initialInteligencia } from './inteligencia'
 import { initialComissoes } from './cpi'
 import { initialCongress, initialSenate } from './congress'
@@ -269,7 +270,12 @@ export function migrate(raw: unknown): GameState | null {
       (s as GameState).inteligencia ??= initialInteligencia()
       s.saveVersion = 31
     }
-    if (s.saveVersion !== 31) return null
+    if (s.saveVersion === 31) {
+      // v0.33 → v0.34 (Etapa 6A): nenhuma ação política feita e cobertura neutra em todos os veículos.
+      (s as GameState).agendaPres ??= initialAgenda()
+      s.saveVersion = 32
+    }
+    if (s.saveVersion !== 32) return null
     syncCustomBills(s as GameState)
     return s as GameState
   } catch {
