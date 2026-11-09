@@ -3,7 +3,7 @@
 > **Leia este arquivo primeiro.** Ele diz onde o projeto está e qual é o próximo passo.
 > Atualize-o a cada mudança: seção "Estado atual", "Próximo passo" e uma linha no "Histórico".
 
-**Última atualização:** 08/11/2026 · **Versão atual:** v0.35.0 (6C, regras desligadas; aguardando publicação)
+**Última atualização:** 08/11/2026 · **Versão publicada:** v0.35.0 (6C, regras desligadas até as telas)
 
 ---
 
