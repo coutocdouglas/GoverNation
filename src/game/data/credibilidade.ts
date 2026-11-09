@@ -5,8 +5,8 @@ import type { GroupId } from '../types'
  * Todos os números de balanceamento do bloco moram aqui. Plano: docs/projeto/plano-etapa-6.md; DESIGN.md 27.32.
  */
 export const CREDIBILIDADE = {
-  /** Desligada até as telas da v0.35.1. Testes e simulador usam `ligarCredibilidade`. */
-  ativo: false,
+  /** Ligada na v0.35.1 (telas prontas). Testes e simulador usam `ligarCredibilidade`. */
+  ativo: true,
   inicio: 55,
   /** Promessa de contagem (leis, PECs) cumprida: uma vez só por promessa. */
   promessaCumprida: 5,

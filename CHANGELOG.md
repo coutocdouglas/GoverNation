@@ -1,5 +1,14 @@
 # Novidades
 
+## 0.35.1 (08/11/2026)
+- **Bloco 6C da Etapa 6 (telas): credibilidade, compromisso, pesquisa e medida explosiva. O bloco está ligado.**
+  - **Credibilidade** no Radar (valor de 0 a 100) e janela própria: peso da sua fala, efeito no mercado, compromisso em aberto com prazo e o que mexeu nela.
+  - **Compromisso na fala:** em "Falar à nação", nova opção "com compromisso" (só em crise): a fala rende 40% a mais, cumprir dá +5, não cumprir custa −10 e dá força à oposição.
+  - **Pesquisa** na agenda (rápida ou completa), sem tomar o lugar da medida. Os grupos sociais passam a aparecer em **faixa com seta** entre pesquisas; depois de uma pesquisa, mostram o número com margem de erro e a idade dela. A aprovação geral continua sempre à vista. A ficha da medida e o "Por quê?" seguem com números.
+  - **Nota de absurdo** na ficha da medida (a partir de "impopular").
+  - **Medida explosiva:** aviso grande com o custo antes de assinar e confirmação obrigatória; janela "Medida explosiva" no Radar com **Retirar da pauta** (lei, LC e PEC) ou **Revogar** (decreto e MP até o mês seguinte), mostrando o custo.
+- Sem mudança no save (33). 488 testes (3 novos).
+
 ## 0.35.0 (08/11/2026)
 - **Bloco 6C da Etapa 6: credibilidade, discurso, pesquisa e medida explosiva (regras).** Ainda **desligado**: nada muda na partida até as telas da v0.35.1.
   - **Credibilidade de 0 a 100:** só entrega faz subir (promessa de posse cumprida, compromisso honrado); falhar custa o dobro. Muda quanto rendem post, rua e fala, e pesa um pouco no mercado.

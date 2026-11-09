@@ -4,6 +4,9 @@ import { fatigued, monthKind, speechOf, statementsFor } from '../game/assessoria
 import { agendaUsada } from '../game/caso'
 import { ministerOf } from '../game/camara'
 import { AGENDA_ACOES, IMPRENSA, VOZES } from '../game/data/agenda'
+import { COMPROMISSO, credibilidadeLigada, PESQUISA, type NivelPesquisa } from '../game/data/credibilidade'
+import { pesquisaBlockedReason } from '../game/pesquisa'
+import { credibOf } from '../game/credibilidade'
 import { ASSESSORIA } from '../game/data/assessoria'
 import { AGENDA } from '../game/data/caso'
 import { PARTIES } from '../game/data/parties'
@@ -11,10 +14,11 @@ import { currentEvent } from '../game/events'
 import type { MonthPlan } from '../game/game'
 import { AREAS, wearLabel } from '../game/ministerios'
 import { peekRound } from '../game/rodada'
+import { absMonth } from '../game/memory'
 import type { GameState } from '../game/types'
 import { effectChips, type Chip } from './effects'
 
-type Cat = 'post' | 'rua' | 'nacao' | 'lider' | 'ministro' | 'imprensa'
+type Cat = 'post' | 'rua' | 'nacao' | 'lider' | 'ministro' | 'imprensa' | 'pesquisa'
 const CATS: { id: Cat; nome: string }[] = [
   { id: 'post', nome: '📣 Post' },
   { id: 'rua', nome: '🚶 Rua' },
@@ -22,6 +26,7 @@ const CATS: { id: Cat; nome: string }[] = [
   { id: 'lider', nome: '🤝 Receber líder' },
   { id: 'ministro', nome: '🏢 Cobrar ministro' },
   { id: 'imprensa', nome: '🗞️ Imprensa' },
+  { id: 'pesquisa', nome: '📊 Pesquisa' },
 ]
 
 const pct = (x: number) => `${Math.round(x * 100)}%`
@@ -60,10 +65,13 @@ function Opcao({ a, titulo, texto, direita, atual, base, travada, crise, escolhe
  * Bloco 6A (v0.34.1): a janela "Agenda do presidente". Uma ação política por mês, no lugar da medida nova.
  * Mostra o que já ocupa a agenda e o custo de cada ação antes da escolha; a ação fica na rodada e pode ser desfeita.
  */
-export function AgendaJanela({ state, plan, billPronto, onState, onToast }: {
+export function AgendaJanela({ state, plan, billPronto, pesquisa, onPesquisa, onState, onToast }: {
   state: GameState
   plan: MonthPlan
   billPronto: boolean
+  /** Pesquisa encomendada neste mês (não entra no lugar da medida, só gasta agenda e dinheiro). */
+  pesquisa: NivelPesquisa | null
+  onPesquisa: (n: NivelPesquisa | null) => void
   onState: (s: GameState) => void
   onToast: (t: string) => void
 }) {
@@ -75,12 +83,13 @@ export function AgendaJanela({ state, plan, billPronto, onState, onToast }: {
   const round = peekRound(state)
   const atual = round?.acao ?? null
   const base = atual ? cancelarAcao(state) : state
-  const outras = agendaUsada({ casos: plan.casos, advogado: plan.advogado, cpi: plan.cpi, inteligencia: plan.inteligencia })
+  const outras = agendaUsada({ casos: plan.casos, advogado: plan.advogado, cpi: plan.cpi, inteligencia: plan.inteligencia, pesquisa: pesquisa ?? undefined })
   const ocupam = [
     (plan.casos ?? []).length ? `Casos na investigação (${plan.casos!.length})` : '',
     plan.cpi ? 'CPI' : '',
     plan.advogado ? 'Troca de advogado' : '',
     plan.inteligencia ? 'Serviço de inteligência' : '',
+    pesquisa ? PESQUISA.niveis[pesquisa].nome : '',
   ].filter(Boolean)
   const usada = outras + (atual ? AGENDA_ACOES.espacos : 0)
   const travada = round?.measure ? null : billPronto ? 'Você já preparou uma medida para este mês: retire-a para escolher uma ação.' : !atual && outras + AGENDA_ACOES.espacos > AGENDA.espacos ? `A agenda do mês está cheia (${AGENDA.espacos} espaços).` : null
@@ -121,7 +130,7 @@ export function AgendaJanela({ state, plan, billPronto, onState, onToast }: {
         <p className="pn-hint">🗣️ Peso do discurso nesta crise: <b>{pct(speechOf(ev))}</b>. {speechOf(ev) <= 0.35 ? 'É um problema material: falar quase não resolve.' : speechOf(ev) >= 0.65 ? 'Aqui o que se diz muda quem leva a culpa.' : 'Falar ajuda um pouco, mas não substitui agir.'} Só com post ou presença, “Foge das crises” ainda pesa {pct(ASSESSORIA.omissoShare)}.</p>
       )}
       <div className="pn-subnav" style={{ flexWrap: 'wrap' }}>
-        {CATS.map((c) => <button key={c.id} type="button" className={cat === c.id ? 'on' : ''} onClick={() => setCat(c.id)}>{c.nome}</button>)}
+        {CATS.filter((c) => c.id !== 'pesquisa' || credibilidadeLigada()).map((c) => <button key={c.id} type="button" className={cat === c.id ? 'on' : ''} onClick={() => setCat(c.id)}>{c.nome}</button>)}
       </div>
       <div className="pn-empresas pn-caso__acoes">
         {cat === 'post' && (
@@ -134,7 +143,10 @@ export function AgendaJanela({ state, plan, billPronto, onState, onToast }: {
           ruaOpcoes(state).length ? ruaOpcoes(state).map((x) => <Opcao {...ctx} key={x.id} a={{ tipo: 'rua', id: x.id }} titulo={`${x.icon} ${x.label}`} texto={x.text} />)
             : <p className="pn-hint">Esta crise não se resolve com presença: não há ação de rua para ela.</p>
         )}
-        {cat === 'nacao' && <Opcao {...ctx} a={{ tipo: 'nacao' }} titulo="📺 Cadeia nacional de rádio e TV" texto={`O presidente fala ao país. Só uma a cada ${ASSESSORIA.cadeiaMonths} meses.`} />}
+        {cat === 'nacao' && <>
+          <Opcao {...ctx} a={{ tipo: 'nacao' }} titulo="📺 Cadeia nacional de rádio e TV" texto={`O presidente fala ao país. Só uma a cada ${ASSESSORIA.cadeiaMonths} meses.`} />
+          {credibilidadeLigada() && <Opcao {...ctx} a={{ tipo: 'nacao', compromisso: true }} titulo="📺 Cadeia nacional com compromisso" texto={`Só em crise. Você promete uma medida nova da área em ${COMPROMISSO.meses} meses: a fala rende ${Math.round((COMPROMISSO.bonus - 1) * 100)}% a mais. Cumprir dá credibilidade +${COMPROMISSO.cumprido}; não cumprir custa ${COMPROMISSO.falhou} e dá força à oposição.${credibOf(state).compromisso ? ' Você já tem um compromisso em aberto.' : ''}`} />}
+        </>}
         {cat === 'lider' && PARTIES.map((p) => (
           <Opcao {...ctx} key={p.id} a={{ tipo: 'lider', partido: p.id }} titulo={`${p.sigla} · ${p.leader.name}`} direita={`relação ${Math.round(state.congress.parties[p.id].relation)}`} />
         ))}
@@ -148,6 +160,22 @@ export function AgendaJanela({ state, plan, billPronto, onState, onToast }: {
             const w = Math.round(state.ministries[area]?.wear ?? 0)
             return <Opcao {...ctx} key={area} a={{ tipo: 'ministro', area, tom }} titulo={m.name} texto={m.role} direita={`${wearLabel(w)} · ${w}`} />
           })}
+        </>}
+        {cat === 'pesquisa' && <>
+          <p className="pn-hint">A pesquisa <b>não entra no lugar da medida</b>: gasta {PESQUISA.agenda} espaço da agenda e dinheiro. A aprovação geral está sempre visível; os grupos aparecem em faixa até você encomendar uma pesquisa, que mostra o número com margem de erro. O erro nunca passa da margem.</p>
+          {(Object.keys(PESQUISA.niveis) as NivelPesquisa[]).map((n) => {
+            const on = pesquisa === n
+            const d = PESQUISA.niveis[n]
+            const motivo = on ? null : pesquisaBlockedReason(state, n) ?? (outras + (atual ? AGENDA_ACOES.espacos : 0) + (pesquisa ? 0 : PESQUISA.agenda) > AGENDA.espacos ? `A agenda do mês está cheia (${AGENDA.espacos} espaços).` : null)
+            return (
+              <button key={n} type="button" className={`pn-empresa ${on ? 'on' : ''}`} disabled={!!motivo} title={motivo ?? undefined} onClick={() => { onPesquisa(on ? null : n); onToast(on ? '↩️ Pesquisa cancelada.' : `📊 ${d.nome} anotada: chega ao fechar o mês.`) }}>
+                <span>{on ? '🔘' : '⚪'}</span>
+                <span><b>{d.nome}</b><small>Margem de erro de {d.margem} pontos · custa {d.pctPib.toLocaleString('pt-BR')}% do PIB por {d.meses} meses.</small>{motivo && <small>🔒 {motivo}</small>}</span>
+                <span className="pn-empresa__custo">{PESQUISA.agenda} espaço</span>
+              </button>
+            )
+          })}
+          {state.credib?.pesquisas.length ? <p className="pn-hint">Última pesquisa: há {absMonth(state) - state.credib.pesquisas.at(-1)!.at} meses ({state.credib.pesquisas.at(-1)!.nivel === 'completa' ? 'completa' : 'rápida'}).</p> : null}
         </>}
         {cat === 'imprensa' && <>
           <div className="pn-row">

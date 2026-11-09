@@ -18,6 +18,8 @@ import { GROUP_ICON } from './icons'
 import { NewBadge, NewBillNotes } from './NewBill'
 import { LegalRiskLine } from './SupremoView'
 import { num, signed } from './format'
+import { AbsurdoLinha, ExplosivaAviso } from './CredibilidadeJanela'
+import { ehExplosiva } from '../game/absurdo'
 import { contratoDe, previsaoControle, riscoOf } from '../game/risco'
 
 const pct = (x: number) => `${Math.round(x * 100)}%`
@@ -65,6 +67,7 @@ export function MeasureSheet({ state, id, ids, request, constraints, speech, not
   const [summary, setSummary] = useState<{ id: BillId; text: string | null } | null>(null)
   const [pending, setPending] = useState<BillId | null>(startStep === 2 && aiReady() ? id : null)
   const [hearing, setHearing] = useState(false)
+  const [ciente, setCiente] = useState(false)
   const b = BILL_BY_ID[cur]
   const f = fichaDaMedida(state, cur)
   const n = notasFicha(state, cur)
@@ -104,7 +107,7 @@ export function MeasureSheet({ state, id, ids, request, constraints, speech, not
     onRewrite(`${request.trim()}\n\nIncorporando o parecer de ${minister.name}:\n${saved.suggestions.map((x) => `- ${x}`).join('\n')}`)
   }
   const nCls = (x: number) => (x >= 7 ? 'up' : x >= 4 ? 'warn' : 'dn')
-  const swap = (x: BillId) => { setCur(x); setTitle(state.names?.[x] ?? '') }
+  const swap = (x: BillId) => { setCiente(false); setCur(x); setTitle(state.names?.[x] ?? '') }
   // Etapa 5A: efeito no Controle do Estado e aviso de licitação (a empresa é escolhida depois, v0.27.2).
   const confirm = () => onConfirm(cur, title.trim() || undefined)
   const contratoBox = <ContratoBox state={state} id={cur} acts={acts} />
@@ -150,6 +153,7 @@ export function MeasureSheet({ state, id, ids, request, constraints, speech, not
             <div className="up">+ {b.pros}</div>
             <div className="dn">− {b.cons}</div>
             {contratoBox}
+            <AbsurdoLinha id={cur} />
 
             {groups.length > 0 && (
               <>
@@ -262,12 +266,14 @@ export function MeasureSheet({ state, id, ids, request, constraints, speech, not
               </div>
             </div>
             {startStep === 2 && contratoBox}
+            <AbsurdoLinha id={cur} />
+            <ExplosivaAviso id={cur} ciente={ciente} onCiente={setCiente} />
             <LegalRiskLine state={state} id={cur} consult={consult === cur} onConsult={onConsult} />
             {!acts && <ForecastRow state={state} id={cur} />}
             <p className="pn-hint">As notas mudam com a negociação: acordos com as bancadas sobem a Congressual; concessão ao TCU deixa o texto mais seguro no Supremo.{acts ? ' Decreto e MP valem na hora; se houver ação, o Supremo julga no mesmo dia.' : ' Aprovada, a lei vale na hora; se houver ação, o Supremo julga no mesmo dia.'}</p>
             <div className="pn-sheet__foot">
               <button className="pn-btn pn-btn--ghost pn-btn--big" onClick={() => (startStep === 2 ? onClose() : setStep(1))}>← Voltar</button>
-              <button className="pn-btn pn-btn--big" disabled={consult === cur} title={consult === cur ? 'Você pediu parecer ao Supremo sobre esta medida: ela espera a resposta.' : ''} onClick={confirm}>
+              <button className="pn-btn pn-btn--big" disabled={consult === cur || (ehExplosiva(b) && !ciente)} title={consult === cur ? 'Você pediu parecer ao Supremo sobre esta medida: ela espera a resposta.' : ehExplosiva(b) && !ciente ? 'Marque que está ciente do custo da medida explosiva.' : ''} onClick={confirm}>
                 {b.instrument === 'decreto' ? '🖊️ Assinar o decreto' : b.instrument === 'mp' ? '⚡ Editar a medida provisória' : '🗳️ Ir para a votação →'}
               </button>
             </div>

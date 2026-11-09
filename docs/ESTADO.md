@@ -3,15 +3,15 @@
 > **Leia este arquivo primeiro.** Ele diz onde o projeto está e qual é o próximo passo.
 > Atualize-o a cada mudança: seção "Estado atual", "Próximo passo" e uma linha no "Histórico".
 
-**Última atualização:** 08/11/2026 · **Versão publicada:** v0.35.0 (6C, regras desligadas até as telas)
+**Última atualização:** 08/11/2026 · **Versão:** v0.35.1 (6C, telas e bloco ligado; falta publicar)
 
 ---
 
 ## Próximo passo
 
-**Próximo: telas do bloco 6C (v0.35.1)**: credibilidade no Radar e janela, compromisso na fala, pesquisa e grupos em faixa, nota de absurdo na ficha, confirmação e retirar da medida explosiva; ao final, ligar `CREDIBILIDADE.ativo`. Complexidade média · **Sonnet**. Regras prontas na v0.35.0 (DESIGN.md 27.32).
+**Próximo: bloco 6D (pressão antes da votação)**, conforme `docs/projeto/plano-etapa-6.md`. Complexidade média-alta · **Opus** no desenho, **Sonnet** nas telas. O 6C está completo e ligado (v0.35.1, DESIGN.md 27.33); falta o Douglas jogar para sentir o peso dos extras da medida explosiva (o simulador nunca manda uma).
 
-**Etapa 6 aprovada (plano em `docs/projeto/plano-etapa-6.md`, 08/11/2026).** Ordem: 6.0 → 6B → 6A → 6C → 6D → 6E → 6F. **6.0 feito na v0.32.1**, **6B feito na v0.33.0**, **6A feito** (regras na v0.34.0, telas na v0.34.1; DESIGN.md 27.31), **6C com regras prontas** (v0.35.0, desligadas; DESIGN.md 27.32). **Portão de playtest da 5B e da 5C dispensado pelo Douglas em 08/11/2026: considerado fechado.**
+**Etapa 6 aprovada (plano em `docs/projeto/plano-etapa-6.md`, 08/11/2026).** Ordem: 6.0 → 6B → 6A → 6C → 6D → 6E → 6F. **6.0 feito na v0.32.1**, **6B feito na v0.33.0**, **6A feito** (regras na v0.34.0, telas na v0.34.1; DESIGN.md 27.31), **6C feito** (regras v0.35.0, telas v0.35.1; DESIGN.md 27.32 e 27.33). **Portão de playtest da 5B e da 5C dispensado pelo Douglas em 08/11/2026: considerado fechado.**
 
 **Etapa 5C fechada no código (v0.32.0):** telas do serviço de inteligência e dos dossiês (DESIGN.md 27.28).
 
@@ -127,6 +127,8 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 ---
 
 ## Histórico
+
+- 08/11/2026 · v0.35.1 · Bloco 6C (telas): credibilidade no Radar e janela, compromisso na fala, pesquisa na agenda, grupos em faixa entre pesquisas, nota de absurdo, aviso com confirmação e janela de retirar ou revogar a medida explosiva; bloco ligado; sem mudança no save; 488 testes.
 
 - 08/11/2026 · v0.35.0 · Bloco 6C (regras, desligadas): credibilidade, compromisso na fala, peso da fala em todo fato, pesquisa com margem de erro, nota de absurdo e medida explosiva com retirar da pauta; save 33; 485 testes; `npm run sim6c` (promete sem entregar 425, só fala 439, promete e entrega 594).
 

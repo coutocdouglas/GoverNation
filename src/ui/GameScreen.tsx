@@ -28,6 +28,10 @@ import { CourtSheet, PendenciasCard } from './FluxoSheets'
 import type { PendingTarget } from '../game/pendencias'
 import { cancelarAcao, rotuloAcao } from '../game/agenda'
 import { AgendaJanela } from './AgendaJanela'
+import { credibilidadeLigada } from '../game/data/credibilidade'
+import { leituraGrupo } from '../game/pesquisa'
+import { faixaMeio, GrupoLeitura } from './CredibilidadeJanela'
+import type { NivelPesquisa } from '../game/data/credibilidade'
 import { FichasView } from './FichasView'
 import { LicitacaoSheet } from './LicitacaoSheet'
 import { ACAO_NOME_CURTO } from './casoTexto'
@@ -118,6 +122,7 @@ export function GameScreen({ state, onChange, onExit }: {
   const [cpiDecisao, setCpiDecisao] = useState<AcaoCpi | null>(null)
   /** v0.32.0: ordem do mês ao serviço de inteligência (vale ao encerrar) e dossiê escolhido por votação da Câmara (vale ao votar). */
   const [intelOrdem, setIntelOrdem] = useState<OrdemIntel | null>(null)
+  const [pesquisa, setPesquisa] = useState<NivelPesquisa | null>(null)
   const [dossieSel, setDossieSel] = useState<Record<BillId, PartyId>>({})
   /** Etapa 2B: resposta ao fato esperando a ficha (etapa 2 da corrente) antes de assinar ou votar. */
   const [respSheet, setRespSheet] = useState<BillId | null>(null)
@@ -137,7 +142,7 @@ export function GameScreen({ state, onChange, onExit }: {
   const plan: MonthPlan = {
     bill: bill ?? undefined, articulations, eventChoice: eventChoice ?? undefined, eventResponse: eventResponse ?? undefined, deals,
     hold: proc.hold, urgent: proc.urgent, original: proc.original, symbolic: proc.symbolic, sanctions, ministry: ministry ?? undefined, nominee: nominee ?? undefined, consult: consult ?? undefined,
-    proposta: proposta ?? undefined,
+    proposta: proposta ?? undefined, pesquisa: pesquisa ?? undefined,
     casos: casoDecisoes.length ? casoDecisoes : undefined, advogado: advogado ?? undefined, cpi: cpiDecisao ?? undefined, inteligencia: intelOrdem ?? undefined,
   }
   const onProcedure = (kind: ProcedureKind, id: BillId, on: boolean) => setProc((cur) => {
@@ -279,6 +284,7 @@ export function GameScreen({ state, onChange, onExit }: {
       setAdvogado(null)
       setCpiDecisao(null)
       setIntelOrdem(null)
+      setPesquisa(null)
       setDossieSel({})
       setTab('painel')
       setStep(1)
@@ -384,12 +390,13 @@ export function GameScreen({ state, onChange, onExit }: {
   const janelaDefs: Record<string, JanelaDef> = { ...janelaDefsDoRadar(state), ...Object.fromEntries(abertas.flatMap((id) => { const d = defPorQue(id); return d ? [[id, d] as const] : [] })) }
   const renderJanela = (id: string) => { const alvo = alvoPorQue(id); return alvo ? <PorQueJanela state={state} alvo={alvo} /> : conteudoDaJanela(id, {
     state, casoDecisoes, advogado, cpiDecisao, intelOrdem, ultimoMes,
-    agenda: <AgendaJanela state={state} plan={plan} billPronto={!!bill} onState={onChange} onToast={toast} />,
+    agenda: <AgendaJanela state={state} plan={plan} billPronto={!!bill} pesquisa={pesquisa} onPesquisa={setPesquisa} onState={onChange} onToast={toast} />,
     onCaso: (d) => { setCasoDecisoes(d); if (d.length > casoDecisoes.length) toast('🕵️ Decisão do caso anotada: vale ao encerrar o mês.') },
     onCpi: (a) => { setCpiDecisao(a); if (a) toast('🏛️ Decisão sobre a CPI anotada: vale ao encerrar o mês.') },
     onIntel: (o) => { setIntelOrdem(o); if (o) toast('📡 Ordem ao serviço anotada: vale ao encerrar o mês.') },
     onAdvogado: (aid) => { setAdvogado(aid); if (aid) toast('💼 Troca de advogado anotada: vale ao encerrar o mês.') },
     onAbrirReputacao: () => { fechar('reputacao'); setTab('fichas') },
+    onState: onChange, onToast: toast,
   }) }
 
   return (
@@ -794,15 +801,17 @@ export function GameScreen({ state, onChange, onExit }: {
                 {GROUPS.map((g) => {
                   const v = now.groups[g.id]
                   const d = prev ? v - prev.groups[g.id] : 0
+                  const lei = credibilidadeLigada() ? leituraGrupo(state, g.id) : null
+                  const largura = lei ? (lei.pesquisa ? lei.pesquisa.valor : faixaMeio(lei.faixa)) : v
                   return (
                     <button key={g.id} className="pn-group" onClick={() => abrir(idPorQue({ kind: 'group', id: g.id }))}>
                       <span className="pn-group__ic">{GROUP_ICON[g.id]}</span>
                       <span className="pn-group__body">
                         <span className="pn-group__head">
                           <span>{g.name}</span>
-                          <span><b>{num(v, 0)}%</b> {prev && <Delta value={d} good={1} d={1} />}</span>
+                          <span>{lei ? <GrupoLeitura lei={lei} /> : <><b>{num(v, 0)}%</b> {prev && <Delta value={d} good={1} d={1} />}</>}</span>
                         </span>
-                        <span className="pn-meter"><span style={{ width: `${v}%`, background: tone(v) }} /></span>
+                        <span className="pn-meter"><span style={{ width: `${largura}%`, background: tone(largura) }} /></span>
                         <small>{Math.round(g.weight * 100)}% da população</small>
                       </span>
                     </button>
