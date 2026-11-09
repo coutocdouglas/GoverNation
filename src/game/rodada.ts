@@ -39,6 +39,9 @@ import { FLUXO } from './data/fluxo'
 import { SUPREMO, TSE_BY_ID } from './data/supremo'
 import { applyEffects } from './effects'
 import { custoDeEnviar, descontarEnvio, pesaNoEnvio } from './efeitos'
+import { anunciarExplosiva, assinarExplosiva, ehExplosiva, insistirExplosiva, regDe } from './absurdo'
+import { mudaCredib } from './credibilidade'
+import { EXPLOSIVA } from './data/credibilidade'
 import { addMark, markMeasure, noteRecord } from './reputacao'
 import { REPUTACAO } from './data/marks'
 import { Rng } from './rng'
@@ -599,6 +602,55 @@ export function withdrawMeasure(prev: GameState, caseId: string): GameState {
 }
 
 const rivalOf = (ctx: RoundCtx): Cause[] => (ctx.round.rival ??= [])
+const alvoDe = (ctx: RoundCtx) => ({ e: ctx.e, headlines: ctx.headlines, conf: ctx.conf, rival: rivalOf(ctx) })
+
+/** Motivo pelo qual não dá para retirar (ou revogar) a medida explosiva, ou null. */
+export function retirarBlockedReason(s: GameState, id: BillId): string | null {
+  const r = regDe(s, id)
+  if (!r) return 'Esta medida não é explosiva.'
+  if (r.fase === 'anunciada') return null
+  if (r.fase === 'vigor') return absMonth(s) - r.at <= EXPLOSIVA.revogar.janela ? null : 'O prazo para revogar já passou.'
+  return r.fase === 'cobrada' ? 'O governo já levou a medida a voto.' : 'A medida já saiu da pauta.'
+}
+
+/**
+ * Etapa 6C: tira da pauta a medida explosiva anunciada, com custo menor que insistir, ou revoga o decreto ou a MP
+ * até o mês seguinte. A mesma medida não volta tão cedo, para retirar e reenviar não sair de graça.
+ */
+export function retirarExplosiva(prev: GameState, id: BillId): GameState {
+  const err = retirarBlockedReason(prev, id)
+  if (err) throw new Error(err)
+  const s = structuredClone(prev)
+  const ctx = openCtx(s)
+  const bill = BILL_BY_ID[id]
+  const c = s.congress
+  const r = regDe(s, id)!
+  const vigor = r.fase === 'vigor'
+  const custo = vigor ? EXPLOSIVA.revogar : EXPLOSIVA.retirar
+  const p = c.pending.find((x) => x.id === id)
+  if (p?.priced) ctx.conf.v -= p.priced
+  if (vigor) {
+    const w = s.supremo.watch.find((x) => x.bill === id)
+    ctx.conf.v += applyEffects(ctx.e, ctx.impulses, undoEffects(bill, w?.scale), `Revogada: ${bill.name}`, 1, -1)
+    c.laws = c.laws.filter((x) => x !== id)
+    dropInForce(s, id)
+  }
+  c.pending = c.pending.filter((x) => x.id !== id)
+  c.senate.pending = c.senate.pending.filter((x) => x.id !== id)
+  c.blockedUntil[id] = s.month + EXPLOSIVA.voltaEm
+  s.eventQueue = s.eventQueue.filter((x) => !(x.id === 'protestoExplosiva' && x.origin?.bill === id))
+  r.fase = 'retirada'
+  mudaCredib(s, custo.credibilidade, `Recuou da medida explosiva: ${bill.name}`)
+  rivalOf(ctx).push({ label: `Governo recua de “${bill.name}”`, value: custo.rival })
+  const verbo = vigor ? 'revoga' : 'retira da pauta'
+  ctx.taken.push(`Recuou: ${verbo} “${bill.name}”`)
+  ctx.headlines.push({ text: `Governo ${verbo} “${bill.name}” depois da reação do país`, tone: 'neutral' })
+  noteRecord(s, { text: `Recuou e ${verbo} “${bill.name}”, medida explosiva`, tone: 'neutral', kind: 'medida', bill: id })
+  addBio(s, s.presidentName, `Recuou da medida explosiva “${bill.name}”.`)
+  addChronicle(s, `Governo ${s.presidentName} recua de “${bill.name}”`, 'neutral')
+  closeCtx(ctx)
+  return s
+}
 
 /**
  * Etapa 4 (v0.23): o presidente escolhe a cadeira de jurista do tribunal eleitoral (vale na hora).
@@ -915,6 +967,7 @@ export function sendInto(s: GameState, id: BillId, opts: FloorOptions = {}, resp
     if (!response) ctx.taken.push(`Assinou o decreto: ${bill.name}`)
     ctx.mm.enacted.push(bill.area)
     statesOnMeasure(s, bill)
+    if (ehExplosiva(bill)) assinarExplosiva(s, bill, alvoDe(ctx))
     reactToday(ctx, id)
     courtToday(ctx, id)
   } else {
@@ -941,6 +994,7 @@ export function sendInto(s: GameState, id: BillId, opts: FloorOptions = {}, resp
       addBio(s, s.presidentName, `Editou a medida provisória: ${bill.name}.`)
       ctx.mm.enacted.push(bill.area)
       if (!response) ctx.taken.push(`Editou a MP: ${bill.name}`)
+      if (ehExplosiva(bill)) assinarExplosiva(s, bill, alvoDe(ctx))
       statesOnMeasure(s, bill)
       reactToday(ctx, id)
       courtToday(ctx, id)
@@ -958,7 +1012,11 @@ export function sendInto(s: GameState, id: BillId, opts: FloorOptions = {}, resp
       }
       reactToday(ctx, id)
       if (opts.dossie) usarDossie(s, opts.dossie, id, ctx.headlines, ctx.taken)
-      parked = floorCamara(ctx, p, opts) === 'parado'
+      // Etapa 6C: a explosiva não vota na rodada do anúncio. Fica na pauta, para o governo poder retirar.
+      if (ehExplosiva(bill)) {
+        anunciarExplosiva(s, bill, alvoDe(ctx))
+        parked = true
+      } else parked = floorCamara(ctx, p, opts) === 'parado'
     }
   }
   if (minister) addBio(s, minister.name, `${minister.role}: ficou responsável por “${bill.name}”.`)
@@ -989,6 +1047,8 @@ export function voteNowBlockedReason(s: GameState, id: BillId): string | null {
   }
   if (isRecess(s.month)) return 'O Congresso está em recesso.'
   if (isFrozen(s, id)) return 'O Supremo travou a votação até o plenário julgar.'
+  const ex = regDe(s, id)
+  if (ex?.fase === 'anunciada' && ex.at === absMonth(s)) return 'A medida explosiva acabou de ser anunciada: só vai a voto a partir da próxima rodada.'
   return null
 }
 
@@ -1043,6 +1103,7 @@ export function voteNow(prev: GameState, id: BillId, opts: FloorOptions = {}): R
   applyDeals(ctx, (opts.deals ?? []).map((d) => ({ ...d, bill: id })))
   ctx.conf.v += payBuys(s, id, opts.senadores ?? [], ctx.headlines, ctx.taken)
   ctx.taken.push(`Pautou ${house === 'senado' ? 'no Senado' : 'na Câmara'}: ${bill.name}`)
+  insistirExplosiva(s, bill, alvoDe(ctx))
   const parked = house === 'camara'
     ? floorCamara(ctx, c.pending.find((x) => x.id === id)!, opts) === 'parado'
     : floorSenado(ctx, senatePending(s, id)!, opts) === 'parado'

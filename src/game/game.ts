@@ -30,7 +30,7 @@ import { RIVAL_BY_PARTY } from './data/rival'
 import { Rng } from './rng'
 import { applyEffects } from './effects'
 import { aplicarTeto } from './efeitos'
-import { registrarCausas } from './causas'
+import { registrarCausa, registrarCausas } from './causas'
 import { addMark, initialReputation, maybeCloseChapter, noteRecord, stepReputation } from './reputacao'
 import { REPUTACAO } from './data/marks'
 import { applyMinistryChange, applyPlanToRound, barredByLaw, archiveStale, expireMps, peekRound, roundOf, type RoundCtx } from './rodada'
@@ -49,6 +49,10 @@ import { driftAlas, internalElections, leaderOf, openMesa, runMesa, speakerOf } 
 import { TALK } from './data/negociacao'
 import { acaoCasoBlockedReason, advogadoBlockedReason, agendaUsada, aplicarDecisoes, initialInvestigacao, stepCasos, trocarAdvogado, type DecisaoCaso } from './caso'
 import { AGENDA } from './data/caso'
+import { fazerPesquisa, pagarPesquisa, pesquisaBlockedReason } from './pesquisa'
+import { initialCredib, mercadoDaCredib, stepCredibilidade } from './credibilidade'
+import { stepExplosivas } from './absurdo'
+import type { NivelPesquisa } from './data/credibilidade'
 import { acaoBlockedReason, aplicarAcao, ganhoDaAcao, initialAgenda, stepAgenda, type AcaoAgenda } from './agenda'
 import { agendaLigada } from './data/agenda'
 import { initialRisco, posseRisco, propostaAtual, propostaBlockedReason, responderProposta, sortearProposta, stepRisco, vencerLicitacoes } from './risco'
@@ -98,8 +102,9 @@ export function newGame(
   const rngState = seed ?? Math.floor(Math.random() * 2 ** 31)
   const bonus = DIFFICULTY[difficulty].approvalBonus
   const state: GameState = {
-    saveVersion: 32,
+    saveVersion: 33,
     agendaPres: initialAgenda(),
+    credib: initialCredib(),
     inteligencia: initialInteligencia(),
     investigacao: undefined as unknown as GameState['investigacao'],
     comissoes: undefined as unknown as GameState['comissoes'],
@@ -247,6 +252,8 @@ export interface MonthPlan {
   inteligencia?: OrdemIntel
   /** Etapa 6A (v0.34): a ação política do mês, no lugar da medida nova. Gasta a agenda. */
   acao?: AcaoAgenda
+  /** Etapa 6C (v0.35): pesquisa encomendada. Gasta a agenda e dinheiro, mas não entra no lugar da medida. */
+  pesquisa?: NivelPesquisa
 }
 
 /** Ficha do que foi aprovado e espera sanção ou veto (pauta-bomba inteira ou o jabuti enxertado). */
@@ -366,6 +373,10 @@ export function validatePlan(s: GameState, plan: MonthPlan): string | null {
   if (plan.acao) {
     const r = acaoBlockedReason(s, plan.acao)
     if (r) return `Agenda: ${r}`
+  }
+  if (plan.pesquisa) {
+    const r = pesquisaBlockedReason(s, plan.pesquisa)
+    if (r) return `Pesquisa: ${r}`
   }
   if (acaoDoMes && plan.bill) return 'A ação política entra no lugar da medida nova: escolha uma das duas.'
   if (agendaLigada() && (plan.statement !== undefined || plan.street !== undefined)) return 'Post e rua agora são ações da agenda do presidente.'
@@ -899,6 +910,13 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
   actionConfidence += cpiMes.confidence
   rivalExtra.push(...cpiMes.rival)
   stepInteligencia(s)
+  // 1l. Etapa 6C: a pesquisa se paga agora; a credibilidade pesa um pouco no mercado todo mês.
+  if (plan.pesquisa) pagarPesquisa(plan.pesquisa, e, taken)
+  const mercadoCredib = mercadoDaCredib(s)
+  if (mercadoCredib) {
+    actionConfidence += mercadoCredib
+    registrarCausa(s, { subject: 'indicador:confidence', delta: mercadoCredib, why: 'Credibilidade do governo', source: 'outro' })
+  }
   const scandalHit = !!casos.vazou
   // O que vazou deixa de ser exposição: a imprensa já publicou.
   if (scandalHit) c.scandal *= DEALS.scandalAfter
@@ -945,6 +963,11 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
   headlines.push(...economicHeadlines(before, after, approvalBefore, approvalAfter))
   driftRelations(c, approvalAfter, s.playerParty)
   driftAlas(c)
+
+  // 5a. Etapa 6C: a pesquisa sai com os grupos já fechados; promessas, compromisso e explosivas que saíram da pauta.
+  if (plan.pesquisa) fazerPesquisa(s, plan.pesquisa, new Rng((absMonth(s) * 48271) ^ s.rngState ^ 0x9e51), headlines)
+  stepCredibilidade(s, headlines, rivalExtra)
+  stepExplosivas(s, headlines, rivalExtra)
 
   // 5b. Etapa 5A: força, postura e pesquisa do rival.
   const nBeforeRival = headlines.length

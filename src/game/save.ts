@@ -15,6 +15,7 @@ import { BASE } from './data/base'
 import { ensureStates } from './estados'
 import { garantirPessoa, initialRisco, pessoasAtuais, type RiscoState } from './risco'
 import { initialInvestigacao } from './caso'
+import { initialCredib } from './credibilidade'
 import type { GameState } from './types'
 
 // O jogo instalado guarda o localStorage na pasta de dados do usuário no Windows
@@ -275,7 +276,11 @@ export function migrate(raw: unknown): GameState | null {
       (s as GameState).agendaPres ??= initialAgenda()
       s.saveVersion = 32
     }
-    if (s.saveVersion !== 32) return null
+    if (s.saveVersion === 32) {
+      (s as GameState).credib ??= initialCredib()
+      s.saveVersion = 33
+    }
+    if (s.saveVersion !== 33) return null
     syncCustomBills(s as GameState)
     return s as GameState
   } catch {

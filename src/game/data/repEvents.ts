@@ -16,6 +16,25 @@ const P = {
 
 export const REP_EVENTS: EventDef[] = [
   {
+    id: 'protestoExplosiva', area: 'politica', tag: 'Medida explosiva · rua', icon: '🧨', weight: 0, random: false, kind: 'consequencia', importance: 5,
+    title: '{lei} leva multidões às ruas',
+    text: 'A medida já vale e o país parou para reagir. O movimento Basta fala na maior mobilização em décadas, e até aliados evitam defender o governo.',
+    presenter: P.rua,
+    pauta: {
+      title: 'Multidões vão às ruas para barrar {lei} antes do voto',
+      text: 'A medida ainda nem foi a plenário e o país parou para reagir. O movimento Basta promete cercar o Congresso, e até aliados pedem ao governo que recue enquanto há tempo.',
+    },
+    barrada: {
+      title: 'Mesmo sem {lei}, as ruas querem resposta do governo',
+      text: 'A medida caiu, mas a ferida ficou. O movimento Basta quer saber quem no Planalto teve a ideia e mantém atos convocados.',
+    },
+    options: [
+      { icon: '🤝', label: 'Receber os organizadores', text: 'Baixa a temperatura, mas soa como quem sentiu o golpe.', effects: { groups: { trabalhadores: 1, jovens: 1, classeMedia: 1 } }, outcome: 'Presidente recebe organizadores e ouve as críticas à medida', tone: 'neutral' },
+      { icon: '🛡️', label: 'Enfrentar as ruas', text: 'Dobra a aposta. O confronto vira a notícia do mês.', effects: { groups: { trabalhadores: -3, jovens: -3, classeMedia: -2, baixaRenda: -2 }, confidence: -1 }, outcome: 'Governo enfrenta os atos, e o confronto domina o noticiário', tone: 'bad' },
+      { icon: '🙈', label: 'Deixar passar', text: 'Os atos crescem sem resposta, e a oposição assume o palanque.', effects: { groups: { trabalhadores: -2, jovens: -2, classeMedia: -2, baixaRenda: -1 } }, outcome: 'Atos crescem sem resposta do governo e a oposição assume o palanque', tone: 'bad', default: true },
+    ],
+  },
+  {
     id: 'repImpopular', area: 'politica', tag: 'Desdobramento · rua', icon: '📢', weight: 0, random: false, kind: 'consequencia', importance: 4,
     title: 'Protestos contra {lei} tomam as capitais',
     text: 'A medida mal saiu do Planalto e já virou símbolo: o movimento Basta convoca atos em 20 capitais e diz que o governo “não ouve ninguém”.',

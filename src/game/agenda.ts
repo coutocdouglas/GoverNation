@@ -9,7 +9,9 @@ import type { ActionEffects } from './actions'
 import { baseGroupsOf, comGanho, fatigued, monthKind, speechScale, statementBlockedReason, statementEffect, streetOptions, type Scaled } from './assessoria'
 import { ministerOf } from './camara'
 import { bumpScandal, registrarCausa } from './causas'
+import { abrirCompromisso, compromissoBlockedReason, fatorPalavra } from './credibilidade'
 import { ASSESSORIA, STATEMENT_BY_ID, type StatementId } from './data/assessoria'
+import { COMPROMISSO, CREDIBILIDADE } from './data/credibilidade'
 import { AGENDA_ACOES, agendaLigada, COBRAR, IMPRENSA, LIDER, VOZ_BY_ID, VOZES, type VozDef } from './data/agenda'
 import { AREA_GROUP } from './data/ministerios'
 import type { AreaId } from './data/ministers'
@@ -28,7 +30,7 @@ export type AcaoAgenda =
   | { tipo: 'rua'; id: string }
   | { tipo: 'lider'; partido: PartyId }
   | { tipo: 'ministro'; area: AreaId; tom: 'particular' | 'publico' }
-  | { tipo: 'nacao' }
+  | { tipo: 'nacao'; compromisso?: boolean }
   | { tipo: 'imprensa'; voz: string; modo: 'apoio' | 'romper' }
 
 export interface AgendaState {
@@ -83,7 +85,7 @@ export function acaoBlockedReason(s: GameState, a: AcaoAgenda): string | null {
     case 'nacao':
       if (monthKind(s) === 'travado') return 'Este fato pede uma das escolhas prontas.'
       if ((s.statementLog ?? []).some((x) => x.id === 'cadeia' && s.month - x.month < ASSESSORIA.cadeiaMonths)) return `Você já falou ao país há menos de ${ASSESSORIA.cadeiaMonths} meses: repetir cansa.`
-      return null
+      return a.compromisso ? compromissoBlockedReason(s) : null
     case 'lider':
       if (!PARTY_BY_ID[a.partido]) return 'Partido desconhecido.'
       return recente(s, 'lider', a.partido, LIDER.intervalo) ? `Você recebeu esta liderança há menos de ${LIDER.intervalo} meses.` : null
@@ -129,10 +131,17 @@ export function coberturaFator(s: GameState): number {
   return 1 + ((media - 50) / 50) * IMPRENSA.faixaEfeito
 }
 
+/** Imprensa e credibilidade juntas: o quanto o público ouve o presidente (com limite, para não dispararem somadas). */
+export function fatorPublico(s: GameState): number {
+  const [lo, hi] = CREDIBILIDADE.fatorPublico
+  return clamp(coberturaFator(s) * fatorPalavra(s), lo, hi)
+}
+
 /** Quanto do ganho a ação rende neste mês. O post já tem o cansaço próprio: não cobra duas vezes. */
 export function ganhoDaAcao(s: GameState, a: AcaoAgenda): number {
-  if (a.tipo === 'post') return (fatigued(s) ? 1 : fadigaDe(s)) * coberturaFator(s)
-  if (a.tipo === 'rua' || a.tipo === 'nacao') return fadigaDe(s) * coberturaFator(s)
+  if (a.tipo === 'post') return (fatigued(s) ? 1 : fadigaDe(s)) * fatorPublico(s)
+  if (a.tipo === 'rua') return fadigaDe(s) * fatorPublico(s)
+  if (a.tipo === 'nacao') return fadigaDe(s) * fatorPublico(s) * (a.compromisso ? COMPROMISSO.bonus : 1)
   return fadigaDe(s)
 }
 
@@ -161,7 +170,7 @@ export function previaAcao(s: GameState, a: AcaoAgenda): PreviaAcao | null {
       return def ? { ...comGanho(deRua(def), k), extras: [] } : null
     }
     case 'nacao':
-      return { ...comGanho(deRua(CADEIA), k * speechScale(s)), extras: [] }
+      return { ...comGanho(deRua(CADEIA), k * speechScale(s)), extras: a.compromisso ? [{ texto: `compromisso: uma medida da área valendo em ${COMPROMISSO.meses} meses, ou credibilidade ${menos(COMPROMISSO.falhou)}`, bom: false }] : [] }
     case 'lider':
       return { ...vazio, parties: { [a.partido]: round1(LIDER.relacao * k), [adversarioDe(a.partido)]: LIDER.ciume } }
     case 'ministro':
@@ -195,7 +204,7 @@ export function rotuloAcao(s: GameState, a: AcaoAgenda): string {
   switch (a.tipo) {
     case 'post': return `Post: ${STATEMENT_BY_ID[a.id].label}`
     case 'rua': return ruaOpcoes(s).find((x) => x.id === a.id)?.label ?? 'Ação de rua'
-    case 'nacao': return 'Falar à nação'
+    case 'nacao': return a.compromisso ? 'Falar à nação e assumir um compromisso' : 'Falar à nação'
     case 'lider': return `Receber ${leaderOf(s, a.partido).name} (${PARTY_BY_ID[a.partido].sigla})`
     case 'ministro': return `Cobrar ${ministerOf(s, a.area).name} ${a.tom === 'publico' ? 'em público' : 'em particular'}`
     case 'imprensa': return a.modo === 'apoio' ? `Pedir apoio ${ao(VOZ_BY_ID[a.voz])}` : `Romper ${comV(VOZ_BY_ID[a.voz])}`
@@ -270,7 +279,8 @@ export function aplicarAcao(
       out.soften = title && monthKind(s) === 'crise' ? round1(CADEIA.soften * k * fala * 100) / 100 : 0
       out.presenca = true
       out.street = CADEIA.id
-      taken.push('Falou à nação')
+      taken.push(a.compromisso ? 'Falou à nação e assumiu um compromisso' : 'Falou à nação')
+      if (a.compromisso) abrirCompromisso(s, title)
       s.statementLog.push({ id: 'cadeia', month: s.month })
       noteRecord(s, { text: label, tone: 'neutral', kind: title ? 'crise' : 'outro' })
       ag.log.push({ tipo: 'nacao', at })

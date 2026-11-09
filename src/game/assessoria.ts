@@ -9,6 +9,7 @@ import type { ActionEffects } from './actions'
 import { applyEffects } from './effects'
 import { ASSESSORIA, BASE_GROUPS, SPEECH_WEIGHT, STATEMENTS, STATEMENT_BY_ID, type StatementDef, type StatementId } from './data/assessoria'
 import { CADEIA, RUA, type StreetDef } from './data/rua'
+import { credibilidadeLigada, PESO_FALA } from './data/credibilidade'
 import { EVENT_BY_ID, type EventDef } from './data/events'
 import { GROUPS } from './data/groups'
 import { PARTY_BY_ID } from './data/parties'
@@ -29,7 +30,19 @@ export function monthKind(s: Pick<GameState, 'event'>): MonthKind {
 }
 
 /** Peso do discurso na crise (0 a 1): quanto falar ajuda. Material pesa pouco. */
-export const speechOf = (ev: Pick<EventDef, 'id'>): number => SPEECH_WEIGHT[ev.id] ?? ASSESSORIA.defaultSpeech
+export function speechOf(ev: Pick<EventDef, 'id'> & Partial<Pick<EventDef, 'kind'>>): number {
+  const dado = SPEECH_WEIGHT[ev.id]
+  if (dado !== undefined) return dado
+  if (!credibilidadeLigada()) return ASSESSORIA.defaultSpeech
+  // Etapa 6C: todo fato tem um tipo. Desdobramento de reputação é crise de confiança; fruto de lei antiga é material.
+  return PESO_FALA.especial[ev.id] ?? (ev.id.startsWith('rep') ? PESO_FALA.reputacao : ev.kind === 'consequencia' ? PESO_FALA.consequencia : ASSESSORIA.defaultSpeech)
+}
+
+/** Etapa 6C: o tipo da crise, para a tela. */
+export function tipoDaCrise(ev: Pick<EventDef, 'id'> & Partial<Pick<EventDef, 'kind'>>): 'material' | 'mista' | 'confianca' {
+  const p = speechOf(ev)
+  return p < PESO_FALA.material ? 'material' : p >= PESO_FALA.confianca ? 'confianca' : 'mista'
+}
 
 /** Quanto do efeito cheio vale (no mês de crise, pelo peso do discurso; mês limpo tem bônus). */
 export function speechScale(s: Pick<GameState, 'event'>): number {

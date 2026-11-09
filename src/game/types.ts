@@ -144,9 +144,11 @@ import type { ReputationState } from './reputacao'
 import type { RiscoState } from './risco'
 
 export interface GameState {
-  saveVersion: 32
+  saveVersion: 33
   /** Etapa 6A (v0.34): ações políticas do presidente (cansaço, intervalos e cobertura da imprensa). Ver agenda.ts. */
   agendaPres: import('./agenda').AgendaState
+  /** Etapa 6C (v0.35): credibilidade, compromisso, pesquisas e medidas explosivas. */
+  credib: import('./credibilidade').CredibState
   /** Etapa 5C (v0.30): serviço de inteligência e dossiês. */
   inteligencia: import('./inteligencia').InteligenciaState
   /** Etapa 5C: CPI em andamento e comissões encerradas. */

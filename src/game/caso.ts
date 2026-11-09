@@ -15,6 +15,7 @@
  *
  * Regras decidem, a IA só narra. O jogador vê provas, faixas de chance e pistas em palavras; o rastro é oculto.
  */
+import { PESQUISA } from './data/credibilidade'
 import { ACOES_CPI, type AcaoCpi } from './data/cpi'
 import { ANTECIPAR, type OrdemIntel } from './data/inteligencia'
 import { agendaDaOrdem, aoVazarDossies, detectarVazamento, sementeAvisada } from './inteligencia'
@@ -261,10 +262,10 @@ export interface DecisaoCaso {
 export const agendaDaAcao = (a: AcaoCaso) => ACOES_CASO[a].agenda
 
 /** Espaços da agenda usados pelo plano (casos e troca de advogado). */
-type PlanoAgenda = { casos?: DecisaoCaso[]; advogado?: string; cpi?: AcaoCpi; inteligencia?: OrdemIntel; acao?: unknown }
+type PlanoAgenda = { casos?: DecisaoCaso[]; advogado?: string; cpi?: AcaoCpi; inteligencia?: OrdemIntel; acao?: unknown; pesquisa?: unknown }
 
 export function agendaUsada(plan: PlanoAgenda): number {
-  return (plan.acao ? AGENDA_ACOES.espacos : 0) + (plan.casos ?? []).reduce((a, d) => a + agendaDaAcao(d.acao), 0) + (plan.advogado ? ADVOGADO.agenda : 0) + (plan.cpi ? ACOES_CPI[plan.cpi].agenda : 0) + (plan.inteligencia ? agendaDaOrdem(plan.inteligencia.acao) : 0)
+  return (plan.acao ? AGENDA_ACOES.espacos : 0) + (plan.pesquisa ? PESQUISA.agenda : 0) + (plan.casos ?? []).reduce((a, d) => a + agendaDaAcao(d.acao), 0) + (plan.advogado ? ADVOGADO.agenda : 0) + (plan.cpi ? ACOES_CPI[plan.cpi].agenda : 0) + (plan.inteligencia ? agendaDaOrdem(plan.inteligencia.acao) : 0)
 }
 
 export const agendaLivre = (plan: PlanoAgenda) => AGENDA.espacos - agendaUsada(plan)

@@ -1,5 +1,16 @@
 # Novidades
 
+## 0.35.0 (08/11/2026)
+- **Bloco 6C da Etapa 6: credibilidade, discurso, pesquisa e medida explosiva (regras).** Ainda **desligado**: nada muda na partida até as telas da v0.35.1.
+  - **Credibilidade de 0 a 100:** só entrega faz subir (promessa de posse cumprida, compromisso honrado); falhar custa o dobro. Muda quanto rendem post, rua e fala, e pesa um pouco no mercado.
+  - **Compromisso na fala:** ao falar à nação numa crise, o presidente pode prometer uma medida da área em 3 meses. A fala rende mais na hora; sem entrega, a credibilidade cai 10.
+  - **Peso da fala para todo fato:** crise material rende pouco com discurso; crise de confiança rende muito.
+  - **Pesquisa rápida ou completa:** gasta agenda e dinheiro, não entra no lugar da medida e mostra cada grupo com margem de erro. Entre pesquisas, o grupo aparece em faixa com seta.
+  - **Nota de absurdo de 0 a 10:** desconta quem ganha e o que a medida traz ao país. Nada do catálogo chega à faixa vermelha.
+  - **Medida explosiva:** marca forte, força ao rival, mercado e dólar, base fugindo e protesto. Lei, LC e PEC ficam uma rodada na pauta antes do voto, e dá para retirar por bem menos; decreto e MP pagam tudo na hora e podem ser revogados até o mês seguinte.
+  - Simulador novo `npm run sim6c`: prometer sem entregar fica abaixo de só falar (425 contra 439); prometer e entregar é o melhor caminho (594).
+- Save 33, com migração. 485 testes (24 novos).
+
 ## 0.34.1 (08/11/2026)
 - **Bloco 6A da Etapa 6: as telas. A agenda do presidente está ligada.**
   - **Janela "Agenda do presidente"**, aberta pelo Radar ou por "Sua agenda está limpa": mostra o que ocupa os 2 espaços do mês e o custo de cada ação antes de escolher (post, rua, falar à nação, receber líder, cobrar ministro, imprensa).
