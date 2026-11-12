@@ -1343,3 +1343,5 @@ Desenho aprovado pelo Douglas (12/11/2026). Motor em `src/game/circulo.ts`; núm
 6. **Testes do projeto:** atalho (1 consulta por mês; ouvir não dá bônus, só informação, e quem tem risco cobra rastro); beco sem saída (não ouvir é sempre possível); sobrecarga (a consulta fica atrás de um clique na leitura da medida).
 
 **Telas e IA na v0.40.1**, que fecham o bloco 6E.
+
+**Telas e IA (v0.40.1).** `CirculoBox` (`src/ui/CirculoJanela.tsx`) na leitura da medida (`MeasureSheet.tsx`, depois do parecer do ministro): os membros como botões, com Elo, o que avaliam e a pista de risco; depois de ouvir, o parecer (posição e fala). A consulta e a fala da IA ficam em `PainelPecas.tsx` (`consultarCirculo`, `askCirculo`, `narrarCirculo` sobre o estado mais novo). `circleSpeechPrompt` manda a posição e a leitura já decididas ("não mude a posição"); sem IA, vale `textoParecer`. Linha e janela "Círculo de confiança" no Radar. **Com isso o bloco 6E (governo com vida) está completo: vice e líder (27.35), ministérios com vida (27.36), ministro antenado (27.37) e círculo de confiança (27.38).**

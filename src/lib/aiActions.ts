@@ -1,4 +1,5 @@
-import { ministerProposalPrompt, parseProposal } from '../game/ai'
+import { circleSpeechPrompt, ministerProposalPrompt, parseCircleSpeech, parseProposal } from '../game/ai'
+import { membroDe } from '../game/circulo'
 import { dossiePasta, dossieTexto } from '../game/conselho'
 import { narrarProposta, peekRound } from '../game/rodada'
 import { briefingPrompt, empresaNamesPrompt, parseEmpresaNames, eventBriefPrompt, parseShortText, concessionPrompt, interpretPrompt, ministerAdvicePrompt, ministerReviewPrompt, parseAdvice, parseConcession, parseInterpretation, parseReview, type Advice, type Review } from '../game/ai'
@@ -166,4 +167,22 @@ export async function askProposta(state: GameState): Promise<GameState> {
     if (!(e instanceof AiError)) noteAiFailure('fala', `proposta do ministro: ${String(e)}`)
   }
   return state
+}
+
+/**
+ * v0.40.1: a IA dá voz a quem o presidente ouviu no círculo. Devolve só a fala (ou null: vale o texto das regras).
+ * Nunca falha na tela; o erro real vai para o registro.
+ */
+export async function askCirculo(state: GameState): Promise<string | null> {
+  const c = peekRound(state)?.circulo
+  const m = c ? membroDe(state, c.quem) : undefined
+  if (!c || !m || c.ia || !aiReady()) return null
+  try {
+    const fala = parseCircleSpeech(await callAi('fala', circleSpeechPrompt(state, m, c)))
+    if (fala) return fala
+    noteAiFailure('fala', 'círculo de confiança: a IA respondeu fora do formato')
+  } catch (e) {
+    if (!(e instanceof AiError)) noteAiFailure('fala', `círculo de confiança: ${String(e)}`)
+  }
+  return null
 }

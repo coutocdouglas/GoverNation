@@ -3,7 +3,9 @@ import { billBlockedReason } from '../game/congress'
 import { BILL_BY_ID, BILLS, type BillDef } from '../game/data/bills'
 import { NewBadge } from './NewBill'
 import { ACTION_BY_ID, ACTIONS, ACTIONS_PER_MONTH, blockedReason } from '../game/actions'
-import { guardarParecer } from '../game/rodada'
+import { consultarCirculo, guardarParecer, narrarCirculo } from '../game/rodada'
+import { askCirculo } from '../lib/aiActions'
+import type { MembroCirculo } from '../game/circulo'
 import type { MeasureRef } from '../game/interpret'
 import { readText } from '../lib/aiActions'
 import { MeasureSheet } from './MeasureSheet'
@@ -92,6 +94,16 @@ export function MeasureBox({ state, onState, draft, selected, onSign, onSend, on
   /** Etapa 2: janela da medida em etapas aberta para esta medida. */
   const [sheet, setSheet] = useState<BillId | null>(null)
   const [busy, setBusy] = useState(false)
+  /** v0.40.1: o estado mais novo, para a fala da IA do círculo cair sobre ele (o jogo pode andar enquanto ela responde). */
+  const latest = useRef(state)
+  useEffect(() => { latest.current = state }, [state])
+  const ouvirCirculo = async (quem: MembroCirculo, bill: BillId) => {
+    let next: GameState
+    try { next = consultarCirculo(latest.current, quem, bill) } catch { return }
+    onState(next)
+    const fala = await askCirculo(next)
+    if (fala) onState(narrarCirculo(latest.current, quem, fala))
+  }
   const read = async () => {
     if (!text.trim() || busy) return
     setBusy(true)
@@ -123,7 +135,7 @@ export function MeasureBox({ state, onState, draft, selected, onSign, onSend, on
       <div className="pn-row">
         <button className="pn-btn" disabled={!text.trim() || busy} onClick={read}>{busy ? '⏳ Lendo…' : '📋 Pedir leitura do gabinete'}</button>
       </div>
-      {sheet && <MeasureSheet state={state} id={sheet} ids={billIds} request={text} constraints={result?.constraints} speech={result?.speech} notes={result?.notes} consult={consult} onConsult={setConsult} onClose={() => setSheet(null)} onConfirm={(id, title) => { setSheet(null); onSend(id, title) }} onParecer={(p) => onState(guardarParecer(state, p))} onRewrite={(t) => { setText(t); setResult(null); setSheet(null) }} />}
+      {sheet && <MeasureSheet state={state} id={sheet} ids={billIds} request={text} constraints={result?.constraints} speech={result?.speech} notes={result?.notes} consult={consult} onConsult={setConsult} onClose={() => setSheet(null)} onConfirm={(id, title) => { setSheet(null); onSend(id, title) }} onParecer={(p) => onState(guardarParecer(state, p))} onCirculo={ouvirCirculo} onRewrite={(t) => { setText(t); setResult(null); setSheet(null) }} />}
       {result && (
         <div className="pn-preview">
           {result.fallback && <p className="pn-hint">⚠️ {result.fallback} Lido por palavras-chave.</p>}

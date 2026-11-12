@@ -9,6 +9,7 @@ import type { MeasureRef } from './interpret'
 import { MATTERS, type CustomDraft } from './custom'
 import type { ActionId, BillId, GameState } from './types'
 import type { Proposta } from './conselho'
+import type { Membro, ParecerCirculo } from './circulo'
 
 /**
  * Camada de IA (etapa 3B), parte sem internet: monta os pedidos e confere as respostas.
@@ -381,4 +382,30 @@ export function parseProposal(raw: string): { fala: string; ordem: string | null
   const fala = cleanText(data.fala, 700).replace(/^["“]|["”]$/g, '')
   const ordem = cleanText(data.ordem, 300)
   return fala ? { fala, ordem: ordem || null } : null
+}
+
+/**
+ * v0.40.1 (6E, parte 4): a fala de quem o presidente ouviu no círculo de confiança. A posição e a leitura já vêm das
+ * regras (com o erro e o viés de quem fala, que a IA não conhece e não deve corrigir); a IA só dá voz, no estilo dele.
+ */
+export function circleSpeechPrompt(state: GameState, m: Membro, p: ParecerCirculo): AiRequest {
+  const b = BILL_BY_ID[p.bill]
+  const pos = p.posicao === 'apoia' ? 'a favor de mandar' : p.posicao === 'ressalva' ? 'a favor, com ressalvas' : 'contra mandar agora'
+  return {
+    system: [
+      `Você é ${m.name}, do círculo de confiança do presidente num jogo de simulação política do Brasil. Todos os personagens são fictícios; não cite pessoas reais.`,
+      `O presidente ouve você sobre ${m.papel}. Fale só disso, em primeira pessoa, em 2 ou 3 frases, como numa conversa reservada no Planalto.`,
+      `Sua posição já está decidida: ${pos}. Sua leitura: ${p.leitura} Não mude a posição nem a leitura, e não invente números.`,
+      'Responda SOMENTE com JSON: {"fala":"..."}',
+    ].join('\n'),
+    user: `${countryContext(state)}\n\nMedida em questão: ${b.name} (${INSTRUMENTS[b.instrument].label}). ${b.summary}`,
+    maxTokens: 300,
+  }
+}
+
+/** Confere a fala do conselheiro. */
+export function parseCircleSpeech(raw: string): string | null {
+  const data = extractJson(raw) as { fala?: unknown } | null
+  const fala = data ? cleanText(data.fala, 600).replace(/^["“]|["”]$/g, '') : ''
+  return fala || null
 }

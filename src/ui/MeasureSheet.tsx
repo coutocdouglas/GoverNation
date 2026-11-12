@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react'
+import { CirculoBox } from './CirculoJanela'
+import type { MembroCirculo } from '../game/circulo'
 import { BILL_BY_ID, GDP_BILLIONS, INSTRUMENTS } from '../game/data/bills'
 import { GROUP_BY_ID } from '../game/data/groups'
 import { conditionsOf, fichaDaMedida, LEVEL_LABEL } from '../game/ficha'
@@ -35,7 +37,7 @@ const STANCE_CLS = {
  * quem vai reagir, nome) · 2 · Ficha (resumo executivo, notas Congressual e Judicial, risco jurídico em número,
  * potencial de crescimento e a ficha da pasta). Depois: votação (lei) ou assinatura (decreto, MP).
  */
-export function MeasureSheet({ state, id, ids, request, constraints, speech, notes, startStep = 1, onClose, onConfirm, consult, onConsult, backLabel, onParecer, onRewrite }: {
+export function MeasureSheet({ state, id, ids, request, constraints, speech, notes, startStep = 1, onClose, onConfirm, consult, onConsult, backLabel, onParecer, onRewrite, onCirculo }: {
   state: GameState
   id: BillId
   /** Outras leituras possíveis do mesmo pedido (troca na etapa 1). */
@@ -58,6 +60,8 @@ export function MeasureSheet({ state, id, ids, request, constraints, speech, not
   backLabel?: string
   /** Fase A: guarda o parecer do ministro na rodada (um por mês por ministro). */
   onParecer?: (p: Parecer) => void
+  /** v0.40.1: ouvir um membro do círculo de confiança sobre esta medida (um por mês). */
+  onCirculo?: (quem: MembroCirculo, bill: BillId) => Promise<void>
   /** Fase A: "acatar as sugestões e reescrever": devolve o texto novo para o campo da medida. */
   onRewrite?: (text: string) => void
 }) {
@@ -67,6 +71,7 @@ export function MeasureSheet({ state, id, ids, request, constraints, speech, not
   const [summary, setSummary] = useState<{ id: BillId; text: string | null } | null>(null)
   const [pending, setPending] = useState<BillId | null>(startStep === 2 && aiReady() ? id : null)
   const [hearing, setHearing] = useState(false)
+  const [ouvindo, setOuvindo] = useState<MembroCirculo | null>(null)
   const [ciente, setCiente] = useState(false)
   const b = BILL_BY_ID[cur]
   const f = fichaDaMedida(state, cur)
@@ -210,6 +215,7 @@ export function MeasureSheet({ state, id, ids, request, constraints, speech, not
                 )}
               </div>
             )}
+            {onCirculo && <CirculoBox state={state} bill={cur} ouvindo={ouvindo} onOuvir={(quem) => { setOuvindo(quem); void onCirculo(quem, cur).finally(() => setOuvindo(null)) }} />}
             <label className="pn-name">
               <span>🏷️ Nome da medida <small>(opcional: vira a manchete do telejornal e fica na Ficha de governo)</small></span>
               <input className="pn-input" maxLength={60} value={title} placeholder="Ex.: Renda Livre, Brasil Sem Fila" onChange={(e) => setTitle(e.target.value)} />

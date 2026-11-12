@@ -1,5 +1,12 @@
 # Novidades
 
+## 0.40.1 (12/11/2026)
+- **Bloco 6E, parte 4 (telas e IA): o círculo de confiança. Com isso, o bloco 6E (governo com vida) está completo.**
+  - **Na leitura da medida**, logo depois do parecer do ministro da pasta: **🤝 Ouvir o círculo de confiança**, com o líder do governo, o advogado, o vice e o ministro da Fazenda, cada um com o Elo na foto, o que avalia e a pista de risco em palavras. Um por mês. O aviso lembra que ouvir alguém de fama ruim deixa rastro.
+  - **O parecer** aparece com a posição (pode mandar, com cuidado, não mandaria) e a fala. Com a IA ligada, ela dá voz a quem você ouviu, sem mudar a posição nem inventar números; sem IA, vale o texto das regras.
+  - **Radar:** linha e janela "Círculo de confiança", com os quatro e o que você ouviu no mês.
+- 614 testes (4 novos nas telas). Conferido no navegador: a leitura da medida com o círculo e a consulta à Fazenda.
+
 ## 0.40.0 (12/11/2026)
 - **Bloco 6E, parte 4: o círculo de confiança (regras).** Ainda **sem tela**: nada muda na partida até a v0.40.1.
   - **Quem está no círculo:** o líder do governo (avalia o placar), o advogado (o risco jurídico), o vice (a leitura política) e o ministro da Fazenda (as contas e o mercado).
