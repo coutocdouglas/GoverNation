@@ -11,7 +11,7 @@ import { PARTY_BY_ID } from '../game/data/parties'
 import { ACTION_BY_ID, ACTIONS, ACTIONS_PER_MONTH, blockedReason, effectMultiplier } from '../game/actions'
 import { GROUPS } from '../game/data/groups'
 import { advanceMonth, isCopomMonth, monthLabel, TERM_MONTHS, type MonthPlan } from '../game/game'
-import { articulate, articulateBlockedReason, gavetaReason, ministryNow, peekRound, plenaryToday, queueHouse, sendBlockedReason, sendMeasure, voteNow, voteNowBlockedReason, type FloorOptions } from '../game/rodada'
+import { articulate, articulateBlockedReason, efetivarInterino, gavetaReason, ministryNow, peekRound, plenaryToday, queueHouse, sendBlockedReason, sendMeasure, voteNow, voteNowBlockedReason, type FloorOptions } from '../game/rodada'
 import { Art } from './Art'
 import type { MinistryChange } from '../game/camara'
 import { VoteAnimation } from './VoteAnimation'
@@ -340,7 +340,7 @@ export function GameScreen({ state, onChange, onExit }: {
     })
   }
   const goPending = (t: PendingTarget) => {
-    if (t === 'caso' || t === 'cpi' || t === 'inteligencia' || t === 'pressao') { abrir(t === 'caso' ? 'casos' : t); return }
+    if (t === 'caso' || t === 'cpi' || t === 'inteligencia' || t === 'pressao' || t === 'pasta') { abrir(t === 'caso' ? 'casos' : t === 'pasta' ? 'pastajogo' : t); return }
     if (t === 'camara' || t === 'senado' || t === 'supremo') { setTab('governo'); setGovTab(t); window.scrollTo({ top: 0, behavior: 'smooth' }); return }
     const el = document.getElementById(t === 'promessas' ? 'promessas' : t === 'evento' ? 'fato-do-mes' : 'fato-do-mes')
     if (t === 'cobrancas') { medidaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }); return }
@@ -576,7 +576,7 @@ export function GameScreen({ state, onChange, onExit }: {
           ) : govTab === 'senado' ? (
             <SenadoView state={state} articulations={peekRound(state)?.articulations ?? []} onToggle={toggleArticulation} onNegotiate={setVoteSheet} deals={deals} plan={plan} onState={onChange} onToast={toast} />
           ) : govTab === 'ministerios' ? (
-            <MinistriosView state={state} change={ministry} done={!!peekRound(state)?.ministryDone} onChange={(ch) => {
+            <MinistriosView state={state} change={ministry} done={!!peekRound(state)?.ministryDone} onEfetivar={(area) => { try { onChange(efetivarInterino(state, area)); toast('🏢 Interino efetivado como titular da pasta.') } catch (e) { toast(`✋ ${(e as Error).message}`) } }} onChange={(ch) => {
               // Etapa 2: ceder, trocar ou retomar vale na hora.
               if (!ch) { setMinistry(null); return }
               try { onChange(ministryNow(state, ch)); toast(ch.party ? `🏢 Pasta ${state.cabinet[ch.area] ? 'trocada' : 'cedida'} ao ${PARTY_BY_ID[ch.party].sigla}: vale já.` : '🏢 Pasta retomada: vale já.') } catch (e) { toast(`✋ ${(e as Error).message}`) }

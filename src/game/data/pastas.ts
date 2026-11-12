@@ -6,8 +6,8 @@ import type { AreaId } from './ministers'
  * Plano: docs/projeto/plano-etapa-6.md; DESIGN.md 27.36.
  */
 export const PASTAS = {
-  /** Desligado até as telas (v0.38.1). Testes e simulador usam `ligarPastas`. */
-  ativo: false,
+  /** Ligado desde as telas (v0.38.1). Testes e simulador podem usar `ligarPastas`. */
+  ativo: true,
   /**
    * Meses entre trocas de ministro (trocar de partido, retomar uma pasta cedida ou fazer a reforma). Ceder a pasta
    * de um interino a um partido não conta como troca e vale a qualquer momento; efetivar o interino também não.

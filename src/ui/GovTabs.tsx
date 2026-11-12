@@ -9,6 +9,8 @@ import { MINISTERS, type AreaId } from '../game/data/ministers'
 import { PARTY_BY_ID } from '../game/data/parties'
 import { yearOf } from '../game/memory'
 import { ministriesInTrouble, ministryGoal, wearLabel } from '../game/ministerios'
+import { PASTAS, pastasLigadas } from '../game/data/pastas'
+import { comInterino, efetivado, efetivarBlockedReason, mesesParaTroca, trocaBlockedReason } from '../game/pastas'
 import { STATUS_LABEL } from '../game/promises'
 import type { Articulation, BillId, Deal, GameState } from '../game/types'
 import type { MonthPlan } from '../game/game'
@@ -61,18 +63,24 @@ export function SenadoView({ state, articulations, onToggle, onNegotiate, deals,
 const STATUS_CLS: Record<string, string> = { rumo: 'up', cumprida: 'up', risco: 'warn', longe: 'dn', quase: 'warn', quebrada: 'dn' }
 
 /** Aba Ministérios: os 13 ministros, desgaste, meta de cada pasta e reforma ministerial. */
-export function MinistriosView({ state, change, onChange, done }: { state: GameState; change: MinistryChange | null; onChange: (c: MinistryChange | null) => void; done?: boolean }) {
+export function MinistriosView({ state, change, onChange, done, onEfetivar }: { state: GameState; change: MinistryChange | null; onChange: (c: MinistryChange | null) => void; done?: boolean; onEfetivar?: (area: AreaId) => void }) {
   const [open, setOpen] = useState<AreaId | null>(null)
+  // Etapa 6E (v0.38): com os ministérios vivos, vale uma troca a cada 3 meses (ceder a pasta de um interino é livre).
+  const vivos = pastasLigadas()
+  const meses = mesesParaTroca(state)
+  const bloqueio = (ch: MinistryChange): string | null => (vivos ? trocaBlockedReason(state, ch) : done ? 'Uma troca por rodada.' : null)
+  const emJogo = vivos ? state.pastas?.jogo ?? null : null
   const ceded = Object.values(state.cabinet ?? {}).filter(Boolean).length
   const trouble = ministriesInTrouble(state)
   return (
     <div className="pn-col">
       <section className="pn-card">
-        <h3>🏢 Ministérios <span className="pn-badge">{ceded} de {CAMARA.ministry.maxCeded} pastas cedidas · vale na hora · uma troca por rodada</span></h3>
+        <h3>🏢 Ministérios <span className="pn-badge">{ceded} de {CAMARA.ministry.maxCeded} pastas cedidas · vale na hora · {vivos ? (meses > 0 ? `próxima troca em ${meses} ${meses === 1 ? 'mês' : 'meses'}` : `uma troca a cada ${PASTAS.intervaloTroca} meses: liberada`) : 'uma troca por rodada'}</span></h3>
         <p className="pn-hint">
           Cada ministro tem um <b>desgaste</b> de 0 a 100. Sobe com crise da área sem resposta, medida derrubada ou suspensa no Supremo e meta longe;
           cai quando você resolve o fato do mês da área, põe medidas da área em vigor e a meta anda. A partir de {MINISTERIOS.worn}, o ministro está desgastado e custa aprovação no grupo que mais sente a pasta.
           Trocar o ministro zera o desgaste.
+          {vivos && <> <b>Uma troca de ministro a cada {PASTAS.intervaloTroca} meses</b> (trocar a pasta de partido, retomar ou fazer a reforma pela agenda). Ceder a pasta de um interino a um partido, ou efetivar o interino, não conta como troca e vale a qualquer momento.</>}
         </p>
         {trouble.length > 0 && (
           <p className="pn-hint warn" style={{ marginTop: 6 }}>
@@ -90,6 +98,9 @@ export function MinistriosView({ state, change, onChange, done }: { state: GameS
             const locked = (CAMARA.ministry.locked as readonly AreaId[]).includes(area)
             const wear = Math.round(ms.wear)
             const wcls = wear >= MINISTERIOS.worn ? 'dn' : wear >= 45 ? 'warn' : 'up'
+            const interino = vivos ? comInterino(state, area) : !seat && state.interinos?.[area] === m.name
+            const efetivo = vivos && efetivado(state, area)
+            const porque = efetivarBlockedReason(state, area)
             const fmt = (v: number) => goal.count ? `${Math.round(v)}` : num(v, goal.unit === '%' ? 1 : 0)
             return (
               <div key={area} className={`pn-minister pn-minister--full ${seat ? 'ceded' : ''} ${pending ? 'pending' : ''} ${wear >= MINISTERIOS.worn ? 'worn' : ''}`}>
@@ -98,19 +109,26 @@ export function MinistriosView({ state, change, onChange, done }: { state: GameS
                   <small>{base.icon} {base.areaName} · no cargo desde {when(ms.since)}</small>
                   <b>{m.name}</b>
                   <small style={{ color: PARTY_BY_ID[m.party].color }}>{PARTY_BY_ID[m.party].sigla}{seat ? ' · pasta cedida' : ''}</small>
-                  {!seat && state.interinos?.[area] === m.name && (
+                  {interino && (
                     <small className="pn-pista" title="Técnico de carreira que assumiu depois que o ministro saiu por causa de um caso. Fica até você ceder a pasta a um partido.">
-                      <span className="pn-badge warn">interino</span> Técnico de carreira: assumiu quando o ministro saiu por causa de um caso. Fica até você ceder a pasta.
+                      <span className="pn-badge warn">interino</span> Técnico de carreira: assumiu quando o ministro saiu por causa de um caso. {vivos ? 'Dá para ceder a pasta a um partido ou efetivá-lo, sem gastar a troca.' : 'Fica até você ceder a pasta.'}
                     </small>
                   )}
+                  {efetivo && (
+                    <small className="pn-pista" title="Interino efetivado como titular: sem padrinho político, segura pior a crise da área.">
+                      <span className="pn-badge">titular efetivado</span> Sem padrinho político: a crise da área ignorada desgasta {Math.round((PASTAS.efetivar.crise - 1) * 100)}% mais.
+                    </small>
+                  )}
+                  {emJogo?.area === area && <small className="pn-pista"><span className="pn-badge warn">em jogo</span> O {PARTY_BY_ID[emJogo.party].sigla} cobra esta pasta: responda pelo Radar ou pelas pendências.</small>}
                 </div>
                 <div className="pn-minister__act">
                   {pending ? (
                     <button className="pn-btn pn-btn--small" onClick={() => onChange(null)}>✔ {pending.party ? `${seat ? 'trocar pelo' : 'ceder ao'} ${PARTY_BY_ID[pending.party].sigla}` : 'retomar'} · desfazer</button>
                   ) : locked ? <small className="pn-hint" style={{ margin: 0 }}>🔒 do presidente</small> : (
                     <>
-                      {seat && <button className="pn-btn pn-btn--ghost pn-btn--small" disabled={!!change || done} title={change || done ? 'Uma troca por rodada.' : 'O ministro original volta (vale na hora).'} onClick={() => onChange({ area, party: null })}>Retomar</button>}
-                      <button className="pn-btn pn-btn--ghost pn-btn--small" disabled={!!change || done} title={change || done ? 'Uma troca por rodada.' : 'Vale na hora: o partido já vota diferente nesta rodada.'} onClick={() => setOpen(open === area ? null : area)}>{seat ? 'Trocar…' : 'Ceder…'}</button>
+                      {seat && <button className="pn-btn pn-btn--ghost pn-btn--small" disabled={!!change || !!bloqueio({ area, party: null })} title={bloqueio({ area, party: null }) ?? 'O ministro original volta (vale na hora).'} onClick={() => onChange({ area, party: null })}>Retomar</button>}
+                      {vivos && interino && onEfetivar && <button className="pn-btn pn-btn--ghost pn-btn--small" disabled={!!porque} title={porque ?? `O técnico vira titular. Não conta como troca, mas a pasta fica sem padrinho político (crise ignorada ${Math.round((PASTAS.efetivar.crise - 1) * 100)}% pior) e trocar depois conta como troca.`} onClick={() => onEfetivar(area)}>Efetivar</button>}
+                      <button className="pn-btn pn-btn--ghost pn-btn--small" disabled={!!change || !!bloqueio({ area, party: 'mdn' })} title={bloqueio({ area, party: 'mdn' }) ?? (interino && vivos ? 'Ceder a pasta do interino não conta como troca: vale já.' : 'Vale na hora: o partido já vota diferente nesta rodada.')} onClick={() => setOpen(open === area ? null : area)}>{seat ? 'Trocar…' : 'Ceder…'}</button>
                     </>
                   )}
                 </div>
@@ -150,7 +168,7 @@ export function MinistriosView({ state, change, onChange, done }: { state: GameS
         </div>
         <p className="pn-hint" style={{ marginTop: 10 }}>
           Ceder uma pasta traz o partido para a base: a relação sobe {CAMARA.ministry.relationGain} e a bancada vota mais com o governo. O seu partido não gosta de dividir espaço ({CAMARA.ministry.ownPartyHit}),
-          e o risco de escândalo sobe. Tirar a pasta de um partido (retomar ou trocar por outro) custa {CAMARA.ministry.dismissHit} de relação com ele. Fazenda e Relações Institucionais ficam com gente do presidente.
+          e o risco de escândalo sobe. Tirar a pasta de um partido (retomar ou trocar por outro) custa {CAMARA.ministry.dismissHit} de relação com ele.{vivos ? ' Uma reforma ministerial (troca de até 3 pastas de uma vez) fica na agenda do presidente, no lugar da medida do mês.' : ''} Fazenda e Relações Institucionais ficam com gente do presidente.
         </p>
       </section>
     </div>

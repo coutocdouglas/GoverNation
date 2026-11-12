@@ -21,6 +21,7 @@ import { CredibilidadeJanela, credibLabel, ExplosivasJanela, explosivasVivas } f
 import { ResumoLinha, type JanelaDef } from './Janelas'
 import { PressaoJanela, resumoPressao } from './PressaoJanela'
 import { GovernoJanela, resumoGoverno } from './GovernoJanela'
+import { PastaJogoJanela, resumoPastaJogo } from './PastasJanela'
 
 /** v0.32.1 (6.0): o Radar e as janelas de detalhe, tirados do GameScreen (só mudou de lugar). */
 type Tom = 'dn' | 'warn' | 'up'
@@ -39,6 +40,7 @@ function linhasDoRadar(state: GameState, intelOrdem: OrdemIntel | null): Linha[]
   const acao = peekRound(state)?.acao
   const pressao = resumoPressao(state)
   const governo = resumoGoverno(state)
+  const pastaJogo = resumoPastaJogo(state)
   return [
     ...(precisa.length ? [{ id: 'precisa', icone: '🚨', titulo: 'Precisa de você', texto: precisa[0].texto, tag: `${precisa.length} alerta${precisa.length > 1 ? 's' : ''}`, tom: precisa.some((a) => a.grave) ? ('dn' as Tom) : ('warn' as Tom) }] : []),
     { id: 'agenda', icone: '🗓️', titulo: 'Agenda do presidente', texto: acao ? rotuloAcao(state, acao) : peekRound(state)?.measure ? 'A medida do mês já foi: ação só no mês que vem' : 'Uma ação política no lugar da medida', tag: acao ? 'ação do mês' : undefined, tom: acao ? ('up' as Tom) : undefined },
@@ -54,6 +56,7 @@ function linhasDoRadar(state: GameState, intelOrdem: OrdemIntel | null): Linha[]
     { id: 'reputacao', icone: '🪞', titulo: 'Reputação do governo', texto: 'Como o país te vê e a exposição a escândalo', tag: `escândalo ${escand}/100`, tom: escand >= 40 ? 'dn' : escand >= 15 ? 'warn' : 'up' },
     ...(credibilidadeLigada() ? [{ id: 'credibilidade', icone: '🎖️', titulo: 'Credibilidade', texto: credibOf(state).compromisso ? `Compromisso em aberto: ${credibOf(state).compromisso!.titulo}` : 'Quanto vale a sua palavra', tag: `${Math.round(credibOf(state).valor)}/100`, tom: credibLabel(credibOf(state).valor).cls as Tom }] : []),
     ...(explosivasVivas(state).length ? [{ id: 'explosiva', icone: '💣', titulo: 'Medida explosiva', texto: 'O país reage além da conta: dá para recuar com custo', tag: 'atenção', tom: 'dn' as Tom }] : []),
+    ...(pastaJogo ? [{ id: 'pastajogo', icone: '🏢', titulo: 'A pasta está em jogo', texto: `${pastaJogo.titulo}: ${pastaJogo.texto}`, tag: pastaJogo.respondida ? 'respondida' : 'responder', tom: (pastaJogo.respondida ? 'warn' : 'dn') as Tom }] : []),
     ...(governo ? [{ id: 'governo', icone: '🤝', titulo: 'Vice e líder do governo', texto: governo.texto, tag: governo.tag, tom: governo.tom as Tom | undefined }] : []),
     ...(pressao ? [{ id: 'pressao', icone: '📉', titulo: 'Pressão na votação', texto: `${pressao.titulo}: ${pressao.texto}`, tag: pressao.respondida ? 'respondida' : 'responder', tom: (pressao.respondida ? 'warn' : 'dn') as Tom }] : []),
     { id: 'advogado', icone: '💼', titulo: 'Seu advogado', texto: 'Parecer nas propostas e documentos dos casos' },
@@ -85,6 +88,7 @@ export function janelaDefsDoRadar(state: GameState): Record<string, JanelaDef> {
     reputacao: { id: 'reputacao', titulo: 'Reputação do governo', icone: '🪞', largura: 600 },
     credibilidade: { id: 'credibilidade', titulo: 'Credibilidade', icone: '🎖️', largura: 560 },
     explosiva: { id: 'explosiva', titulo: 'Medida explosiva', icone: '💣', largura: 600 },
+    pastajogo: { id: 'pastajogo', titulo: 'A pasta está em jogo', icone: '🏢', largura: 620 },
     governo: { id: 'governo', titulo: 'Vice e líder do governo', icone: '🤝', largura: 640 },
     pressao: { id: 'pressao', titulo: 'Pressão antes da votação', icone: '📉', largura: 620 },
     advogado: { id: 'advogado', titulo: 'Seu advogado', icone: '💼', largura: 560 },
@@ -119,6 +123,7 @@ export function conteudoDaJanela(id: string, p: {
     case 'advogado': return <AdvogadoCard state={state} decisoes={casoDecisoes} advogado={advogado} cpi={cpiDecisao} intel={intelOrdem} onChange={p.onAdvogado} />
     case 'credibilidade': return <CredibilidadeJanela state={state} />
     case 'explosiva': return <ExplosivasJanela state={state} onState={p.onState} onToast={p.onToast} />
+    case 'pastajogo': return <PastaJogoJanela state={state} onState={p.onState} onToast={p.onToast} />
     case 'governo': return <GovernoJanela state={state} onState={p.onState} onToast={p.onToast} />
     case 'pressao': return <PressaoJanela state={state} onState={p.onState} onToast={p.onToast} />
     case 'precisa': return <AlertasLista state={state} />

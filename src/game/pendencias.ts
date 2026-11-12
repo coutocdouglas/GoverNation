@@ -25,11 +25,14 @@ import { cpiAtual } from './cpi'
 import { sementeAvisada } from './inteligencia'
 import { CPI } from './data/cpi'
 import { PRESSAO, pressaoLigada } from './data/pressao'
+import { pastasLigadas } from './data/pastas'
+import { MINISTER_BY_AREA } from './data/ministers'
+import { motivoPasta } from './pastas'
 import { deAuthor, justiceName } from './supremo'
 import { TSE_BY_ID } from './data/supremo'
 
 export type Urgency = 'red' | 'yellow' | 'green'
-export type PendingTarget = 'evento' | 'camara' | 'senado' | 'supremo' | 'promessas' | 'cobrancas' | 'licitacao' | 'caso' | 'cpi' | 'inteligencia' | 'pressao'
+export type PendingTarget = 'evento' | 'camara' | 'senado' | 'supremo' | 'promessas' | 'cobrancas' | 'licitacao' | 'caso' | 'cpi' | 'inteligencia' | 'pressao' | 'pasta'
 
 export interface Pendencia {
   id: string
@@ -102,6 +105,19 @@ export function pendencias(s: GameState): Pendencia[] {
       title: `${PRESSAO.tipos[pr.tipo].nome} contra: ${BILL_BY_ID[pr.bill]?.name ?? pr.bill}`,
       detail: pr.resposta ? `Você respondeu (${pr.resposta}) · esfria em ${leftText(left)}` : `Tira votos da medida · enfrentar, negociar, adiar ou retirar · sem resposta, cresce todo mês`,
       urgency: pr.resposta ? 'green' : left <= 1 ? 'red' : 'yellow', weight: pr.resposta ? 20 : 48,
+    })
+  }
+
+  // v0.38.1 (6E, parte 2): o partido cobra uma pasta cedida. Sem resposta, perde a paciência no fim do prazo.
+  const pj = pastasLigadas() ? s.pastas?.jogo : null
+  if (pj) {
+    const left = Math.max(0, pj.ate - now)
+    const pasta = MINISTER_BY_AREA[pj.area].areaName.toLowerCase()
+    out.push({
+      id: `pasta-${pj.area}`, icon: '🏢', target: 'pasta', left,
+      title: `${PARTY_BY_ID[pj.party].sigla} cobra a pasta de ${pasta}`,
+      detail: pj.resposta ? `Você respondeu (${pj.resposta === 'renegociar' ? 'renegociou' : 'retirou'}) · esfria em ${leftText(left)}` : `${motivoPasta(pj)} · renegociar, retirar a pasta ou deixar passar · prazo ${leftText(left)}`,
+      urgency: pj.resposta ? 'green' : left <= 1 ? 'red' : 'yellow', weight: pj.resposta ? 20 : 47,
     })
   }
 

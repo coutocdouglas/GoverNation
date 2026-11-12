@@ -195,7 +195,7 @@ export function opcoesPasta(s: GameState, conversas: number, conversasMax: numbe
   const j = s.pastas?.jogo
   const sigla = j ? PARTY_BY_ID[j.party].sigla : 'partido'
   const base: Omit<OpcaoPasta, 'bloqueio'>[] = [
-    { acao: 'renegociar', nome: 'Renegociar', efeito: `Emendas por 3 meses; fidelidade do ${sigla} ${sg(R.renegociar.fidelidade)} e o ministro desgasta ${sg(R.renegociar.desgaste)}.`, custo: [`gasta ${R.renegociar.conversas} das ${conversasMax} conversas da rodada`, 'o gasto das emendas pesa nas contas'] },
+    { acao: 'renegociar', nome: 'Renegociar', efeito: `Emendas por 3 meses; fidelidade do ${sigla} ${sg(R.renegociar.fidelidade)} e o desgaste do ministro cai ${Math.abs(R.renegociar.desgaste)}.`, custo: [`gasta ${R.renegociar.conversas} das ${conversasMax} conversas da rodada`, 'o gasto das emendas pesa nas contas'] },
     { acao: 'retirar', nome: 'Retirar a pasta', efeito: `Você retoma a pasta; o ${sigla} deixa a base.`, custo: ['conta como a troca de ministro (a próxima só em 3 meses)', 'o partido perde relação e ameaça retaliar'] },
   ]
   return base.map((o) => ({ ...o, bloqueio: pastaJogoBlockedReason(s, o.acao, conversas, conversasMax) }))

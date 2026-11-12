@@ -208,7 +208,8 @@ describe('Etapa 2: mesa de negociação', () => {
     }
     const m = ministryNow(feb(), { area: 'saude', party: 'psn' })
     expect(m.cabinet.saude?.party).toBe('psn')
-    expect(() => ministryNow(m, { area: 'cidades', party: 'pra' })).toThrow(/uma mudança de ministério/)
+    // Com os ministérios vivos (v0.38), o limite é uma troca a cada 3 meses, não uma por rodada.
+    expect(() => ministryNow(m, { area: 'cidades', party: 'pra' })).toThrow(/próxima troca libera em 3 meses|uma mudança de ministério/)
   })
 })
 

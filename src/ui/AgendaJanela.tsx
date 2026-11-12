@@ -1,24 +1,28 @@
 import { useState } from 'react'
-import { acaoBlockedReason, agendaOf, cancelarAcao, coberturaFator, escolherAcao, fadigaDe, mesma, previaAcao, rotuloAcao, ruaOpcoes, type AcaoAgenda, type PreviaAcao } from '../game/agenda'
+import { acaoBlockedReason, agendaOf, cancelarAcao, coberturaFator, escolherAcao, fadigaDe, mesma, previaAcao, reformaBlockedReason, rotuloAcao, ruaOpcoes, type AcaoAgenda, type PreviaAcao } from '../game/agenda'
 import { fatigued, monthKind, speechOf, statementsFor } from '../game/assessoria'
 import { agendaUsada } from '../game/caso'
-import { ministerOf } from '../game/camara'
+import { ministerOf, ministryBlockedReason, type MinistryChange } from '../game/camara'
+import { CAMARA, NOMINEES } from '../game/data/camara'
+import { PASTAS, pastasLigadas } from '../game/data/pastas'
+import { MINISTER_BY_AREA, type AreaId } from '../game/data/ministers'
+import { mesesParaTroca } from '../game/pastas'
 import { AGENDA_ACOES, IMPRENSA, VOZES } from '../game/data/agenda'
 import { COMPROMISSO, credibilidadeLigada, PESQUISA, type NivelPesquisa } from '../game/data/credibilidade'
 import { pesquisaBlockedReason } from '../game/pesquisa'
 import { credibOf } from '../game/credibilidade'
 import { ASSESSORIA } from '../game/data/assessoria'
 import { AGENDA } from '../game/data/caso'
-import { PARTIES } from '../game/data/parties'
+import { PARTIES, PARTY_BY_ID } from '../game/data/parties'
 import { currentEvent } from '../game/events'
 import type { MonthPlan } from '../game/game'
 import { AREAS, wearLabel } from '../game/ministerios'
 import { peekRound } from '../game/rodada'
 import { absMonth } from '../game/memory'
-import type { GameState } from '../game/types'
+import type { GameState, PartyId } from '../game/types'
 import { effectChips, type Chip } from './effects'
 
-type Cat = 'post' | 'rua' | 'nacao' | 'lider' | 'ministro' | 'imprensa' | 'pesquisa'
+type Cat = 'post' | 'rua' | 'nacao' | 'lider' | 'ministro' | 'imprensa' | 'pesquisa' | 'reforma'
 const CATS: { id: Cat; nome: string }[] = [
   { id: 'post', nome: '📣 Post' },
   { id: 'rua', nome: '🚶 Rua' },
@@ -27,6 +31,7 @@ const CATS: { id: Cat; nome: string }[] = [
   { id: 'ministro', nome: '🏢 Cobrar ministro' },
   { id: 'imprensa', nome: '🗞️ Imprensa' },
   { id: 'pesquisa', nome: '📊 Pesquisa' },
+  { id: 'reforma', nome: '🔄 Reforma ministerial' },
 ]
 
 const pct = (x: number) => `${Math.round(x * 100)}%`
@@ -60,6 +65,54 @@ function Opcao({ a, titulo, texto, direita, atual, base, travada, crise, escolhe
     </button>
   )
 }
+
+/**
+ * Bloco 6E, parte 2 (v0.38.1): a reforma ministerial. Escolhe de 1 a 3 pastas, o que fazer em cada uma (ceder, trocar ou retomar)
+ * e anota a ação do mês. Conta como a troca de ministro do intervalo de 3 meses.
+ */
+function ReformaPainel({ base, atual, travada, crise, escolher }: { base: GameState; atual: AcaoAgenda | null; travada: string | null; crise: boolean; escolher: (a: AcaoAgenda) => void }) {
+  const [trocas, setTrocas] = useState<MinistryChange[]>(atual?.tipo === 'reforma' ? atual.trocas : [])
+  const meses = mesesParaTroca(base)
+  const set = (area: AreaId, v: string) => setTrocas((prev) => {
+    const resto = prev.filter((t) => t.area !== area)
+    if (!v) return resto
+    return [...resto, { area, party: v === 'retomar' ? null : (v as PartyId) }]
+  })
+  const a: AcaoAgenda = { tipo: 'reforma', trocas }
+  const on = !!atual && mesma(atual, a)
+  const motivo = on ? null : travada ?? (trocas.length ? reformaBlockedReason(base, trocas) : 'Escolha de 1 a ' + PASTAS.reforma.maxPastas + ' pastas para trocar.')
+  const p = trocas.length ? previaAcao(base, a) : null
+  return (
+    <div>
+      <p className="pn-hint">Troca até {PASTAS.reforma.maxPastas} pastas de uma vez, <b>no lugar da medida do mês</b>. Conta como a troca de ministro: depois dela, a próxima só em {PASTAS.intervaloTroca} meses. Pasta trocada zera o desgaste; o gesto de renovação só rende com ministro desgastado, tem teto e cai pela metade a cada reforma no último ano. {meses > 0 ? `🔒 Libera em ${meses} ${meses === 1 ? 'mês' : 'meses'}.` : ''}</p>
+      {MINISTERS_PARA_REFORMA(base).map((area) => {
+        const m = ministerOf(base, area)
+        const seat = base.cabinet?.[area]
+        const w = Math.round(base.ministries[area]?.wear ?? 0)
+        const atualV = trocas.find((t) => t.area === area)
+        const valor = atualV ? (atualV.party === null ? 'retomar' : atualV.party) : ''
+        return (
+          <div key={area} className="pn-pend__wrap" style={{ marginBottom: 4 }}>
+            <div className="pn-pend__body"><b>{MINISTER_BY_AREA[area].areaName}</b><small>{m.name} · {wearLabel(w)} {w}{seat ? ' · pasta cedida' : ''}</small></div>
+            <select value={valor} onChange={(e) => set(area, e.target.value)} disabled={mesesParaTroca(base) > 0 && !atual}>
+              <option value="">manter</option>
+              {seat && <option value="retomar">retomar a pasta</option>}
+              {NOMINEES.map((n) => <option key={n.party} value={n.party} disabled={!!ministryBlockedReason(base, { area, party: n.party })}>{seat ? 'trocar pelo' : 'ceder ao'} {PARTY_BY_ID[n.party].sigla}</option>)}
+            </select>
+          </div>
+        )
+      })}
+      {p && <span className="pn-chips">{chipsDe(p, crise).map((c, k) => <span key={k} className={`pn-chipfx ${c.tone}`} title={c.title}>{c.text}</span>)}</span>}
+      <div className="pn-row" style={{ marginTop: 8 }}>
+        <button type="button" className="pn-btn pn-btn--small" disabled={!!motivo} title={motivo ?? undefined} onClick={() => escolher(a)}>{on ? 'Desfazer a reforma' : `Anotar a reforma (${trocas.length} ${trocas.length === 1 ? 'pasta' : 'pastas'})`}</button>
+        {motivo && <small className="pn-hint">🔒 {motivo}</small>}
+      </div>
+    </div>
+  )
+}
+
+/** As pastas que a reforma pode mexer (Fazenda e Relações Institucionais ficam com gente do presidente). */
+const MINISTERS_PARA_REFORMA = (s: GameState): AreaId[] => AREAS.filter((a) => !(CAMARA.ministry.locked as readonly AreaId[]).includes(a) && !!s)
 
 /**
  * Bloco 6A (v0.34.1): a janela "Agenda do presidente". Uma ação política por mês, no lugar da medida nova.
@@ -130,7 +183,7 @@ export function AgendaJanela({ state, plan, billPronto, pesquisa, onPesquisa, on
         <p className="pn-hint">🗣️ Peso do discurso nesta crise: <b>{pct(speechOf(ev))}</b>. {speechOf(ev) <= 0.35 ? 'É um problema material: falar quase não resolve.' : speechOf(ev) >= 0.65 ? 'Aqui o que se diz muda quem leva a culpa.' : 'Falar ajuda um pouco, mas não substitui agir.'} Só com post ou presença, “Foge das crises” ainda pesa {pct(ASSESSORIA.omissoShare)}.</p>
       )}
       <div className="pn-subnav" style={{ flexWrap: 'wrap' }}>
-        {CATS.filter((c) => c.id !== 'pesquisa' || credibilidadeLigada()).map((c) => <button key={c.id} type="button" className={cat === c.id ? 'on' : ''} onClick={() => setCat(c.id)}>{c.nome}</button>)}
+        {CATS.filter((c) => (c.id !== 'pesquisa' || credibilidadeLigada()) && (c.id !== 'reforma' || pastasLigadas())).map((c) => <button key={c.id} type="button" className={cat === c.id ? 'on' : ''} onClick={() => setCat(c.id)}>{c.nome}</button>)}
       </div>
       <div className="pn-empresas pn-caso__acoes">
         {cat === 'post' && (
@@ -161,6 +214,7 @@ export function AgendaJanela({ state, plan, billPronto, pesquisa, onPesquisa, on
             return <Opcao {...ctx} key={area} a={{ tipo: 'ministro', area, tom }} titulo={m.name} texto={m.role} direita={`${wearLabel(w)} · ${w}`} />
           })}
         </>}
+        {cat === 'reforma' && <ReformaPainel base={base} atual={atual} travada={travada} crise={crise} escolher={escolher} />}
         {cat === 'pesquisa' && <>
           <p className="pn-hint">A pesquisa <b>não entra no lugar da medida</b>: gasta {PESQUISA.agenda} espaço da agenda e dinheiro. A aprovação geral está sempre visível; os grupos aparecem em faixa até você encomendar uma pesquisa, que mostra o número com margem de erro. O erro nunca passa da margem.</p>
           {(Object.keys(PESQUISA.niveis) as NivelPesquisa[]).map((n) => {

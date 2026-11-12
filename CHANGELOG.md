@@ -1,5 +1,12 @@
 # Novidades
 
+## 0.38.1 (12/11/2026)
+- **Bloco 6E, parte 2 (telas): ministérios com vida. O bloco está ligado.**
+  - **Aba Ministérios:** mostra "próxima troca em N meses" (uma troca a cada 3 meses), o botão **Efetivar** no interino (vira "titular efetivado", sem padrinho político) e **Ceder…** livre no interino, sem gastar a troca. A pasta cobrada pelo partido ganha a marca "em jogo".
+  - **Reforma ministerial:** nova aba na janela da Agenda do presidente. Você escolhe até 3 pastas e o que fazer em cada (ceder, trocar ou retomar), vê o efeito e o que custa antes, e anota a ação do mês no lugar da medida.
+  - **A pasta está em jogo:** cartão nas pendências, linha no Radar e janela com Renegociar e Retirar a pasta (custo à vista; a retirada trava dentro dos 3 meses e mostra quando libera). Deixar passar é a terceira saída.
+- 577 testes (6 novos nas telas). Conferido no navegador: efetivar, ceder, contagem dos 3 meses, aba da reforma e a janela da pasta em jogo.
+
 ## 0.38.0 (12/11/2026)
 - **Bloco 6E, parte 2: ministérios com vida (regras).** Ainda **desligado**: nada muda na partida até as telas da v0.38.1.
   - **Uma troca de ministro a cada 3 meses** (no lugar de uma por rodada): trocar a pasta de partido, retomar a pasta de um partido e a reforma contam. **Ceder a pasta de um interino a um partido não conta e vale a qualquer momento**, mesmo dentro dos 3 meses.
