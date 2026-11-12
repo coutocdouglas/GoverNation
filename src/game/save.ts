@@ -20,6 +20,7 @@ import { initialPressao } from './pressao'
 import { initialGoverno } from './governo'
 import { initialPastas } from './pastas'
 import { initialDilemas } from './dilema'
+import { initialImpeachPres } from './impeachPres'
 import type { GameState } from './types'
 
 // O jogo instalado guarda o localStorage na pasta de dados do usuário no Windows
@@ -317,7 +318,12 @@ export function migrate(raw: unknown): GameState | null {
       (s as GameState).dilemas ??= initialDilemas()
       s.saveVersion = 40
     }
-    if (s.saveVersion !== 40) return null
+    if (s.saveVersion === 40) {
+      // v0.42 → v0.43 (impeachment do presidente): pressão zerada, nenhum processo no histórico.
+      (s as GameState).impeachPres ??= initialImpeachPres()
+      s.saveVersion = 41
+    }
+    if (s.saveVersion !== 41) return null
     syncCustomBills(s as GameState)
     return s as GameState
   } catch {

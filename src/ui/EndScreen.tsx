@@ -13,10 +13,16 @@ export function EndScreen({ state, onHome }: { state: GameState; onHome: () => v
   const poll = state.rival?.polls[state.rival.polls.length - 1]
   return (
     <main className="end">
-      <h1>Fim do mandato</h1>
+      <h1>{score.cassado ? 'Mandato cassado' : 'Fim do mandato'}</h1>
       <p className="muted">
         Presidente {state.presidentName}, {shortMonthLabel(0)} a {shortMonthLabel(state.month - 1)}
       </p>
+      {score.cassado && (
+        <section className="pn-card pn-card--red">
+          <h3>⚖️ Condenado no impeachment</h3>
+          <p>O Senado condenou {state.presidentName} por crime de responsabilidade e o mandato terminou antes do prazo, depois de {state.month} meses. O vice assumiu o governo. Perder o cargo pesa na nota: ela fica em 40% do que seria.</p>
+        </section>
+      )}
 
       <div className="end__score">
         <span>Nota final</span>

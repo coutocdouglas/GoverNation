@@ -638,6 +638,20 @@ export function forecastSenateAgainst(s: GameState, bill: BillDef, boost: Partia
   return forecastWith(s, bill, b, needed, -1, 'senado', undefined, undefined, orientK)
 }
 
+/** Impeachment do presidente (v0.43): a autorização na Câmara (342 votos), com a mesma regra de voto contra o governo. */
+export function forecastChamberAgainst(s: GameState, bill: BillDef, boost: Partial<Record<PartyId, number>>, needed: number, orientK: number): Forecast {
+  const b: Partial<Record<PartyId, number>> = { ...boost }
+  for (const [pid, v] of Object.entries(govBoost(s)) as [PartyId, number][]) b[pid] = (b[pid] ?? 0) - v
+  return forecastWith(s, bill, b, needed, -1, 'camara', undefined, undefined, orientK)
+}
+
+export function runChamberAgainst(s: GameState, bill: BillDef, boost: Partial<Record<PartyId, number>>, needed: number, orientK: number, rng: Rng, title: string): VoteRecord {
+  const b: Partial<Record<PartyId, number>> = { ...boost }
+  for (const [pid, v] of Object.entries(govBoost(s)) as [PartyId, number][]) b[pid] = (b[pid] ?? 0) - v
+  const { byAla: _a, cast: _c, ...r } = runWith(s, bill, b, needed, -1, rng, 'camara', undefined, orientK)
+  return { month: s.month, bill: bill.id, ...r, needed, kind: 'impeachment', title }
+}
+
 export function runSenateAgainst(s: GameState, bill: BillDef, boost: Partial<Record<PartyId, number>>, needed: number, orientK: number, rng: Rng, title: string): VoteRecord {
   const b: Partial<Record<PartyId, number>> = { ...boost }
   for (const [pid, v] of Object.entries(govBoost(s)) as [PartyId, number][]) b[pid] = (b[pid] ?? 0) - v

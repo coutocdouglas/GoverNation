@@ -321,7 +321,7 @@ describe('5A: contrato e licitação', () => {
     delete R.licitacoes
     R.empresas = { [obra.id]: { perfil: 'barata' } }
     const m = migrate(JSON.parse(JSON.stringify(s)))!
-    expect(m.saveVersion).toBe(40)
+    expect(m.saveVersion).toBe(41)
     expect((m.risco as unknown as Record<string, unknown>).empresas).toBeUndefined()
     expect(m.risco.licitacoes).toEqual([])
   })
@@ -406,7 +406,7 @@ describe('5A: save 26', () => {
     delete (s as Partial<GameState>).risco
     ;(s as unknown as { saveVersion: number }).saveVersion = 25
     const m = migrate(JSON.parse(JSON.stringify(s)))!
-    expect(m.saveVersion).toBe(40)
+    expect(m.saveVersion).toBe(41)
     expect(m.risco.controle).toBe(CONTROLE.inicio.normal)
     expect(m.risco.sementes.length).toBe(0)
     expect(m.risco.rastro).toBe(0)

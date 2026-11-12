@@ -55,6 +55,8 @@ import { initialPressao, stepPressao } from './pressao'
 import { initialGoverno, stepGoverno } from './governo'
 import { initialPastas, stepPastas } from './pastas'
 import { aplicarDilema, initialDilemas } from './dilema'
+import { IMPEACH_PRES } from './data/impeachPres'
+import { impeachBlockedReason, initialImpeachPres, stepImpeachPres, type AcaoImpeach } from './impeachPres'
 import { stepExplosivas } from './absurdo'
 import type { NivelPesquisa } from './data/credibilidade'
 import { acaoBlockedReason, aplicarAcao, ganhoDaAcao, initialAgenda, stepAgenda, type AcaoAgenda } from './agenda'
@@ -106,8 +108,9 @@ export function newGame(
   const rngState = seed ?? Math.floor(Math.random() * 2 ** 31)
   const bonus = DIFFICULTY[difficulty].approvalBonus
   const state: GameState = {
-    saveVersion: 40,
+    saveVersion: 41,
     dilemas: initialDilemas(),
+    impeachPres: initialImpeachPres(),
     pressao: initialPressao(),
     pastas: initialPastas(),
     governo: initialGoverno(avatarSeed ?? `${presidentName}-${rngState}`, playerParty, posse.vices),
@@ -256,6 +259,8 @@ export interface MonthPlan {
   advogado?: string
   /** Etapa 5C: a decisão do mês sobre a CPI (uma por mês). */
   cpi?: AcaoCpi
+  /** Impeachment do presidente (v0.43): a decisão do mês no processo (uma por mês). */
+  impeach?: AcaoImpeach
   /** Etapa 5C (v0.30): a ordem do mês ao serviço de inteligência. */
   inteligencia?: OrdemIntel
   /** Etapa 6A (v0.34): a ação política do mês, no lugar da medida nova. Gasta a agenda. */
@@ -397,6 +402,10 @@ export function validatePlan(s: GameState, plan: MonthPlan): string | null {
   if (plan.cpi) {
     const r = cpiBlockedReason(s, plan.cpi)
     if (r) return `CPI: ${r}`
+  }
+  if (plan.impeach) {
+    const r = impeachBlockedReason(s, plan.impeach)
+    if (r) return `Impeachment: ${r}`
   }
   if (plan.inteligencia) {
     const r = ordemBlockedReason(s, plan.inteligencia)
@@ -919,6 +928,8 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
   const cpiMes = stepCpi(s, rngCpi, impulses, headlines)
   actionConfidence += cpiMes.confidence
   rivalExtra.push(...cpiMes.rival)
+  // 1k2. Impeachment do presidente (v0.43): pressão, pedido, Câmara, Senado. Desligado até as telas.
+  stepImpeachPres(s, plan.impeach, impulses, headlines, rivalExtra, taken, new Rng((absMonth(s) * 48271) ^ s.rngState ^ 0x1bea7))
   stepInteligencia(s)
   // 1l. Etapa 6C: a pesquisa se paga agora; a credibilidade pesa um pouco no mercado todo mês.
   if (plan.pesquisa) pagarPesquisa(plan.pesquisa, e, taken)
@@ -1035,7 +1046,7 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
   s.month += 1
   s.lastReport = report
   s.history.push(snapshot(s))
-  if (s.month >= TERM_MONTHS) {
+  if (s.month >= TERM_MONTHS || s.finished) {
     s.finished = true
     closePromises(s, headlines)
   } else {
@@ -1114,6 +1125,8 @@ export interface ScoreBreakdown {
   parts: { label: string; score: number; max: number; detail: string }[]
   /** Save anterior à 5A, sem promessas: as outras partes foram reescaladas para 1000. */
   rescaled?: boolean
+  /** Perdeu o mandato num impeachment: a nota foi reduzida. */
+  cassado?: boolean
 }
 
 const unit = (v: number) => Math.min(1, Math.max(0, v))
@@ -1161,5 +1174,8 @@ export function finalScore(s: GameState): ScoreBreakdown {
     const almost = p.results.filter((r) => r.status === 'quase').length
     parts.push({ label: 'Promessas de posse', score: p.points, max: SCORE_WEIGHTS.promises, detail: `${kept} cumpridas, ${almost} quase, ${p.results.length - kept - almost} quebradas` })
   }
-  return { total: parts.reduce((a, x) => a + x.score, 0), parts, rescaled: !hasPromises || undefined }
+  const bruto = parts.reduce((a, x) => a + x.score, 0)
+  // v0.43.1: quem perdeu o mandato num impeachment fica com uma fração da nota (Teste do atalho).
+  const cassado = (s.impeachPres?.historico ?? []).some((h) => h.desfecho === 'condenado')
+  return { total: cassado ? Math.round(bruto * IMPEACH_PRES.desfecho.notaCondenado) : bruto, parts, rescaled: !hasPromises || undefined, cassado: cassado || undefined }
 }

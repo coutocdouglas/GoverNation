@@ -20,6 +20,8 @@ import { credibilidadeLigada } from '../game/data/credibilidade'
 import { CredibilidadeJanela, credibLabel, ExplosivasJanela, explosivasVivas } from './CredibilidadeJanela'
 import { ResumoLinha, type JanelaDef } from './Janelas'
 import { PressaoJanela, resumoPressao } from './PressaoJanela'
+import { ImpeachJanela, resumoImpeach } from './ImpeachJanela'
+import type { AcaoImpeach } from '../game/data/impeachPres'
 import { GovernoJanela, resumoGoverno } from './GovernoJanela'
 import { PastaJogoJanela, resumoPastaJogo } from './PastasJanela'
 import { PropostaJanela, resumoProposta } from './PropostaJanela'
@@ -45,6 +47,7 @@ function linhasDoRadar(state: GameState, intelOrdem: OrdemIntel | null): Linha[]
   const pastaJogo = resumoPastaJogo(state)
   const proposta = resumoProposta(state)
   const circulo = resumoCirculo(state)
+  const impeach = resumoImpeach(state)
   return [
     ...(precisa.length ? [{ id: 'precisa', icone: '🚨', titulo: 'Precisa de você', texto: precisa[0].texto, tag: `${precisa.length} alerta${precisa.length > 1 ? 's' : ''}`, tom: precisa.some((a) => a.grave) ? ('dn' as Tom) : ('warn' as Tom) }] : []),
     { id: 'agenda', icone: '🗓️', titulo: 'Agenda do presidente', texto: acao ? rotuloAcao(state, acao) : peekRound(state)?.measure ? 'A medida do mês já foi: ação só no mês que vem' : 'Uma ação política no lugar da medida', tag: acao ? 'ação do mês' : undefined, tom: acao ? ('up' as Tom) : undefined },
@@ -64,6 +67,7 @@ function linhasDoRadar(state: GameState, intelOrdem: OrdemIntel | null): Linha[]
     ...(proposta ? [{ id: 'proposta', icone: '💡', titulo: 'Proposta do ministro', texto: proposta.texto, tag: proposta.tag, tom: (proposta.tag === 'acatada' ? 'up' : undefined) as Tom | undefined }] : []),
     ...(pastaJogo ? [{ id: 'pastajogo', icone: '🏢', titulo: 'A pasta está em jogo', texto: `${pastaJogo.titulo}: ${pastaJogo.texto}`, tag: pastaJogo.respondida ? 'respondida' : 'responder', tom: (pastaJogo.respondida ? 'warn' : 'dn') as Tom }] : []),
     ...(governo ? [{ id: 'governo', icone: '🤝', titulo: 'Vice e líder do governo', texto: governo.texto, tag: governo.tag, tom: governo.tom as Tom | undefined }] : []),
+    ...(impeach ? [{ id: 'impeachment', icone: '⚖️', titulo: 'Impeachment', texto: impeach.texto, tag: impeach.tag, tom: impeach.tom as Tom }] : []),
     ...(pressao ? [{ id: 'pressao', icone: '📉', titulo: 'Pressão na votação', texto: `${pressao.titulo}: ${pressao.texto}`, tag: pressao.respondida ? 'respondida' : 'responder', tom: (pressao.respondida ? 'warn' : 'dn') as Tom }] : []),
     { id: 'advogado', icone: '💼', titulo: 'Seu advogado', texto: 'Parecer nas propostas e documentos dos casos' },
     { id: 'mudou', icone: '🗞️', titulo: report ? 'O que mudou no mês passado' : 'Bem-vindo ao Planalto', texto: report ? `${report.headlines.length} notícias${report.meanwhile?.length ? ' · enquanto você decidia' : ''}` : 'primeiro mês' },
@@ -98,6 +102,7 @@ export function janelaDefsDoRadar(state: GameState): Record<string, JanelaDef> {
     proposta: { id: 'proposta', titulo: 'Proposta do ministro', icone: '💡', largura: 640 },
     pastajogo: { id: 'pastajogo', titulo: 'A pasta está em jogo', icone: '🏢', largura: 620 },
     governo: { id: 'governo', titulo: 'Vice e líder do governo', icone: '🤝', largura: 640 },
+    impeachment: { id: 'impeachment', titulo: 'Impeachment do presidente', icone: '⚖️', largura: 640 },
     pressao: { id: 'pressao', titulo: 'Pressão antes da votação', icone: '📉', largura: 620 },
     advogado: { id: 'advogado', titulo: 'Seu advogado', icone: '💼', largura: 560 },
     mudou: { id: 'mudou', titulo: mudou, icone: '🗞️', largura: 720 },
@@ -115,6 +120,8 @@ export function conteudoDaJanela(id: string, p: {
   agenda: ReactNode
   onCaso: (d: DecisaoCaso[]) => void
   onCpi: (a: AcaoCpi | null) => void
+  impeachDecisao: AcaoImpeach | null
+  onImpeach: (a: AcaoImpeach | null) => void
   onIntel: (o: OrdemIntel | null) => void
   onAdvogado: (a: string | null) => void
   onAbrirReputacao: () => void
@@ -137,6 +144,7 @@ export function conteudoDaJanela(id: string, p: {
     case 'proposta': return <PropostaJanela state={state} onState={p.onState} onToast={p.onToast} onAtender={p.onAtender} />
     case 'pastajogo': return <PastaJogoJanela state={state} onState={p.onState} onToast={p.onToast} />
     case 'governo': return <GovernoJanela state={state} onState={p.onState} onToast={p.onToast} />
+    case 'impeachment': return <ImpeachJanela state={state} escolha={p.impeachDecisao} onPick={p.onImpeach} />
     case 'pressao': return <PressaoJanela state={state} onState={p.onState} onToast={p.onToast} />
     case 'precisa': return <AlertasLista state={state} />
     case 'mudou': return p.ultimoMes

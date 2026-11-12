@@ -24,6 +24,7 @@ import { casosAbertos, faixaGravidade } from './caso'
 import { cpiAtual } from './cpi'
 import { sementeAvisada } from './inteligencia'
 import { CPI } from './data/cpi'
+import { impeachPresLigado } from './data/impeachPres'
 import { PRESSAO, pressaoLigada } from './data/pressao'
 import { pastasLigadas } from './data/pastas'
 import { MINISTER_BY_AREA } from './data/ministers'
@@ -32,7 +33,7 @@ import { deAuthor, justiceName } from './supremo'
 import { TSE_BY_ID } from './data/supremo'
 
 export type Urgency = 'red' | 'yellow' | 'green'
-export type PendingTarget = 'evento' | 'camara' | 'senado' | 'supremo' | 'promessas' | 'cobrancas' | 'licitacao' | 'caso' | 'cpi' | 'inteligencia' | 'pressao' | 'pasta'
+export type PendingTarget = 'evento' | 'camara' | 'senado' | 'supremo' | 'promessas' | 'cobrancas' | 'licitacao' | 'caso' | 'cpi' | 'inteligencia' | 'pressao' | 'pasta' | 'impeachment'
 
 export interface Pendencia {
   id: string
@@ -105,6 +106,17 @@ export function pendencias(s: GameState): Pendencia[] {
       title: `${PRESSAO.tipos[pr.tipo].nome} contra: ${BILL_BY_ID[pr.bill]?.name ?? pr.bill}`,
       detail: pr.resposta ? `Você respondeu (${pr.resposta}) · esfria em ${leftText(left)}` : `Tira votos da medida · enfrentar, negociar, adiar ou retirar · sem resposta, cresce todo mês`,
       urgency: pr.resposta ? 'green' : left <= 1 ? 'red' : 'yellow', weight: pr.resposta ? 20 : 48,
+    })
+  }
+
+  // v0.43.1: impeachment do presidente em andamento. Sem prazo do jogador: deixar passar também é uma decisão, mas é a pendência mais grave.
+  if (impeachPresLigado() && s.impeachPres && s.impeachPres.fase !== 'nenhum') {
+    const f = s.impeachPres.fase
+    out.push({
+      id: `impeach-${f}`, icon: '⚖️', target: 'impeachment',
+      title: f === 'pedido' ? 'Pedido de impeachment na mesa da Câmara' : f === 'camara' ? 'Impeachment: a Câmara vota neste fechamento' : 'Impeachment: o Senado julga',
+      detail: f === 'pedido' ? 'O presidente da Câmara decide abrir ou engavetar · dá para negociar com ele · agir ou deixar passar' : 'Cobrar a base, defesa jurídica ou ato de rua · agir ou deixar passar',
+      urgency: 'red', weight: 70,
     })
   }
 

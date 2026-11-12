@@ -144,7 +144,9 @@ import type { ReputationState } from './reputacao'
 import type { RiscoState } from './risco'
 
 export interface GameState {
-  saveVersion: 40
+  saveVersion: 41
+  /** Impeachment do presidente (v0.43): pressão oculta, fase e histórico. Ver impeachPres.ts. */
+  impeachPres: import('./impeachPres').ImpeachPresState
   /** Etapa 6F (v0.41): dilemas que vieram e o lado que o presidente escolheu. Ver dilema.ts. */
   dilemas: import('./dilema').DilemasState
   /** Etapa 6D (v0.36): pressão antes da votação (agência de risco, mercado, ato de rua) e o que o governo respondeu. */

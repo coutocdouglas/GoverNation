@@ -11,6 +11,7 @@ import { EVENT_BY_ID } from '../game/data/events'
 import { PARTY_BY_ID } from '../game/data/parties'
 import { ACTION_BY_ID, ACTIONS, ACTIONS_PER_MONTH, blockedReason, effectMultiplier } from '../game/actions'
 import { GROUPS } from '../game/data/groups'
+import type { AcaoImpeach } from '../game/data/impeachPres'
 import { advanceMonth, isCopomMonth, monthLabel, TERM_MONTHS, type MonthPlan } from '../game/game'
 import { articulate, articulateBlockedReason, efetivarInterino, gavetaReason, ministryNow, narrarProposta, pedirProposta, peekRound, plenaryToday, queueHouse, sendBlockedReason, sendMeasure, voteNow, voteNowBlockedReason, type FloorOptions } from '../game/rodada'
 import { Art } from './Art'
@@ -121,6 +122,8 @@ export function GameScreen({ state, onChange, onExit }: {
   const [advogado, setAdvogado] = useState<string | null>(null)
   /** Etapa 5C (v0.29.1): saída escolhida para a CPI (vale ao encerrar). */
   const [cpiDecisao, setCpiDecisao] = useState<AcaoCpi | null>(null)
+  /** v0.43.1: decisão do mês no impeachment do presidente (vale ao encerrar). */
+  const [impeachDecisao, setImpeachDecisao] = useState<AcaoImpeach | null>(null)
   /** v0.32.0: ordem do mês ao serviço de inteligência (vale ao encerrar) e dossiê escolhido por votação da Câmara (vale ao votar). */
   const [intelOrdem, setIntelOrdem] = useState<OrdemIntel | null>(null)
   const [pesquisa, setPesquisa] = useState<NivelPesquisa | null>(null)
@@ -144,7 +147,7 @@ export function GameScreen({ state, onChange, onExit }: {
     bill: bill ?? undefined, articulations, eventChoice: eventChoice ?? undefined, eventResponse: eventResponse ?? undefined, deals,
     hold: proc.hold, urgent: proc.urgent, original: proc.original, symbolic: proc.symbolic, sanctions, ministry: ministry ?? undefined, nominee: nominee ?? undefined, consult: consult ?? undefined,
     proposta: proposta ?? undefined, pesquisa: pesquisa ?? undefined,
-    casos: casoDecisoes.length ? casoDecisoes : undefined, advogado: advogado ?? undefined, cpi: cpiDecisao ?? undefined, inteligencia: intelOrdem ?? undefined,
+    casos: casoDecisoes.length ? casoDecisoes : undefined, advogado: advogado ?? undefined, cpi: cpiDecisao ?? undefined, impeach: impeachDecisao ?? undefined, inteligencia: intelOrdem ?? undefined,
   }
   const onProcedure = (kind: ProcedureKind, id: BillId, on: boolean) => setProc((cur) => {
     const next = { ...cur }
@@ -284,6 +287,7 @@ export function GameScreen({ state, onChange, onExit }: {
       setCasoDecisoes([])
       setAdvogado(null)
       setCpiDecisao(null)
+      setImpeachDecisao(null)
       setIntelOrdem(null)
       setPesquisa(null)
       setDossieSel({})
@@ -356,7 +360,7 @@ export function GameScreen({ state, onChange, onExit }: {
     })
   }
   const goPending = (t: PendingTarget) => {
-    if (t === 'caso' || t === 'cpi' || t === 'inteligencia' || t === 'pressao' || t === 'pasta') { abrir(t === 'caso' ? 'casos' : t === 'pasta' ? 'pastajogo' : t); return }
+    if (t === 'caso' || t === 'cpi' || t === 'inteligencia' || t === 'pressao' || t === 'pasta' || t === 'impeachment') { abrir(t === 'caso' ? 'casos' : t === 'pasta' ? 'pastajogo' : t); return }
     if (t === 'camara' || t === 'senado' || t === 'supremo') { setTab('governo'); setGovTab(t); window.scrollTo({ top: 0, behavior: 'smooth' }); return }
     const el = document.getElementById(t === 'promessas' ? 'promessas' : t === 'evento' ? 'fato-do-mes' : 'fato-do-mes')
     if (t === 'cobrancas') { medidaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }); return }
@@ -405,7 +409,8 @@ export function GameScreen({ state, onChange, onExit }: {
   /** v0.31 (V3): as janelas de detalhe do Radar (v0.32.1: o conteúdo mora em Radar.tsx). */
   const janelaDefs: Record<string, JanelaDef> = { ...janelaDefsDoRadar(state), ...Object.fromEntries(abertas.flatMap((id) => { const d = defPorQue(id); return d ? [[id, d] as const] : [] })) }
   const renderJanela = (id: string) => { const alvo = alvoPorQue(id); return alvo ? <PorQueJanela state={state} alvo={alvo} /> : conteudoDaJanela(id, {
-    state, casoDecisoes, advogado, cpiDecisao, intelOrdem, ultimoMes,
+    state, casoDecisoes, advogado, cpiDecisao, intelOrdem, ultimoMes, impeachDecisao,
+    onImpeach: (a) => { setImpeachDecisao(a); if (a) toast('⚖️ Decisão no impeachment anotada: vale ao encerrar o mês.') },
     agenda: <AgendaJanela state={state} plan={plan} billPronto={!!bill} pesquisa={pesquisa} onPesquisa={setPesquisa} onState={onChange} onToast={toast} />,
     onCaso: (d) => { setCasoDecisoes(d); if (d.length > casoDecisoes.length) toast('🕵️ Decisão do caso anotada: vale ao encerrar o mês.') },
     onCpi: (a) => { setCpiDecisao(a); if (a) toast('🏛️ Decisão sobre a CPI anotada: vale ao encerrar o mês.') },

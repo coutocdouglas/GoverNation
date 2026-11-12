@@ -1,5 +1,22 @@
 # Novidades
 
+## 0.43.1 (12/11/2026)
+- **Impeachment do presidente (telas): está ligado.**
+  - **No Radar:** uma linha "Impeachment" que só aparece com processo em andamento ou com o ruído alto; mostra pistas em palavras, nunca o número da pressão.
+  - **Janela "Impeachment do presidente":** a fase, a acusação, a previsão de votos (Câmara 342, Senado 54) e as quatro decisões com o custo à vista. Uma escolha por mês, que se desfaz com outro clique; deixar passar é sempre possível.
+  - **Central de pendências:** o processo é a pendência mais grave.
+  - **Fim do mandato por condenação:** a tela final avisa "Mandato cassado" e a nota fica em 40% do que seria (perder o cargo não sai de graça).
+- 660 testes (6 novos nas telas). Conferido no navegador com um save antigo migrado: pedido, janela, escolha e voto da Câmara.
+
+## 0.43.0 (12/11/2026)
+- **Impeachment do presidente (regras, ainda desligado até as telas da 0.43.1).**
+  - **Pressão oculta** que sobe com aprovação baixa, escândalo, CPI e denúncia contra o presidente, decisão do Supremo descumprida e vice rompido. A tela só vai mostrar pistas em palavras.
+  - **O caminho:** a oposição protocola o pedido, o presidente da Câmara abre ou engaveta, a Câmara autoriza com 342 votos e o Senado julga com 54, com o vice como interino. Absolvido, o mandato segue com a marca; condenado, o mandato termina.
+  - **Sua decisão por mês, com o custo à vista:** negociar com o presidente da Câmara, cobrar a base, defesa jurídica e ato de rua. Deixar passar é sempre possível.
+  - **Muito raro:** no máximo um processo por mandato; jogando normal, não aparece. Medido com `npm run sim7`.
+  - Save 41, com migração.
+- 654 testes (13 novos).
+
 ## 0.42.0 (12/11/2026)
 - **Fecho da Etapa 6 no código.** Falta só a sua partida completa (portão de playtest).
   - **Simulador da etapa** (`npm run sim6`): todos os blocos da Etapa 6 ligados juntos, comparando 7 jeitos de jogar. Nada dispara nem desaba; falar sem governar não compensa; o melhor é governar e usar a agenda de vez em quando; nos dilemas, nenhum lado vale mais e a indecisão custa.

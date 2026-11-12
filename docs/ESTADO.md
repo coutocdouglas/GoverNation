@@ -3,13 +3,13 @@
 > **Leia este arquivo primeiro.** Ele diz onde o projeto está e qual é o próximo passo.
 > Atualize-o a cada mudança: seção "Estado atual", "Próximo passo" e uma linha no "Histórico".
 
-**Última atualização:** 12/11/2026 · **Versão:** v0.42.0 (Etapa 6 fechada no código; falta o playtest). A v0.41.1 foi publicada em 12/11/2026.
+**Última atualização:** 12/11/2026 · **Versão:** v0.43.1 (impeachment do presidente completo e ligado). A v0.43.0 e a v0.43.1 ainda não foram publicadas (commit e tag pendentes). Última publicada: v0.42.0.
 
 ---
 
 ## Próximo passo
 
-**Próximo: portão de playtest da Etapa 6: o Douglas joga uma partida completa** (vice, líder, pastas, propostas dos ministros, círculo e dilemas; o que anotar está em DESIGN.md 27.40). A Etapa 6 fechou no código na v0.42.0 (`npm run sim6`, DESIGN.md 27.40). Depois do playtest: ajustes do que ele anotar (v0.42.x) e a decisão do que vem a seguir: o **impeachment do presidente** como bloco próprio (recomendado; complexidade alta · Opus), o plano 6G (proposto, não aprovado: `docs/projeto/plano-etapa-6g.md`) ou a Etapa 7.
+**Próximo: decidir com o Douglas o que desenvolver antes do playtest da Etapa 6** (ele quer mais desenvolvimento antes de jogar): plano 6G (fatos vivos, imprensa, grupos sociais, requerimentos; `docs/projeto/plano-etapa-6g.md`, ainda não aprovado) ou Etapa 7. Pendente também: commit e publicação da v0.43.1 (sobe junto com a v0.43.0).
 
 **Etapa 6 aprovada (plano em `docs/projeto/plano-etapa-6.md`, 08/11/2026).** Ordem: 6.0 → 6B → 6A → 6C → 6D → 6E → 6F. **6.0 feito na v0.32.1**, **6B feito na v0.33.0**, **6A feito** (regras na v0.34.0, telas na v0.34.1; DESIGN.md 27.31), **6C feito** (regras v0.35.0, telas v0.35.1; DESIGN.md 27.32 e 27.33). **Portão de playtest da 5B e da 5C dispensado pelo Douglas em 08/11/2026: considerado fechado.**
 
@@ -141,6 +141,8 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 - 12/11/2026 · v0.41.0 · Bloco 6F (regras, desligadas): 10 dilemas (6 novos e 4 fatos antigos reescritos, que saem do sorteio comum), no máximo 1 a cada 3 meses, saídas sem resposta certa (conferido em teste), custo que volta por semente com aviso antes, aliado do jogo (`{aliado}`), texto da vacina conforme a regra fiscal; save 40; 636 testes; medido em 40 partidas (9 a 11 por mandato). Desenho aprovado pelo Douglas; conselhos opostos do círculo e impeachment ficaram com a recomendação (círculo nas telas; impeachment depois do fecho da Etapa 6), a confirmar.
 - 12/11/2026 · v0.41.1 · Bloco 6F (telas): faixa do dilema, lado de cada saída, aviso "Depois", aliado nas etiquetas e "O círculo se divide" (dois conselheiros em lados opostos, pelas regras); `DILEMA.ativo` ligado; 639 testes; conferido no navegador. Publicada a v0.41.0.
 - 12/11/2026 · v0.42.0 · Fecho da Etapa 6 no código: `npm run sim6` (7 jeitos de jogar com 6A a 6F ligados; nada dispara nem desaba, falar sem governar não compensa, nenhum lado do dilema vale mais), dilema que volta respeita o intervalo e teto de 12 por mandato, Caixa de ideias revisada; 641 testes. Publicada a v0.41.1. Falta o portão de playtest do Douglas.
+- 12/11/2026 · v0.43.0 · Impeachment do presidente (regras, desligadas até a v0.43.1): pressão oculta, pedido, presidente da Câmara abre ou engaveta, Câmara 342, Senado 54 com vice interino, absolvido ou condenado (fim do mandato), quatro decisões por mês com custo à vista, um processo por mandato; `npm run sim7`; save 41; 654 testes. **Não publicada ainda** (sobe junto com as telas) |
+- 12/11/2026 · v0.43.1 · Impeachment do presidente (telas): janela no Radar, pendência mais grave, previsão de votos, decisão por mês em `MonthPlan.impeach`, tela de mandato cassado, nota final em 40% para quem perde o cargo; `IMPEACH_PRES.ativo` ligado; 660 testes; conferido no navegador. **Não publicada ainda** |
 - 09/11/2026 · (sem versão, só documento) · Plano proposto `docs/projeto/plano-etapa-6g.md` (blocos H0 a H5: correções, resposta ao fato como ação executiva, ministros com personalidade, mais grupos sociais, requerimentos dos setores em passos, fatos vivos e imprensa). Aguarda aprovação do Douglas e a lista de grupos do jogo de referência.
 - 09/11/2026 · (sem versão, só CSS, não publicado) · Revisão do playtest, item 1: aba Ministérios com a coluna da foto em 64 px (o anel do Elo cobria o nome). Pendentes do playtest: resposta ao fato do mês sem segunda votação, ministros com personalidade, passo a passo dos requerimentos dos setores.
 - 08/11/2026 · v0.35.1 · Bloco 6C (telas): credibilidade no Radar e janela, compromisso na fala, pesquisa na agenda, grupos em faixa entre pesquisas, nota de absurdo, aviso com confirmação e janela de retirar ou revogar a medida explosiva; bloco ligado; sem mudança no save; 488 testes.
