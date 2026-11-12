@@ -1,5 +1,11 @@
 # Novidades
 
+## 0.42.0 (12/11/2026)
+- **Fecho da Etapa 6 no código.** Falta só a sua partida completa (portão de playtest).
+  - **Simulador da etapa** (`npm run sim6`): todos os blocos da Etapa 6 ligados juntos, comparando 7 jeitos de jogar. Nada dispara nem desaba; falar sem governar não compensa; o melhor é governar e usar a agenda de vez em quando; nos dilemas, nenhum lado vale mais e a indecisão custa.
+  - **Dilemas mais bem dosados:** o dilema que volta depois de uma escolha passa a esperar o intervalo de 3 meses, e há um teto de 12 por mandato (antes podia chegar a 15).
+- 641 testes (2 novos).
+
 ## 0.41.1 (12/11/2026)
 - **Bloco 6F (telas): os dilemas estão ligados.**
   - **No fato do mês**, a faixa "⚖️ Dilema" mostra os dois lados em jogo (por exemplo, "O aliado × A opinião pública").

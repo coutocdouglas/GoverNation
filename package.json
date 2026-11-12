@@ -1,7 +1,7 @@
 {
   "name": "governation",
   "private": true,
-  "version": "0.41.1",
+  "version": "0.42.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -22,6 +22,7 @@
     "sim6c": "tsx scripts/sim6c.ts",
     "sim6d": "tsx scripts/sim6d.ts",
     "sim6e": "tsx scripts/sim6e.ts",
+    "sim6": "tsx scripts/sim6.ts",
     "sim6f": "tsx scripts/sim6f.ts"
   },
   "dependencies": {

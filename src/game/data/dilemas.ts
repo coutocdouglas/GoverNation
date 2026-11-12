@@ -31,6 +31,8 @@ export const DILEMA = {
   omissoFator: 0.6,
   /** Chance de o custo adiado (semente) de fato voltar. O aviso diz "pode". */
   chanceVolta: 0.75,
+  /** Teto de dilemas por mandato (Teste da sobrecarga). */
+  maxMandato: 12,
 }
 
 const quem = (area: AreaId) => {

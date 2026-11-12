@@ -3,7 +3,7 @@ import { ALL_EVENTS, EVENT_BY_ID, EVENT_CHANCE, EVENT_REPEAT, type EventDef } fr
 import { reputationEvent } from './reputacao'
 import { BILL_BY_ID } from './data/bills'
 import { PARTY_BY_ID } from './data/parties'
-import { montarDilema, sortearDilema, substituido } from './dilema'
+import { intervaloLivre, montarDilema, sortearDilema, substituido } from './dilema'
 import type { Rng } from './rng'
 import type { BillId, GameState } from './types'
 
@@ -65,7 +65,9 @@ export function drawEvent(s: GameState, rng: Rng): GameState['event'] {
   if (s.month >= 48) return null
   // Consequências que brotaram têm prioridade sobre o sorteio.
   const queued = s.eventQueue.shift()
-  if (queued && EVENT_BY_ID[queued.id]) {
+  // Etapa 6F (v0.42): o dilema que volta por semente também respeita o intervalo; espera na fila.
+  if (queued && EVENT_BY_ID[queued.id]?.dilema && !intervaloLivre(s)) s.eventQueue.push(queued)
+  else if (queued && EVENT_BY_ID[queued.id]) {
     const ev = { id: queued.id, month: s.month, origin: queued.origin }
     // Etapa 6F: um dilema que volta por semente ganha o aliado de hoje.
     return EVENT_BY_ID[queued.id].dilema ? montarDilema(s, EVENT_BY_ID[queued.id], ev) : ev

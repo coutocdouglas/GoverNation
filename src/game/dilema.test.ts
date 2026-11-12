@@ -144,6 +144,12 @@ describe('sorteio', () => {
     cedo.month = DILEMA.desdeMes - 1
     expect(sortearDilema(cedo, sempre)).toBeNull()
   })
+  it('no máximo 12 dilemas por mandato (v0.42)', () => {
+    const s = jogo()
+    for (let i = 0; i < DILEMA.maxMandato; i++) dilemasOf(s).log.push({ id: 'dilConta', at: i, saida: 0, escolheu: true, lado: 0 })
+    s.month = 47
+    expect(sortearDilema(s, sempre)).toBeNull()
+  })
   it('sem sorte, o mês segue para o fato comum', () => {
     expect(sortearDilema(jogo(), nunca)).toBeNull()
   })
@@ -229,6 +235,15 @@ describe('resolução', () => {
     aplicarDilema(s, def, idx, false, def.title, undefined, [], sempre)
     expect(s.world.seeds.some((x) => x.source === 'dilema')).toBe(false)
     expect(ladoDaSaida(def, idx)).toBe('nenhum dos dois')
+  })
+
+  it('o dilema que volta por semente espera o intervalo na fila (v0.42)', () => {
+    const s = jogo()
+    dilemasOf(s).log.push({ id: 'dilConta', at: absMonth(s) - 1, saida: 0, escolheu: true, lado: 0 })
+    s.eventQueue.push({ id: 'dilTerra', origin: { label: 'x', author: 'T', year: 2027 } })
+    const ev = drawEvent(s, nunca)
+    expect(ev?.id).not.toBe('dilTerra')
+    expect(s.eventQueue.map((q) => q.id)).toContain('dilTerra')
   })
 
   it('o dilema que volta por semente ganha o aliado de hoje', () => {

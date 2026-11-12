@@ -1193,6 +1193,7 @@ O que a 27.26 deixou para as telas, feito: `INTELIGENCIA.ativo = true` (o estado
 **Conferido no navegador:** montar (ordem anotada, agenda 1 de 2, mês virou), aviso chegando e aparecendo no Radar e na janela, 3 pedidos de dossiê (material 74), dossiê na votação (+19 votos na previsão, material zerado depois de votar). **A conferir no playtest:** o reforço de +19 votos de um dossiê de 74 de material parece forte; ver se o preço (relação −12, esquema que vaza) basta, e rebalancear `DOSSIE.reforco` se preciso. Não conferido na tela: abafar (certo e errado), queimar, fechar e reabrir.
 
 ### 27.1 Caixa de ideias por etapa
+- **Do fecho da Etapa 6 (12/11/2026).** (1) Impeachment do presidente: bloco próprio depois do portão de playtest da Etapa 6 (recomendação aceita pelo silêncio, a confirmar com o Douglas); usa `comissoes.contraPresidente`, `investigacao.denuncias`, `supremo.defied` e o vice. (2) Fala dos conselhos opostos do círculo no dilema escrita pela IA (hoje só regras, sem falha possível). (3) Nas queimadas ninguém do círculo defende o lado do agro: rever as lentes no playtest. (4) O ministro antenado ainda propõe medida para fatos do Supremo e do impeachment (`choiceOnly`); só o dilema foi excluído. (5) O `sim6` não cede pastas nem pede propostas ou o círculo: a pasta em jogo segue medida no `sim6f`. (6) Os dilemas entram como um tipo de fato no banco maior do plano 6G (H5), se aprovado.
 - **Da Etapa 5C, bloco 3 (08/11/2026).** (1) Dossiê sobre deputado avulso (exige mudar o cálculo voto a voto). (2) Avisar também o fato do mês (Etapa 7, crises com relógio). (3) Dossiê no Senado. (4) Ensinar o simulador a reagir aos avisos e a queimar dossiês.
 - **Da Etapa 5C, bloco 1 (08/11/2026).** (1) CPI no Senado. (2) Processo de impeachment do presidente usando `comissoes.contraPresidente`, `investigacao.denuncias` e `supremo.defied` (Etapa 6). (3) Ensinar o simulador a escolher saídas da CPI. (4) Presidente e relator com nome próprio, que hoje são só o partido (personagem novo entra no `CAST`).
 - **Da Etapa 5B, bloco 2 (08/11/2026).** (1) Nomear um titular no lugar do interino: hoje ele fica até a pasta ser cedida a um partido. (2) O texto de origem da posse diz "Nomeado na posse: Ministra..." sem concordância de gênero.
@@ -1364,3 +1365,22 @@ Desenho aprovado pelo Douglas (12/11/2026). Motor em `src/game/dilema.ts`; texto
 **Telas na v0.41.1** (faixa do dilema, os dois lados, o aviso do custo que volta, a mudança com o aliado e, se o Douglas aprovar, os conselhos opostos do círculo), que ligam a chave.
 
 **Telas (v0.41.1), que ligam a chave (`DILEMA.ativo: true`).** Em `src/ui/EventPanel.tsx`: faixa "⚖️ Dilema: lado × lado" no fato, com a fala "aqui não tem saída sem custo"; em cada saída, o lado que ela protege ("➜ Fica com: …" ou "⚖️ Meio-termo"), o aviso "⏳ Depois: …" (`EventOption.depois.aviso`) e as etiquetas de efeito com a mudança no partido aliado somada às dos partidos fixos (também no "Deixar passar"). **Conselhos opostos do círculo** (`conselhosDilema`, em `dilema.ts`): cada membro pesa as saídas pelo que entende (Fazenda: contas e mercado; líder: partidos e aliado; vice: grupos; advogado: o que volta depois e a imagem) e o jogo mostra os dois que defendem lados opostos com mais força, de graça e só como informação; texto das regras, sem IA (não há o que falhar). Se ninguém defende um dos lados (hoje, as queimadas), a caixa não aparece. O dossiê do ministro troca `{aliado}` por "partido aliado" na lista de crises. Conferido no navegador com o dilema da anistia.
+
+### 27.40 Fecho da Etapa 6 (v0.42.0)
+
+1. **Simulador da etapa** (`npm run sim6`, `scripts/sim6.ts`): liga juntos agenda (6A), credibilidade (6C), pressão (6D), governo vivo, pastas e conselho (6E) e dilemas (6F), e compara 7 jeitos de jogar com a etapa desligada, em 30 sementes. Resultado na v0.42.0 (nota de 0 a 1000, aprovação final média):
+
+| Jeito de jogar | Nota | Aprovação final | Dilemas |
+|---|---|---|---|
+| Etapa desligada (governa) | 543 | 41,8 | 0 |
+| Passivo (deixa tudo passar) | 516 | 46,0 | 9,7 |
+| Governa (medida todo mês, dilema alternando o lado, negocia pressão) | 546 | 43,4 | 5,6 |
+| Governa e fala (ação de agenda a cada 3 meses) | 571 | 47,0 | 6,3 |
+| Só fala (ação de agenda todo mês) | 522 | 46,1 | 10,4 |
+| Indeciso (governa, deixa os dilemas passarem) | 537 | 42,2 | 5,1 |
+| Sempre o primeiro lado / sempre o segundo | 538 / 541 | 43,2 / 42,5 | 5,0 / 5,3 |
+
+**Leitura:** nada dispara nem desaba (nenhuma partida terminou com aprovação acima de 80 ou abaixo de 15); falar sem governar não é atalho (522, abaixo de governar); o melhor é governar e usar a agenda de vez em quando; nos dilemas, nenhum lado vale mais, e a indecisão custa uns 9 pontos. Quem governa vê menos dilemas porque as consequências das próprias leis ocupam o fato do mês primeiro.
+
+2. **Ajuste de balanceamento dos dilemas:** o dilema que volta por semente passa a respeitar o intervalo de 3 meses (espera na fila; `intervaloLivre` em `drawEvent`) e há teto de 12 por mandato (`DILEMA.maxMandato`). Antes, o meio-termo chegava a 15 dilemas num mandato; agora 9 a 10 em média, no máximo 12.
+3. **Portão de playtest:** a Etapa 6 fecha no código na v0.42.0; falta a partida completa do Douglas (vice, líder, pastas, propostas, círculo, dilemas). O que anotar: se os dilemas aparecem demais ou de menos, se algum lado parece o certo, se o aviso "Depois" é claro, se os conselhos do círculo ajudam, e o peso geral do mês com agenda, pressão e pasta em jogo juntos.

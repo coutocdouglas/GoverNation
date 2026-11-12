@@ -79,10 +79,7 @@ export function montarDilema(s: GameState, def: EventDef, ev: NonNullable<GameSt
 /** Sorteia um dilema para o mês, no lugar do fato comum (ou null). Só gasta sorte quando o bloco está ligado. */
 export function sortearDilema(s: GameState, rng: Rng): GameState['event'] {
   if (!ligado || s.month < DILEMA.desdeMes || s.month >= 48) return null
-  const now = absMonth(s)
-  const log = dilemasOf(s).log
-  const ultimo = log.length ? log[log.length - 1].at : -Infinity
-  if (now - ultimo < DILEMA.intervalo) return null
+  if (!intervaloLivre(s)) return null
   if (rng.next() >= DILEMA.chance) return null
   const recent = new Set(s.eventLog.filter((e) => s.month - e.month < DILEMA.repete).map((e) => e.id))
   const pool = DILEMAS.filter((d) => !recent.has(d.id) && (!d.when || d.when(s)))
@@ -193,4 +190,12 @@ export function conselhosDilema(s: GameState, def: EventDef): ConselhoDilema[] {
     { quem: pro0.m.quem, name: pro0.m.name, feminine: pro0.m.feminine, lado: 0, saida: pro0.a![1], fala: fala(0, pro0.m.quem, pro0.a![0].label) },
     { quem: pro1.m.quem, name: pro1.m.name, feminine: pro1.m.feminine, lado: 1, saida: pro1.b![1], fala: fala(1, pro1.m.quem, pro1.b![0].label) },
   ]
+}
+
+/** Cabe um dilema agora? Intervalo mínimo desde o último e teto por mandato (vale também para o que volta por semente). */
+export function intervaloLivre(s: GameState): boolean {
+  const log = dilemasOf(s).log
+  const now = absMonth(s)
+  if (log.filter((d) => d.at >= (s.term - 1) * 48).length >= DILEMA.maxMandato) return false
+  return !log.length || now - log[log.length - 1].at >= DILEMA.intervalo
 }
