@@ -1292,3 +1292,5 @@ Desenho aprovado pelo Douglas em 12/11/2026: o vice **não é sorteado entre tod
 8. **Testes do projeto:** atalho (dar espaço sem parar leva à ruptura numa crise; isolar derruba a lealdade e o reforço; confrontar custa credibilidade; vigiar exige serviço e pode vazar); beco sem saída (todas as ações têm saída e o custo aparece antes); sobrecarga (1 ação por mês, gastando conversa, sem competir com a medida).
 
 **Simulador (`npm run sim6e`, 30 sementes):** desligado 611; ignorar 609; dar espaço 609 (ambição 100, lealdade 98); isolar 611 (ambição 1, lealdade 0); confrontar 596. O robô mantém a aprovação perto de 49, então a ruptura quase não aparece; o peso real depende da partida do Douglas. **Telas na v0.37.1** (etapa "Vice" no Novo mandato, tela de posse, janela).
+
+**Telas (v0.37.1).** Etapa "3. Vice" no Novo mandato (`App.tsx`; `PosseChoices.vices`), tela "Dia da posse" (`PosseReveal.tsx`) e janela "Vice e líder do governo" no Radar (`GovernoJanela.tsx`). Lealdade e ambição reais só em número depois de vigiar; o vice não vira pendência para não vazar a ambição. O bloco está ligado (`GOVERNO.ativo`).

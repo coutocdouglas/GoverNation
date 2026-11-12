@@ -1,5 +1,13 @@
 # Novidades
 
+## 0.37.1 (12/11/2026)
+- **Bloco 6E, parte 1 (telas): vice por proposta e líder do governo. O bloco está ligado.**
+  - **Novo mandato:** nova etapa "3. Vice" (as abas viram Candidato, Perfil, Vice e Promessas): os 27 candidatos, agrupados por partido, com retrato, perfil em palavras e fama de lealdade. Você propõe exatamente 3; as chances não aparecem. "Tomar posse" só libera com 3 nomes e 5 promessas.
+  - **Dia da posse:** tela nova que revela qual dos 3 aceitou, quem recusou e o líder do governo na Câmara.
+  - **Radar:** linha "Vice e líder do governo" e janela com os dois (Elo, pistas em palavras, as 4 ações no vice e "Trocar o líder", cada uma com o custo à vista e o motivo quando bloqueada). A lealdade e a ambição reais só viram número depois de vigiar.
+  - Pendências: o vice não aparece nelas de propósito, para não entregar a ambição oculta.
+- 548 testes (5 novos nas telas). Conferido no navegador: proposta, posse, janela e uma ação.
+
 ## 0.37.0 (12/11/2026)
 - **Bloco 6E da Etapa 6, parte 1: vice-presidente e líder do governo (regras).** Ainda **desligado**: nada muda na partida até as telas da v0.37.1.
   - **Vice por proposta:** na posse o jogador propõe 3 entre 27 nomes (3 por partido) e um só aceita, sorteado com peso: partido próprio ou próximo aceita mais fácil. O partido do vice vota parcialmente com o governo (metade do reforço de uma pasta, pela lealdade) até ele romper.

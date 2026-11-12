@@ -9,8 +9,8 @@ import type { PartyId } from '../types'
  * para votar parcialmente com o governo enquanto a lealdade segurar.
  */
 export const GOVERNO = {
-  /** Desligado até as telas (v0.37.1). Testes e simulador usam `ligarGoverno`. */
-  ativo: false,
+  /** Ligado desde as telas (v0.37.1). Testes e simulador podem usar `ligarGoverno`. */
+  ativo: true,
   vice: {
     /** Quantos nomes o jogador propõe na posse. */
     propostas: 3,

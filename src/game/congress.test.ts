@@ -30,8 +30,9 @@ describe('Câmara dos Deputados', () => {
   })
 
   it('a ideologia pesa: cada lado aprova mais o que é seu', () => {
-    const left = newGame('T', 'normal', 3, 'fpt')
-    const right = newGame('T', 'normal', 3, 'pol')
+    // O vice vem do próprio partido (sem reforço de fora), para o teste medir só a ideologia.
+    const left = newGame('T', 'normal', 3, 'fpt', undefined, undefined, { vices: ['fpt_ib', 'fpt_dn', 'fpt_lm'] })
+    const right = newGame('T', 'normal', 3, 'pol', undefined, undefined, { vices: ['pol_hv', 'pol_mc', 'pol_fm'] })
     expect(forecastVote(left, 'taxarDividendos').yes).toBeLessThan(forecastVote(left, 'isencaoIR').yes)
     expect(forecastVote(right, 'privatizar').yes).toBeGreaterThan(forecastVote(left, 'privatizar').yes)
   })

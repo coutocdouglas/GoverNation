@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { PartyLogo } from './ui/PartyLogo'
 import { UpdateBanner } from './components/UpdateBanner'
-import { PLAYER_PARTY_CHOICES } from './game/data/parties'
+import { PARTIES, PLAYER_PARTY_CHOICES } from './game/data/parties'
 import { monthLabel, newGame } from './game/game'
 import { deleteSave, loadGame, saveGame } from './game/save'
 import type { GameState, PartyId } from './game/types'
@@ -17,6 +17,9 @@ import { PROMISES, PROMISES_TO_PICK, SIDE_OF_PARTY } from './game/data/promises'
 import { profileOffsets, promiseSideBoosts, type PosseChoices } from './game/promises'
 import { RIVAL_BY_PARTY, RIVAL_PARTY_FOR } from './game/data/rival'
 import { castPortrait } from './game/data/cast'
+import { GOVERNO, VICES } from './game/data/governo'
+import { pistaLealdade } from './game/governo'
+import { PosseReveal } from './ui/PosseReveal'
 
 const ROADMAP = [
   { v: '0.1', label: 'Estrutura e atualização automática', done: true },
@@ -35,7 +38,7 @@ const DIFFICULTIES: { id: GameState['difficulty']; name: string; desc: string }[
   { id: 'dificil', name: 'Difícil', desc: 'Crises frequentes e eleitores exigentes.' },
 ]
 
-type Screen = 'home' | 'new' | 'game'
+type Screen = 'home' | 'new' | 'posse' | 'game'
 
 export default function App() {
   const [game, setGame] = useState<GameState | null>(() => loadGame())
@@ -62,9 +65,12 @@ export default function App() {
           onCancel={() => setScreen('home')}
           onStart={(name, diff, party, face, posse) => {
             update(newGame(name, diff, undefined, party, String(face), face, posse))
-            setScreen('game')
+            setScreen('posse')
           }}
         />
+      )}
+      {screen === 'posse' && game && (
+        <PosseReveal state={game} onContinue={() => setScreen('game')} />
       )}
       {screen === 'game' && game && !game.finished && (
         <GameScreen state={game} onChange={update} onExit={() => setScreen('home')} />
@@ -127,6 +133,8 @@ function Home({ saved, onNew, onContinue }: { saved: GameState | null; onNew: ()
   )
 }
 
+const VICES_A_PROPOR: number = GOVERNO.vice.propostas
+
 const SIDE_LABEL = { esquerda: 'Esquerda', centro: 'Centro', direita: 'Direita', qualquer: 'Qualquer governo' } as const
 
 const signed = (v: number) => `${v > 0 ? '+' : ''}${v.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}`
@@ -146,7 +154,7 @@ function NewGame({ hasSave, onCancel, onStart }: {
   onCancel: () => void
   onStart: (name: string, d: GameState['difficulty'], party: PartyId, face: number, posse: PosseChoices) => void
 }) {
-  const [step, setStep] = useState<1 | 2 | 3>(1)
+  const [step, setStep] = useState<1 | 2 | 3 | 4>(1)
   const [name, setName] = useState('')
   const [diff, setDiff] = useState<GameState['difficulty']>('normal')
   const [party, setParty] = useState<PartyId>('mdn')
@@ -155,6 +163,7 @@ function NewGame({ hasSave, onCancel, onStart }: {
   const [traits, setTraits] = useState<string[]>([])
   const [habits, setHabits] = useState<string[]>([])
   const [promises, setPromises] = useState<string[]>([])
+  const [vices, setVices] = useState<string[]>([])
 
   // Painel ao lado: aprovação inicial de cada grupo com as escolhas feitas até aqui.
   const base = useMemo(() => newGame('Prévia', diff, 1, party, 'previa', face), [diff, party, face])
@@ -172,7 +181,7 @@ function NewGame({ hasSave, onCancel, onStart }: {
     set(list.includes(id) ? list.filter((x) => x !== id) : list.length < max ? [...list, id] : list)
 
   const side = SIDE_OF_PARTY[party]
-  const steps = ['Candidato', 'Perfil', 'Promessas']
+  const steps = ['Candidato', 'Perfil', 'Vice', 'Promessas']
 
   return (
     <main className="home posse">
@@ -180,7 +189,7 @@ function NewGame({ hasSave, onCancel, onStart }: {
       <ol className="posse__steps">
         {steps.map((label, i) => (
           <li key={label} className={step === i + 1 ? 'on' : step > i + 1 ? 'done' : ''}>
-            <button onClick={() => setStep((i + 1) as 1 | 2 | 3)}>{i + 1}. {label}</button>
+            <button onClick={() => setStep((i + 1) as 1 | 2 | 3 | 4)}>{i + 1}. {label}</button>
           </li>
         ))}
       </ol>
@@ -278,6 +287,34 @@ function NewGame({ hasSave, onCancel, onStart }: {
           {step === 3 && (
             <>
               <p className="muted">
+                Proponha exatamente {VICES_A_PROPOR} nomes para vice-presidente, de qualquer partido (pode ser do seu). Na vida real você faz a proposta e um só aceita: você só descobre quem ao tomar posse. Partido igual ou próximo ao seu aceita com mais facilidade; um nome de fora rende mais votos, se aceitar.
+              </p>
+              <div className="field">
+                <span>Nomes propostos ({vices.length}/{VICES_A_PROPOR})</span>
+                {PARTIES.map((p) => (
+                  <div key={p.id} className="posse__vices">
+                    <div className="posse__vices-head"><PartyLogo party={p.id} size={28} /> <strong>{p.sigla}</strong> <small className="muted">{p.name}{p.id === party ? ' · o seu partido' : ''}</small></div>
+                    <div className="posse__grid">
+                      {VICES.filter((v) => v.party === p.id).map((v) => (
+                        <button key={v.id} className={`choice posse__vice ${vices.includes(v.id) ? 'choice--selected' : ''}`}
+                          disabled={!vices.includes(v.id) && vices.length >= VICES_A_PROPOR}
+                          onClick={() => toggle(vices, setVices, v.id, VICES_A_PROPOR)}>
+                          <Portrait id={v.portrait} color={PARTY_BY_ID[v.party].color} size={52} />
+                          <strong>{v.name}</strong>
+                          <small>{v.perfil}</small>
+                          <span className="posse__side">{pistaLealdade(v.lealdade)}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          {step === 4 && (
+            <>
+              <p className="muted">
                 Escolha exatamente {PROMISES_TO_PICK} promessas. Elas são acompanhadas no Painel e cobradas no fim do mandato: valem até 300 pontos da nota final.
                 As do seu lado ({SIDE_LABEL[side]}) animam o grupo que cobra logo na posse.
                 {rival && <> Promessa fora do rumo vira munição para {rival.name}.</>}
@@ -332,19 +369,19 @@ function NewGame({ hasSave, onCancel, onStart }: {
 
       {hasSave && <p className="warning">Começar um novo mandato apaga o mandato salvo.</p>}
       <div className="home__menu">
-        {step < 3 ? (
-          <button className="btn btn--primary btn--big" onClick={() => setStep((step + 1) as 2 | 3)}>
+        {step < 4 ? (
+          <button className="btn btn--primary btn--big" onClick={() => setStep((step + 1) as 2 | 3 | 4)}>
             Continuar
-            <small>{step === 1 ? 'traços e hábitos' : 'promessas de posse'}</small>
+            <small>{step === 1 ? 'traços e hábitos' : step === 2 ? 'proposta de vice' : 'promessas de posse'}</small>
           </button>
         ) : (
-          <button className="btn btn--primary btn--big" disabled={promises.length !== PROMISES_TO_PICK}
-            onClick={() => onStart(name, diff, party, face, { traits, habits, promises })}>
+          <button className="btn btn--primary btn--big" disabled={promises.length !== PROMISES_TO_PICK || vices.length !== VICES_A_PROPOR}
+            onClick={() => onStart(name, diff, party, face, { traits, habits, promises, vices })}>
             Tomar posse
-            <small>{promises.length === PROMISES_TO_PICK ? '1º de janeiro de 2027' : `faltam ${PROMISES_TO_PICK - promises.length} promessas`}</small>
+            <small>{vices.length !== VICES_A_PROPOR ? `faltam ${VICES_A_PROPOR - vices.length} nomes de vice` : promises.length === PROMISES_TO_PICK ? '1º de janeiro de 2027' : `faltam ${PROMISES_TO_PICK - promises.length} promessas`}</small>
           </button>
         )}
-        <button className="btn btn--big" onClick={step === 1 ? onCancel : () => setStep((step - 1) as 1 | 2)}>
+        <button className="btn btn--big" onClick={step === 1 ? onCancel : () => setStep((step - 1) as 1 | 2 | 3)}>
           Voltar<small>{step === 1 ? 'ao menu' : 'passo anterior'}</small>
         </button>
       </div>
