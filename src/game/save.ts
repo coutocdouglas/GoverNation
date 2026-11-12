@@ -19,6 +19,7 @@ import { initialCredib } from './credibilidade'
 import { initialPressao } from './pressao'
 import { initialGoverno } from './governo'
 import { initialPastas } from './pastas'
+import { initialDilemas } from './dilema'
 import type { GameState } from './types'
 
 // O jogo instalado guarda o localStorage na pasta de dados do usuário no Windows
@@ -311,7 +312,12 @@ export function migrate(raw: unknown): GameState | null {
       // v0.39 → v0.40 (Etapa 6E, parte 4): campo novo e opcional na rodada (consulta ao círculo); nada a converter.
       s.saveVersion = 39
     }
-    if (s.saveVersion !== 39) return null
+    if (s.saveVersion === 39) {
+      // v0.40 → v0.41 (Etapa 6F): nenhum dilema decidido ainda.
+      (s as GameState).dilemas ??= initialDilemas()
+      s.saveVersion = 40
+    }
+    if (s.saveVersion !== 40) return null
     syncCustomBills(s as GameState)
     return s as GameState
   } catch {

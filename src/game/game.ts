@@ -54,6 +54,7 @@ import { initialCredib, mercadoDaCredib, stepCredibilidade } from './credibilida
 import { initialPressao, stepPressao } from './pressao'
 import { initialGoverno, stepGoverno } from './governo'
 import { initialPastas, stepPastas } from './pastas'
+import { aplicarDilema, initialDilemas } from './dilema'
 import { stepExplosivas } from './absurdo'
 import type { NivelPesquisa } from './data/credibilidade'
 import { acaoBlockedReason, aplicarAcao, ganhoDaAcao, initialAgenda, stepAgenda, type AcaoAgenda } from './agenda'
@@ -105,7 +106,8 @@ export function newGame(
   const rngState = seed ?? Math.floor(Math.random() * 2 ** 31)
   const bonus = DIFFICULTY[difficulty].approvalBonus
   const state: GameState = {
-    saveVersion: 39,
+    saveVersion: 40,
+    dilemas: initialDilemas(),
     pressao: initialPressao(),
     pastas: initialPastas(),
     governo: initialGoverno(avatarSeed ?? `${presidentName}-${rngState}`, playerParty, posse.vices),
@@ -838,7 +840,9 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
       // Etapa 1: como o presidente lidou com o fato entra na Ficha e na reputação.
       const crisis = def.kind !== 'bom' && !def.choiceOnly
       const ignored = plan.eventChoice === undefined || !!opt.default
-      if (crisis && ignored && def.importance >= 3) addMark(s, 'omisso', def.importance * REPUTACAO.pts.crisePer * (assess.used ? ASSESSORIA.omissoShare : 1), assess.used ? `${title}: só com nota e presença, sem medida` : `${title}: deixou passar`, 'crise')
+      // Etapa 6F: o dilema tem registro próprio (lado escolhido, aliado, custo que volta; indecisão marca omissão).
+      if (def.dilema) aplicarDilema(s, def, idx, !ignored, title, s.event.aliado, headlines, rng)
+      else if (crisis && ignored && def.importance >= 3) addMark(s, 'omisso', def.importance * REPUTACAO.pts.crisePer * (assess.used ? ASSESSORIA.omissoShare : 1), assess.used ? `${title}: só com nota e presença, sem medida` : `${title}: deixou passar`, 'crise')
       else if (crisis && !ignored) addMark(s, 'enfrenta', def.importance * REPUTACAO.pts.crisePer * 0.5, `${title}: ${lowerFirst(opt.label)}`, 'crise')
       else noteRecord(s, { text: `${title}: ${lowerFirst(opt.label)}`, tone: tone === 'good' ? 'good' : tone === 'bad' ? 'bad' : 'neutral', kind: 'crise' })
       // Etapa 1B: boa notícia que passa sem ação (Normal e Difícil) entrega o crédito à oposição.
@@ -855,7 +859,7 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
       s.eventLog.push({ id: def.id, month: s.month })
       addBio(s, def.presenter.name, `${def.presenter.role}: levou ao presidente “${title}”. Decisão: ${lowerFirst(opt.label)}.`)
       if (def.importance >= 3 || def.kind !== 'crise') addBio(s, s.presidentName, `${title}: ${lowerFirst(opt.label)}.`)
-      if (origin) addChronicle(s, `${title} (consequência de ${origin.label}, ${origin.author}, ${origin.year})`, tone)
+      if (origin && !def.dilema) addChronicle(s, `${title} (consequência de ${origin.label}, ${origin.author}, ${origin.year})`, tone)
       eventReport = { id: def.id, option: idx, chosen: plan.eventChoice !== undefined }
       if (!def.choiceOnly && def.kind !== 'bom') mm.event = { area: def.area, kind: plan.eventChoice !== undefined && !opt.default ? 'escolha' : 'ignorado' }
     }

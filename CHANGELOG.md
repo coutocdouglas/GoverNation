@@ -1,5 +1,14 @@
 # Novidades
 
+## 0.41.0 (12/11/2026)
+- **Bloco 6F (regras): dilemas.** Ainda **desligado**: nada muda na partida até as telas da v0.41.1.
+  - **Dilemas** são fatos do mês em que dois bens colidem: a vacina ou a meta fiscal, a anistia pedida pelo aliado, a mina na floresta, o reajuste com o caixa vazio, a operação policial com mortes, a conta de luz da estatal, e quatro fatos antigos reescritos (Centrão exige ministério, ministro do aliado flagrado, conflito por terra, queimadas).
+  - Duas ou três saídas com o custo à vista e nenhuma certa; deixar passar cobra dos dois lados e marca omissão. Toda saída com custo adiado avisa antes ("em uns 4 a 7 meses…") e pode trazer o problema de volta.
+  - **Entram no lugar, não somam:** os quatro fatos antigos saem do sorteio comum, e vem no máximo um dilema a cada 3 meses (uns 9 a 11 por mandato).
+  - **O aliado** é sempre alguém do jogo: o partido do vice, ou o maior da base.
+  - A escolha fica na Ficha de governo e na crônica.
+- Save 40, com migração. 636 testes (22 novos).
+
 ## 0.40.1 (12/11/2026)
 - **Bloco 6E, parte 4 (telas e IA): o círculo de confiança. Com isso, o bloco 6E (governo com vida) está completo.**
   - **Na leitura da medida**, logo depois do parecer do ministro da pasta: **🤝 Ouvir o círculo de confiança**, com o líder do governo, o advogado, o vice e o ministro da Fazenda, cada um com o Elo na foto, o que avalia e a pista de risco em palavras. Um por mês. O aviso lembra que ouvir alguém de fama ruim deixa rastro.

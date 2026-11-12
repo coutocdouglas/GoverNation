@@ -28,6 +28,12 @@ export interface EventOption {
   stf?: 'acatar' | 'nova' | 'criticar' | 'esperar' | 'recuar' | 'recorrer' | 'embargos' | 'demitir' | 'descumprir'
   /** Etapa 3: resposta a um pedido de impeachment de ministro no Senado (o motor trata em impeachment.ts). */
   impeach?: 'defender' | 'demitir' | 'deixar'
+  /** Etapa 6F: em um dilema, de que lado a saída fica (índice em `dilema.lados`) ou se é o meio-termo. */
+  lado?: 0 | 1 | 'meio'
+  /** Etapa 6F: mudança na relação com o partido aliado do dilema (`{aliado}` no texto). */
+  aliado?: number
+  /** Etapa 6F: o custo que volta depois (semente), mostrado antes da escolha. */
+  depois?: { evento: string; meses: [number, number]; rotulo: string; aviso: string }
 }
 
 /** Texto de um fato conforme a situação da medida que o originou (pauta ou barrada). Só troca palavras; as regras são as mesmas. */
@@ -64,6 +70,8 @@ export interface EventDef {
   choiceOnly?: true
   /** Só acontece se a condição for verdadeira. */
   when?: (s: GameState) => boolean
+  /** Etapa 6F: dilema (dois bens colidem). Só entra pelo sorteio próprio (data/dilemas.ts), nunca pelo comum. */
+  dilema?: { lados: [string, string] }
   options: EventOption[]
 }
 
@@ -232,9 +240,10 @@ export const EVENTS: EventDef[] = [
 import { CONSEQUENCE_EVENTS } from './consequences'
 import { STF_EVENT, STF_LIMINAR_EVENT } from './supremo'
 import { IMPEACH_EVENT } from './impeachment'
+import { DILEMAS, DILEMA_VOLTAS } from './dilemas'
 
-/** Todos os fatos: os sorteáveis e os que só nascem de sementes. */
-export const ALL_EVENTS: EventDef[] = [...EVENTS, ...CONSEQUENCE_EVENTS, STF_EVENT, STF_LIMINAR_EVENT, IMPEACH_EVENT, ...REP_EVENTS]
+/** Todos os fatos: os sorteáveis e os que só nascem de sementes (os dilemas têm sorteio próprio). */
+export const ALL_EVENTS: EventDef[] = [...EVENTS, ...CONSEQUENCE_EVENTS, STF_EVENT, STF_LIMINAR_EVENT, IMPEACH_EVENT, ...REP_EVENTS, ...DILEMAS, ...DILEMA_VOLTAS]
 
 export const EVENT_BY_ID = Object.fromEntries(ALL_EVENTS.map((e) => [e.id, e])) as Record<string, EventDef>
 

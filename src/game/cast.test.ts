@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { CAST, castMember, castPortrait, fallbackPortrait, PLAYER_POOL, RESERVED, setPresidentPortrait } from './data/cast'
 import { EVENTS } from './data/events'
 import { REP_EVENTS } from './data/repEvents'
+import { DILEMAS, DILEMA_VOLTAS } from './data/dilemas'
 import { PARTIES } from './data/parties'
 import { PORTRAIT_COUNT, PORTRAITS } from './data/portraits'
 import { newGame } from './game'
@@ -32,7 +33,7 @@ describe('elenco e retratos', () => {
       expect(m, p.leader.name).toBeDefined()
       expect(m!.gender === 'f').toBe(p.leader.feminine)
     }
-    for (const e of [...EVENTS, ...REP_EVENTS]) {
+    for (const e of [...EVENTS, ...REP_EVENTS, ...DILEMAS, ...DILEMA_VOLTAS]) {
       const m = castMember(e.presenter.name)
       expect(m, e.presenter.name).toBeDefined()
       expect(m!.gender === 'f').toBe(e.presenter.feminine)

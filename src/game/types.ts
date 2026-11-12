@@ -144,7 +144,9 @@ import type { ReputationState } from './reputacao'
 import type { RiscoState } from './risco'
 
 export interface GameState {
-  saveVersion: 39
+  saveVersion: 40
+  /** Etapa 6F (v0.41): dilemas que vieram e o lado que o presidente escolheu. Ver dilema.ts. */
+  dilemas: import('./dilema').DilemasState
   /** Etapa 6D (v0.36): pressão antes da votação (agência de risco, mercado, ato de rua) e o que o governo respondeu. */
   pressao: import('./pressao').PressaoState
   /** Etapa 6E (v0.37): o vice (escolhido por proposta na posse) e o líder do governo na Câmara. */
@@ -179,7 +181,7 @@ export interface GameState {
   /** Retrato do presidente (1 a 110). Saves antigos não têm: o jogo sorteia um fixo. */
   avatarPortrait?: number
   /** Fato do mês à espera de resposta (origin = o que o gerou, se for consequência). */
-  event: { id: string; month: number; origin?: EventOrigin } | null
+  event: { id: string; month: number; origin?: EventOrigin; /** Etapa 6F: partido aliado do dilema (`{aliado}`). */ aliado?: PartyId } | null
   /** Fatos nascidos de sementes, esperando a vez. */
   eventQueue: { id: string; origin?: EventOrigin }[]
   /** Mandato atual (1, 2, 3...). Os mandatos se encadeiam numa campanha contínua. */
