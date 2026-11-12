@@ -105,7 +105,7 @@ export function dossiePasta(s: GameState, area: AreaId): Dossie {
       return atende.length ? [{ id: d.id, titulo: def.title, grupo: def.group, faltam: d.expires - s.month, atende }] : []
     }),
     fato: ev && ev.area === area && !ev.dilema ? { titulo: ev.title, respondido: !!s.round?.response && s.round.month === s.month } : null,
-    crises: (s.eventLog ?? []).filter((e) => EVENT_BY_ID[e.id]?.area === area && s.month - e.month < 6).map((e) => EVENT_BY_ID[e.id].title),
+    crises: (s.eventLog ?? []).filter((e) => EVENT_BY_ID[e.id]?.area === area && s.month - e.month < 6).map((e) => EVENT_BY_ID[e.id].title.replaceAll('{aliado}', 'partido aliado')),
   }
 }
 

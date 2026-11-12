@@ -9,7 +9,8 @@
 import { baseMembers } from './base'
 import { DILEMA, DILEMAS } from './data/dilemas'
 import { REPUTACAO } from './data/marks'
-import type { EventDef } from './data/events'
+import type { EventDef, EventOption } from './data/events'
+import { membrosCirculo, type MembroCirculo } from './circulo'
 import { PARTY_BY_ID } from './data/parties'
 import { billStage } from './events'
 import { viceDef } from './governo'
@@ -131,4 +132,65 @@ export function aplicarDilema(s: GameState, def: EventDef, idx: number, escolheu
     headlines.push({ text: `Indecisão: “${title}” fica sem resposta e os dois lados cobram`, tone: 'bad' })
   }
   dilemasOf(s).log.push({ id: def.id, at: now, saida: idx, escolheu, lado: opt.lado })
+}
+
+// ─── Conselhos opostos do círculo (v0.41.1) ───────────────────────────────────
+
+export interface ConselhoDilema {
+  quem: MembroCirculo
+  name: string
+  feminine: boolean
+  /** O lado que defende (índice em `dilema.lados`). */
+  lado: 0 | 1
+  /** A saída que ele recomenda (índice nas opções). */
+  saida: number
+  fala: string
+}
+
+/** Como cada membro do círculo pesa uma saída (cada um olha o que entende). */
+function pesoDoMembro(quem: MembroCirculo, o: EventOption): number {
+  const fx = o.effects
+  const g = fx.groups ?? {}
+  const soma = (r: Partial<Record<string, number>>) => Object.values(r).reduce<number>((a, v) => a + (v ?? 0), 0)
+  switch (quem) {
+    case 'fazenda':
+      return (fx.confidence ?? 0) - (fx.spending ?? 0) * 40 + (fx.revenue ?? 0) * 40 - (fx.temp?.amount ?? 0) * 40 - (fx.expectations ?? 0) * 8 + (fx.potential ?? 0) * 60 - (o.depois ? 1 : 0)
+    case 'lider':
+      return soma(o.parties ?? {}) / 3 + (o.aliado ?? 0) / 2
+    case 'vice':
+      return soma(g)
+    case 'advogado':
+      return (o.depois ? -4 : 0) + (g.classeMedia ?? 0) + (g.jovens ?? 0) / 2
+  }
+}
+
+const RAZAO: Record<MembroCirculo, string> = {
+  fazenda: 'as contas e o mercado cobram primeiro',
+  lider: 'é o que segura os votos no Congresso',
+  vice: 'é o que pesa na aprovação, no bolso e na rua',
+  advogado: 'é a saída que menos volta para assombrar o governo',
+}
+
+/**
+ * Dois membros do círculo, cada um defendendo um lado do dilema, pelo que cada um entende. De graça e só informação
+ * (não muda nada no jogo); texto das regras, sem IA. Vazio se ninguém defende algum dos lados.
+ */
+export function conselhosDilema(s: GameState, def: EventDef): ConselhoDilema[] {
+  if (!def.dilema) return []
+  const melhor = (quem: MembroCirculo, lado: 0 | 1) => {
+    const idx = def.options.map((o, i) => [o, i] as const).filter(([o]) => !o.default && o.lado === lado)
+    return idx.sort((a, b) => pesoDoMembro(quem, b[0]) - pesoDoMembro(quem, a[0]))[0]
+  }
+  const notas = membrosCirculo(s).map((m) => {
+    const a = melhor(m.quem, 0), b = melhor(m.quem, 1)
+    return { m, a, b, dif: a && b ? pesoDoMembro(m.quem, a[0]) - pesoDoMembro(m.quem, b[0]) : 0 }
+  })
+  const pro0 = [...notas].sort((x, y) => y.dif - x.dif)[0]
+  const pro1 = [...notas].filter((n) => n !== pro0).sort((x, y) => x.dif - y.dif)[0]
+  if (!pro0 || !pro1 || pro0.dif <= 0 || pro1.dif >= 0) return []
+  const fala = (lado: 0 | 1, quem: MembroCirculo, label: string) => `Eu ficaria com “${def.dilema!.lados[lado]}”: ${label.toLowerCase()}. ${RAZAO[quem][0].toUpperCase()}${RAZAO[quem].slice(1)}.`
+  return [
+    { quem: pro0.m.quem, name: pro0.m.name, feminine: pro0.m.feminine, lado: 0, saida: pro0.a![1], fala: fala(0, pro0.m.quem, pro0.a![0].label) },
+    { quem: pro1.m.quem, name: pro1.m.name, feminine: pro1.m.feminine, lado: 1, saida: pro1.b![1], fala: fala(1, pro1.m.quem, pro1.b![0].label) },
+  ]
 }

@@ -15,8 +15,8 @@ import { MINISTER_BY_AREA, type AreaId } from './ministers'
  * mudança na relação com ele.
  */
 export const DILEMA = {
-  /** Ligado nas telas (v0.41.1). Testes podem usar `ligarDilemas`. */
-  ativo: false,
+  /** Ligado desde as telas (v0.41.1). Testes podem usar `ligarDilemas`. */
+  ativo: true,
   /** Meses mínimos entre dois dilemas sorteados (os que voltam por semente não contam). */
   intervalo: 3,
   /** Chance de o fato do mês ser um dilema, quando o intervalo já passou. */
@@ -62,7 +62,7 @@ export const DILEMAS: EventDef[] = [
     text: 'O {aliado} pede o apoio do governo a uma anistia de multas eleitorais de prefeitos aliados. Nas redes, a palavra do dia é “impunidade”.',
     presenter: quem('politica'),
     options: [
-      { icon: '✅', label: 'Apoiar a anistia', text: 'O aliado fica devendo; a rua não perdoa.', lado: 0, aliado: 10, effects: { groups: { classeMedia: -3, jovens: -3 } }, outcome: 'Governo apoia anistia de multas pedida pelo {aliado}', tone: 'bad' },
+      { icon: '🤝', label: 'Apoiar a anistia', text: 'O aliado fica devendo; a rua não perdoa.', lado: 0, aliado: 10, effects: { groups: { classeMedia: -3, jovens: -3 } }, outcome: 'Governo apoia anistia de multas pedida pelo {aliado}', tone: 'bad' },
       { icon: '✋', label: 'Recusar em público', text: 'A opinião pública aplaude; o {aliado} cobra na próxima votação.', lado: 1, aliado: -8, effects: { groups: { classeMedia: 2, jovens: 2 } }, outcome: 'Presidente recusa anistia e irrita o {aliado}', tone: 'good' },
       { icon: '⚖️', label: 'Só para cidades pequenas', text: 'Meio-termo que ninguém defende com gosto.', lado: 'meio', aliado: 3, effects: { groups: { classeMedia: -1, jovens: -1 } }, depois: { evento: 'dilAnistia', meses: [6, 9], rotulo: 'a anistia parcial a prefeitos', aviso: 'em uns 6 a 9 meses, o aliado pode voltar pedindo a anistia completa' }, outcome: 'Anistia parcial para prefeitos sai do Planalto', tone: 'neutral' },
       { icon: '🙈', label: 'Deixar passar', text: 'Sem resposta, o {aliado} se sente traído e a imprensa diz que o governo foi conivente.', default: true, aliado: -4, effects: { groups: { classeMedia: -1, jovens: -1 } }, outcome: 'Governo se cala sobre anistia e desagrada todo mundo', tone: 'bad' },

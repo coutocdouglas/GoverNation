@@ -12,6 +12,26 @@ import { MINISTER_BY_AREA } from '../game/data/ministers'
 import { ministerOf } from '../game/camara'
 import { aiReady } from '../lib/ai'
 import { askEventBrief } from '../lib/aiActions'
+import type { EventDef, EventOption } from '../game/data/events'
+import { conselhosDilema } from '../game/dilema'
+
+/** Etapa 6F: dois do círculo, cada um defendendo um lado do dilema. De graça; só informação (texto das regras). */
+function ConselhosBox({ state, ev }: { state: GameState; ev: EventDef }) {
+  const cs = conselhosDilema(state, ev)
+  if (!cs.length) return null
+  return (
+    <div className="pn-review">
+      <div className="pn-label">🤝 O círculo se divide</div>
+      {cs.map((c) => (
+        <div key={c.quem} className="pn-review__head">
+          <Portrait name={c.name} feminine={c.feminine} size={36} title={c.name} />
+          <div><b>{c.name}</b> <span className="muted">· por {ev.dilema!.lados[c.lado].toLowerCase()}</span><p className="pn-review__quote">“{c.fala}”</p></div>
+        </div>
+      ))}
+      <p className="pn-hint">Conselho de graça: cada um vê do jeito que é. A decisão é sua.</p>
+    </div>
+  )
+}
 
 /**
  * Painel do fato do mês. Etapa 2B (v0.19): é o destaque da página, com duas saídas para todo fato, bom ou ruim:
@@ -71,7 +91,10 @@ export function EventPanel({ state, choice, onChoose, response, onRespond, plann
     setBrief(await askEventBrief(state, ev))
     setBriefBusy(false)
   }
-  const passChips = effectChips(passOpt.effects, passOpt.parties)
+  // Etapa 6F: no dilema, a mudança com o partido aliado entra nas etiquetas de cada saída.
+  const aliado = state.event?.aliado
+  const chipsDe = (o: EventOption) => effectChips(o.effects, o.aliado && aliado ? { ...o.parties, [aliado]: (o.parties?.[aliado] ?? 0) + o.aliado } : o.parties)
+  const passChips = chipsDe(passOpt)
   const goodPass = kind === 'bom'
     ? (state.difficulty === 'facil' ? 'A boa notícia passa sem render nada ao governo.' : 'A oposição fica com o crédito da boa notícia.')
     : passOpt.text
@@ -95,7 +118,8 @@ export function EventPanel({ state, choice, onChoose, response, onRespond, plann
           {resp.name !== p.name && <p className="pn-hint" style={{ margin: '0 0 4px' }}>{resp.icon} Área: {resp.areaName} · responsável: <b>{resp.name}</b></p>}
           <p>{fillText(ev.text, origin)}</p>
           {origin && ev.id !== 'impeachMinistro' && <p className="pn-event__origin">🌱 {stage === 'pauta' ? 'Reação a' : stage === 'barrada' ? 'Reação à tentativa de' : 'Consequência de'} <b>{origin.label}</b> · {origin.author} · {origin.year}{stage === 'pauta' ? ' · ainda na pauta do Congresso' : stage === 'barrada' ? ' · barrada' : ''}</p>}
-          <p className="pn-event__ask">{kind === 'bom' ? '“Presidente, temos uma boa notícia. Vamos agir em cima dela?”' : '“Presidente, precisamos de uma decisão.”'}</p>
+          {ev.dilema && <p className="pn-event__origin">⚖️ <b>Dilema:</b> {ev.dilema.lados[0]} × {ev.dilema.lados[1]} · cada saída protege um lado e cobra do outro</p>}
+          <p className="pn-event__ask">{ev.dilema ? '“Presidente, aqui não tem saída sem custo. De que lado ficamos?”' : kind === 'bom' ?'“Presidente, temos uma boa notícia. Vamos agir em cima dela?”' : '“Presidente, precisamos de uma decisão.”'}</p>
         </div>
       </div>
 
@@ -103,7 +127,7 @@ export function EventPanel({ state, choice, onChoose, response, onRespond, plann
         <div className="pn-twoway">
           <button className="pn-twoway__act" onClick={startActing}>
             <span>⚡</span><b>Agir</b>
-            <small>{ev.choiceOnly ? 'Ver as saídas que o caso permite.' : `Ouvir ${resp.feminine ? 'a ministra' : 'o ministro'}, escrever a ordem e mandar a medida.`}</small>
+            <small>{ev.dilema ? 'Ver as saídas: cada uma com o custo à vista.' : ev.choiceOnly ? 'Ver as saídas que o caso permite.' : `Ouvir ${resp.feminine ? 'a ministra' : 'o ministro'}, escrever a ordem e mandar a medida.`}</small>
           </button>
           <button className="pn-twoway__pass" onClick={() => onChoose(def)}>
             <span>🤷</span><b>Deixar passar</b>
@@ -135,14 +159,17 @@ export function EventPanel({ state, choice, onChoose, response, onRespond, plann
               const f = forecastImpeach(state)
               return f ? <p className="pn-hint warn">⚖️ Hoje: {f.yes} votos para afastar (precisa de {f.needed}, em voto secreto) · chance de cair se você defender: <b>{Math.round(f.chance * 100)}%</b>. Na aba Governo › Senado, atender as bancadas estaduais antes de encerrar o mês muda a conta.</p> : null
             })()}
+            {ev.dilema && <ConselhosBox state={state} ev={ev} />}
             <div className="pn-event__options">
               {ev.options.map((o, i) => (
                 <button key={i} className={`pn-option ${choice === i ? 'sel' : ''} ${o.default ? 'is-default' : ''}`} onClick={() => onChoose(choice === i ? null : i)}>
                   <span className="pn-option__ic">{choice === i ? '✅' : o.icon}</span>
                   <b>{o.label}</b>
+                  {ev.dilema && !o.default && o.lado !== undefined && <small className="muted">{o.lado === 'meio' ? '⚖️ Meio-termo' : `➜ Fica com: ${ev.dilema.lados[o.lado].toLowerCase()}`}</small>}
                   <small>{o.text}</small>
+                  {o.depois && <small className="pn-hint warn">⏳ Depois: {o.depois.aviso}.</small>}
                   <span className="pn-chips">
-                    {effectChips(o.effects, o.parties).map((c, k) => <span key={k} className={`pn-chipfx ${c.tone}`} title={c.title}>{c.text}</span>)}
+                    {chipsDe(o).map((c, k) => <span key={k} className={`pn-chipfx ${c.tone}`} title={c.title}>{c.text}</span>)}
                   </span>
                   {o.stf && (() => { const note = stfChoiceNote(state, o.stf, origin); return note ? <small className={o.stf === 'descumprir' ? 'dn' : 'pn-hint'}>⚖️ {note}</small> : null })()}
                   {o.default && <span className="pn-option__def">vale se você não escolher</span>}

@@ -1,5 +1,12 @@
 # Novidades
 
+## 0.41.1 (12/11/2026)
+- **Bloco 6F (telas): os dilemas estão ligados.**
+  - **No fato do mês**, a faixa "⚖️ Dilema" mostra os dois lados em jogo (por exemplo, "O aliado × A opinião pública").
+  - **Em cada saída:** de que lado ela fica (ou se é o meio-termo), o custo à vista, a mudança com o partido aliado e, quando há, o aviso "⏳ Depois: em uns 6 a 9 meses…".
+  - **O círculo se divide:** dois do seu círculo de confiança defendem lados opostos, cada um pelo que entende (a Fazenda olha as contas, o líder os votos, o vice a aprovação, o advogado o que volta depois). É de graça e só conselho: a decisão é sua.
+- 639 testes (3 novos nas telas). Conferido no navegador com o dilema da anistia.
+
 ## 0.41.0 (12/11/2026)
 - **Bloco 6F (regras): dilemas.** Ainda **desligado**: nada muda na partida até as telas da v0.41.1.
   - **Dilemas** são fatos do mês em que dois bens colidem: a vacina ou a meta fiscal, a anistia pedida pelo aliado, a mina na floresta, o reajuste com o caixa vazio, a operação policial com mortes, a conta de luz da estatal, e quatro fatos antigos reescritos (Centrão exige ministério, ministro do aliado flagrado, conflito por terra, queimadas).
