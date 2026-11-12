@@ -80,6 +80,7 @@ export function acaoBlockedReason(s: GameState, a: AcaoAgenda): string | null {
   if (s.finished) return 'O mandato já terminou.'
   const r = peekRound(s)
   if (r?.measure) return 'Você já mandou a medida desta rodada: a ação política entra no lugar dela, não soma.'
+  if (r?.revogou) return 'Você revogou um decreto neste mês: a revogação entra no lugar da ação política.'
   if (r?.acao && !mesma(r.acao, a)) return 'Só uma ação política por mês.'
   switch (a.tipo) {
     case 'post':

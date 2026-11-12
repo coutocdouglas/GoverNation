@@ -1,5 +1,13 @@
 # Novidades
 
+## 0.39.0 (12/11/2026)
+- **Bloco 6E, parte 3: o ministro antenado (regras).** Ainda **desligado**: nada muda na partida até as telas da v0.39.1.
+  - **Dossiê da pasta:** o ministro sabe o que o seu governo fez na área (medidas em vigor, na pauta e barradas, gasto e licitações em andamento, compromisso, meta), o que a população pede (aprovação e tendência do grupo, cobranças, fato do mês, crises recentes) e quem ele é (partido, desgaste, Elo).
+  - **Proposta do ministro** (ideia do Douglas): pedida por você, **1 por rodada ao todo**. As regras olham o dossiê e escolhem entre **complementar** uma medida sua que fere um grupo (sem desfazer o que ela fez), **retirar da pauta** um projeto que vai perder, esfria ou sofre pressão, **revogar** um decreto que fere a área ou está no Supremo, ou mandar uma **medida nova** para uma cobrança, o fato do mês ou o grupo da área (a genérica, só quando nada é mais urgente). Ministro desgastado demais não tem força; desgastado ou de Elo baixo lê pior; de risco oculto alto puxa para obra ou contrato. Proposta acatada no mês baixa o desgaste dele em 5.
+  - **Retirar da pauta** qualquer projeto parado: credibilidade −1, só volta em 6 meses, não gasta a medida do mês.
+  - **Revogar decreto** em vigor: os efeitos são desfeitos, credibilidade −1, só volta em 6 meses e ocupa o lugar da medida do mês. Revogar lei fica para depois (exige outra lei).
+- Save 37, com migração. 593 testes (16 novos).
+
 ## 0.38.1 (12/11/2026)
 - **Bloco 6E, parte 2 (telas): ministérios com vida. O bloco está ligado.**
   - **Aba Ministérios:** mostra "próxima troca em N meses" (uma troca a cada 3 meses), o botão **Efetivar** no interino (vira "titular efetivado", sem padrinho político) e **Ceder…** livre no interino, sem gastar a troca. A pasta cobrada pelo partido ganha a marca "em jogo".

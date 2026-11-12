@@ -299,7 +299,11 @@ export function migrate(raw: unknown): GameState | null {
       (s as GameState).pastas ??= initialPastas()
       s.saveVersion = 36
     }
-    if (s.saveVersion !== 36) return null
+    if (s.saveVersion === 36) {
+      // v0.38 → v0.39 (Etapa 6E, parte 3): campos novos e opcionais na rodada (proposta do ministro, decreto revogado); nada a converter.
+      s.saveVersion = 37
+    }
+    if (s.saveVersion !== 37) return null
     syncCustomBills(s as GameState)
     return s as GameState
   } catch {

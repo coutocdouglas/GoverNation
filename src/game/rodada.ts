@@ -46,6 +46,8 @@ import { PRESSAO, type RespostaPressao } from './data/pressao'
 import { cedidoScale, encerrarPressao, pressaoBlockedReason, pressaoOf } from './pressao'
 import { GOVERNO, governoLigado, type AcaoVice } from './data/governo'
 import { PASTAS, pastasLigadas, type RespostaPasta } from './data/pastas'
+import { CONSELHO, conselhoLigado, type TipoProposta } from './data/conselho'
+import { escolherProposta, textoProposta } from './conselho'
 import { efetivarBlockedReason, pastaJogoBlockedReason, pastasOf, registrarTroca, trocaBlockedReason, trocaConta } from './pastas'
 import { aplicarAcaoVice, trocarLiderNoEstado, viceBlockedReason } from './governo'
 import { addMark, markMeasure, noteRecord } from './reputacao'
@@ -978,6 +980,7 @@ export function sendBlockedReason(s: GameState, id: BillId, response = false): s
     if (bill.area !== ev.area) return `${ministerOf(s, ev.area).name} responde por ${MINISTER_BY_AREA[ev.area].areaName.toLowerCase()}: esta medida é de outra área.`
   } else {
     if (r?.measure) return 'Você já enviou a medida desta rodada. A próxima, só na rodada que vem.'
+    if (r?.revogou) return 'Você revogou um decreto neste mês: a revogação entra no lugar da medida nova.'
     if (r?.acao) return 'Você escolheu uma ação política neste mês: ela entra no lugar da medida nova. Desfaça a ação para mandar uma medida.'
     if (r?.response === id) return 'Esta medida já foi enviada como resposta ao fato do mês.'
   }
@@ -1018,6 +1021,7 @@ export function sendInto(s: GameState, id: BillId, opts: FloorOptions = {}, resp
   const minister = ministerOf(s, bill.area)
   if (response) ctx.round.response = id
   else ctx.round.measure = id
+  acatarProposta(s, ctx.round, id, ['nova', 'complementar'])
   // Etapa 2: o nome dado pelo presidente vira manchete e fica na Ficha.
   const title = opts.title?.trim().slice(0, 60)
   if (title) {
@@ -1533,6 +1537,127 @@ export function responderPastaJogo(prev: GameState, acao: RespostaPasta): GameSt
     st.jogo = null
     st.ultimoJogo = agora
   }
+  closeCtx(ctx)
+  return s
+}
+
+// ─── Etapa 6E, parte 3 (v0.39): o ministro antenado ───────────────────────────
+
+/** Se a proposta do ministro foi acatada nesta rodada, o desgaste dele cai (uma vez). */
+function acatarProposta(s: GameState, round: RoundBuffer, id: BillId, tipos: TipoProposta[]): void {
+  const p = round.proposta
+  if (!conselhoLigado() || !p || p.acatada || !p.resultado.ok) return
+  const pr = p.resultado.proposta
+  if (pr.bill !== id || !tipos.includes(pr.tipo)) return
+  p.acatada = true
+  const seat = s.ministries[pr.area]
+  if (seat) seat.wear = Math.max(0, seat.wear + CONSELHO.proposta.acatada.desgaste)
+  const m = ministerOf(s, pr.area)
+  addBio(s, m.name, `Teve a proposta acatada pelo presidente ${s.presidentName}: ${BILL_BY_ID[id].name}.`)
+}
+
+const areaIdx = (area: AreaId) => Object.keys(MINISTER_BY_AREA).indexOf(area) * 977
+
+/** Motivo pelo qual não dá para pedir a proposta ao ministro agora, ou null. */
+export function propostaMinistroBlockedReason(s: GameState, area: AreaId): string | null {
+  if (!conselhoLigado()) return 'A proposta do ministro ainda não está disponível.'
+  if (s.finished) return 'O mandato já terminou.'
+  if (!MINISTER_BY_AREA[area]) return 'Pasta desconhecida.'
+  const r = peekRound(s)
+  if (r?.proposta) return `Você já pediu uma proposta nesta rodada (${ministerOf(s, r.proposta.area).name}). A próxima, só na rodada que vem.`
+  return null
+}
+
+/** Pede a proposta ao ministro da pasta (uma por rodada, somando todos). O texto pelas regras é a reserva da fala da IA. */
+export function pedirProposta(prev: GameState, area: AreaId): GameState {
+  const err = propostaMinistroBlockedReason(prev, area)
+  if (err) throw new Error(err)
+  const s = structuredClone(prev)
+  const r = roundOf(s)
+  const resultado = escolherProposta(s, area, new Rng((absMonth(s) * 31337) ^ s.rngState ^ (0x5eed + areaIdx(area))))
+  r.proposta = { area, resultado, texto: textoProposta(s, resultado, area) }
+  return s
+}
+
+/** Motivo pelo qual não dá para retirar o projeto da pauta, ou null. */
+export function retirarDaPautaBlockedReason(s: GameState, id: BillId): string | null {
+  if (!conselhoLigado()) return 'Retirar da pauta ainda não está disponível.'
+  if (s.finished) return 'O mandato já terminou.'
+  const c = s.congress
+  if (!c.pending.some((p) => p.id === id) && !c.senate.pending.some((p) => p.id === id)) return 'O projeto não está na pauta.'
+  if (BILL_BY_ID[id]?.instrument === 'mp') return 'A medida provisória já vale: não dá para retirar da pauta.'
+  return null
+}
+
+/** Retira da pauta um projeto parado: credibilidade −1 e só volta em 6 meses. Não gasta a medida do mês. */
+export function retirarDaPauta(prev: GameState, id: BillId): GameState {
+  const err = retirarDaPautaBlockedReason(prev, id)
+  if (err) throw new Error(err)
+  // A medida explosiva anunciada já tem o recuo próprio (6C): não cobrar duas vezes.
+  if (regDe(prev, id)?.fase === 'anunciada') {
+    const t = retirarExplosiva(prev, id)
+    if (t.round) acatarProposta(t, t.round, id, ['retirar'])
+    return t
+  }
+  const s = structuredClone(prev)
+  const ctx = openCtx(s)
+  const bill = BILL_BY_ID[id]
+  const c = s.congress
+  const p = c.pending.find((x) => x.id === id) ?? c.senate.pending.find((x) => x.id === id)
+  if (p?.priced) ctx.conf.v -= p.priced
+  c.pending = c.pending.filter((x) => x.id !== id)
+  c.senate.pending = c.senate.pending.filter((x) => x.id !== id)
+  c.blockedUntil[id] = s.month + CONSELHO.retirar.voltaEm
+  // A pressão sobre o projeto perde o alvo.
+  const pr = s.pressao?.ativa
+  if (pr && pr.bill === id) encerrarPressao(s, pr, 'retirada')
+  mudaCredib(s, CONSELHO.retirar.credibilidade, `Retirou ${bill.name} da pauta`)
+  ctx.taken.push(`Retirou “${bill.name}” da pauta`)
+  ctx.headlines.push({ text: `Governo retira “${bill.name}” da pauta do Congresso`, tone: 'neutral' })
+  noteRecord(s, { text: `Retirou “${bill.name}” da pauta`, tone: 'neutral', kind: 'medida', bill: id })
+  addBio(s, s.presidentName, `Retirou “${bill.name}” da pauta do Congresso.`)
+  acatarProposta(s, ctx.round, id, ['retirar'])
+  closeCtx(ctx)
+  return s
+}
+
+/** Motivo pelo qual não dá para revogar o decreto agora, ou null. Leis ficam para depois (exigem outra lei). */
+export function revogarDecretoBlockedReason(s: GameState, id: BillId): string | null {
+  if (!conselhoLigado()) return 'Revogar decreto ainda não está disponível.'
+  if (s.finished) return 'O mandato já terminou.'
+  const bill = BILL_BY_ID[id]
+  if (!bill || bill.instrument !== 'decreto') return 'Só dá para revogar decreto: lei exige outra lei votada no Congresso.'
+  if (!s.congress.laws.includes(id)) return 'O decreto não está em vigor.'
+  const r = peekRound(s)
+  if (r?.revogou) return 'Você já revogou um decreto neste mês.'
+  if (r?.measure) return 'Você já mandou a medida desta rodada: a revogação entra no lugar dela.'
+  if (r?.acao) return 'Você escolheu uma ação política neste mês: a revogação entra no lugar dela.'
+  return null
+}
+
+/** Revoga um decreto em vigor: os efeitos são desfeitos, credibilidade −1, e ocupa o lugar da medida do mês. */
+export function revogarDecreto(prev: GameState, id: BillId): GameState {
+  const err = revogarDecretoBlockedReason(prev, id)
+  if (err) throw new Error(err)
+  const s = structuredClone(prev)
+  const ctx = openCtx(s)
+  const bill = BILL_BY_ID[id]
+  const w = s.supremo.watch.find((x) => x.bill === id)
+  ctx.conf.v += applyEffects(ctx.e, ctx.impulses, undoEffects(bill, w?.scale), `Revogado: ${bill.name}`, 1, -1)
+  for (const x of struckImpulses(bill, w?.scale)) ctx.impulses[x.group].push({ label: x.label.replace(/^Supremo derruba/, 'Governo revoga').replace(/^Alívio com a derrubada/, 'Alívio com a revogação'), value: x.value })
+  s.congress.laws = s.congress.laws.filter((x) => x !== id)
+  dropInForce(s, id)
+  s.congress.blockedUntil[id] = s.month + CONSELHO.revogar.voltaEm
+  const reg = regDe(s, id)
+  if (reg && reg.fase === 'vigor') reg.fase = 'retirada'
+  ctx.round.revogou = id
+  mudaCredib(s, CONSELHO.revogar.credibilidade, `Revogou o decreto ${bill.name}`)
+  ctx.taken.push(`Revogou o decreto “${bill.name}”`)
+  ctx.headlines.push({ text: `Governo revoga o decreto “${bill.name}”`, tone: 'neutral' })
+  noteRecord(s, { text: `Revogou o decreto “${bill.name}”`, tone: 'neutral', kind: 'medida', bill: id })
+  addBio(s, s.presidentName, `Revogou o decreto “${bill.name}”.`)
+  addChronicle(s, `Governo ${s.presidentName} revoga o decreto “${bill.name}”`, 'neutral')
+  acatarProposta(s, ctx.round, id, ['revogar'])
   closeCtx(ctx)
   return s
 }
