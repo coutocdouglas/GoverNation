@@ -45,7 +45,8 @@ export interface Dossie {
   crises: string[]
 }
 
-const custoAno = (b: BillDef) => {
+/** Custo por ano da medida, em R$ bi (positivo = custa). */
+export const custoAno = (b: BillDef) => {
   const fx = b.effects
   return (((fx.spending ?? 0) - (fx.revenue ?? 0)) / 100) * GDP_BILLIONS + ((fx.temp?.amount ?? 0) / 100) * GDP_BILLIONS
 }

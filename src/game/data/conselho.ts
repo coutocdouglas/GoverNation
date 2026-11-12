@@ -47,4 +47,23 @@ let ligado: boolean = CONSELHO.ativo
 export const ligarConselho = (v: boolean) => { ligado = v }
 export const conselhoLigado = () => ligado
 
+/**
+ * Etapa 6E, parte 4 (v0.40): o círculo de confiança. Uma consulta por mês; cada um avalia o que entende, com o erro e
+ * o viés de cada um (ocultos). Ouvir quem tem risco oculto alto sobe o rastro do presidente.
+ */
+export const CIRCULO = {
+  /** Consultas ao círculo por mês (rodada), além do parecer do ministro da pasta. */
+  porMes: 1,
+  /** Ouvir quem tem risco oculto a partir de `riscoDesde` sobe o rastro do presidente nesta quantidade. */
+  rastro: { riscoDesde: 60, valor: 2 },
+  /** Líder do governo: erro de até `erroMax` na chance (menos quanto mais competente); desleal pinta o placar mais bonito. */
+  lider: { erroMax: 0.3, otimismoDesleal: 0.15, lealdadeAbaixo: 40, folga: 0.75, apertado: 0.4 },
+  /** Advogado: chance de subestimar o risco = (1 − eficiência) × `subestima`. */
+  advogado: { subestima: 0.6 },
+  /** Vice: com ambição a partir de `ambicaoDesde` e lealdade abaixo de `lealdadeAbaixo`, empurra para o erro. */
+  vice: { ambicaoDesde: 70, lealdadeAbaixo: 40 },
+  /** Fazenda: custo em R$ bi por ano (caro, médio); desgastado, o custo parece `subestimaCusto` menor. */
+  fazenda: { caro: 15, medio: 5, mercadoRuim: -2, desgasteDesde: 70, subestimaCusto: 0.3 },
+} as const
+
 export type TipoProposta = 'complementar' | 'retirar' | 'revogar' | 'nova'

@@ -144,7 +144,7 @@ import type { ReputationState } from './reputacao'
 import type { RiscoState } from './risco'
 
 export interface GameState {
-  saveVersion: 38
+  saveVersion: 39
   /** Etapa 6D (v0.36): pressão antes da votação (agência de risco, mercado, ato de rua) e o que o governo respondeu. */
   pressao: import('./pressao').PressaoState
   /** Etapa 6E (v0.37): o vice (escolhido por proposta na posse) e o líder do governo na Câmara. */
@@ -269,6 +269,8 @@ export interface RoundBuffer {
   proposta?: { area: import('./data/ministers').AreaId; resultado: import('./conselho').ResultadoProposta; texto: string; acatada?: boolean; ordem?: string; ia?: boolean }
   /** Etapa 6E (v0.39): decreto revogado nesta rodada (entra no lugar da medida do mês). */
   revogou?: BillId
+  /** Etapa 6E (v0.40): a consulta ao círculo de confiança deste mês (uma) e o texto que a tela mostra. */
+  circulo?: import('./circulo').ParecerCirculo & { texto: string; ia?: boolean }
   /** Etapa 2: urgência pedida e ministério mudado nesta rodada (um de cada). */
   urgencyAsked?: boolean
   ministryDone?: boolean

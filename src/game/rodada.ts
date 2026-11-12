@@ -48,6 +48,9 @@ import { GOVERNO, governoLigado, type AcaoVice } from './data/governo'
 import { PASTAS, pastasLigadas, type RespostaPasta } from './data/pastas'
 import { CONSELHO, conselhoLigado, type TipoProposta } from './data/conselho'
 import { escolherProposta, ordemPadrao, textoProposta } from './conselho'
+import { membroDe, parecerCirculo, riscoDe, textoParecer, type MembroCirculo } from './circulo'
+import { CIRCULO } from './data/conselho'
+import { subirRastro } from './risco'
 import { efetivarBlockedReason, pastaJogoBlockedReason, pastasOf, registrarTroca, trocaBlockedReason, trocaConta } from './pastas'
 import { aplicarAcaoVice, trocarLiderNoEstado, viceBlockedReason } from './governo'
 import { addMark, markMeasure, noteRecord } from './reputacao'
@@ -1671,5 +1674,44 @@ export function revogarDecreto(prev: GameState, id: BillId): GameState {
   addChronicle(s, `Governo ${s.presidentName} revoga o decreto “${bill.name}”`, 'neutral')
   acatarProposta(s, ctx.round, id, ['revogar'])
   closeCtx(ctx)
+  return s
+}
+
+// ─── Etapa 6E, parte 4 (v0.40): o círculo de confiança ────────────────────────
+
+/** Motivo pelo qual não dá para consultar este membro do círculo sobre a medida agora, ou null. */
+export function circuloBlockedReason(s: GameState, quem: MembroCirculo, bill: BillId): string | null {
+  if (!conselhoLigado()) return 'O círculo de confiança ainda não está disponível.'
+  if (s.finished) return 'O mandato já terminou.'
+  if (!BILL_BY_ID[bill]) return 'Medida desconhecida.'
+  if (!membroDe(s, quem)) return 'Esta pessoa não está no seu círculo agora.'
+  const r = peekRound(s)
+  if (r?.circulo) return `Você já ouviu o círculo neste mês (${membroDe(s, r.circulo.quem)?.name ?? 'alguém'}). A próxima consulta, só no mês que vem.`
+  return null
+}
+
+/**
+ * Consulta um membro do círculo sobre a medida que você prepara (uma por mês). O parecer sai das regras, com o erro e o
+ * viés de quem fala. Ouvir quem tem risco oculto alto sobe o rastro do presidente.
+ */
+export function consultarCirculo(prev: GameState, quem: MembroCirculo, bill: BillId): GameState {
+  const err = circuloBlockedReason(prev, quem, bill)
+  if (err) throw new Error(err)
+  const s = structuredClone(prev)
+  const r = roundOf(s)
+  const m = membroDe(s, quem)!
+  const p = parecerCirculo(s, quem, bill, new Rng((absMonth(s) * 31337) ^ s.rngState ^ 0xc1c0))
+  r.circulo = { ...p, texto: textoParecer(p) }
+  if (riscoDe(s, m) >= CIRCULO.rastro.riscoDesde) subirRastro(s, CIRCULO.rastro.valor, `Ouviu ${m.name} no círculo de confiança`, bill)
+  addBio(s, m.name, `Foi ouvid${m.feminine ? 'a' : 'o'} pelo presidente ${s.presidentName} sobre “${BILL_BY_ID[bill].name}”.`)
+  return s
+}
+
+/** v0.40.1: a IA narrou o parecer do círculo (só troca o texto). */
+export function narrarCirculo(prev: GameState, quem: MembroCirculo, texto: string): GameState {
+  const c = peekRound(prev)?.circulo
+  if (!c || c.quem !== quem) return prev
+  const s = structuredClone(prev)
+  s.round!.circulo = { ...c, texto, ia: true }
   return s
 }

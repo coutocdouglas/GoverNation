@@ -1,5 +1,12 @@
 # Novidades
 
+## 0.40.0 (12/11/2026)
+- **Bloco 6E, parte 4: o círculo de confiança (regras).** Ainda **sem tela**: nada muda na partida até a v0.40.1.
+  - **Quem está no círculo:** o líder do governo (avalia o placar), o advogado (o risco jurídico), o vice (a leitura política) e o ministro da Fazenda (as contas e o mercado).
+  - **Uma consulta por mês** sobre a medida que você prepara, além do parecer do ministro da pasta. Cada um responde pelas regras, do jeito que é: líder pouco competente erra o placar e o desleal pinta o placar mais bonito; advogado fraco às vezes subestima o perigo; o vice ambicioso e desleal elogia o que te prejudica; a Fazenda desgastada acha a medida mais barata do que é. O viés não aparece: você julga pelo Elo e pela pista de cada um.
+  - **Ouvir quem tem risco oculto alto** sobe o rastro do presidente (+2).
+- Save 39, com migração. 610 testes (11 novos).
+
 ## 0.39.1 (12/11/2026)
 - **Bloco 6E, parte 3 (telas e IA): o ministro antenado. O bloco está ligado.**
   - **Aba Ministérios:** botão **💡 Pedir proposta** em cada ministro (Fazenda e Relações Institucionais incluídas). Uma proposta por rodada, somando todos; o botão diz quando trava.

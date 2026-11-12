@@ -1326,3 +1326,20 @@ Pedido do Douglas (12/11/2026): o ministro precisa acompanhar o jogo (as medidas
 **Telas e IA na v0.39.1. Círculo de confiança na v0.40.0.**
 
 **Telas e IA (v0.39.1).** Botão "Pedir proposta" na aba Ministérios (`GovTabs.tsx`), janela `PropostaJanela.tsx` (no Radar enquanto a rodada tiver proposta), "Retirar da pauta" e "Revogar decreto" em `CongressView.tsx` (com confirmação). IA: `ministerProposalPrompt` manda o dossiê e a decisão já tomada pelas regras ("não troque a proposta"); a IA devolve a fala e, na medida nova ou no complemento, a ordem pronta, que vai para o campo da medida do mês pelo mesmo caminho do "Atender" (e de lá a leitura do gabinete pode achar a medida no catálogo ou redigir uma nova). Sem IA ou com falha, vale `textoProposta` e o nome da medida. Save 38 (`RoundBuffer.proposta.ordem` e `.ia`). O bloco está ligado (`CONSELHO.ativo`).
+
+### 27.38 Bloco 6E da Etapa 6, parte 4: o círculo de confiança (regras, v0.40.0)
+
+Desenho aprovado pelo Douglas (12/11/2026). Motor em `src/game/circulo.ts`; números em `CIRCULO` (`src/game/data/conselho.ts`); consulta em `src/game/rodada.ts`.
+
+1. **Membros** (`membrosCirculo`): líder do governo (o placar), advogado do presidente (o risco jurídico), vice (a leitura política) e ministro da Fazenda (as contas e o mercado). Sem governo vivo, só advogado e Fazenda.
+2. **Consulta** (`consultarCirculo`): uma por mês (`RoundBuffer.circulo`), sobre uma medida, além do parecer do ministro da pasta, que continua igual. Guarda o parecer e o texto das regras (`textoParecer`, reserva da fala da IA).
+3. **Pareceres** (`parecerCirculo`), com o erro e o viés de cada um, ocultos:
+   - **Líder:** lê a chance de passar (`forecastVote`) com erro de até ±0,3 vezes (1 − competência); com lealdade abaixo de 40 soma +0,15 (pinta o placar bonito). "Passa com folga" a partir de 0,75; "apertado" a partir de 0,4. Decreto não passa pelo Congresso.
+   - **Advogado:** risco jurídico da medida (`legalRiskIn`), um degrau a mais com contratação que afrouxa controle; chance de subestimar um degrau = (1 − eficiência) × 0,6.
+   - **Vice:** saldo dos efeitos nos grupos; com ambição 70+ e lealdade abaixo de 40, inverte (elogia o que prejudica, põe dúvida no que ajuda).
+   - **Fazenda:** custo por ano (R$ 15 bi+ ou mercado −2: contra; R$ 5 bi+: ressalva); desgaste 70+ faz o custo parecer 30% menor.
+4. **Rastro:** ouvir quem tem risco oculto 60+ sobe o rastro do presidente em 2 (`subirRastro`), com a origem registrada. A tela vai mostrar a pista antes.
+5. **Save 39** (campo opcional na rodada).
+6. **Testes do projeto:** atalho (1 consulta por mês; ouvir não dá bônus, só informação, e quem tem risco cobra rastro); beco sem saída (não ouvir é sempre possível); sobrecarga (a consulta fica atrás de um clique na leitura da medida).
+
+**Telas e IA na v0.40.1**, que fecham o bloco 6E.
