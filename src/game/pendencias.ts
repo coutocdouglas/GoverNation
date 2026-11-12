@@ -24,11 +24,12 @@ import { casosAbertos, faixaGravidade } from './caso'
 import { cpiAtual } from './cpi'
 import { sementeAvisada } from './inteligencia'
 import { CPI } from './data/cpi'
+import { PRESSAO, pressaoLigada } from './data/pressao'
 import { deAuthor, justiceName } from './supremo'
 import { TSE_BY_ID } from './data/supremo'
 
 export type Urgency = 'red' | 'yellow' | 'green'
-export type PendingTarget = 'evento' | 'camara' | 'senado' | 'supremo' | 'promessas' | 'cobrancas' | 'licitacao' | 'caso' | 'cpi' | 'inteligencia'
+export type PendingTarget = 'evento' | 'camara' | 'senado' | 'supremo' | 'promessas' | 'cobrancas' | 'licitacao' | 'caso' | 'cpi' | 'inteligencia' | 'pressao'
 
 export interface Pendencia {
   id: string
@@ -89,6 +90,18 @@ export function pendencias(s: GameState): Pendencia[] {
       title: `Licitação: ${BILL_BY_ID[l.bill].name}`,
       detail: `Escolha quem executa (${l.empresas.length} empresas) · ${leftText(left)} · sem escolha, fica a empresa de sempre`,
       urgency: urgencyOf(left, false), weight: 45 - left * 6,
+    })
+  }
+
+  // v0.36.1 (6D): pressão sobre uma medida da fila. Sem resposta, cresce todo mês; deixar passar também é uma saída.
+  const pr = pressaoLigada() ? s.pressao?.ativa : null
+  if (pr) {
+    const left = Math.max(0, pr.ate - now)
+    out.push({
+      id: `pressao-${pr.bill}`, icon: PRESSAO.tipos[pr.tipo].icon, target: 'pressao', left,
+      title: `${PRESSAO.tipos[pr.tipo].nome} contra: ${BILL_BY_ID[pr.bill]?.name ?? pr.bill}`,
+      detail: pr.resposta ? `Você respondeu (${pr.resposta}) · esfria em ${leftText(left)}` : `Tira votos da medida · enfrentar, negociar, adiar ou retirar · sem resposta, cresce todo mês`,
+      urgency: pr.resposta ? 'green' : left <= 1 ? 'red' : 'yellow', weight: pr.resposta ? 20 : 48,
     })
   }
 

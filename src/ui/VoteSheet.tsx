@@ -26,6 +26,7 @@ import { askConcession } from '../lib/aiActions'
 import { procedureBlockedReason, type MonthPlan } from '../game/game'
 import type { BillId, Deal, EmendaDestino, GameState, PartyId, SenatorBuy } from '../game/types'
 import { Portrait } from './Portrait'
+import { PressaoLinha } from './PressaoJanela'
 import { Art } from './Art'
 import { ChainSteps } from './Chain'
 import type { ChainInfo } from './corrente'
@@ -182,6 +183,7 @@ export function VoteSheet({ state, bill, deals, listened, onListen, listenedSena
           {queued && fp.age > 0 && b.instrument !== 'mp' && (
             <p className={`pn-hint ${fp.age >= ESFRIA.archiveAfter - 2 ? 'dn' : 'warn'}`}>🧊 Na fila há {fp.age} {fp.age === 1 ? 'rodada' : 'rodadas'}: a pauta esfria e o apoio cai.{ESFRIA.archiveAfter - 1 - fp.age <= 0 ? ' Sem votação, é arquivada no fim desta rodada.' : ` Sobram ${ESFRIA.archiveAfter - fp.age} rodadas, contando esta; sem votação, depois disso é arquivada.`}</p>
           )}
+          <PressaoLinha state={state} bill={bill} />
           {fp.rua !== 0 && <p className={`pn-hint ${fp.rua > 0 ? 'up' : 'dn'}`}>{fp.rua > 0 ? '📢 As ruas encheram pela medida: o Congresso sente a pressão.' : '📢 As ruas esvaziaram: a pressão agora é contra.'}</p>}
           {state.rival?.stance === 'obstrucao' && (
             <p className="pn-hint dn">🥊 Oposição em obstrução: {state.rival.name} puxa o {PARTY_BY_ID[state.rival.party].sigla} e aliados a votar mais contra o governo.</p>

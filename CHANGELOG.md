@@ -1,5 +1,12 @@
 # Novidades
 
+## 0.36.1 (12/11/2026)
+- **Bloco 6D da Etapa 6 (telas): pressão antes da votação. O bloco está ligado.**
+  - **Pendências:** a pressão aparece como um cartão (um por vez), vermelho se não foi respondida e esfria em até 1 mês; respondida, fica verde.
+  - **Radar:** linha "Pressão na votação" e janela com quem pressiona, quantos votos tira da Câmara hoje e as quatro saídas (enfrentar, negociar, adiar, retirar) com o custo à vista, mais as últimas pressões.
+  - **Votação:** linha "Pressão: −N votos, por quê" na medida atingida.
+- 516 testes (5 novos nas telas).
+
 ## 0.36.0 (11/11/2026)
 - **Bloco 6D da Etapa 6: pressão antes da votação (regras).** Ainda **desligado**: nada muda na partida até as telas da v0.36.1.
   - **Pressão sobre a medida que espera voto:** agência de risco, mercado nervoso ou ato de rua de um grupo. Só uma por vez, cerca de 2 ou 3 por mandato. Ela tira votos de cada partido (mais dos pró-mercado, ou do partido do grupo que protesta) e cresce se você não responde.

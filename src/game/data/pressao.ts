@@ -9,8 +9,8 @@ import type { PartyId } from '../types'
  * de cada partido e o jogador responde: enfrentar, negociar, adiar, retirar ou deixar passar.
  */
 export const PRESSAO = {
-  /** Desligada até as telas (v0.36.1). Testes e simulador usam `ligarPressao`. */
-  ativo: false,
+  /** Ligada desde as telas (v0.36.1). Testes e simulador podem usar `ligarPressao`. */
+  ativo: true,
   /** Meses sem pressão nova depois que uma termina. */
   intervalo: 2,
   /** A pressão só aparece em medida que já passou ao menos este número de meses na fila (0: já no fechamento do mês em que ficou parada, para o jogador ver antes de votar). */

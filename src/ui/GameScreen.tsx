@@ -340,7 +340,7 @@ export function GameScreen({ state, onChange, onExit }: {
     })
   }
   const goPending = (t: PendingTarget) => {
-    if (t === 'caso' || t === 'cpi' || t === 'inteligencia') { abrir(t === 'caso' ? 'casos' : t); return }
+    if (t === 'caso' || t === 'cpi' || t === 'inteligencia' || t === 'pressao') { abrir(t === 'caso' ? 'casos' : t); return }
     if (t === 'camara' || t === 'senado' || t === 'supremo') { setTab('governo'); setGovTab(t); window.scrollTo({ top: 0, behavior: 'smooth' }); return }
     const el = document.getElementById(t === 'promessas' ? 'promessas' : t === 'evento' ? 'fato-do-mes' : 'fato-do-mes')
     if (t === 'cobrancas') { medidaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }); return }
