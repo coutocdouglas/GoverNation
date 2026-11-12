@@ -42,6 +42,8 @@ import { custoDeEnviar, descontarEnvio, pesaNoEnvio } from './efeitos'
 import { anunciarExplosiva, assinarExplosiva, ehExplosiva, insistirExplosiva, regDe } from './absurdo'
 import { mudaCredib } from './credibilidade'
 import { EXPLOSIVA } from './data/credibilidade'
+import { PRESSAO, type RespostaPressao } from './data/pressao'
+import { cedidoScale, encerrarPressao, pressaoBlockedReason, pressaoOf } from './pressao'
 import { addMark, markMeasure, noteRecord } from './reputacao'
 import { REPUTACAO } from './data/marks'
 import { Rng } from './rng'
@@ -434,7 +436,7 @@ function enactBill(ctx: RoundCtx, p: PendingBill, placarS: string): void {
   const conc = [...(p.conceded ?? []), ...(p.deals ?? [])].filter((d, i, arr) => d.kind === 'concessao' && arr.findIndex((x) => x.kind === 'concessao' && x.party === d.party && x.concession?.type === d.concession?.type) === i)
   if (concessionSafer(conc) && !s.supremo.adjusted[p.id]) s.supremo.adjusted[p.id] = 'baixo'
   if (bill.instrument !== 'mp') {
-    const k = (p.ccj === 'adequado' ? SUPREMO.ccj.adequaScale : 1) * senadoScale(p)
+    const k = (p.ccj === 'adequado' ? SUPREMO.ccj.adequaScale : 1) * senadoScale(p) * cedidoScale(s, p.id)
     const fx = concededEffects(coreEffects(bill, am), conc)
     const final = k === 1 ? fx : coreEffects({ ...bill, effects: fx }, { relator: s.playerParty, kind: 'desidrata', shift: 0, scale: k })
     // v0.26: a parte da perda que já pesou no envio não conta duas vezes.
@@ -648,6 +650,72 @@ export function retirarExplosiva(prev: GameState, id: BillId): GameState {
   noteRecord(s, { text: `Recuou e ${verbo} “${bill.name}”, medida explosiva`, tone: 'neutral', kind: 'medida', bill: id })
   addBio(s, s.presidentName, `Recuou da medida explosiva “${bill.name}”.`)
   addChronicle(s, `Governo ${s.presidentName} recua de “${bill.name}”`, 'neutral')
+  closeCtx(ctx)
+  return s
+}
+
+/**
+ * Etapa 6D: responde à pressão ativa, na hora. Enfrentar só marca a escolha (o custo vem no resultado do voto);
+ * negociar corta o texto e a pressão pela metade e gasta uma conversa; adiar segura a votação e esfria a pressão;
+ * retirar tira a medida do Congresso e cobra mais a cada recuo. Uma resposta por pressão.
+ */
+export function responderPressao(prev: GameState, acao: RespostaPressao): GameState {
+  const err = pressaoBlockedReason(prev, acao)
+  if (err) throw new Error(err)
+  const R = PRESSAO.respostas
+  // Retirar uma medida explosiva anunciada já tem custo próprio (6C): não cobrar duas vezes.
+  if (acao === 'retirar' && regDe(prev, prev.pressao.ativa!.bill)?.fase === 'anunciada') {
+    const s = retirarExplosiva(prev, prev.pressao.ativa!.bill)
+    const a = s.pressao.ativa!
+    a.resposta = 'retirar'
+    pressaoOf(s).recuos += 1
+    encerrarPressao(s, a, 'retirada')
+    return s
+  }
+  const s = structuredClone(prev)
+  const ctx = openCtx(s)
+  const st = pressaoOf(s)
+  const a = st.ativa!
+  const bill = BILL_BY_ID[a.bill]
+  const c = s.congress
+  const agora = absMonth(s)
+  a.resposta = acao
+  if (acao === 'enfrentar') {
+    ctx.taken.push(`Enfrentou a pressão sobre “${bill.name}”`)
+    noteRecord(s, { text: `Decidiu enfrentar a pressão sobre “${bill.name}”`, tone: 'neutral', kind: 'medida', bill: a.bill })
+  } else if (acao === 'negociar') {
+    a.forca = Math.round(a.forca * R.negociar.forca * 1000) / 1000
+    st.cedidos[a.bill] = Math.round((st.cedidos[a.bill] ?? 1) * R.negociar.escala * 100) / 100
+    ctx.round.dealsDone = (ctx.round.dealsDone ?? 0) + R.negociar.conversas
+    ctx.taken.push(`Negociou com quem pressiona por “${bill.name}”: cedeu parte do texto`)
+    ctx.headlines.push({ text: `Governo cede parte de “${bill.name}” para aliviar a pressão`, tone: 'neutral' })
+    noteRecord(s, { text: `Cedeu parte do texto de “${bill.name}” para aliviar a pressão`, tone: 'neutral', kind: 'medida', bill: a.bill })
+  } else if (acao === 'adiar') {
+    a.forca = Math.round(a.forca * R.adiar.forca * 1000) / 1000
+    a.ate = Math.min(a.ate, agora + R.adiar.meses)
+    st.adiadas.push(a.bill)
+    for (const p of [...c.pending, ...c.senate.pending]) if (p.id === a.bill) p.waitUntil = s.month + R.adiar.meses
+    mudaCredib(s, R.adiar.credibilidade, `Adiou a votação de ${bill.name} por causa da pressão`)
+    ctx.taken.push(`Adiou a votação de “${bill.name}” por ${R.adiar.meses} meses`)
+    ctx.headlines.push({ text: `Governo adia a votação de “${bill.name}” por causa da pressão`, tone: 'neutral' })
+    noteRecord(s, { text: `Adiou a votação de “${bill.name}” por ${R.adiar.meses} meses`, tone: 'neutral', kind: 'medida', bill: a.bill })
+  } else {
+    const p = c.pending.find((x) => x.id === a.bill) ?? c.senate.pending.find((x) => x.id === a.bill)
+    if (p?.priced) ctx.conf.v -= p.priced
+    c.pending = c.pending.filter((x) => x.id !== a.bill)
+    c.senate.pending = c.senate.pending.filter((x) => x.id !== a.bill)
+    c.blockedUntil[a.bill] = s.month + R.retirar.voltaEm
+    const custo = Math.max(R.retirar.tetoRecuo, R.retirar.credibilidade + R.retirar.porRecuo * st.recuos)
+    mudaCredib(s, custo, `Retirou ${bill.name} da pauta sob pressão`)
+    rivalOf(ctx).push({ label: `Governo recua de “${bill.name}”`, value: R.retirar.rival })
+    st.recuos += 1
+    ctx.taken.push(`Recuou: retirou “${bill.name}” da pauta`)
+    ctx.headlines.push({ text: `Governo retira “${bill.name}” da pauta depois da pressão`, tone: 'neutral' })
+    noteRecord(s, { text: `Retirou “${bill.name}” da pauta sob pressão`, tone: 'neutral', kind: 'medida', bill: a.bill })
+    addBio(s, s.presidentName, `Retirou “${bill.name}” da pauta sob pressão.`)
+    addChronicle(s, `Governo ${s.presidentName} retira “${bill.name}” depois da pressão`, 'neutral')
+    encerrarPressao(s, a, 'retirada')
+  }
   closeCtx(ctx)
   return s
 }

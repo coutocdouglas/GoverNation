@@ -229,7 +229,7 @@ describe('v0.23: save 22', () => {
     delete old.supremo.defied
     delete old.supremo.tse
     const m = migrate(old)!
-    expect(m.saveVersion).toBe(33)
+    expect(m.saveVersion).toBe(34)
     expect(Math.abs(m.supremo.favor - meanRelation(m.supremo))).toBeLessThan(1)
     expect(m.supremo.precedentes).toEqual([])
     expect(m.supremo.tse.seat).toBe(TSE.start)

@@ -1,5 +1,13 @@
 # Novidades
 
+## 0.36.0 (11/11/2026)
+- **Bloco 6D da Etapa 6: pressão antes da votação (regras).** Ainda **desligado**: nada muda na partida até as telas da v0.36.1.
+  - **Pressão sobre a medida que espera voto:** agência de risco, mercado nervoso ou ato de rua de um grupo. Só uma por vez, cerca de 2 ou 3 por mandato. Ela tira votos de cada partido (mais dos pró-mercado, ou do partido do grupo que protesta) e cresce se você não responde.
+  - **Saídas com o custo à vista:** enfrentar, negociar (a medida perde parte dos efeitos, gasta uma conversa), adiar (uma vez por medida) ou retirar da pauta (cada recuo custa mais credibilidade e a medida não volta por 6 meses). Deixar passar dá força à oposição e marca a Ficha.
+  - Simulador novo `npm run sim6d`: nenhuma saída dispara a nota; retirar mantém a nota mas derruba a credibilidade.
+- Save 34, com migração. 511 testes (23 novos).
+
+
 ## 0.35.1 (08/11/2026)
 - **Bloco 6C da Etapa 6 (telas): credibilidade, compromisso, pesquisa e medida explosiva. O bloco está ligado.**
   - **Credibilidade** no Radar (valor de 0 a 100) e janela própria: peso da sua fala, efeito no mercado, compromisso em aberto com prazo e o que mexeu nela.

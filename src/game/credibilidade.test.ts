@@ -229,7 +229,7 @@ describe('save e chave geral', () => {
     s.saveVersion = 32
     delete s.credib
     const m = migrate(s as unknown as GameState)
-    expect(m?.saveVersion).toBe(33)
+    expect(m?.saveVersion).toBe(34)
     expect(m?.credib).toEqual(initialCredib())
   })
   it('desligado, nada muda: a explosiva vota como qualquer lei', () => {

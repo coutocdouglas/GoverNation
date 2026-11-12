@@ -144,7 +144,9 @@ import type { ReputationState } from './reputacao'
 import type { RiscoState } from './risco'
 
 export interface GameState {
-  saveVersion: 33
+  saveVersion: 34
+  /** Etapa 6D (v0.36): pressão antes da votação (agência de risco, mercado, ato de rua) e o que o governo respondeu. */
+  pressao: import('./pressao').PressaoState
   /** Etapa 6A (v0.34): ações políticas do presidente (cansaço, intervalos e cobertura da imprensa). Ver agenda.ts. */
   agendaPres: import('./agenda').AgendaState
   /** Etapa 6C (v0.35): credibilidade, compromisso, pesquisas e medidas explosivas. */

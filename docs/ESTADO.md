@@ -3,13 +3,13 @@
 > **Leia este arquivo primeiro.** Ele diz onde o projeto está e qual é o próximo passo.
 > Atualize-o a cada mudança: seção "Estado atual", "Próximo passo" e uma linha no "Histórico".
 
-**Última atualização:** 08/11/2026 · **Versão:** v0.35.1 (6C, telas e bloco ligado; falta publicar)
+**Última atualização:** 11/11/2026 · **Versão:** v0.36.0 (6D, regras, desligadas; falta publicar). A v0.35.1 foi publicada em 11/11/2026.
 
 ---
 
 ## Próximo passo
 
-**Próximo: bloco 6D (pressão antes da votação)**, conforme `docs/projeto/plano-etapa-6.md`. Complexidade média-alta · **Opus** no desenho, **Sonnet** nas telas. O 6C está completo e ligado (v0.35.1, DESIGN.md 27.33); falta o Douglas jogar para sentir o peso dos extras da medida explosiva (o simulador nunca manda uma).
+**Próximo: v0.36.1, telas do bloco 6D (pressão antes da votação)** · complexidade média · **Sonnet**. As regras estão prontas e **desligadas** (v0.36.0, DESIGN.md 27.34; `PRESSAO.ativo`, `ligarPressao`). Telas a fazer: cartão da pressão na central de pendências (um por vez), resumo no Radar e janela com as 4 saídas e o custo de cada (`opcoesPressao`, `responderPressao`), linha "Pressão: −N votos, por quê" na `VoteSheet` e ligar `PRESSAO.ativo`. Depois, bloco 6E. O 6C está completo e ligado (v0.35.1, DESIGN.md 27.33); falta o Douglas jogar para sentir o peso dos extras da medida explosiva e da pressão (o simulador pauta a fila logo e nunca manda explosiva).
 
 **Etapa 6 aprovada (plano em `docs/projeto/plano-etapa-6.md`, 08/11/2026).** Ordem: 6.0 → 6B → 6A → 6C → 6D → 6E → 6F. **6.0 feito na v0.32.1**, **6B feito na v0.33.0**, **6A feito** (regras na v0.34.0, telas na v0.34.1; DESIGN.md 27.31), **6C feito** (regras v0.35.0, telas v0.35.1; DESIGN.md 27.32 e 27.33). **Portão de playtest da 5B e da 5C dispensado pelo Douglas em 08/11/2026: considerado fechado.**
 
@@ -40,7 +40,7 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 **Base técnica**
 - App de Windows (Tauri 2 + React + TypeScript). O instalador é gerado pelo GitHub Actions e o jogo se atualiza sozinho, com atualização assinada.
 - O motor do jogo (`src/game/`) fica separado das telas (`src/ui/`). Os números de balanceamento ficam em `src/game/data/`.
-- 485 testes automáticos. Saves antigos são migrados (versão atual do save: 33).
+- 511 testes automáticos. Saves antigos são migrados (versão atual do save: 34).
 
 **Jogabilidade**
 - Mandato de 48 meses (jan/2027 a dez/2030), com o mês em 4 passos: notícias, fato do mês, decisões e encerrar.
@@ -128,6 +128,9 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 
 ## Histórico
 
+- 11/11/2026 · v0.36.0 · Bloco 6D (regras, desligadas): pressão antes da votação (agência de risco, mercado, ato de rua; uma por vez), efeito no voto por partido, saídas enfrentar, negociar, adiar e retirar com custo à vista, deixar passar marca a Ficha; save 34; 511 testes; `npm run sim6d` (cerca de 2,5 pressões por mandato, nenhuma saída dispara a nota). Aprovado pelo Douglas: só medida na fila, "Adiar" entra, grupo que se organiza fundido ao ato nas ruas. Publicada a v0.35.1.
+- 09/11/2026 · (sem versão, só documento) · Plano proposto `docs/projeto/plano-etapa-6g.md` (blocos H0 a H5: correções, resposta ao fato como ação executiva, ministros com personalidade, mais grupos sociais, requerimentos dos setores em passos, fatos vivos e imprensa). Aguarda aprovação do Douglas e a lista de grupos do jogo de referência.
+- 09/11/2026 · (sem versão, só CSS, não publicado) · Revisão do playtest, item 1: aba Ministérios com a coluna da foto em 64 px (o anel do Elo cobria o nome). Pendentes do playtest: resposta ao fato do mês sem segunda votação, ministros com personalidade, passo a passo dos requerimentos dos setores.
 - 08/11/2026 · v0.35.1 · Bloco 6C (telas): credibilidade no Radar e janela, compromisso na fala, pesquisa na agenda, grupos em faixa entre pesquisas, nota de absurdo, aviso com confirmação e janela de retirar ou revogar a medida explosiva; bloco ligado; sem mudança no save; 488 testes.
 
 - 08/11/2026 · v0.35.0 · Bloco 6C (regras, desligadas): credibilidade, compromisso na fala, peso da fala em todo fato, pesquisa com margem de erro, nota de absurdo e medida explosiva com retirar da pauta; save 33; 485 testes; `npm run sim6c` (promete sem entregar 425, só fala 439, promete e entrega 594).

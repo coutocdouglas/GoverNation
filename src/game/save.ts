@@ -16,6 +16,7 @@ import { ensureStates } from './estados'
 import { garantirPessoa, initialRisco, pessoasAtuais, type RiscoState } from './risco'
 import { initialInvestigacao } from './caso'
 import { initialCredib } from './credibilidade'
+import { initialPressao } from './pressao'
 import type { GameState } from './types'
 
 // O jogo instalado guarda o localStorage na pasta de dados do usuário no Windows
@@ -280,7 +281,12 @@ export function migrate(raw: unknown): GameState | null {
       (s as GameState).credib ??= initialCredib()
       s.saveVersion = 33
     }
-    if (s.saveVersion !== 33) return null
+    if (s.saveVersion === 33) {
+      // v0.35 → v0.36 (Etapa 6D): nenhuma pressão ativa nem recuo anterior.
+      (s as GameState).pressao ??= initialPressao()
+      s.saveVersion = 34
+    }
+    if (s.saveVersion !== 34) return null
     syncCustomBills(s as GameState)
     return s as GameState
   } catch {

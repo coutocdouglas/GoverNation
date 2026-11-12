@@ -96,7 +96,7 @@ describe('lote A2: acordos que esfriam', () => {
     s.congress.pending[0].sentMonth = 7
     ;(s as unknown as { saveVersion: number }).saveVersion = 23
     const m = migrate(JSON.parse(JSON.stringify(s)))!
-    expect(m.saveVersion).toBe(33)
+    expect(m.saveVersion).toBe(34)
     expect(m.congress.pending[0].deals![0].month).toBe(7)
   })
 })
