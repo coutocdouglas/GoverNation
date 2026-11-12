@@ -165,7 +165,7 @@ describe('save', () => {
     s.saveVersion = 31
     delete s.agendaPres
     const m = migrate(s as unknown as GameState)
-    expect(m?.saveVersion).toBe(34)
+    expect(m?.saveVersion).toBe(35)
     expect(m?.agendaPres).toEqual(initialAgenda())
   })
 })

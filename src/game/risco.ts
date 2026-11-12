@@ -27,6 +27,7 @@ import { ministerOf } from './camara'
 import { leaderOf } from './partidos'
 import { justiceInfo } from './supremo'
 import { baseMembers } from './base'
+import { LIDER_BY_ID, VICE_BY_ID } from './data/governo'
 import { absMonth, addBio } from './memory'
 import { noteRecord } from './reputacao'
 import { Rng } from './rng'
@@ -272,6 +273,12 @@ export function pessoasAtuais(s: GameState): { name: string; ctx: ContextoPessoa
   }
   for (const j of s.supremo?.justices ?? []) out.push({ name: justiceInfo(j).name, ctx: { papel: 'supremo' } })
   for (const p of PARTIES) if (s.congress?.parties[p.id]) out.push({ name: leaderOf(s, p.id).name, ctx: { papel: 'lider', party: p.id } })
+  // Etapa 6E: o líder do governo, o vice-líder e o vice-presidente também têm Elo.
+  if (s.governo) {
+    out.push({ name: LIDER_BY_ID[s.governo.lider.id].name, ctx: { papel: 'lider', party: s.playerParty } })
+    out.push({ name: LIDER_BY_ID[s.governo.viceLider].name, ctx: { papel: 'lider', party: s.playerParty } })
+    out.push({ name: VICE_BY_ID[s.governo.vice.id].name, ctx: { papel: 'lider', party: VICE_BY_ID[s.governo.vice.id].party } })
+  }
   // Etapa 5B: o advogado do presidente também tem Elo.
   const adv = s.investigacao ? ADVOGADOS.find((a) => a.id === s.investigacao.advogado) : undefined
   if (adv) out.push({ name: adv.name, ctx: { papel: 'advogado' } })

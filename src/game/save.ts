@@ -17,6 +17,7 @@ import { garantirPessoa, initialRisco, pessoasAtuais, type RiscoState } from './
 import { initialInvestigacao } from './caso'
 import { initialCredib } from './credibilidade'
 import { initialPressao } from './pressao'
+import { initialGoverno } from './governo'
 import type { GameState } from './types'
 
 // O jogo instalado guarda o localStorage na pasta de dados do usuário no Windows
@@ -286,7 +287,13 @@ export function migrate(raw: unknown): GameState | null {
       (s as GameState).pressao ??= initialPressao()
       s.saveVersion = 34
     }
-    if (s.saveVersion !== 34) return null
+    if (s.saveVersion === 34) {
+      // v0.36 → v0.37 (Etapa 6E): saves antigos não tiveram proposta; o vice e o líder do governo saem da semente.
+      const g = s as GameState
+      g.governo ??= initialGoverno(g.avatarSeed ?? g.presidentName, g.playerParty, undefined, absMonth(g))
+      s.saveVersion = 35
+    }
+    if (s.saveVersion !== 35) return null
     syncCustomBills(s as GameState)
     return s as GameState
   } catch {

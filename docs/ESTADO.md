@@ -3,13 +3,13 @@
 > **Leia este arquivo primeiro.** Ele diz onde o projeto está e qual é o próximo passo.
 > Atualize-o a cada mudança: seção "Estado atual", "Próximo passo" e uma linha no "Histórico".
 
-**Última atualização:** 12/11/2026 · **Versão:** v0.36.1 (6D, telas, ligado; falta publicar). A v0.36.0 foi publicada em 11/11/2026.
+**Última atualização:** 12/11/2026 · **Versão:** v0.37.0 (6E parte 1, regras, desligadas; falta publicar). A v0.36.1 foi publicada em 12/11/2026.
 
 ---
 
 ## Próximo passo
 
-**Próximo: bloco 6E, governo com vida (líder do governo, vice, ministérios, círculo de confiança)** · complexidade alta · **Opus**. O 6D está completo e ligado (v0.36.1, DESIGN.md 27.34). Falta o Douglas jogar para sentir o peso da pressão e das medidas explosivas (o simulador pauta a fila logo e nunca manda explosiva).
+**Próximo: v0.37.1, telas do vice e do líder do governo** · complexidade média · **Sonnet**. As regras estão prontas e **desligadas** (v0.37.0, DESIGN.md 27.35; `GOVERNO.ativo`, `ligarGoverno`). Telas a fazer: etapa "3. Vice" no Novo mandato (escolher exatamente 3 de 27 nomes, 3 por partido, com perfil em palavras e sem mostrar as chances; `PosseChoices.vices`), tela de posse que revela quem aceitou, cartão do vice e do líder no Radar com janela (4 ações com custo à vista, `opcoesVice`, `agirNoVice`; trocar líder, `trocarLider`), pendências e ligar `GOVERNO.ativo`. Depois, 6E parte 2: ministérios com vida e círculo de confiança.
 
 **Etapa 6 aprovada (plano em `docs/projeto/plano-etapa-6.md`, 08/11/2026).** Ordem: 6.0 → 6B → 6A → 6C → 6D → 6E → 6F. **6.0 feito na v0.32.1**, **6B feito na v0.33.0**, **6A feito** (regras na v0.34.0, telas na v0.34.1; DESIGN.md 27.31), **6C feito** (regras v0.35.0, telas v0.35.1; DESIGN.md 27.32 e 27.33). **Portão de playtest da 5B e da 5C dispensado pelo Douglas em 08/11/2026: considerado fechado.**
 
@@ -130,6 +130,7 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 
 - 11/11/2026 · v0.36.0 · Bloco 6D (regras, desligadas): pressão antes da votação (agência de risco, mercado, ato de rua; uma por vez), efeito no voto por partido, saídas enfrentar, negociar, adiar e retirar com custo à vista, deixar passar marca a Ficha; save 34; 511 testes; `npm run sim6d` (cerca de 2,5 pressões por mandato, nenhuma saída dispara a nota). Aprovado pelo Douglas: só medida na fila, "Adiar" entra, grupo que se organiza fundido ao ato nas ruas. Publicada a v0.35.1.
 - 12/11/2026 · v0.36.1 · Bloco 6D (telas): cartão na central de pendências, linha e janela "Pressão antes da votação" no Radar com as 4 saídas e o custo, linha "Pressão: −N votos, por quê" na votação; `PRESSAO.ativo` ligado; 516 testes. Publicada a v0.36.0.
+- 12/11/2026 · v0.37.0 · Bloco 6E parte 1 (regras, desligadas): vice por proposta (3 de 27, um aceita, sorteio com peso), base parcial pelo partido do vice, ações dar espaço, isolar, confrontar e vigiar, articulação e ruptura; líder do governo e vice-líder com lealdade oculta, Elo, traição e troca; save 35; 543 testes; `npm run sim6e`. Retratos livres: 83 antes, 48 depois (35 novos). Publicada a v0.36.1.
 - 09/11/2026 · (sem versão, só documento) · Plano proposto `docs/projeto/plano-etapa-6g.md` (blocos H0 a H5: correções, resposta ao fato como ação executiva, ministros com personalidade, mais grupos sociais, requerimentos dos setores em passos, fatos vivos e imprensa). Aguarda aprovação do Douglas e a lista de grupos do jogo de referência.
 - 09/11/2026 · (sem versão, só CSS, não publicado) · Revisão do playtest, item 1: aba Ministérios com a coluna da foto em 64 px (o anel do Elo cobria o nome). Pendentes do playtest: resposta ao fato do mês sem segunda votação, ministros com personalidade, passo a passo dos requerimentos dos setores.
 - 08/11/2026 · v0.35.1 · Bloco 6C (telas): credibilidade no Radar e janela, compromisso na fala, pesquisa na agenda, grupos em faixa entre pesquisas, nota de absurdo, aviso com confirmação e janela de retirar ou revogar a medida explosiva; bloco ligado; sem mudança no save; 488 testes.

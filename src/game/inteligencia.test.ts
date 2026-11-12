@@ -252,7 +252,7 @@ describe('Save e partida', () => {
     delete s.inteligencia
     s.saveVersion = 30
     const m = migrate(s)!
-    expect(m.saveVersion).toBe(34)
+    expect(m.saveVersion).toBe(35)
     expect(m.inteligencia).toEqual(intelOf(fresh()))
   })
   it('a ordem passa pelo plano do mês', () => {

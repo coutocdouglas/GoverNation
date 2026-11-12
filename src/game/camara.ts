@@ -1,4 +1,5 @@
 import { baseBoost } from './base'
+import { governoBoost } from './governo'
 import type { ActionEffects } from './actions'
 import { BILL_BY_ID, type BillDef } from './data/bills'
 import { INTERINOS } from './data/caso'
@@ -181,7 +182,10 @@ export function ministerOf(s: (Pick<GameState, 'cabinet'> & Partial<Pick<GameSta
 
 /** Partidos com ministério cedido (ou, desde a 2C, com pacto) votam mais com o governo, conforme a fidelidade. */
 export function cabinetBoost(s: GameState): Partial<Record<PartyId, number>> {
-  return baseBoost(s)
+  // Etapa 6E: o partido do vice e o líder do governo somam ao reforço da base.
+  const out = { ...baseBoost(s) }
+  for (const [p, v] of Object.entries(governoBoost(s)) as [PartyId, number][]) out[p] = (out[p] ?? 0) + v
+  return out
 }
 
 /** Área ocupada por um partido, se houver. */

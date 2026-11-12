@@ -6,7 +6,7 @@
  * em cada casa; as articulações valem na hora. Os efeitos na economia e nos grupos ficam guardados em
  * `GameState.round` e são aplicados no fechamento do mês (advanceMonth), junto com o resto.
  */
-import { dossieBlockedReason, usarDossie } from './inteligencia'
+import { dossieBlockedReason, servicoAtivo, usarDossie } from './inteligencia'
 import { attendBlockedReason, attendState, statesOnMeasure } from './estados'
 import type { UfId } from './data/estados'
 import { addMesaWear, applyMesa, buysBlockedReason, favorToStates, meiaSessaoBlocks, mesaBlockedReason, mesaDone, noteSenatorBroke, noteSenatorVotes, payBuys, runSenadoComissoes, senadoComissoes, senadoScale } from './senado'
@@ -44,6 +44,8 @@ import { mudaCredib } from './credibilidade'
 import { EXPLOSIVA } from './data/credibilidade'
 import { PRESSAO, type RespostaPressao } from './data/pressao'
 import { cedidoScale, encerrarPressao, pressaoBlockedReason, pressaoOf } from './pressao'
+import { GOVERNO, governoLigado, type AcaoVice } from './data/governo'
+import { aplicarAcaoVice, trocarLiderNoEstado, viceBlockedReason } from './governo'
 import { addMark, markMeasure, noteRecord } from './reputacao'
 import { REPUTACAO } from './data/marks'
 import { Rng } from './rng'
@@ -1418,6 +1420,54 @@ export function mesaNow(prev: GameState, a: MesaSenadoAcao): GameState {
   const s = structuredClone(prev)
   const ctx = openCtx(s)
   applyMesa(s, a, ctx.headlines, ctx.taken)
+  closeCtx(ctx)
+  return s
+}
+
+/** Quantas conversas a rodada já gastou (as do vice e da pressão contam junto com as da mesa). */
+const conversasFeitas = (s: GameState): number => (s.round && s.round.month === s.month ? s.round.dealsDone ?? 0 : 0)
+
+/** Motivo pelo qual não dá para agir no vice assim, ou null. */
+export function viceAcaoBlockedReason(s: GameState, acao: AcaoVice): string | null {
+  return viceBlockedReason(s, acao, servicoAtivo(s), conversasFeitas(s), MENU.perRound)
+}
+
+/** Etapa 6E: age sobre o vice (dar espaço, isolar, confrontar, vigiar). Uma por mês; gasta uma conversa da rodada. */
+export function agirNoVice(prev: GameState, acao: AcaoVice): GameState {
+  const err = viceAcaoBlockedReason(prev, acao)
+  if (err) throw new Error(err)
+  const s = structuredClone(prev)
+  const ctx = openCtx(s)
+  const r = aplicarAcaoVice(s, acao, new Rng((absMonth(s) * 31337) ^ s.rngState ^ 0x91ce))
+  ctx.round.dealsDone = (ctx.round.dealsDone ?? 0) + GOVERNO.vice.conversas
+  ctx.taken.push(r.taken)
+  if (r.headline) ctx.headlines.push(r.headline)
+  if (r.credibilidade) mudaCredib(s, r.credibilidade, r.taken)
+  closeCtx(ctx)
+  return s
+}
+
+/** Motivo pelo qual não dá para trocar o líder do governo agora, ou null. */
+export function trocarLiderBlockedReason(s: GameState): string | null {
+  if (!governoLigado()) return 'O líder do governo ainda não está disponível.'
+  if (s.finished) return 'O mandato já terminou.'
+  if (conversasFeitas(s) + GOVERNO.lider.troca.conversas > MENU.perRound) return `Você já usou as ${MENU.perRound} conversas desta rodada.`
+  return null
+}
+
+/** Etapa 6E: troca o líder do governo; o vice-líder assume. Gasta uma conversa da rodada. */
+export function trocarLider(prev: GameState): GameState {
+  const err = trocarLiderBlockedReason(prev)
+  if (err) throw new Error(err)
+  const s = structuredClone(prev)
+  const ctx = openCtx(s)
+  const { saiu, entrou } = trocarLiderNoEstado(s)
+  ctx.round.dealsDone = (ctx.round.dealsDone ?? 0) + GOVERNO.lider.troca.conversas
+  ctx.taken.push(`Trocou o líder do governo: ${entrou} no lugar de ${saiu}`)
+  ctx.headlines.push({ text: `Governo troca o líder na Câmara: ${entrou} assume no lugar de ${saiu}`, tone: 'neutral' })
+  noteRecord(s, { text: `Trocou o líder do governo na Câmara: ${entrou} no lugar de ${saiu}`, tone: 'neutral', kind: 'outro' })
+  addBio(s, saiu, `Perdeu a liderança do governo na Câmara; ${entrou} assumiu.`)
+  addBio(s, entrou, `Assumiu a liderança do governo na Câmara no lugar de ${saiu}.`)
   closeCtx(ctx)
   return s
 }

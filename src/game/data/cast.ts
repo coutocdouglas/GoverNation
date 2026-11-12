@@ -1,3 +1,4 @@
+import { LIDERES, VICES } from './governo'
 import { PORTRAITS } from './portraits'
 
 /**
@@ -130,6 +131,9 @@ export const CAST: CastMember[] = [
   { name: 'Patrícia Moraes Leal', role: 'Técnica de carreira (ministra interina)', gender: 'f', portrait: 144, alt: 23 },
   { name: 'Valter Guimarães', role: 'Técnico de carreira (ministro interino)', gender: 'm', portrait: 140, alt: 16 },
   { name: 'Débora Sarmento', role: 'Técnica de carreira (ministra interina)', gender: 'f', portrait: 145, alt: 23 },
+  // Etapa 6E (v0.37, data/governo.ts): os 27 candidatos a vice e os deputados que podem liderar o governo na Câmara.
+  ...VICES.map((x): CastMember => ({ name: x.name, role: `Candidat${x.feminine ? 'a' : 'o'} a vice-presidente (${x.party.toUpperCase()})`, gender: x.feminine ? 'f' : 'm', portrait: x.portrait, alt: x.feminine ? 23 : 16 })),
+  ...LIDERES.map((x): CastMember => ({ name: x.name, role: 'Deputad' + (x.feminine ? 'a' : 'o') + ' do partido do presidente (líder do governo)', gender: x.feminine ? 'f' : 'm', portrait: x.portrait, alt: x.feminine ? 23 : 16 })),
 ]
 
 /**

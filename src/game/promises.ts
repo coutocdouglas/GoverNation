@@ -2,6 +2,7 @@
 import { BILL_BY_ID } from './data/bills'
 import { BOMBS } from './data/camara'
 import { GROUPS } from './data/groups'
+import { propostaBlockedReason } from './data/governo'
 import { MAX_HABITS, MAX_TRAITS, PROFILE_BY_ID } from './data/profile'
 import { PROMISE_BY_ID, PROMISE_POINTS, PROMISE_SIDE_BOOST, PROMISES_TO_PICK, SIDE_OF_PARTY, type PromiseDef } from './data/promises'
 import type { GameState, GroupId, PartyId } from './types'
@@ -83,6 +84,8 @@ export interface PosseChoices {
   traits?: string[]
   habits?: string[]
   promises?: string[]
+  /** Etapa 6E: os 3 nomes propostos para vice (ids de data/governo.ts); um só aceita, sorteado na posse. */
+  vices?: string[]
 }
 
 /** Motivo pelo qual as escolhas da posse não valem, ou null. Promessas: exatamente 5 (ou nenhuma, nos testes). */
@@ -95,6 +98,8 @@ export function posseBlockedReason(c: PosseChoices): string | null {
   if (new Set(traits).size !== traits.length || new Set(habits).size !== habits.length) return 'Escolha repetida.'
   if (promises.some((p) => !PROMISE_BY_ID[p]) || new Set(promises).size !== promises.length) return 'Promessa inválida.'
   if (promises.length !== 0 && promises.length !== PROMISES_TO_PICK) return `Escolha exatamente ${PROMISES_TO_PICK} promessas.`
+  const vicesErr = propostaBlockedReason(c.vices)
+  if (vicesErr) return vicesErr
   return null
 }
 

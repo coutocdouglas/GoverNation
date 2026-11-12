@@ -1,5 +1,14 @@
 # Novidades
 
+## 0.37.0 (12/11/2026)
+- **Bloco 6E da Etapa 6, parte 1: vice-presidente e líder do governo (regras).** Ainda **desligado**: nada muda na partida até as telas da v0.37.1.
+  - **Vice por proposta:** na posse o jogador propõe 3 entre 27 nomes (3 por partido) e um só aceita, sorteado com peso: partido próprio ou próximo aceita mais fácil. O partido do vice vota parcialmente com o governo (metade do reforço de uma pasta, pela lealdade) até ele romper.
+  - **O vice só ganha se você cair:** a ambição sobe com aprovação baixa e caso aberto; ele articula, racha o partido e rompe. Quatro ações (dar espaço, isolar, confrontar em público, vigiar), uma por mês, cada uma gasta uma conversa da rodada. Lealdade e ambição são ocultas; vigiar revela por 3 meses.
+  - **Líder do governo e vice-líder:** deputados do partido do presidente, com competência e lealdade ocultas e Elo. Dão um reforço pequeno à base; com lealdade baixa podem trair e o vice-líder assume. Trocar o líder gasta uma conversa.
+  - 27 candidatos e 8 deputados novos no elenco, cada um com retrato próprio.
+  - Simulador novo `npm run sim6e`: nenhuma ação dispara a nota; confrontar custa uns 12 pontos; dar espaço sem parar deixa o vice leal mas de ambição 100, pronto para romper numa crise.
+- Save 35, com migração. 543 testes (27 novos).
+
 ## 0.36.1 (12/11/2026)
 - **Bloco 6D da Etapa 6 (telas): pressão antes da votação. O bloco está ligado.**
   - **Pendências:** a pressão aparece como um cartão (um por vez), vermelho se não foi respondida e esfria em até 1 mês; respondida, fica verde.
