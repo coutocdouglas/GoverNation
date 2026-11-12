@@ -18,6 +18,7 @@ import { initialInvestigacao } from './caso'
 import { initialCredib } from './credibilidade'
 import { initialPressao } from './pressao'
 import { initialGoverno } from './governo'
+import { initialPastas } from './pastas'
 import type { GameState } from './types'
 
 // O jogo instalado guarda o localStorage na pasta de dados do usuário no Windows
@@ -293,7 +294,12 @@ export function migrate(raw: unknown): GameState | null {
       g.governo ??= initialGoverno(g.avatarSeed ?? g.presidentName, g.playerParty, undefined, absMonth(g))
       s.saveVersion = 35
     }
-    if (s.saveVersion !== 35) return null
+    if (s.saveVersion === 35) {
+      // v0.37 → v0.38 (Etapa 6E, parte 2): nenhuma troca recente, nenhum interino efetivado, nenhuma pasta em jogo.
+      (s as GameState).pastas ??= initialPastas()
+      s.saveVersion = 36
+    }
+    if (s.saveVersion !== 36) return null
     syncCustomBills(s as GameState)
     return s as GameState
   } catch {

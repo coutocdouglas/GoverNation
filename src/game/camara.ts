@@ -164,7 +164,7 @@ export function committeeOf(bill: BillDef): { name: string; chair: PartyId } {
 // ---------------------------------------------------------------------------
 
 /** O ministro da área agora: o original ou o indicado do partido que recebeu a pasta. */
-export function ministerOf(s: (Pick<GameState, 'cabinet'> & Partial<Pick<GameState, 'interinos' | 'playerParty'>>) | null | undefined, area: AreaId): Minister {
+export function ministerOf(s: (Pick<GameState, 'cabinet'> & Partial<Pick<GameState, 'interinos' | 'playerParty' | 'pastas'>>) | null | undefined, area: AreaId): Minister {
   const base = MINISTER_BY_AREA[area]
   const seat = s?.cabinet?.[area]
   const n = seat ? NOMINEE_BY_PARTY[seat.party] : undefined
@@ -173,7 +173,9 @@ export function ministerOf(s: (Pick<GameState, 'cabinet'> & Partial<Pick<GameSta
     const it = INTERINOS.find((x) => x.name === s?.interinos?.[area])
     if (!it) return base
     const party = s?.playerParty ?? base.party
-    const role = base.role.replace(/^Ministr[oa]|^Secretári[oa]/, (w) => (w.startsWith('Sec') ? (it.feminine ? 'Secretária interina' : 'Secretário interino') : it.feminine ? 'Ministra interina' : 'Ministro interino'))
+    // Etapa 6E: o interino efetivado vira titular (sem o "interino" no cargo).
+    const titular = !!s?.pastas?.efetivados?.includes(area)
+    const role = base.role.replace(/^Ministr[oa]|^Secretári[oa]/, (w) => (w.startsWith('Sec') ? (it.feminine ? `Secretária${titular ? '' : ' interina'}` : `Secretário${titular ? '' : ' interino'}`) : it.feminine ? `Ministra${titular ? '' : ' interina'}` : `Ministro${titular ? '' : ' interino'}`))
     return { ...base, name: it.name, role, feminine: it.feminine, party, color: PARTY_BY_ID[party].color, style: 'Técnico de carreira, discreto e cuidadoso; segura a pasta sem barulho e evita tudo o que pareça política.' }
   }
   const role = base.role.replace(/^Ministr[oa]|^Secretári[oa]/, (w) => (w.startsWith('Sec') ? (n.feminine ? 'Secretária' : 'Secretário') : n.feminine ? 'Ministra' : 'Ministro'))

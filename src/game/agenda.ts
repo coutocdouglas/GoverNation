@@ -7,7 +7,7 @@
  */
 import type { ActionEffects } from './actions'
 import { baseGroupsOf, comGanho, fatigued, monthKind, speechScale, statementBlockedReason, statementEffect, streetOptions, type Scaled } from './assessoria'
-import { ministerOf } from './camara'
+import { ministerOf, ministryBlockedReason, type MinistryChange } from './camara'
 import { bumpScandal, registrarCausa } from './causas'
 import { abrirCompromisso, compromissoBlockedReason, fatorPalavra } from './credibilidade'
 import { ASSESSORIA, STATEMENT_BY_ID, type StatementId } from './data/assessoria'
@@ -22,7 +22,9 @@ import { absMonth, addBio } from './memory'
 import { AREAS } from './ministerios'
 import { leaderOf } from './partidos'
 import { noteRecord } from './reputacao'
-import { peekRound, roundOf } from './rodada'
+import { applyMinistryChange, peekRound, roundOf } from './rodada'
+import { PASTAS, pastasLigadas } from './data/pastas'
+import { mesesParaTroca, pastaDesgastada, pastasOf, registrarTroca } from './pastas'
 import type { Cause, Economy, GameState, GroupId, Headline, Impulse, PartyId } from './types'
 
 export type AcaoAgenda =
@@ -32,6 +34,8 @@ export type AcaoAgenda =
   | { tipo: 'ministro'; area: AreaId; tom: 'particular' | 'publico' }
   | { tipo: 'nacao'; compromisso?: boolean }
   | { tipo: 'imprensa'; voz: string; modo: 'apoio' | 'romper' }
+  /** Etapa 6E (v0.38): troca até 3 pastas de uma vez; conta como a troca de ministro do intervalo de 3 meses. */
+  | { tipo: 'reforma'; trocas: MinistryChange[] }
 
 export interface AgendaState {
   /** Ações dos últimos meses (mês absoluto), para os intervalos. */
@@ -92,6 +96,8 @@ export function acaoBlockedReason(s: GameState, a: AcaoAgenda): string | null {
     case 'ministro':
       if (!AREAS.includes(a.area)) return 'Pasta desconhecida.'
       return recente(s, 'ministro', a.area, COBRAR.intervalo) ? `Você cobrou esta pasta há menos de ${COBRAR.intervalo} meses.` : null
+    case 'reforma':
+      return reformaBlockedReason(s, a.trocas)
     case 'imprensa': {
       if (!VOZ_BY_ID[a.voz]) return 'Veículo desconhecido.'
       if (recente(s, 'imprensa', a.voz, IMPRENSA.intervalo)) return `Você já tratou com este veículo há menos de ${IMPRENSA.intervalo} meses.`
@@ -100,6 +106,23 @@ export function acaoBlockedReason(s: GameState, a: AcaoAgenda): string | null {
       return null
     }
   }
+}
+
+/** Motivo pelo qual a reforma ministerial não vale (intervalo de 3 meses, no máximo 3 pastas, cada troca válida em sequência), ou null. */
+export function reformaBlockedReason(s: GameState, trocas: MinistryChange[]): string | null {
+  if (!pastasLigadas()) return 'A reforma ministerial ainda não está disponível.'
+  if (!trocas.length) return 'Escolha ao menos uma pasta para trocar.'
+  if (trocas.length > PASTAS.reforma.maxPastas) return `A reforma troca no máximo ${PASTAS.reforma.maxPastas} pastas.`
+  if (new Set(trocas.map((t) => t.area)).size !== trocas.length) return 'A mesma pasta duas vezes na reforma.'
+  const m = mesesParaTroca(s)
+  if (m > 0) return `Você trocou um ministro há pouco: a reforma libera em ${m} ${m === 1 ? 'mês' : 'meses'}.`
+  const sim = structuredClone(s)
+  for (const ch of trocas) {
+    const r = ministryBlockedReason(sim, ch)
+    if (r) return `${ministerOf(sim, ch.area).areaName}: ${r}`
+    applyMinistryChange(sim, ch, [], [])
+  }
+  return null
 }
 
 /** Marca a ação do mês na rodada (bloqueia a medida nova). Só vale no fechamento, então ainda pode ser trocada. */
@@ -181,6 +204,21 @@ export function previaAcao(s: GameState, a: AcaoAgenda): PreviaAcao | null {
         parties: { [s.cabinet?.[a.area]?.party ?? s.playerParty]: COBRAR.publico.partido },
         extras: [{ texto: `desgaste do ministro +${COBRAR.publico.desgaste}`, bom: false }],
       }
+    case 'reforma': {
+      const desg = a.trocas.filter((t) => pastaDesgastada(s, t.area)).length
+      const R = PASTAS.reforma.renovacao
+      const recentes = pastasOf(s).reformas.filter((x) => absMonth(s) - x < R.janela).length
+      const ganho = round1(Math.min(R.teto, R.ganho * desg) * Math.pow(R.decai, recentes) * k)
+      return {
+        ...vazio,
+        fx: ganho > 0 ? { groups: { [R.grupo]: ganho } as ActionEffects['groups'] } : {},
+        extras: [
+          { texto: `${a.trocas.length} ${a.trocas.length === 1 ? 'pasta trocada' : 'pastas trocadas'}: o desgaste de cada uma zera`, bom: true },
+          { texto: `a próxima troca de ministro só em ${PASTAS.intervaloTroca} meses`, bom: false },
+          { texto: 'partido que perde a pasta perde relação com o governo', bom: false },
+        ],
+      }
+    }
     case 'imprensa': {
       const v = VOZ_BY_ID[a.voz]
       if (!v) return null
@@ -207,6 +245,7 @@ export function rotuloAcao(s: GameState, a: AcaoAgenda): string {
     case 'nacao': return a.compromisso ? 'Falar à nação e assumir um compromisso' : 'Falar à nação'
     case 'lider': return `Receber ${leaderOf(s, a.partido).name} (${PARTY_BY_ID[a.partido].sigla})`
     case 'ministro': return `Cobrar ${ministerOf(s, a.area).name} ${a.tom === 'publico' ? 'em público' : 'em particular'}`
+    case 'reforma': return `Reforma ministerial (${a.trocas.length} ${a.trocas.length === 1 ? 'pasta' : 'pastas'})`
     case 'imprensa': return a.modo === 'apoio' ? `Pedir apoio ${ao(VOZ_BY_ID[a.voz])}` : `Romper ${comV(VOZ_BY_ID[a.voz])}`
   }
 }
@@ -316,6 +355,22 @@ export function aplicarAcao(
       taken.push(`Cobrou ${m.name} (${a.tom === 'publico' ? 'em público' : 'em particular'})`)
       noteRecord(s, { text: `Cobrou ${m.name} ${a.tom === 'publico' ? 'em público' : 'em particular'}`, tone: 'neutral', kind: 'outro' })
       ag.log.push({ tipo: 'ministro', alvo: a.area, at })
+      break
+    }
+    case 'reforma': {
+      const desgastadas = a.trocas.filter((t) => pastaDesgastada(s, t.area)).length
+      for (const ch of a.trocas) applyMinistryChange(s, ch, headlines, taken)
+      const st = pastasOf(s)
+      const R = PASTAS.reforma.renovacao
+      const recentes = st.reformas.filter((x) => at - x < R.janela).length
+      st.reformas.push(at)
+      registrarTroca(s)
+      const ganho = round1(Math.min(R.teto, R.ganho * desgastadas) * Math.pow(R.decai, recentes) * k)
+      if (ganho > 0) out.confidence += applyEffects(e, impulses, { groups: { [R.grupo]: ganho } as ActionEffects['groups'] }, 'Reforma ministerial')
+      headlines.push({ text: `Reforma ministerial: ${a.trocas.length} ${a.trocas.length === 1 ? 'pasta trocada' : 'pastas trocadas'}${desgastadas ? `, ${desgastadas} de ministro desgastado` : ''}`, tone: 'neutral' })
+      taken.push(`Fez uma reforma ministerial (${a.trocas.length} ${a.trocas.length === 1 ? 'pasta' : 'pastas'})`)
+      noteRecord(s, { text: `Fez uma reforma ministerial: ${a.trocas.length} ${a.trocas.length === 1 ? 'pasta' : 'pastas'} trocadas no lugar de mandar uma medida`, tone: 'neutral', kind: 'outro' })
+      ag.log.push({ tipo: 'reforma', at })
       break
     }
     case 'imprensa': {

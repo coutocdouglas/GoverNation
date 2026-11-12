@@ -280,7 +280,7 @@ describe('Etapa 4C3: save', () => {
     delete raw.supremo.consultas
     delete raw.supremo.adjusted
     const m = migrate(raw)!
-    expect(m.saveVersion).toBe(35)
+    expect(m.saveVersion).toBe(36)
     expect(m.supremo.consultas).toEqual([])
     expect(m.supremo.adjusted).toEqual({})
     expect(m.ministries.seguranca.wear).toBe(MINISTERIOS.start + MINISTERIOS.struck)

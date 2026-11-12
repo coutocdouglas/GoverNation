@@ -326,7 +326,7 @@ describe('5B: save 28 e partida inteira', () => {
     delete (s as Partial<GameState>).investigacao
     ;(s as unknown as { saveVersion: number }).saveVersion = 27
     const m = migrate(JSON.parse(JSON.stringify(s)))!
-    expect(m.saveVersion).toBe(35)
+    expect(m.saveVersion).toBe(36)
     expect(m.investigacao.casos).toEqual([])
     expect(m.investigacao.advogado).toBe(advogadoInicial(s.avatarSeed))
     expect(advanceMonth(m, []).month).toBe(1)

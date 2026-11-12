@@ -8,6 +8,7 @@ import { absMonth, addBio } from './memory'
 import { promiseStatus, type PromiseStatus } from './promises'
 import type { Cause, GameState, GroupId, Headline, Impulse, MinistrySeat } from './types'
 import { imprensaPorElo } from './risco'
+import { fatorCrise } from './pastas'
 
 export const AREAS: AreaId[] = MINISTERS.map((m) => m.area)
 
@@ -63,7 +64,9 @@ export function stepMinistries(s: GameState, m: MinistryMonth, impulses: Record<
     const add = (label: string, v: number) => { if (v) causes.push({ label, value: v }) }
     if (m.event?.area === area) {
       const labels = { resolvido: 'Resolveu o fato do mês', escolha: 'Lidou com o fato do mês', ignorado: 'Crise da área sem resposta', falhou: 'Resposta à crise travou' }
-      add(labels[m.event.kind], MINISTERIOS.event[m.event.kind])
+      // Etapa 6E: interino efetivado, sem padrinho político, segura pior a crise ignorada ou travada.
+      const k = m.event.kind === 'ignorado' || m.event.kind === 'falhou' ? fatorCrise(s, area) : 1
+      add(labels[m.event.kind] + (k > 1 ? ' (titular sem padrinho)' : ''), Math.round(MINISTERIOS.event[m.event.kind] * k * 10) / 10)
     }
     const n = m.enacted.filter((a) => a === area).length
     if (n) add(n > 1 ? `${n} medidas da área em vigor` : 'Medida da área em vigor', MINISTERIOS.enacted * n)

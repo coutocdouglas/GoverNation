@@ -53,6 +53,7 @@ import { fazerPesquisa, pagarPesquisa, pesquisaBlockedReason } from './pesquisa'
 import { initialCredib, mercadoDaCredib, stepCredibilidade } from './credibilidade'
 import { initialPressao, stepPressao } from './pressao'
 import { initialGoverno, stepGoverno } from './governo'
+import { initialPastas, stepPastas } from './pastas'
 import { stepExplosivas } from './absurdo'
 import type { NivelPesquisa } from './data/credibilidade'
 import { acaoBlockedReason, aplicarAcao, ganhoDaAcao, initialAgenda, stepAgenda, type AcaoAgenda } from './agenda'
@@ -104,8 +105,9 @@ export function newGame(
   const rngState = seed ?? Math.floor(Math.random() * 2 ** 31)
   const bonus = DIFFICULTY[difficulty].approvalBonus
   const state: GameState = {
-    saveVersion: 35,
+    saveVersion: 36,
     pressao: initialPressao(),
+    pastas: initialPastas(),
     governo: initialGoverno(avatarSeed ?? `${presidentName}-${rngState}`, playerParty, posse.vices),
     agendaPres: initialAgenda(),
     credib: initialCredib(),
@@ -975,6 +977,7 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
   // 5a2. Etapa 6D: a pressão que terminou fecha com seu custo; sem pressão ativa, pode surgir uma nova na fila.
   stepPressao(s, headlines, rivalExtra, new Rng((absMonth(s) * 31337) ^ s.rngState ^ 0x93e55))
   stepGoverno(s, headlines, rivalExtra, new Rng((absMonth(s) * 31337) ^ s.rngState ^ 0x6e6e1))
+  stepPastas(s, headlines, rivalExtra, new Rng((absMonth(s) * 31337) ^ s.rngState ^ 0x9a57a))
 
   // 5b. Etapa 5A: força, postura e pesquisa do rival.
   const nBeforeRival = headlines.length

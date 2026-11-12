@@ -1,5 +1,14 @@
 # Novidades
 
+## 0.38.0 (12/11/2026)
+- **Bloco 6E, parte 2: ministérios com vida (regras).** Ainda **desligado**: nada muda na partida até as telas da v0.38.1.
+  - **Uma troca de ministro a cada 3 meses** (no lugar de uma por rodada): trocar a pasta de partido, retomar a pasta de um partido e a reforma contam. **Ceder a pasta de um interino a um partido não conta e vale a qualquer momento**, mesmo dentro dos 3 meses.
+  - **Efetivar o interino:** o técnico de carreira vira titular, também sem contar como troca. Fica sem padrinho político: a crise da área ignorada ou travada desgasta o ministro 50% mais, e trocar a pasta depois passa a contar como troca.
+  - **Reforma ministerial** como ação de agenda (no lugar da medida do mês): troca até 3 pastas de uma vez e conta como a troca do intervalo. Zera o desgaste das pastas trocadas; o gesto de renovação (classe média) só rende com ministro desgastado, tem teto e cai pela metade a cada reforma nos últimos 12 meses.
+  - **A pasta está em jogo:** o partido que ocupa a pasta cobra no Planalto quando o ministro está desgastado ou a fidelidade caiu (um por vez, prazo de 2 meses). Saídas: renegociar (emendas por 3 meses, fidelidade +15, desgaste −12, gasta uma conversa) ou retirar a pasta (conta como troca); deixar passar derruba a fidelidade e pode fazer o partido entregar a pasta e sair da base.
+  - Simulador novo `npm run sim6f`: cerca de 2 cobranças por mandato; nenhuma saída dispara a nota.
+- Save 36, com migração. 571 testes (23 novos).
+
 ## 0.37.1 (12/11/2026)
 - **Bloco 6E, parte 1 (telas): vice por proposta e líder do governo. O bloco está ligado.**
   - **Novo mandato:** nova etapa "3. Vice" (as abas viram Candidato, Perfil, Vice e Promessas): os 27 candidatos, agrupados por partido, com retrato, perfil em palavras e fama de lealdade. Você propõe exatamente 3; as chances não aparecem. "Tomar posse" só libera com 3 nomes e 5 promessas.

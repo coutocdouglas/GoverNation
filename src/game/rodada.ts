@@ -23,7 +23,7 @@ import { PARTY_BY_ID } from './data/parties'
 import { GROUPS } from './data/groups'
 import { DEALS } from './data/deals'
 import { askMoney, askSpending, dealBlockedReason, emendasAmount, emendasFactor, flagshipOf, hurtGroup } from './deals'
-import { afterGovVote, billGroups, joinBase, noteBarred, supportersOf } from './base'
+import { afterGovVote, billGroups, fidelityOf, joinBase, noteBarred, supportersOf } from './base'
 import { ASK_BY_KIND, ESFRIA, MENU, PARTY_GROUP } from './data/base'
 import { billPopularity } from './congress'
 import { leaderOf, noteTraitors, speakerOf } from './partidos'
@@ -45,6 +45,8 @@ import { EXPLOSIVA } from './data/credibilidade'
 import { PRESSAO, type RespostaPressao } from './data/pressao'
 import { cedidoScale, encerrarPressao, pressaoBlockedReason, pressaoOf } from './pressao'
 import { GOVERNO, governoLigado, type AcaoVice } from './data/governo'
+import { PASTAS, pastasLigadas, type RespostaPasta } from './data/pastas'
+import { efetivarBlockedReason, pastaJogoBlockedReason, pastasOf, registrarTroca, trocaBlockedReason, trocaConta } from './pastas'
 import { aplicarAcaoVice, trocarLiderNoEstado, viceBlockedReason } from './governo'
 import { addMark, markMeasure, noteRecord } from './reputacao'
 import { REPUTACAO } from './data/marks'
@@ -1340,6 +1342,8 @@ export function guardarParecer(prev: GameState, p: Parecer): GameState {
 
 export function ministryNowBlockedReason(s: GameState, ch: MinistryChange): string | null {
   if (s.finished) return 'O mandato já terminou.'
+  // Etapa 6E: com os ministérios vivos, vale uma troca a cada 3 meses (ceder a pasta de um interino é livre), no lugar de uma por rodada.
+  if (pastasLigadas()) return trocaBlockedReason(s, ch) ?? ministryBlockedReason(s, ch)
   if (peekRound(s)?.ministryDone) return 'Só uma mudança de ministério por rodada.'
   return ministryBlockedReason(s, ch)
 }
@@ -1350,8 +1354,10 @@ export function ministryNow(prev: GameState, ch: MinistryChange): GameState {
   if (err) throw new Error(err)
   const s = structuredClone(prev)
   const ctx = openCtx(s)
+  const conta = !pastasLigadas() || trocaConta(prev, ch)
   applyMinistryChange(s, ch, ctx.headlines, ctx.taken)
-  ctx.round.ministryDone = true
+  if (!pastasLigadas()) ctx.round.ministryDone = true
+  else if (conta) registrarTroca(s)
   closeCtx(ctx)
   return s
 }
@@ -1468,6 +1474,65 @@ export function trocarLider(prev: GameState): GameState {
   noteRecord(s, { text: `Trocou o líder do governo na Câmara: ${entrou} no lugar de ${saiu}`, tone: 'neutral', kind: 'outro' })
   addBio(s, saiu, `Perdeu a liderança do governo na Câmara; ${entrou} assumiu.`)
   addBio(s, entrou, `Assumiu a liderança do governo na Câmara no lugar de ${saiu}.`)
+  closeCtx(ctx)
+  return s
+}
+
+/** Etapa 6E (parte 2): efetiva o interino como titular da pasta. Não conta como troca de ministro. */
+export function efetivarInterino(prev: GameState, area: AreaId): GameState {
+  const err = efetivarBlockedReason(prev, area)
+  if (err) throw new Error(err)
+  const s = structuredClone(prev)
+  const ctx = openCtx(s)
+  pastasOf(s).efetivados.push(area)
+  const m = ministerOf(s, area)
+  ctx.taken.push(`Efetivou ${m.name} como titular da pasta de ${m.areaName.toLowerCase()}`)
+  ctx.headlines.push({ text: `${m.name} deixa de ser interin${m.feminine ? 'a' : 'o'} e é efetivad${m.feminine ? 'a' : 'o'} como titular da pasta de ${m.areaName.toLowerCase()}`, tone: 'neutral' })
+  noteRecord(s, { text: `Efetivou ${m.name} como titular da pasta de ${m.areaName.toLowerCase()}`, tone: 'neutral', kind: 'outro' })
+  addBio(s, m.name, `Foi efetivad${m.feminine ? 'a' : 'o'} como titular: ${m.role}.`)
+  closeCtx(ctx)
+  return s
+}
+
+const conversasDaRodada = (s: GameState): number => (s.round && s.round.month === s.month ? s.round.dealsDone ?? 0 : 0)
+
+/** Motivo pelo qual não dá para responder à pasta em jogo assim, ou null. */
+export function pastaJogoRespostaBlockedReason(s: GameState, acao: RespostaPasta): string | null {
+  return pastaJogoBlockedReason(s, acao, conversasDaRodada(s), MENU.perRound)
+}
+
+/** Etapa 6E (parte 2): responde à cobrança do partido pela pasta (renegociar ou retirar). Deixar passar é não escolher. */
+export function responderPastaJogo(prev: GameState, acao: RespostaPasta): GameState {
+  const err = pastaJogoRespostaBlockedReason(prev, acao)
+  if (err) throw new Error(err)
+  const s = structuredClone(prev)
+  const ctx = openCtx(s)
+  const st = pastasOf(s)
+  const j = st.jogo!
+  const p = PARTY_BY_ID[j.party]
+  const m = ministerOf(s, j.area)
+  const pasta = m.areaName.toLowerCase()
+  const R = PASTAS.jogo.respostas
+  const agora = absMonth(s)
+  j.resposta = acao
+  if (acao === 'renegociar') {
+    const ps = s.congress.parties[j.party]
+    ps.fidelity = Math.min(100, fidelityOf(s, j.party) + R.renegociar.fidelidade)
+    ps.relation = Math.min(100, ps.relation + R.renegociar.relacao)
+    s.ministries[j.area].wear = Math.max(0, s.ministries[j.area].wear + R.renegociar.desgaste)
+    s.economy.tempSpending.push({ label: `Emendas para o ${p.sigla} (pasta de ${pasta})`, amount: emendasAmount(j.party, 'camara'), monthsLeft: DEALS.emendasMonths })
+    ctx.round.dealsDone = (ctx.round.dealsDone ?? 0) + R.renegociar.conversas
+    ctx.taken.push(`Renegociou com o ${p.sigla} a pasta de ${pasta}`)
+    ctx.headlines.push({ text: `Governo renegocia com o ${p.sigla} e mantém a pasta de ${pasta}`, tone: 'neutral' })
+    noteRecord(s, { text: `Renegociou com o ${p.sigla} para manter a pasta de ${pasta}`, tone: 'neutral', kind: 'acordo' })
+    addBio(s, p.leader.name, `Renegociou com o governo ${s.presidentName} a permanência da pasta de ${pasta}.`)
+  } else {
+    applyMinistryChange(s, { area: j.area, party: null }, ctx.headlines, ctx.taken)
+    registrarTroca(s)
+    st.fim = [...st.fim, { area: j.area, party: j.party, desde: j.desde, fim: agora, resposta: acao, desfecho: 'saiu' as const }].slice(-PASTAS.guardar)
+    st.jogo = null
+    st.ultimoJogo = agora
+  }
   closeCtx(ctx)
   return s
 }
