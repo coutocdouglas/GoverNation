@@ -203,12 +203,12 @@ describe('revogar decreto', () => {
 })
 
 describe('save', () => {
-  it('um save da versão 36 sobe para 37 sem perder nada', () => {
+  it('um save da versão 36 sobe para a atual sem perder nada', () => {
     const s = jogo()
     const velho = structuredClone(s) as unknown as Record<string, unknown>
     velho.saveVersion = 36
     const m = migrate(velho)!
-    expect(m.saveVersion).toBe(37)
+    expect(m.saveVersion).toBe(38)
     expect(m.presidentName).toBe(s.presidentName)
   })
 })

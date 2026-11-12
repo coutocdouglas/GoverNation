@@ -266,7 +266,7 @@ describe('save', () => {
     delete velho.governo
     velho.saveVersion = 34
     const m = migrate(velho)!
-    expect(m.saveVersion).toBe(37)
+    expect(m.saveVersion).toBe(38)
     expect(m.governo.propostos).toHaveLength(3)
     expect(VICE_BY_ID[m.governo.vice.id]).toBeDefined()
     const outra = migrate(JSON.parse(JSON.stringify(velho)))!

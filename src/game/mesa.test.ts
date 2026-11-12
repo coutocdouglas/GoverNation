@@ -276,7 +276,7 @@ describe('Etapa 2C: save 18', () => {
     delete raw.congress.record
     delete raw.congress.dealLog
     const m = migrate(raw)!
-    expect(m.saveVersion).toBe(37)
+    expect(m.saveVersion).toBe(38)
     expect(m.congress.parties.ucd.fidelity).toBe(BASE.startFidelity)
     expect(m.congress.pacts).toEqual([])
     expect(advanceMonth(m, []).month).toBe(m.month + 1)

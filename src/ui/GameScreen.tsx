@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { isRecess } from '../game/congress'
-import { askEmpresaNames } from '../lib/aiActions'
+import { askEmpresaNames, askProposta } from '../lib/aiActions'
+import type { AreaId } from '../game/data/ministers'
 import { PropostaCard } from './IntegridadeCard'
 import { PartyLogo } from './PartyLogo'
 import { BILL_BY_ID, type BillDef } from '../game/data/bills'
@@ -11,7 +12,7 @@ import { PARTY_BY_ID } from '../game/data/parties'
 import { ACTION_BY_ID, ACTIONS, ACTIONS_PER_MONTH, blockedReason, effectMultiplier } from '../game/actions'
 import { GROUPS } from '../game/data/groups'
 import { advanceMonth, isCopomMonth, monthLabel, TERM_MONTHS, type MonthPlan } from '../game/game'
-import { articulate, articulateBlockedReason, efetivarInterino, gavetaReason, ministryNow, peekRound, plenaryToday, queueHouse, sendBlockedReason, sendMeasure, voteNow, voteNowBlockedReason, type FloorOptions } from '../game/rodada'
+import { articulate, articulateBlockedReason, efetivarInterino, gavetaReason, ministryNow, narrarProposta, pedirProposta, peekRound, plenaryToday, queueHouse, sendBlockedReason, sendMeasure, voteNow, voteNowBlockedReason, type FloorOptions } from '../game/rodada'
 import { Art } from './Art'
 import type { MinistryChange } from '../game/camara'
 import { VoteAnimation } from './VoteAnimation'
@@ -339,6 +340,21 @@ export function GameScreen({ state, onChange, onExit }: {
       }
     })
   }
+  /** v0.39.1: pede a proposta ao ministro, abre a janela e deixa a IA narrar (sem IA, fica o texto do gabinete). */
+  const pedirPropostaAgora = (area: AreaId) => {
+    let next: GameState
+    try { next = pedirProposta(state, area) } catch (e) { toast(`✋ ${(e as Error).message}`); return }
+    onChange(next)
+    abrir('proposta')
+    void askProposta(next).then((narrada) => {
+      if (narrada === next) return
+      const atual = stateRef.current
+      if (atual === next) { onChange(narrada); return }
+      // O jogo andou enquanto a IA respondia: aplica só a fala, se a proposta ainda é a mesma.
+      const p = narrada.round?.proposta
+      if (p && atual.round?.proposta?.area === area && !atual.round?.proposta?.ia) onChange(narrarProposta(atual, area, p.texto, p.ordem ?? null))
+    })
+  }
   const goPending = (t: PendingTarget) => {
     if (t === 'caso' || t === 'cpi' || t === 'inteligencia' || t === 'pressao' || t === 'pasta') { abrir(t === 'caso' ? 'casos' : t === 'pasta' ? 'pastajogo' : t); return }
     if (t === 'camara' || t === 'senado' || t === 'supremo') { setTab('governo'); setGovTab(t); window.scrollTo({ top: 0, behavior: 'smooth' }); return }
@@ -396,7 +412,7 @@ export function GameScreen({ state, onChange, onExit }: {
     onIntel: (o) => { setIntelOrdem(o); if (o) toast('📡 Ordem ao serviço anotada: vale ao encerrar o mês.') },
     onAdvogado: (aid) => { setAdvogado(aid); if (aid) toast('💼 Troca de advogado anotada: vale ao encerrar o mês.') },
     onAbrirReputacao: () => { fechar('reputacao'); setTab('fichas') },
-    onState: onChange, onToast: toast,
+    onState: onChange, onToast: toast, onAtender: attend,
   }) }
 
   return (
@@ -576,7 +592,7 @@ export function GameScreen({ state, onChange, onExit }: {
           ) : govTab === 'senado' ? (
             <SenadoView state={state} articulations={peekRound(state)?.articulations ?? []} onToggle={toggleArticulation} onNegotiate={setVoteSheet} deals={deals} plan={plan} onState={onChange} onToast={toast} />
           ) : govTab === 'ministerios' ? (
-            <MinistriosView state={state} change={ministry} done={!!peekRound(state)?.ministryDone} onEfetivar={(area) => { try { onChange(efetivarInterino(state, area)); toast('🏢 Interino efetivado como titular da pasta.') } catch (e) { toast(`✋ ${(e as Error).message}`) } }} onChange={(ch) => {
+            <MinistriosView state={state} change={ministry} done={!!peekRound(state)?.ministryDone} onEfetivar={(area) => { try { onChange(efetivarInterino(state, area)); toast('🏢 Interino efetivado como titular da pasta.') } catch (e) { toast(`✋ ${(e as Error).message}`) } }} onPedirProposta={pedirPropostaAgora} onChange={(ch) => {
               // Etapa 2: ceder, trocar ou retomar vale na hora.
               if (!ch) { setMinistry(null); return }
               try { onChange(ministryNow(state, ch)); toast(ch.party ? `🏢 Pasta ${state.cabinet[ch.area] ? 'trocada' : 'cedida'} ao ${PARTY_BY_ID[ch.party].sigla}: vale já.` : '🏢 Pasta retomada: vale já.') } catch (e) { toast(`✋ ${(e as Error).message}`) }

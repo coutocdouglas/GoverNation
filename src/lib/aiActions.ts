@@ -1,3 +1,6 @@
+import { ministerProposalPrompt, parseProposal } from '../game/ai'
+import { dossiePasta, dossieTexto } from '../game/conselho'
+import { narrarProposta, peekRound } from '../game/rodada'
 import { briefingPrompt, empresaNamesPrompt, parseEmpresaNames, eventBriefPrompt, parseShortText, concessionPrompt, interpretPrompt, ministerAdvicePrompt, ministerReviewPrompt, parseAdvice, parseConcession, parseInterpretation, parseReview, type Advice, type Review } from '../game/ai'
 import type { BillId } from '../game/types'
 import type { EventDef } from '../game/data/events'
@@ -146,4 +149,21 @@ export async function askEmpresaNames(state: GameState, bill: BillId): Promise<G
     if (!(e instanceof AiError)) noteAiFailure('fala', `nomes das empresas: ${String(e)}`)
     return state
   }
+}
+
+/**
+ * v0.39.1: a IA fala como o ministro sobre a proposta já escolhida pelas regras, com o dossiê da pasta. Devolve o estado
+ * com a fala e a ordem pronta, ou o mesmo estado (vale o texto de reserva). Nunca falha na tela.
+ */
+export async function askProposta(state: GameState): Promise<GameState> {
+  const p = peekRound(state)?.proposta
+  if (!p || !p.resultado.ok || p.ia || !aiReady()) return state
+  try {
+    const r = parseProposal(await callAi('fala', ministerProposalPrompt(state, p.resultado.proposta, dossieTexto(dossiePasta(state, p.area)))))
+    if (r) return narrarProposta(state, p.area, r.fala, r.ordem)
+    noteAiFailure('fala', 'proposta do ministro: a IA respondeu fora do formato')
+  } catch (e) {
+    if (!(e instanceof AiError)) noteAiFailure('fala', `proposta do ministro: ${String(e)}`)
+  }
+  return state
 }

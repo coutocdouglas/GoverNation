@@ -11,6 +11,8 @@ import { yearOf } from '../game/memory'
 import { ministriesInTrouble, ministryGoal, wearLabel } from '../game/ministerios'
 import { PASTAS, pastasLigadas } from '../game/data/pastas'
 import { comInterino, efetivado, efetivarBlockedReason, mesesParaTroca, trocaBlockedReason } from '../game/pastas'
+import { conselhoLigado } from '../game/data/conselho'
+import { propostaMinistroBlockedReason } from '../game/rodada'
 import { STATUS_LABEL } from '../game/promises'
 import type { Articulation, BillId, Deal, GameState } from '../game/types'
 import type { MonthPlan } from '../game/game'
@@ -63,7 +65,7 @@ export function SenadoView({ state, articulations, onToggle, onNegotiate, deals,
 const STATUS_CLS: Record<string, string> = { rumo: 'up', cumprida: 'up', risco: 'warn', longe: 'dn', quase: 'warn', quebrada: 'dn' }
 
 /** Aba Ministérios: os 13 ministros, desgaste, meta de cada pasta e reforma ministerial. */
-export function MinistriosView({ state, change, onChange, done, onEfetivar }: { state: GameState; change: MinistryChange | null; onChange: (c: MinistryChange | null) => void; done?: boolean; onEfetivar?: (area: AreaId) => void }) {
+export function MinistriosView({ state, change, onChange, done, onEfetivar, onPedirProposta }: { state: GameState; change: MinistryChange | null; onChange: (c: MinistryChange | null) => void; done?: boolean; onEfetivar?: (area: AreaId) => void; onPedirProposta?: (area: AreaId) => void }) {
   const [open, setOpen] = useState<AreaId | null>(null)
   // Etapa 6E (v0.38): com os ministérios vivos, vale uma troca a cada 3 meses (ceder a pasta de um interino é livre).
   const vivos = pastasLigadas()
@@ -124,9 +126,13 @@ export function MinistriosView({ state, change, onChange, done, onEfetivar }: { 
                 <div className="pn-minister__act">
                   {pending ? (
                     <button className="pn-btn pn-btn--small" onClick={() => onChange(null)}>✔ {pending.party ? `${seat ? 'trocar pelo' : 'ceder ao'} ${PARTY_BY_ID[pending.party].sigla}` : 'retomar'} · desfazer</button>
-                  ) : locked ? <small className="pn-hint" style={{ margin: 0 }}>🔒 do presidente</small> : (
+                  ) : locked ? <>
+                    <small className="pn-hint" style={{ margin: 0 }}>🔒 do presidente</small>
+                    {conselhoLigado() && onPedirProposta && (() => { const why = propostaMinistroBlockedReason(state, area); return <button className="pn-btn pn-btn--ghost pn-btn--small" disabled={!!why} title={why ?? 'O ministro olha o que o seu governo fez na pasta e o que a população pede, e propõe. Uma proposta por rodada, somando todos os ministros.'} onClick={() => onPedirProposta(area)}>💡 Pedir proposta</button> })()}
+                  </> : (
                     <>
                       {seat && <button className="pn-btn pn-btn--ghost pn-btn--small" disabled={!!change || !!bloqueio({ area, party: null })} title={bloqueio({ area, party: null }) ?? 'O ministro original volta (vale na hora).'} onClick={() => onChange({ area, party: null })}>Retomar</button>}
+                      {conselhoLigado() && onPedirProposta && (() => { const why = propostaMinistroBlockedReason(state, area); return <button className="pn-btn pn-btn--ghost pn-btn--small" disabled={!!why} title={why ?? 'O ministro olha o que o seu governo fez na pasta e o que a população pede, e propõe: completar uma medida, retirar um projeto, revogar um decreto ou mandar uma medida nova. Uma proposta por rodada, somando todos os ministros.'} onClick={() => onPedirProposta(area)}>💡 Pedir proposta</button> })()}
                       {vivos && interino && onEfetivar && <button className="pn-btn pn-btn--ghost pn-btn--small" disabled={!!porque} title={porque ?? `O técnico vira titular. Não conta como troca, mas a pasta fica sem padrinho político (crise ignorada ${Math.round((PASTAS.efetivar.crise - 1) * 100)}% pior) e trocar depois conta como troca.`} onClick={() => onEfetivar(area)}>Efetivar</button>}
                       <button className="pn-btn pn-btn--ghost pn-btn--small" disabled={!!change || !!bloqueio({ area, party: 'mdn' })} title={bloqueio({ area, party: 'mdn' }) ?? (interino && vivos ? 'Ceder a pasta do interino não conta como troca: vale já.' : 'Vale na hora: o partido já vota diferente nesta rodada.')} onClick={() => setOpen(open === area ? null : area)}>{seat ? 'Trocar…' : 'Ceder…'}</button>
                     </>

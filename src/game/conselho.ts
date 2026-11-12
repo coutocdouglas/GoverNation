@@ -240,10 +240,14 @@ export function escolherProposta(s: GameState, area: AreaId, rng: Rng): Resultad
   return { ok: true, proposta: lista[Math.floor(rng.next() * k)] }
 }
 
+/** A ordem pronta que vai para o campo da medida do mês (nova ou complemento), pelas regras. */
+export function ordemPadrao(r: ResultadoProposta): string | null {
+  if (!r.ok || (r.proposta.tipo !== 'nova' && r.proposta.tipo !== 'complementar')) return null
+  return BILL_BY_ID[r.proposta.bill].name
+}
+
 /** O texto da proposta pelas regras (reserva da fala da IA). */
-export function textoProposta(s: GameState, r: ResultadoProposta, area: AreaId): string {
-  const m = ministerOf(s, area)
-  const tit = m.feminine ? 'a ministra' : 'o ministro'
+export function textoProposta(_s: GameState, r: ResultadoProposta, area: AreaId): string {
   if (!r.ok) return r.motivo === 'semForca'
     ? `Presidente, com o desgaste que estou, não tenho força para propor nada agora. Me dê fôlego antes.`
     : `Presidente, na ${MINISTER_BY_AREA[area].areaName.toLowerCase()} não vejo nada urgente para mudar agora.`
@@ -253,5 +257,5 @@ export function textoProposta(s: GameState, r: ResultadoProposta, area: AreaId):
     : p.tipo === 'revogar' ? `sugiro revogar o decreto “${nome}”`
       : p.tipo === 'complementar' ? `sugiro completar com “${nome}”`
         : `sugiro mandar “${nome}”`
-  return `Presidente, ${p.porque} Por isso ${fala}. (${tit} ${m.name})`
+  return `Presidente, ${p.porque.charAt(0).toLowerCase()}${p.porque.slice(1)} Por isso ${fala}.`
 }

@@ -8,6 +8,7 @@ import { PARTIES } from './data/parties'
 import type { MeasureRef } from './interpret'
 import { MATTERS, type CustomDraft } from './custom'
 import type { ActionId, BillId, GameState } from './types'
+import type { Proposta } from './conselho'
 
 /**
  * Camada de IA (etapa 3B), parte sem internet: monta os pedidos e confere as respostas.
@@ -340,4 +341,44 @@ export function parseEmpresaNames(raw: string, n: number): string[] | null {
   if (!j || !Array.isArray(j.nomes) || j.nomes.length < n) return null
   const nomes = j.nomes.slice(0, n).map((x) => cleanText(x, 60))
   return nomes.every(Boolean) ? nomes : null
+}
+
+/**
+ * v0.39.1 (6E, parte 3): a proposta do ministro. As regras já escolheram o que propor (`proposta`); a IA fala como o
+ * ministro, com o dossiê da pasta na mão, e, na medida nova ou no complemento, escreve a ordem pronta (uma frase no
+ * imperativo) que vai para o campo da medida do mês. Não escolhe outra medida nem inventa números.
+ */
+export function ministerProposalPrompt(state: GameState, proposta: Proposta, dossie: string[]): AiRequest {
+  const m = ministerOf(state, proposta.area)
+  const b = BILL_BY_ID[proposta.bill]
+  const alvo = proposta.alvo ? BILL_BY_ID[proposta.alvo] : null
+  const oque = proposta.tipo === 'retirar' ? `pedir ao presidente que retire da pauta do Congresso o projeto "${b.name}"`
+    : proposta.tipo === 'revogar' ? `pedir ao presidente que revogue o decreto "${b.name}"`
+      : proposta.tipo === 'complementar' ? `propor "${b.name}" para completar "${alvo?.name}", que deixou um buraco`
+        : `propor "${b.name}"`
+  const comOrdem = proposta.tipo === 'nova' || proposta.tipo === 'complementar'
+  return {
+    system: [
+      `Você é ${m.name}, ${m.role} do Brasil num jogo de simulação política. Todos os personagens são fictícios; não cite pessoas reais.`,
+      `Partido: ${PARTY_BY_ID[m.party].name}. Você é ${relationWith(state, m)}.`,
+      `Seu jeito: ${m.style}`,
+      'O presidente pediu uma proposta da sua pasta. Você acompanha o governo de perto: fale do que viu no dossiê abaixo (medidas que ele já mandou, o que está em andamento, o que a população cobra), em primeira pessoa, em 2 a 4 frases, como numa reunião de gabinete.',
+      `A decisão já está tomada: você vai ${oque}. Motivo que você viu: ${proposta.porque} Não troque a proposta por outra.`,
+      comOrdem
+        ? 'Escreva também "ordem": UMA frase no imperativo, como o presidente assinaria, com detalhes concretos coerentes com a medida (ex.: "Amplie o programa de renda para as famílias com crianças pequenas, começando pelo Nordeste."). Não invente valores, votos nem efeitos.'
+        : 'Não escreva ordem: deixe "ordem" vazia.',
+      'Responda SOMENTE com JSON: {"fala":"...","ordem":"..."}',
+    ].join('\n'),
+    user: `${countryContext(state)}\n\nDossiê da sua pasta:\n${dossie.map((l) => `- ${l}`).join('\n')}\n\nMedida em questão: ${b.name} (${INSTRUMENTS[b.instrument].label}). ${b.summary}`,
+    maxTokens: 500,
+  }
+}
+
+/** Confere a fala da proposta. Sem fala, nada (vale o texto de reserva). */
+export function parseProposal(raw: string): { fala: string; ordem: string | null } | null {
+  const data = extractJson(raw) as { fala?: unknown; ordem?: unknown } | null
+  if (!data) return null
+  const fala = cleanText(data.fala, 700).replace(/^["“]|["”]$/g, '')
+  const ordem = cleanText(data.ordem, 300)
+  return fala ? { fala, ordem: ordem || null } : null
 }

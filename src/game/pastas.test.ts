@@ -288,7 +288,7 @@ describe('save', () => {
     delete velho.pastas
     velho.saveVersion = 35
     const m = migrate(velho)!
-    expect(m.saveVersion).toBe(37)
+    expect(m.saveVersion).toBe(38)
     expect(m.pastas).toEqual(initialPastas())
     expect(mesesParaTroca(m)).toBe(0)
   })

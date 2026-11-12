@@ -1,5 +1,13 @@
 # Novidades
 
+## 0.39.1 (12/11/2026)
+- **Bloco 6E, parte 3 (telas e IA): o ministro antenado. O bloco está ligado.**
+  - **Aba Ministérios:** botão **💡 Pedir proposta** em cada ministro (Fazenda e Relações Institucionais incluídas). Uma proposta por rodada, somando todos; o botão diz quando trava.
+  - **Janela "Proposta do ministro"** (abre ao pedir e fica no Radar): a fala do ministro, o porquê, o que a medida dá e custa, a saída do tipo (**Levar para a medida do mês**, **Retirar da pauta** ou **Revogar o decreto**, com o custo à vista) e, atrás de um clique, o que ele viu na pasta. Recusar é só fechar.
+  - **IA:** com a IA ligada, o ministro fala com o dossiê da pasta na mão e, na medida nova ou no complemento, escreve a ordem pronta que vai para o campo da medida. As regras continuam decidindo o que ele propõe. Sem IA, ou se ela falhar, vale o texto do gabinete.
+  - **Câmara:** botão **↩️ Retirar da pauta** nos projetos parados e linha **↩️ Revogar decreto** nas leis e decretos em vigor, com confirmação e o custo antes.
+- Save 38, com migração. 599 testes (6 novos nas telas). Conferido no navegador: pedir, ler a janela e levar a proposta ao campo da medida.
+
 ## 0.39.0 (12/11/2026)
 - **Bloco 6E, parte 3: o ministro antenado (regras).** Ainda **desligado**: nada muda na partida até as telas da v0.39.1.
   - **Dossiê da pasta:** o ministro sabe o que o seu governo fez na área (medidas em vigor, na pauta e barradas, gasto e licitações em andamento, compromisso, meta), o que a população pede (aprovação e tendência do grupo, cobranças, fato do mês, crises recentes) e quem ele é (partido, desgaste, Elo).

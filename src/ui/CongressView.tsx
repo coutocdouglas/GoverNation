@@ -13,7 +13,8 @@ import { Portrait } from './Portrait'
 import { num } from './format'
 import { AlasList, BancadasChart, BaseCard, MesaCard, OwnLeaderPicker, TalkButtons } from './PartidosPanels'
 import { leaderOf } from '../game/partidos'
-import { urgencyNow, urgencyNowBlockedReason } from '../game/rodada'
+import { urgencyNow, urgencyNowBlockedReason, retirarDaPauta, retirarDaPautaBlockedReason, revogarDecreto, revogarDecretoBlockedReason } from '../game/rodada'
+import { CONSELHO, conselhoLigado } from '../game/data/conselho'
 import { LEADER_STYLE } from '../game/data/alas'
 
 const relationLabel = (r: number) =>
@@ -116,6 +117,11 @@ export function CongressView({ state, articulations, onToggle, bill, extraBill, 
                   const why = urgencyNowBlockedReason(state, id)
                   return <button className="pn-btn pn-btn--ghost pn-btn--small" disabled={!!why} title={why ?? 'Pula a comissão e a gaveta da Câmara quando for pautado. Custa um pouco da relação com o presidente da Câmara.'} onClick={() => { onState(urgencyNow(state, id)); toast(`⚡ Urgência pedida para “${BILL_BY_ID[id].name}”: vale já.`) }}>⚡ Pedir urgência (vale já)</button>
                 })()}
+                {onState && conselhoLigado() && (c.pending.some((p) => p.id === id) || c.senate.pending.some((p) => p.id === id)) && BILL_BY_ID[id].instrument !== 'mp' && (() => {
+                  const why = retirarDaPautaBlockedReason(state, id)
+                  const custo = `Credibilidade ${CONSELHO.retirar.credibilidade}; o projeto só volta em ${CONSELHO.retirar.voltaEm} meses. Não gasta a medida do mês.`
+                  return <button className="pn-btn pn-btn--ghost pn-btn--small" disabled={!!why} title={why ?? custo} onClick={() => { if (!window.confirm(`Retirar “${BILL_BY_ID[id].name}” da pauta?\n${custo}`)) return; try { onState(retirarDaPauta(state, id)); toast(`↩️ “${BILL_BY_ID[id].name}” retirado da pauta.`) } catch (e) { toast(`✋ ${(e as Error).message}`) } }}>↩️ Retirar da pauta</button>
+                })()}
               </div>
             </div>
           ))}
@@ -185,6 +191,15 @@ export function CongressView({ state, articulations, onToggle, bill, extraBill, 
               {c.laws.map((id) => BILL_BY_ID[id].instrument === 'decreto' || !onReaction
                 ? <span key={id} className="pn-law">{state.names?.[id] ? `“${state.names[id]}” · ` : ''}{BILL_BY_ID[id].name}</span>
                 : <button key={id} className="pn-law pn-law--btn" title="Ver como a sociedade reagiu" onClick={() => onReaction(id)}>📣 {state.names?.[id] ? `“${state.names[id]}” · ` : ''}{BILL_BY_ID[id].name}</button>)}
+            </div>
+          )}
+          {onState && conselhoLigado() && c.laws.some((id) => BILL_BY_ID[id].instrument === 'decreto') && (
+            <div className="pn-row" style={{ flexWrap: 'wrap', marginTop: 6 }}>
+              <small className="pn-hint" style={{ margin: 0 }}>↩️ Revogar decreto (entra no lugar da medida do mês; credibilidade {CONSELHO.revogar.credibilidade}; só volta em {CONSELHO.revogar.voltaEm} meses):</small>
+              {c.laws.filter((id) => BILL_BY_ID[id].instrument === 'decreto').map((id) => {
+                const why = revogarDecretoBlockedReason(state, id)
+                return <button key={id} className="pn-btn pn-btn--ghost pn-btn--small" disabled={!!why} title={why ?? 'Os efeitos do decreto são desfeitos: quem ganhava perde, quem perdia sente alívio.'} onClick={() => { if (!window.confirm(`Revogar o decreto “${BILL_BY_ID[id].name}”?\nOs efeitos são desfeitos, a credibilidade cai ${Math.abs(CONSELHO.revogar.credibilidade)} e a revogação entra no lugar da medida do mês.`)) return; try { onState(revogarDecreto(state, id)); toast(`↩️ Decreto “${BILL_BY_ID[id].name}” revogado.`) } catch (e) { toast(`✋ ${(e as Error).message}`) } }}>{BILL_BY_ID[id].name}</button>
+              })}
             </div>
           )}
           {[...c.votes].reverse().map((v, i) => <Scoreboard key={i} v={v} compact />)}

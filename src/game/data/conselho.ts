@@ -4,8 +4,8 @@
  * na v0.40 e usa este mesmo arquivo. Todos os números moram aqui. Desenho em DESIGN.md 27.37.
  */
 export const CONSELHO = {
-  /** Desligado até as telas (v0.39.1). Testes usam `ligarConselho`. */
-  ativo: false,
+  /** Ligado desde as telas (v0.39.1). Testes podem usar `ligarConselho`. */
+  ativo: true,
   proposta: {
     /** Pedidos de proposta por rodada, somando todos os ministros. */
     porRodada: 1,

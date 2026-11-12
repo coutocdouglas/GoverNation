@@ -303,7 +303,11 @@ export function migrate(raw: unknown): GameState | null {
       // v0.38 → v0.39 (Etapa 6E, parte 3): campos novos e opcionais na rodada (proposta do ministro, decreto revogado); nada a converter.
       s.saveVersion = 37
     }
-    if (s.saveVersion !== 37) return null
+    if (s.saveVersion === 37) {
+      // v0.39.0 → v0.39.1: a proposta do ministro ganha a ordem pronta e a marca da fala da IA (opcionais); nada a converter.
+      s.saveVersion = 38
+    }
+    if (s.saveVersion !== 38) return null
     syncCustomBills(s as GameState)
     return s as GameState
   } catch {

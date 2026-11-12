@@ -105,7 +105,7 @@ export function newGame(
   const rngState = seed ?? Math.floor(Math.random() * 2 ** 31)
   const bonus = DIFFICULTY[difficulty].approvalBonus
   const state: GameState = {
-    saveVersion: 37,
+    saveVersion: 38,
     pressao: initialPressao(),
     pastas: initialPastas(),
     governo: initialGoverno(avatarSeed ?? `${presidentName}-${rngState}`, playerParty, posse.vices),

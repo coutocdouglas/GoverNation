@@ -47,7 +47,7 @@ import { cedidoScale, encerrarPressao, pressaoBlockedReason, pressaoOf } from '.
 import { GOVERNO, governoLigado, type AcaoVice } from './data/governo'
 import { PASTAS, pastasLigadas, type RespostaPasta } from './data/pastas'
 import { CONSELHO, conselhoLigado, type TipoProposta } from './data/conselho'
-import { escolherProposta, textoProposta } from './conselho'
+import { escolherProposta, ordemPadrao, textoProposta } from './conselho'
 import { efetivarBlockedReason, pastaJogoBlockedReason, pastasOf, registrarTroca, trocaBlockedReason, trocaConta } from './pastas'
 import { aplicarAcaoVice, trocarLiderNoEstado, viceBlockedReason } from './governo'
 import { addMark, markMeasure, noteRecord } from './reputacao'
@@ -1575,7 +1575,19 @@ export function pedirProposta(prev: GameState, area: AreaId): GameState {
   const s = structuredClone(prev)
   const r = roundOf(s)
   const resultado = escolherProposta(s, area, new Rng((absMonth(s) * 31337) ^ s.rngState ^ (0x5eed + areaIdx(area))))
-  r.proposta = { area, resultado, texto: textoProposta(s, resultado, area) }
+  r.proposta = { area, resultado, texto: textoProposta(s, resultado, area), ordem: ordemPadrao(resultado) ?? undefined }
+  return s
+}
+
+/** v0.39.1: a IA narrou a proposta (fala do ministro e, na medida nova ou no complemento, a ordem pronta). Só troca o texto. */
+export function narrarProposta(prev: GameState, area: AreaId, fala: string, ordem: string | null): GameState {
+  const p = peekRound(prev)?.proposta
+  if (!p || p.area !== area) return prev
+  const s = structuredClone(prev)
+  const q = s.round!.proposta!
+  q.texto = fala
+  if (ordem) q.ordem = ordem
+  q.ia = true
   return s
 }
 
