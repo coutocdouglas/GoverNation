@@ -11,6 +11,9 @@ import type { GameState } from '../game/types'
 import { aiReady, AiError, callAi, noteAiFailure } from './ai'
 import { reservaAdvice, reservaBrief, reservaReview } from '../game/reserva'
 import { buildCustomBill } from '../game/custom'
+import { utilidade } from '../game/perfil'
+import { UTILIDADE } from '../game/data/perfis'
+import { BILL_BY_ID } from '../game/data/bills'
 import { completarResposta, interpretarResposta, type RespostaFato } from '../game/resposta'
 import { currentEvent } from '../game/events'
 import { licitacoesAbertas, nomearEmpresas } from '../game/risco'
@@ -80,9 +83,9 @@ export async function readText(state: GameState, text: string, area: AreaId | nu
 export async function askAdvice(state: GameState, ev: EventDef): Promise<Advice> {
   if (aiReady()) {
     try {
-      const advice = parseAdvice(await callAi('fala', ministerAdvicePrompt(state, ev)), ev.area)
+      const advice = parseAdvice(await callAi('fala', ministerAdvicePrompt(state, ev)), ev.area, (id) => utilidade(state, ev, BILL_BY_ID[id]) >= UTILIDADE.minimo)
       if (advice) return advice
-      noteAiFailure('fala', 'opinião do ministro: a IA respondeu fora do formato')
+      noteAiFailure('fala', 'opinião do ministro: a IA respondeu fora do formato ou sugeriu medidas que não respondem ao fato')
     } catch (e) {
       if (!(e instanceof AiError)) noteAiFailure('fala', `opinião do ministro: ${String(e)}`)
     }

@@ -14,7 +14,11 @@ import { PARTY_BY_ID } from './data/parties'
 import { currentEvent, defaultOption } from './events'
 import { responseBlockedReason } from './game'
 import { TIPOS_RESPOSTA, respostaLigada } from './data/resposta'
-import { afinidadeDe, completarResposta, ordemTexto, respostaBlockedReason } from './resposta'
+import { afinidadeDe, alivioTexto, calcularResposta, completarResposta, ordemTexto, respostaBlockedReason, rotuloResposta } from './resposta'
+import { bandeira, frase, gruposDoFato, medidasUteis, perfilDe, recusa, sementeFala, utilidade } from './perfil'
+import { GROUP_BY_ID } from './data/groups'
+import { UTILIDADE } from './data/perfis'
+import type { GroupId } from './types'
 import { measuresOfArea } from './interpret'
 import { fillText } from './memory'
 import { legalRiskIn } from './supremo'
@@ -38,9 +42,15 @@ export function reservaReview(state: GameState, area: AreaId, _order: string, me
   const relation = state.congress.parties[m.party]?.relation ?? 50
   const sigla = PARTY_BY_ID[m.party].sigla
 
+  // Etapa 6G, H2 (v0.45): o perfil do ministro pesa no parecer.
+  const p = perfilDe(m)
   let score = own ? 1.5 : 0
   const against: string[] = []
   const favor: string[] = []
+  if (recusa(p, b)) { score -= 3.5; against.push('isso vai contra tudo o que eu defendo') }
+  if (bandeira(p, b)) { score += 1; favor.push('é uma bandeira minha') }
+  if (p.gasto <= -0.5 && net > 0.15) { score -= 1; against.push('não tem fonte para esse gasto') }
+  if (p.gasto >= 0.5 && net > 0.3) score += 0.5
   if (risk === 'alto') { score -= 2; against.push('o risco de o Supremo derrubar é alto') } else if (risk === 'medio') { score -= 1; against.push('há risco jurídico') }
   if (net > 0.3) { score -= area === 'economia' ? 2 : 1; against.push('o gasto pesa nas contas') } else if (net < -0.3) { score += 0.5; favor.push('melhora as contas') }
   if (pop <= -0.8) { score -= 1.5; against.push('a maioria rejeita') } else if (pop >= 0.8) { score += 1; favor.push('o país quer isso') }
@@ -50,10 +60,13 @@ export function reservaReview(state: GameState, area: AreaId, _order: string, me
 
   const stance: Stance = score <= -2.5 ? 'contra' : score <= -0.5 ? 'ressalva' : 'apoia'
   const join = (xs: string[]) => (xs.length > 1 ? `${xs.slice(0, -1).join(', ')} e ${xs[xs.length - 1]}` : xs[0] ?? '')
-  const speech =
-    stance === 'apoia' ? `Presidente, pode contar comigo: ${join(favor) || 'a ordem é clara e o custo está à vista'}. Só peço que acompanhe a execução.`
-      : stance === 'ressalva' ? `Presidente, eu apoio, mas com ressalva: ${join(against) || 'o caminho é estreito'}. Ajustando isso, a medida anda.`
-        : `Presidente, sou contra desta forma: ${join(against)}. Se o senhor insistir, a responsabilidade política é sua.`
+  const abre = frase(p.abertura, sementeFala(state, m.name))
+  const fecho = frase(p.bordoes, sementeFala(state, m.name) + 1)
+  const corpo =
+    stance === 'apoia' ? `${abre} pode contar comigo: ${join(favor) || 'a ordem é clara e o custo está à vista'}. Só peço que acompanhe a execução.`
+      : stance === 'ressalva' ? `${abre} eu apoio, mas com ressalva: ${join(against) || 'o caminho é estreito'}. Ajustando isso, a medida anda.`
+        : `${abre} sou contra desta forma: ${join(against)}. Se o senhor insistir, a responsabilidade política é sua.`
+  const speech = `${corpo} ${fecho}`.trim()
 
   const suggestions: string[] = []
   if (b.instrument === 'decreto' && risk !== 'baixo') suggestions.push('Mande como projeto de lei, para o Supremo não derrubar.')
@@ -65,27 +78,44 @@ export function reservaReview(state: GameState, area: AreaId, _order: string, me
   return { stance, speech, suggestions: suggestions.slice(0, 3) }
 }
 
-/** Opinião do ministro sobre o fato, por regras: três ordens de graus diferentes (discreta, média e ousada). */
+/**
+ * Opinião do ministro sobre o fato, por regras. Etapa 6G, H2 (v0.45): só medidas que respondem ao fato
+ * (`utilidade`), na ordem do perfil dele, e a fala no jeito dele; a ação do governo entra quando resolve bem.
+ */
 export function reservaAdvice(state: GameState, ev: EventDef): Advice {
   const m = ministerOf(state, ev.area)
-  const ok = measuresOfArea(ev.area).filter((b) => responseBlockedReason(state, b.id) === null)
-  const sorted = [...ok].sort((a, z) => netCost(a.id) - netCost(z.id) || a.name.localeCompare(z.name))
-  const pick: BillId[] = []
-  if (sorted.length) {
-    for (const i of [0, Math.floor((sorted.length - 1) / 2), sorted.length - 1]) {
-      const id = sorted[i].id
-      if (!pick.includes(id)) pick.push(id)
-    }
-  }
-  // v0.44: o ministro também sugere a ação do governo que mais resolve o fato, quando ela resolve bem.
+  const p = perfilDe(m)
+  const semente = sementeFala(state, m.name)
+  const titulo = fillText(ev.title, state.event?.origin)
+  const sug = medidasUteis(state, ev, m, (id) => responseBlockedReason(state, id)).slice(0, 2)
   const acao = melhorAcao(state, ev)
-  const labels = acao ? ['sem lei, uma ação do governo', 'por medida, a mais discreta', 'por medida, a mais ousada'] : ['a mais discreta', 'a do meio-termo', 'a mais ousada']
-  const options: AdviceOption[] = pick.map((id) => ({ order: BILL_BY_ID[id].name, measure: id }))
-  if (acao) { if (options.length >= 3) options.pop(); options.unshift({ order: ordemTexto(acao), acao: acao.tipo }) }
-  const opinion = options.length
-    ? `Presidente, ${m.feminine ? 'a ministra' : 'o ministro'} ${m.name} sugere ${options.length === 1 ? 'um caminho' : `${options.length} caminhos`} para “${fillText(ev.title, state.event?.origin)}”: ${options.map((o, i) => `${labels[options.length === 1 ? 0 : i]} (${o.order})`).join(', ')}. O custo e o risco de cada uma aparecem na leitura antes de assinar.`
-    : `Presidente, não vejo medida pronta na ${m.areaName.toLowerCase()} que resolva isso agora. Escreva com as suas palavras o que quer fazer.`
-  return { opinion, options }
+  const options: AdviceOption[] = sug.map((x) => ({ order: BILL_BY_ID[x.id].name, measure: x.id }))
+  if (acao) options.push({ order: ordemTexto(acao), acao: acao.tipo })
+
+  const grupos = (Object.entries(gruposDoFato(ev)) as [GroupId, number][]).sort((a, b) => b[1] - a[1]).slice(0, 2).map(([g]) => GROUP_BY_ID[g].name.toLowerCase())
+  const quem = grupos.length ? grupos.join(' e ') : 'o governo'
+  const frases: string[] = [frase(p.abertura, semente)]
+  frases.push(ev.kind === 'bom' ? `“${titulo}” é uma chance de ganhar ${quem}.` : grupos.length ? `“${titulo}” pesa sobre ${quem}${ev.importance >= 4 ? ', e é grave' : ''}.` : `“${titulo}” está na mesa e pede uma decisão.`)
+  if (sug[0]) {
+    const b = BILL_BY_ID[sug[0].id]
+    const net = netCost(b.id)
+    const porque = sug[0].bandeira ? ', que é bandeira minha'
+      : p.gasto <= -0.5 && net <= 0.1 ? ', porque cabe nas contas'
+        : p.gasto >= 0.5 && net > 0.1 ? ', porque resolve de verdade, mesmo custando'
+          : p.ousadia >= 0.5 ? ': é para fazer grande'
+            : p.ousadia <= -0.4 ? ': é o passo mais seguro'
+              : ''
+    frases.push(`Eu defendo ${b.name.charAt(0).toLowerCase()}${b.name.slice(1)}${porque}.`)
+    if (sug[1]) frases.push(`Se preferir outro caminho, ${BILL_BY_ID[sug[1].id].name.charAt(0).toLowerCase()}${BILL_BY_ID[sug[1].id].name.slice(1)} também responde.`)
+  } else {
+    frases.push(`Não vejo medida pronta na ${m.areaName.toLowerCase()} que resolva isso.`)
+  }
+  if (acao) frases.push(`Sem lei, dá para ${rotuloResposta(state, acao).charAt(0).toLowerCase()}${rotuloResposta(state, acao).slice(1)}: ${alivioTexto(calcularResposta(state, ev, acao).alivio, ev.kind === 'bom')}.`)
+  const recusada = measuresOfArea(ev.area).find((b) => recusa(p, b) && utilidade(state, ev, b) >= UTILIDADE.minimo && responseBlockedReason(state, b.id) === null)
+  if (recusada) frases.push(`Só não me peça ${recusada.name.charAt(0).toLowerCase()}${recusada.name.slice(1)}: isso eu não assino.`)
+  if (!options.length) frases.push('Escreva com as suas palavras o que quer fazer.')
+  frases.push(frase(p.bordoes, semente + 1))
+  return { opinion: frases.filter(Boolean).join(' '), options }
 }
 
 /** A ação do governo que mais resolve o fato (se resolver ao menos metade), já completada e liberada. */

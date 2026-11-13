@@ -13,6 +13,8 @@ import type { Membro, ParecerCirculo } from './circulo'
 import { NOME_RESPOSTA, TIPOS_RESPOSTA, type TipoResposta } from './data/resposta'
 import type { RespostaFato } from './resposta'
 import { GROUP_BY_ID } from './data/groups'
+import { perfilTexto, utilidade } from './perfil'
+import { UTILIDADE } from './data/perfis'
 
 /**
  * Camada de IA (etapa 3B), parte sem internet: monta os pedidos e confere as respostas.
@@ -67,12 +69,15 @@ export interface AiRequest {
 /** Pedido de opinião: o ministro dá um parecer e 2 ou 3 ordens prontas, no estilo dele. */
 export function ministerAdvicePrompt(state: GameState, ev: EventDef): AiRequest {
   const m = ministerOf(state, ev.area)
-  const catalog = BILLS.filter((b) => b.area === ev.area).map((b) => billLine(b.id)).join('\n')
+  // Etapa 6G, H2 (v0.45): só entram as medidas que respondem ao fato; o perfil do ministro vai junto.
+  const uteis = BILLS.filter((b) => b.area === ev.area && utilidade(state, ev, b) >= UTILIDADE.minimo)
+  const catalog = uteis.length ? uteis.map((b) => billLine(b.id)).join('\n') : '(nenhuma medida do catálogo responde a este fato: sugira ações do governo)'
   return {
     system: [
       `Você é ${m.name}, ${m.role} do Brasil num jogo de simulação política. Todos os personagens são fictícios; não cite pessoas reais.`,
       `Partido: ${PARTY_BY_ID[m.party].name}. Você é ${relationWith(state, m)}.`,
       `Seu jeito: ${m.style}`,
+      perfilTexto(m),
       'O presidente pediu a sua opinião sobre o fato do mês. Fale como numa reunião de gabinete de verdade, em português do Brasil, em primeira pessoa, no seu estilo e com os seus interesses políticos.',
       'Primeiro, um parecer de 3 a 5 frases: o que está em jogo (vidas, votos, mercado, aliados, estados), o risco de não agir e o que você defende. Pode ser franco e até puxar a sardinha para o seu lado.',
       'Depois, 2 ou 3 opções de ordem que o presidente pode dar. Cada opção é UMA frase no imperativo, como o presidente assinaria (ex.: "Declare emergência sanitária e libere verba extra aos estados afetados."), com detalhes concretos.',
@@ -83,7 +88,7 @@ export function ministerAdvicePrompt(state: GameState, ev: EventDef): AiRequest 
       'Ordene as opções da que você mais defende para a que menos defende.',
       'As opções vêm da situação real do país (os números abaixo), do seu perfil e do alinhamento do seu partido com o presidente: um aliado de outro campo puxa para a linha do próprio partido.',
     ].join('\n'),
-    user: `${countryContext(state)}\n\nFato do mês (${ev.title}): ${ev.text}\n\nCatálogo da sua área (id | nome):\n${catalog}`,
+    user: `${countryContext(state)}\n\nFato do mês (${ev.title}): ${ev.text}\n\nMedidas da sua área que respondem a este fato (id | nome; use só estas):\n${catalog}`,
     maxTokens: 900,
   }
 }
@@ -166,7 +171,7 @@ export interface Advice {
 }
 
 /** Confere a opinião do ministro. Opções com id inválido ou de outra área são descartadas. */
-export function parseAdvice(raw: string, area: AreaId): Advice | null {
+export function parseAdvice(raw: string, area: AreaId, util?: (id: BillId) => boolean): Advice | null {
   const data = extractJson(raw) as { parecer?: unknown; opcoes?: unknown } | null
   if (!data || !Array.isArray(data.opcoes)) return null
   const options: AdviceOption[] = []
@@ -175,7 +180,8 @@ export function parseAdvice(raw: string, area: AreaId): Advice | null {
     const order = cleanText(o.ordem, 300)
     if (!order) continue
     if (validBill(o.medida, area)) {
-      if (options.some((x) => x.measure === o.medida)) continue
+      // v0.45: medida que não responde ao fato fica de fora (sem nenhuma opção válida, o parecer cai na reserva).
+      if (options.some((x) => x.measure === o.medida) || (util && !util(o.medida))) continue
       options.push({ order, measure: o.medida })
     } else if (typeof o.acao === 'string' && (TIPOS_RESPOSTA as string[]).includes(o.acao) && !options.some((x) => x.acao === o.acao)) {
       options.push({ order, acao: o.acao as TipoResposta })
@@ -245,6 +251,7 @@ export function ministerReviewPrompt(state: GameState, area: AreaId, order: stri
       `Você é ${m.name}, ${m.role} do Brasil num jogo de simulação política. Todos os personagens são fictícios; não cite pessoas reais.`,
       `Partido: ${PARTY_BY_ID[m.party].name}. Você é ${relationWith(state, m)}.`,
       `Seu jeito: ${m.style}`,
+      perfilTexto(m),
       'O presidente vai assinar uma ordem e quer ouvir você antes. Opine pelo que você acredita e pelos seus interesses, não necessariamente pelo melhor para o país.',
       'Responda SOMENTE com JSON: {"posicao":"apoia|ressalva|contra","fala":"2 a 4 frases suas, entre aspas na boca do personagem","sugestoes":["até 3 ajustes concretos, cada um uma frase no imperativo"]}',
       'Não invente custos, votos ou números de efeito: o jogo calcula isso.',

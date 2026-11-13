@@ -53,7 +53,9 @@ const clamp = (x: number, lo = 0, hi = 100) => Math.max(lo, Math.min(hi, x))
 const round1 = (x: number) => Math.round(x * 10) / 10
 const round2 = (x: number) => Math.round(x * 100) / 100
 const bi = (amount: number, months: number) => Math.round(((amount * months) / 12 / 100) * GDP_BILLIONS * 10) / 10
-const nomeGrupo = (g: GroupId) => GROUP_BY_ID[g].name.toLowerCase()
+const ARTIGO: Record<GroupId, string> = { trabalhadores: 'dos', baixaRenda: 'das', classeMedia: 'da', empresarios: 'dos', agro: 'do', servidores: 'dos', jovens: 'dos' }
+/** "do agronegócio", "das famílias de baixa renda". */
+const doGrupo = (g: GroupId) => `${ARTIGO[g] ?? 'de'} ${GROUP_BY_ID[g].name.toLowerCase()}`
 /** "dos Transportes", "da Saúde": tirado do cargo do ministro, como no resto do jogo. */
 const daPasta = (a: AreaId) => MINISTER_BY_AREA[a].role.replace(/^(Ministr|Secretári)[oa] /, '')
 
@@ -146,7 +148,7 @@ export function ordemTexto(r: RespostaFato): string {
     case 'pasta': return `Cedo o ministério${r.area ? ` ${daPasta(r.area)}` : ''} ao ${p?.sigla ?? 'partido'}.`
     case 'lider': return `Recebo o líder do ${p?.sigla ?? 'partido'} no Planalto para conversar.`
     case 'ministro': return `Cobro ${r.tom === 'publico' ? 'em público' : 'em particular'} o ministro ${daPasta(r.area ?? 'politica')}.`
-    case 'pedido': return `Atendo o pedido ${r.grupo ? `dos ${nomeGrupo(r.grupo)}` : 'do setor'} sem esperar lei.`
+    case 'pedido': return `Atendo o pedido ${r.grupo ? doGrupo(r.grupo) : 'do setor'} sem esperar lei.`
     case 'campanha': return 'Lanço uma campanha publicitária para mostrar o que o governo fez.'
     case 'ordem': return 'Determino que a pasta resolva isso por ordem executiva, já.'
     case 'barganha': return `Negocio o apoio do ${p?.sigla ?? 'partido'} com emendas e cargos de segundo escalão.`
@@ -154,7 +156,7 @@ export function ordemTexto(r: RespostaFato): string {
     case 'visita': return 'Vou ao local pessoalmente.'
     case 'desculpas': return 'Peço desculpas e assumo o erro em público.'
     case 'apurar': return `Mando a ${NOME_ORGAO[r.orgao ?? 'pf']} apurar tudo.`
-    case 'entidades': return `Reúno as entidades ${r.grupo ? `dos ${nomeGrupo(r.grupo)}` : 'do setor'} no Planalto.`
+    case 'entidades': return `Reúno as entidades ${r.grupo ? doGrupo(r.grupo) : 'do setor'} no Planalto.`
   }
 }
 
@@ -252,9 +254,15 @@ export function ganhoResposta(s: GameState, tipo: TipoResposta): number {
 /** Quanto a ação resolve este fato (0 a 1), antes do retorno decrescente. */
 export function afinidadeDe(ev: EventDef, r: RespostaFato): number {
   const a = RESPOSTA.afinidade[r.tipo] as { base: number; areas?: AreaId[]; forte?: number; grave?: number; alvo?: number; bom: number }
+  // v0.45 (H2): o fato pode dizer quais ações combinam com ele; o que não estiver na lista vale pouco.
+  if (ev.acoes) return ev.acoes[r.tipo] ?? Math.min(RESPOSTA.foraDaLista, ev.kind === 'bom' ? a.bom : a.base)
   if (ev.kind === 'bom') return a.bom
   let v = a.base
-  if (a.areas && a.forte !== undefined && a.areas.includes(ev.area)) v = Math.max(v, a.forte)
+  // v0.45: ceder pasta, barganhar e receber líder só acertam em cheio quando o fato é pressão de partido
+  // (deixar passar estraga a relação com alguém); num escândalo, entregar mais cargo não resolve nada.
+  const deCargo = r.tipo === 'pasta' || r.tipo === 'barganha' || r.tipo === 'lider'
+  const pressaoDePartido = Object.values((ev.options.find((o) => o.default) ?? ev.options[ev.options.length - 1])?.parties ?? {}).some((x) => (x as number) < 0)
+  if (a.areas && a.forte !== undefined && a.areas.includes(ev.area) && (!deCargo || pressaoDePartido)) v = Math.max(v, a.forte)
   if (a.grave !== undefined && ev.importance >= 4) v = Math.max(v, a.grave)
   if (a.alvo !== undefined) {
     const acerta = r.tipo === 'ministro' ? r.area === ev.area : (r.grupo ?? (r.demanda ? DEMAND_BY_ID[r.demanda]?.group : undefined)) === grupoDoFato(ev)
@@ -385,7 +393,7 @@ export function rotuloResposta(s: GameState, r: RespostaFato): string {
     case 'visita': return 'Visitar o local'
     case 'desculpas': return 'Pedir desculpas em público'
     case 'apurar': return `Mandar a ${NOME_ORGAO[r.orgao ?? 'pf']} apurar`
-    case 'entidades': return r.grupo ? `Reunir as entidades dos ${nomeGrupo(r.grupo)}` : 'Reunir entidades'
+    case 'entidades': return r.grupo ? `Reunir as entidades ${doGrupo(r.grupo)}` : 'Reunir entidades'
   }
 }
 

@@ -1,5 +1,12 @@
 # Novidades
 
+## 0.45.0 (13/11/2026)
+- **Ministros com personalidade e medidas úteis (bloco H2 da Etapa 6G).**
+  - **Cada ministro tem um perfil:** fiscalista ou gastador, cauteloso ou ousado, as bandeiras dele, o que ele não assina e o jeito de falar. Isso muda a medida que ele defende, o parecer antes de assinar e a fala (com IA ou sem).
+  - **Só medida que responde ao fato:** o ministro deixa de sugerir "a mais barata, a do meio e a mais cara" da área. Agora só entra o que ajuda quem o fato atinge, trata a causa ou é a resposta clássica. A IA recebe só essas medidas; se ela sugerir outra, o jogo descarta e usa o texto de reserva.
+  - **Ações sem lei mais certeiras:** cada fato do sorteio diz quais ações do governo combinam com ele (num escândalo, mandar apurar; numa enchente, verba e visita; na pressão do Centrão, ceder pasta).
+- 703 testes (10 novos). Sem mudança no save. Conferido no navegador: o ministro da Fazenda defende a regra fiscal no susto do mercado, com a voz dele.
+
 ## 0.44.0 (13/11/2026)
 - **Resposta ao fato que nem sempre é lei (bloco H1 da Etapa 6G).** Escreva o que quer fazer e o jogo entende a ação certa, sem votação: ceder um ministério, receber um líder, cobrar um ministro, atender um pedido, campanha publicitária, ordem executiva, barganhar com um partido, liberar verba emergencial, visitar o local, pedir desculpas, mandar apurar (PF, CGU ou TCU) ou reunir entidades. Lei, decreto e MP continuam como antes.
   - **"Entendi isto":** antes de dar a ordem, o cartão mostra a ação, o gasto, quanto ela resolve o fato e quem sente; dá para ajustar o partido, a pasta ou o grupo, e para ir à aba Ministérios.

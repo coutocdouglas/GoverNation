@@ -1416,3 +1416,15 @@ Bloco próprio, pedido pelo Douglas em 12/11/2026 (antes do playtest da Etapa 6)
 - **Tela:** `src/ui/RespostaSheet.tsx`, o cartão "Entendi isto" (ajuste de partido, pasta, grupo, pedido ou órgão; gasto; quanto resolve; quem sente; atalho para a aba Ministérios). Sem menu de sugestões e sem "ver todas": o jogo reconhece o que o jogador escreve.
 - **Simulador `npm run sim8`:** fato a fato, a ação bem escolhida fica entre deixar passar e a melhor saída pronta (enchente: 51,2% / verba 54,2% / opção 55,3%). Repetir o mesmo tipo todo mês rende quase o mesmo que deixar passar.
 - Save 42 (`respostas`), com migração.
+
+### 27.43 Etapa 6G, bloco H2: ministros com personalidade e medidas úteis (v0.45.0)
+**Problema (revisão de 09/11/2026, ponto 5):** os ministros falavam todos igual e sugeriam medidas pouco úteis. A reserva escolhia "a mais barata, a do meio e a mais cara" da área, sem olhar o fato; a IA podia sugerir qualquer medida da área. Os prints dos casos ruins não vieram: os testes usam os 14 fatos do sorteio.
+**Regra (`src/game/perfil.ts`, números e perfis em `data/perfis.ts`):**
+- **Perfil por pessoa** (13 ministros, 6 indicados dos partidos; interino e quem não tiver perfil herdam um pelo partido): gasto (fiscalista ↔ gastador), ousadia (cauteloso ↔ ousado), bandeiras, o que recusa, aberturas e bordões.
+- **Utilidade** (0 a 1) de cada medida para o fato: resposta clássica (`jaFeito`) vale 1; palavra-chave da medida no texto do fato soma 0,5; ajudar os grupos que o fato atinge (ou que a boa notícia agrada) soma até 0,6; no fato de mercado, acalmar o mercado ou arrumar as contas soma até 0,6. Só se sugere a partir de 0,25.
+- **Escolha:** entre as úteis, liberadas e que o ministro não recusa, vence utilidade + gosto (bolso, ousadia, bandeira). A reserva sugere até 2 medidas e a ação do governo, quando ela resolve ao menos metade do fato.
+- **Fala da reserva:** abertura e bordão do ministro, quem o fato atinge, a medida que ele defende e por quê (bandeira, cabe nas contas, resolve mesmo custando, passo seguro), a alternativa, a ação sem lei e o que ele não assina.
+- **Parecer antes de assinar:** o que o ministro recusa pesa contra (−3,5, "vai contra tudo o que eu defendo"); a bandeira pesa a favor; o fiscalista cobra fonte para o gasto.
+- **IA:** o pedido leva o perfil (`perfilTexto`) e só o catálogo útil; o que a IA sugerir fora do fato é descartado (`parseAdvice` com filtro) e, sem opção válida, vale a reserva, com o erro no registro.
+- **Ações por fato (`EventDef.acoes`):** os 14 fatos do sorteio dizem quais ações do governo (H1) combinam com eles; fora da lista, a ação resolve no máximo 0,3. Ceder pasta, barganhar e receber líder só acertam em cheio quando o fato é pressão de partido. Com isso, `npm run sim8` dá aprovação média de 43% para quem escolhe bem a ação (deixar passar 37%, opções prontas 47%).
+- Sem mudança no save (continua 42).

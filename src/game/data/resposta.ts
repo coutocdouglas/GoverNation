@@ -42,13 +42,15 @@ export const RESPOSTA = {
   pisoGanho: 0.2,
   /** Alívio mínimo para contar como "enfrentou" na Ficha. */
   enfrentou: 0.5,
+  /** v0.45: fato com lista própria de ações (`EventDef.acoes`): ação fora dela resolve no máximo isto. */
+  foraDaLista: 0.3,
   /** Resolver a crise traz esta fração do ganho da melhor saída pronta, vezes o alívio. */
   ganhoFato: 0.7,
   afinidade: {
     pasta: { base: 0.25, areas: ['politica'], forte: 0.9, bom: 0.1 },
     barganha: { base: 0.2, areas: ['politica'], forte: 0.8, bom: 0.1 },
     lider: { base: 0.15, areas: ['politica'], forte: 0.6, bom: 0.1 },
-    ministro: { base: 0.25, alvo: 0.6, bom: 0.25 },
+    ministro: { base: 0.25, alvo: 0.45, bom: 0.25 },
     ordem: { base: 0.5, bom: 0.5 },
     verba: { base: 0.3, areas: MATERIAIS, forte: 0.75, bom: 0.35 },
     visita: { base: 0.25, grave: 0.55, bom: 0.6 },
