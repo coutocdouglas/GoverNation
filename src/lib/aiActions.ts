@@ -11,6 +11,8 @@ import type { GameState } from '../game/types'
 import { aiReady, AiError, callAi, noteAiFailure } from './ai'
 import { reservaAdvice, reservaBrief, reservaReview } from '../game/reserva'
 import { buildCustomBill } from '../game/custom'
+import { completarResposta, interpretarResposta, type RespostaFato } from '../game/resposta'
+import { currentEvent } from '../game/events'
 import { licitacoesAbertas, nomearEmpresas } from '../game/risco'
 import { CONTRATO } from '../game/data/risco'
 import type { BillDef } from '../game/data/bills'
@@ -32,6 +34,8 @@ export interface Reading {
   constraints: string[]
   source: 'ia' | 'palavras'
   fallback: string | null
+  /** v0.44: ação do governo pedida no texto (só na resposta ao fato), já completada pelo motor. */
+  acao?: RespostaFato | null
 }
 
 export async function readText(state: GameState, text: string, area: AreaId | null): Promise<Reading> {
@@ -40,11 +44,19 @@ export async function readText(state: GameState, text: string, area: AreaId | nu
     return interpretMeasure(text).matches
   }
   const base = { draft: null, notes: [], constraints: [] }
-  if (!aiReady()) return { ...base, matches: keywords(), speech: '', source: 'palavras', fallback: null }
+  // v0.44: na resposta ao fato, o texto pode pedir uma ação do governo (regras: também é a reserva da IA).
+  const ev = area ? currentEvent(state) : null
+  const completa = (r: RespostaFato | null | undefined) => (r ? completarResposta(state, ev, r) : null)
+  const porRegras = () => (area ? completa(interpretarResposta(text)) : null)
+  if (!aiReady()) {
+    const acao = porRegras()
+    return { ...base, matches: acao ? [] : keywords(), speech: '', source: 'palavras', fallback: null, acao }
+  }
   try {
     const raw = await callAi('interpretar', interpretPrompt(state, text, area))
     const r = parseInterpretation(raw, area)
     if (!r) throw new AiError('A IA respondeu fora do formato.')
+    if (r.acao) return { ...base, matches: [], speech: r.speech, constraints: r.constraints, source: 'ia', fallback: null, acao: completa(r.acao) }
     if (r.matches.length) return { ...base, matches: r.matches, speech: r.speech, constraints: r.constraints, source: 'ia', fallback: null }
     // Nada do catálogo faz o que foi pedido: a IA redige uma medida nova e o motor confere.
     // (Não cai mais na medida "mais parecida" por palavras-chave: ela não era o que o presidente pediu.)
@@ -56,7 +68,8 @@ export async function readText(state: GameState, text: string, area: AreaId | nu
     }
     return { ...base, matches: [], speech: r.speech, source: 'ia', fallback: null }
   } catch (e) {
-    return { ...base, matches: keywords(), speech: '', source: 'palavras', fallback: e instanceof AiError ? e.message : 'Falha na IA.' }
+    const acao = porRegras()
+    return { ...base, matches: acao ? [] : keywords(), speech: '', source: 'palavras', fallback: e instanceof AiError ? e.message : 'Falha na IA.', acao }
   }
 }
 

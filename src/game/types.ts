@@ -121,7 +121,7 @@ export interface MonthReport {
   votes: VoteRecord[]
   /** Fato do mês resolvido e a opção escolhida. */
   /** option = -1 quando a resposta escrita resolveu o fato. */
-  event?: { id: string; option: number; chosen: boolean; response?: BillId; resolved?: boolean }
+  event?: { id: string; option: number; chosen: boolean; response?: BillId; resolved?: boolean; /** v0.44: respondeu com uma ação do governo. */ resposta?: string }
   /** Leis que entraram em vigor no mês (aprovadas pela Câmara ou sancionadas), para a página de reação (etapa 4B). */
   sanctioned?: BillId[]
   /** Etapa 1B: o que a oposição, o empresariado e a Câmara fizeram enquanto o presidente decidia. */
@@ -144,7 +144,9 @@ import type { ReputationState } from './reputacao'
 import type { RiscoState } from './risco'
 
 export interface GameState {
-  saveVersion: 41
+  saveVersion: 42
+  /** Etapa 6G, bloco H1 (v0.44): respostas ao fato por ação do governo (retorno decrescente). Ver resposta.ts. */
+  respostas: import('./resposta').RespostaLog[]
   /** Impeachment do presidente (v0.43): pressão oculta, fase e histórico. Ver impeachPres.ts. */
   impeachPres: import('./impeachPres').ImpeachPresState
   /** Etapa 6F (v0.41): dilemas que vieram e o lado que o presidente escolheu. Ver dilema.ts. */

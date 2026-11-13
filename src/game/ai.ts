@@ -10,6 +10,9 @@ import { MATTERS, type CustomDraft } from './custom'
 import type { ActionId, BillId, GameState } from './types'
 import type { Proposta } from './conselho'
 import type { Membro, ParecerCirculo } from './circulo'
+import { NOME_RESPOSTA, TIPOS_RESPOSTA, type TipoResposta } from './data/resposta'
+import type { RespostaFato } from './resposta'
+import { GROUP_BY_ID } from './data/groups'
 
 /**
  * Camada de IA (etapa 3B), parte sem internet: monta os pedidos e confere as respostas.
@@ -73,9 +76,10 @@ export function ministerAdvicePrompt(state: GameState, ev: EventDef): AiRequest 
       'O presidente pediu a sua opinião sobre o fato do mês. Fale como numa reunião de gabinete de verdade, em português do Brasil, em primeira pessoa, no seu estilo e com os seus interesses políticos.',
       'Primeiro, um parecer de 3 a 5 frases: o que está em jogo (vidas, votos, mercado, aliados, estados), o risco de não agir e o que você defende. Pode ser franco e até puxar a sardinha para o seu lado.',
       'Depois, 2 ou 3 opções de ordem que o presidente pode dar. Cada opção é UMA frase no imperativo, como o presidente assinaria (ex.: "Declare emergência sanitária e libere verba extra aos estados afetados."), com detalhes concretos.',
-      'Cada opção precisa corresponder a uma medida do catálogo da sua área, informada pelo id exato. Não invente custos, números de votos ou efeitos.',
+      'Cada opção corresponde a uma medida do catálogo da sua área, informada pelo id exato em "medida", OU a uma ação do governo sem lei, informada em "acao" (no lugar de "medida"). Pelo menos uma opção deve ser medida do catálogo. Não invente custos, números de votos ou efeitos.',
+      `Ações do governo sem lei (id em "acao"): ${ACOES_IA}. Use uma ação quando ela responde melhor ao fato que uma lei (ex.: pressão por cargo, boa notícia para divulgar, escândalo a apurar). A ordem da ação diz o alvo pelo nome (o partido, o ministro, o grupo).`,
       'Responda SOMENTE com JSON, sem texto fora dele, no formato:',
-      '{"parecer":"...","opcoes":[{"ordem":"...","medida":"id_do_catalogo"}]}',
+      '{"parecer":"...","opcoes":[{"ordem":"...","medida":"id_do_catalogo"},{"ordem":"...","acao":"tipo"}]}',
       'Ordene as opções da que você mais defende para a que menos defende.',
       'As opções vêm da situação real do país (os números abaixo), do seu perfil e do alinhamento do seu partido com o presidente: um aliado de outro campo puxa para a linha do próprio partido.',
     ].join('\n'),
@@ -116,8 +120,13 @@ export function interpretPrompt(state: GameState, text: string, area: AreaId | n
       '- pros e contras: uma frase cada. palavras: 3 a 6 palavras-chave sem acento.',
       '- controle: quanto a medida aumenta (+) ou reduz (-) a fiscalização do próprio governo, de -15 a +15. Sobe com controladoria, transparência, autonomia de órgãos de controle e punição de corrupção (portal de transparência +4, lei anticorrupção +12, autonomia da Polícia Federal +15); cai se afrouxa licitação, fiscalização ou punição, ou se entrega cargos de controle a aliados (aliado no Tribunal de Contas -12). 0 se não mexe nisso.',
       '- contrato: true se a execução depende de contratar empresa (obra, compra grande, serviço terceirizado); senão false.',
+      ...(area ? [
+        `ANTES de tudo: se o presidente NÃO pede lei, decreto, MP ou PEC, e sim uma ação do governo, preencha "acao" e deixe "medidas" vazia e "nova": null. Tipos de ação: ${ACOES_IA}.`,
+        `Na ação, informe só o que o texto diz: "partido" (id: ${PARTIES.map((p) => `"${p.id}" (${p.sigla})`).join(', ')}; "Centrão" = "ucd"), "pasta" (id de área: ${Object.keys(MINISTER_BY_AREA).map((a) => `"${a}"`).join(', ')}), "grupo" (id: ${groups}), "orgao" ("pf", "cgu" ou "tcu"), "tom" ("particular" ou "publico"). Sem ação: "acao": null.`,
+        'Exemplo de ação: {"medidas":[],"resumo":"Você cede o Ministério dos Transportes ao UCD.","respeitando":[],"nova":null,"acao":{"tipo":"pasta","partido":"ucd","pasta":"transportes"}}',
+      ] : []),
       'Responda SOMENTE com JSON, sem texto fora dele, no formato:',
-      '{"medidas":["id"],"resumo":"...","respeitando":["..."],"nova":null}',
+      '{"medidas":["id"],"resumo":"...","respeitando":["..."],"nova":null' + (area ? ',"acao":null' : '') + '}',
       'ou, sem medida do catálogo:',
       '{"medidas":[],"resumo":"...","respeitando":[],"nova":{"nome":"...","resumo":"...","area":"...","instrumento":"lei","materia":[],"economia":0,"costumes":null,"gasto":0,"receita":0,"temporario":null,"potencial":0,"divida":0,"confianca":0,"expectativa":0,"grupos":{},"risco_juridico":"baixo","pros":"...","contras":"...","palavras":[],"controle":0,"contrato":false}}',
     ].join('\n'),
@@ -146,7 +155,10 @@ const validBill = (id: unknown, area: AreaId | null): id is BillId =>
 export interface AdviceOption {
   /** Ordem pronta, no imperativo: vai para o campo de resposta. */
   order: string
-  measure: BillId
+  /** A medida do catálogo; sem ela, é uma ação do governo (v0.44). */
+  measure?: BillId
+  /** v0.44: ação do governo sem lei (ver data/resposta.ts). */
+  acao?: TipoResposta
 }
 export interface Advice {
   opinion: string
@@ -158,10 +170,16 @@ export function parseAdvice(raw: string, area: AreaId): Advice | null {
   const data = extractJson(raw) as { parecer?: unknown; opcoes?: unknown } | null
   if (!data || !Array.isArray(data.opcoes)) return null
   const options: AdviceOption[] = []
-  for (const o of data.opcoes as { ordem?: unknown; medida?: unknown }[]) {
-    if (!o || !validBill(o.medida, area) || options.some((x) => x.measure === o.medida)) continue
+  for (const o of data.opcoes as { ordem?: unknown; medida?: unknown; acao?: unknown }[]) {
+    if (!o) continue
     const order = cleanText(o.ordem, 300)
-    if (order) options.push({ order, measure: o.medida })
+    if (!order) continue
+    if (validBill(o.medida, area)) {
+      if (options.some((x) => x.measure === o.medida)) continue
+      options.push({ order, measure: o.medida })
+    } else if (typeof o.acao === 'string' && (TIPOS_RESPOSTA as string[]).includes(o.acao) && !options.some((x) => x.acao === o.acao)) {
+      options.push({ order, acao: o.acao as TipoResposta })
+    }
     if (options.length === 3) break
   }
   const opinion = cleanText(data.parecer, 900)
@@ -176,6 +194,8 @@ export interface AiReading {
   speech: string
   /** Condições que o presidente impôs. */
   constraints: string[]
+  /** v0.44: o presidente pediu uma ação do governo, não uma medida (só na resposta ao fato). */
+  acao?: RespostaFato | null
 }
 
 /** Confere a interpretação. Só sobram ids reais do catálogo (e da área, quando houver). */
@@ -195,8 +215,25 @@ export function parseInterpretation(raw: string, area: AreaId | null): AiReading
     if (matches.length === 3) break
   }
   const constraints = Array.isArray(data.respeitando) ? data.respeitando.map((c) => cleanText(c, 120)).filter(Boolean).slice(0, 4) : []
-  const draft = !matches.length && data.nova && typeof data.nova === 'object' ? (data.nova as CustomDraft) : null
-  return { matches, draft, speech: cleanText(data.resumo ?? data.fala, 600), constraints }
+  const acao = area ? parseAcao((data as { acao?: unknown }).acao) : null
+  const draft = !matches.length && !acao && data.nova && typeof data.nova === 'object' ? (data.nova as CustomDraft) : null
+  return { matches: acao ? [] : matches, draft, speech: cleanText(data.resumo ?? data.fala, 600), constraints, acao }
+}
+
+const ACOES_IA = TIPOS_RESPOSTA.map((t) => `"${t}" (${NOME_RESPOSTA[t].nome.toLowerCase()})`).join(', ')
+
+/** Confere a ação do governo que a IA leu. Só sobram tipos e ids reais; o que faltar o motor completa. */
+export function parseAcao(raw: unknown): RespostaFato | null {
+  if (!raw || typeof raw !== 'object') return null
+  const a = raw as Record<string, unknown>
+  if (typeof a.tipo !== 'string' || !(TIPOS_RESPOSTA as string[]).includes(a.tipo)) return null
+  const r: RespostaFato = { tipo: a.tipo as TipoResposta }
+  if (typeof a.partido === 'string' && PARTY_BY_ID[a.partido]) r.partido = a.partido as RespostaFato['partido']
+  if (typeof a.pasta === 'string' && a.pasta in MINISTER_BY_AREA) r.area = a.pasta as AreaId
+  if (typeof a.grupo === 'string' && GROUP_BY_ID[a.grupo as never]) r.grupo = a.grupo as RespostaFato['grupo']
+  if (a.orgao === 'pf' || a.orgao === 'cgu' || a.orgao === 'tcu') r.orgao = a.orgao
+  if (a.tom === 'particular' || a.tom === 'publico') r.tom = a.tom
+  return r
 }
 
 /** Pedido de parecer do ministro sobre a ordem que o presidente vai assinar. */

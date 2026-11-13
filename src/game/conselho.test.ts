@@ -208,7 +208,7 @@ describe('save', () => {
     const velho = structuredClone(s) as unknown as Record<string, unknown>
     velho.saveVersion = 36
     const m = migrate(velho)!
-    expect(m.saveVersion).toBe(41)
+    expect(m.saveVersion).toBe(42)
     expect(m.presidentName).toBe(s.presidentName)
   })
 })

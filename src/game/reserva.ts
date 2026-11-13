@@ -13,6 +13,8 @@ import type { AreaId } from './data/ministers'
 import { PARTY_BY_ID } from './data/parties'
 import { currentEvent, defaultOption } from './events'
 import { responseBlockedReason } from './game'
+import { TIPOS_RESPOSTA, respostaLigada } from './data/resposta'
+import { afinidadeDe, completarResposta, ordemTexto, respostaBlockedReason } from './resposta'
 import { measuresOfArea } from './interpret'
 import { fillText } from './memory'
 import { legalRiskIn } from './supremo'
@@ -75,12 +77,23 @@ export function reservaAdvice(state: GameState, ev: EventDef): Advice {
       if (!pick.includes(id)) pick.push(id)
     }
   }
-  const labels = ['a mais discreta', 'a do meio-termo', 'a mais ousada']
+  // v0.44: o ministro também sugere a ação do governo que mais resolve o fato, quando ela resolve bem.
+  const acao = melhorAcao(state, ev)
+  const labels = acao ? ['sem lei, uma ação do governo', 'por medida, a mais discreta', 'por medida, a mais ousada'] : ['a mais discreta', 'a do meio-termo', 'a mais ousada']
   const options: AdviceOption[] = pick.map((id) => ({ order: BILL_BY_ID[id].name, measure: id }))
+  if (acao) { if (options.length >= 3) options.pop(); options.unshift({ order: ordemTexto(acao), acao: acao.tipo }) }
   const opinion = options.length
     ? `Presidente, ${m.feminine ? 'a ministra' : 'o ministro'} ${m.name} sugere ${options.length === 1 ? 'um caminho' : `${options.length} caminhos`} para “${fillText(ev.title, state.event?.origin)}”: ${options.map((o, i) => `${labels[options.length === 1 ? 0 : i]} (${o.order})`).join(', ')}. O custo e o risco de cada uma aparecem na leitura antes de assinar.`
     : `Presidente, não vejo medida pronta na ${m.areaName.toLowerCase()} que resolva isso agora. Escreva com as suas palavras o que quer fazer.`
   return { opinion, options }
+}
+
+/** A ação do governo que mais resolve o fato (se resolver ao menos metade), já completada e liberada. */
+export function melhorAcao(state: GameState, ev: EventDef) {
+  if (!respostaLigada() || ev.choiceOnly || ev.dilema) return null
+  const cands = TIPOS_RESPOSTA.map((t) => completarResposta(state, ev, { tipo: t })).filter((r) => !respostaBlockedReason(state, r) && afinidadeDe(ev, r) >= 0.5)
+  cands.sort((a, b) => afinidadeDe(ev, b) - afinidadeDe(ev, a))
+  return cands[0] ?? null
 }
 
 /** Resumo do fato do mês pela assessoria, por regras. */

@@ -88,7 +88,7 @@ describe('v0.26: save', () => {
     const raw = structuredClone(feb(3)) as unknown as { saveVersion: number }
     raw.saveVersion = 24
     const m = migrate(raw)
-    expect(m?.saveVersion).toBe(41)
+    expect(m?.saveVersion).toBe(42)
     expect(m?.efeitoAdiado).toBeUndefined()
   })
 })

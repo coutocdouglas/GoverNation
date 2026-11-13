@@ -323,7 +323,12 @@ export function migrate(raw: unknown): GameState | null {
       (s as GameState).impeachPres ??= initialImpeachPres()
       s.saveVersion = 41
     }
-    if (s.saveVersion !== 41) return null
+    if (s.saveVersion === 41) {
+      // v0.43 → v0.44 (Etapa 6G, H1: resposta ao fato por ação do governo): nenhuma resposta ainda.
+      (s as GameState).respostas ??= []
+      s.saveVersion = 42
+    }
+    if (s.saveVersion !== 42) return null
     syncCustomBills(s as GameState)
     return s as GameState
   } catch {

@@ -254,7 +254,7 @@ describe('save', () => {
     s.saveVersion = 33
     delete s.pressao
     const m = migrate(s as unknown as GameState)
-    expect(m?.saveVersion).toBe(41)
+    expect(m?.saveVersion).toBe(42)
     expect(m?.pressao.ativa).toBeNull()
     expect(m?.pressao.recuos).toBe(0)
   })

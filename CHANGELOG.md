@@ -1,5 +1,13 @@
 # Novidades
 
+## 0.44.0 (13/11/2026)
+- **Resposta ao fato que nem sempre é lei (bloco H1 da Etapa 6G).** Escreva o que quer fazer e o jogo entende a ação certa, sem votação: ceder um ministério, receber um líder, cobrar um ministro, atender um pedido, campanha publicitária, ordem executiva, barganhar com um partido, liberar verba emergencial, visitar o local, pedir desculpas, mandar apurar (PF, CGU ou TCU) ou reunir entidades. Lei, decreto e MP continuam como antes.
+  - **"Entendi isto":** antes de dar a ordem, o cartão mostra a ação, o gasto, quanto ela resolve o fato e quem sente; dá para ajustar o partido, a pasta ou o grupo, e para ir à aba Ministérios.
+  - **Cada ação combina com um tipo de fato:** ceder pasta resolve a pressão do Centrão, verba resolve a enchente, apurar resolve o escândalo, campanha aproveita a boa notícia. O que a ação não resolve vale como deixar passar.
+  - **Repetir cansa:** a mesma ação seguida rende cada vez menos. Barganha soma escândalo; campanha com as contas no vermelho vira "propaganda cara"; visita com aprovação baixa pode ter vaia.
+  - **O ministro também sugere ações** no parecer (mesmo botão de antes).
+- Save 42, com migração. 693 testes (30 novos). Simulador `npm run sim8`. Conferido no navegador: o Centrão pede ministério, o texto "Cedo o ministério dos Transportes ao Centrão" vira a cessão ao UCD, sem erro no console.
+
 ## 0.43.2 (13/11/2026)
 - **Fato ciente das leis em vigor (bloco H0 da Etapa 6G).** Cada fato do mês passou a conhecer as leis que já o enfrentam (dengue, caminhoneiros, enchentes, escândalo, professores, queimadas, comida, apagão e desemprego). Com alguma em vigor, o fato sai bem menos no sorteio (peso 30%, nunca zera) e o texto avisa "O governo já tem em vigor…" em vez de agir como se nada existisse. Só as palavras mudam: opções e efeitos continuam iguais, e o fato nascido de uma medida não ganha o aviso.
 - Conferido: a coluna da foto na aba Ministérios (64 px) está no jogo compilado; falta o Douglas ver na tela.

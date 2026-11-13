@@ -16,6 +16,9 @@ import type { BillId, GameState, GroupId } from '../game/types'
 import { ForecastRow } from './CongressView'
 import { effectChips } from './effects'
 import { Portrait } from './Portrait'
+import { RespostaSheet } from './RespostaSheet'
+import { NOME_RESPOSTA, respostaLigada } from '../game/data/resposta'
+import { rotuloResposta, type RespostaFato } from '../game/resposta'
 
 const money = (n: number) => n.toLocaleString('pt-BR', { maximumFractionDigits: 0 })
 /** Custo permanente (R$ bi por ano) e custo temporário (R$ bi no total), positivo = gasta. */
@@ -40,8 +43,12 @@ const ICON = { decreto: '🖊️', mp: '⚡', lei: '📜', complementar: '📜',
  * ("Usar: ..."), que vão para o campo de resposta; o gabinete lê a ordem e mostra, antes de assinar,
  * o que ela vira, quanto custa e quem sente; o ministro pode opinar e sugerir ajustes.
  */
-export function ResponseBox({ state, ev, response, plannedBill, onRespond, onAddBill }: {
+export function ResponseBox({ state, ev, response, plannedBill, onRespond, onAddBill, resposta, onResposta, onIrMinisterios }: {
   state: GameState
+  /** v0.44: resposta por ação do governo (sem votação). */
+  resposta?: RespostaFato | null
+  onResposta?: (r: RespostaFato | null) => void
+  onIrMinisterios?: () => void
   onAddBill: (b: BillDef) => BillId
   ev: EventDef
   response: BillId | null
@@ -51,6 +58,7 @@ export function ResponseBox({ state, ev, response, plannedBill, onRespond, onAdd
   const m = ministerOf(state, ev.area)
   const [text, setText] = useState('')
   const [reading, setReading] = useState<SheetData | null>(null)
+  const [acao, setAcao] = useState<{ r: RespostaFato; resumo: string; fallback: string | null } | null>(null)
   const [noMatch, setNoMatch] = useState<string | null>(null)
   const [busy, setBusy] = useState<'ler' | 'conselho' | null>(null)
   const [advice, setAdvice] = useState<Advice | null>(null)
@@ -64,6 +72,7 @@ export function ResponseBox({ state, ev, response, plannedBill, onRespond, onAdd
     setBusy('ler'); setNoMatch(null)
     const r = await readText(state, text, ev.area)
     setBusy(null)
+    if (r.acao && onResposta && respostaLigada()) { setAcao({ r: r.acao, resumo: r.speech, fallback: r.fallback }); return }
     const ids = r.matches.filter((x) => x.kind === 'bill').map((x) => x.id as BillId).slice(0, 3)
     // Etapa 3C: nada do catálogo servia e a IA redigiu uma medida nova; ela entra no catálogo do mandato.
     if (r.draft) ids.push(onAddBill(r.draft))
@@ -82,6 +91,18 @@ export function ResponseBox({ state, ev, response, plannedBill, onRespond, onAdd
       setAdviceError(e instanceof AiError ? e.message : 'Falha na IA.')
     }
     setBusy(null)
+  }
+
+  if (resposta && onResposta) {
+    return (
+      <div className="pn-respond" id="agir">
+        <div className="pn-preview">
+          <b>✅ Ordem dada: {NOME_RESPOSTA[resposta.tipo].icone} {rotuloResposta(state, resposta)}</b>
+          <p className="pn-hint">Ação do governo, sem votação: vale ao encerrar o mês. {m.name} acompanha.</p>
+          <button className="pn-btn pn-btn--ghost" onClick={() => onResposta(null)}>Desfazer</button>
+        </div>
+      </div>
+    )
   }
 
   if (response) {
@@ -121,7 +142,7 @@ export function ResponseBox({ state, ev, response, plannedBill, onRespond, onAdd
               onClick={() => { setText(o.order); setPicked(i); setNoMatch(null) }}
               title="Levar esta ordem para a sua resposta"
             >
-              Usar: {o.order}
+              {o.acao ? `${NOME_RESPOSTA[o.acao].icone} ` : ''}Usar: {o.order}
             </button>
           ))}
           <button className="pn-memo__redo" disabled={!!busy} onClick={counsel}>{busy === 'conselho' ? '⏳ Pensando…' : '↻ Pedir outra opinião'}</button>
@@ -138,7 +159,7 @@ export function ResponseBox({ state, ev, response, plannedBill, onRespond, onAdd
         placeholder={`Diga ${m.feminine ? 'à ministra' : 'ao ministro'} o que fazer. Ex.: “${catalog[0]?.name ?? 'Agir já'}”`}
         rows={text.length > 200 ? 8 : 3}
       />
-      <p className="pn-hint">A resposta segue o trâmite normal (decreto, MP, lei ou PEC). Se precisar de lei, vai para a pauta da Câmara. Responder <b>não gasta a medida do mês</b>.</p>
+      <p className="pn-hint">Escreva o que quer fazer. Uma medida segue o trâmite normal (decreto, MP, lei ou PEC). {respostaLigada() ? 'Também vale uma ação do governo, sem votação: ceder um ministério, receber um líder, cobrar um ministro, atender um pedido, campanha, ordem executiva, liberar verba, visitar o local, pedir desculpas, mandar apurar, reunir entidades. ' : ''}Responder <b>não gasta a medida do mês</b>.</p>
       {noMatch !== null && (
         <div className="pn-preview">
           <b>🧑‍💼 {m.name}: “Presidente, não sei fazer isso pela {m.areaName.toLowerCase()}.”</b>
@@ -148,6 +169,20 @@ export function ResponseBox({ state, ev, response, plannedBill, onRespond, onAdd
       <div className="pn-row pn-row--end">
         <button className="pn-btn" disabled={!text.trim() || !!busy} onClick={read}>{busy === 'ler' ? '⏳ Lendo…' : '🗂️ Ler com os ministros'}</button>
       </div>
+
+      {acao && onResposta && (
+        <RespostaSheet
+          state={state}
+          ev={ev}
+          inicial={acao.r}
+          resumo={acao.resumo}
+          fallback={acao.fallback}
+          onClose={() => setAcao(null)}
+          onDar={(r) => { setAcao(null); onResposta(r) }}
+          onRewrite={() => setAcao(null)}
+          onIrMinisterios={onIrMinisterios}
+        />
+      )}
 
       {reading && (
         <ReadingSheet

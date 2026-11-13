@@ -12,6 +12,7 @@ import { PARTY_BY_ID } from '../game/data/parties'
 import { ACTION_BY_ID, ACTIONS, ACTIONS_PER_MONTH, blockedReason, effectMultiplier } from '../game/actions'
 import { GROUPS } from '../game/data/groups'
 import type { AcaoImpeach } from '../game/data/impeachPres'
+import { rotuloResposta, type RespostaFato } from '../game/resposta'
 import { advanceMonth, isCopomMonth, monthLabel, TERM_MONTHS, type MonthPlan } from '../game/game'
 import { articulate, articulateBlockedReason, efetivarInterino, gavetaReason, ministryNow, narrarProposta, pedirProposta, peekRound, plenaryToday, queueHouse, sendBlockedReason, sendMeasure, voteNow, voteNowBlockedReason, type FloorOptions } from '../game/rodada'
 import { Art } from './Art'
@@ -124,6 +125,8 @@ export function GameScreen({ state, onChange, onExit }: {
   const [cpiDecisao, setCpiDecisao] = useState<AcaoCpi | null>(null)
   /** v0.43.1: decisão do mês no impeachment do presidente (vale ao encerrar). */
   const [impeachDecisao, setImpeachDecisao] = useState<AcaoImpeach | null>(null)
+  /** v0.44: resposta ao fato por ação do governo (vale ao encerrar). */
+  const [respostaFato, setRespostaFato] = useState<RespostaFato | null>(null)
   /** v0.32.0: ordem do mês ao serviço de inteligência (vale ao encerrar) e dossiê escolhido por votação da Câmara (vale ao votar). */
   const [intelOrdem, setIntelOrdem] = useState<OrdemIntel | null>(null)
   const [pesquisa, setPesquisa] = useState<NivelPesquisa | null>(null)
@@ -148,6 +151,7 @@ export function GameScreen({ state, onChange, onExit }: {
     hold: proc.hold, urgent: proc.urgent, original: proc.original, symbolic: proc.symbolic, sanctions, ministry: ministry ?? undefined, nominee: nominee ?? undefined, consult: consult ?? undefined,
     proposta: proposta ?? undefined, pesquisa: pesquisa ?? undefined,
     casos: casoDecisoes.length ? casoDecisoes : undefined, advogado: advogado ?? undefined, cpi: cpiDecisao ?? undefined, impeach: impeachDecisao ?? undefined, inteligencia: intelOrdem ?? undefined,
+    resposta: respostaFato ?? undefined,
   }
   const onProcedure = (kind: ProcedureKind, id: BillId, on: boolean) => setProc((cur) => {
     const next = { ...cur }
@@ -211,7 +215,7 @@ export function GameScreen({ state, onChange, onExit }: {
       const r = as === 'queue' ? voteNow(state, id, opts) : sendMeasure(state, id, opts, as === 'response')
       onChange(r.state)
       if (as === 'measure') setBill(null)
-      if (as === 'response') { setEventResponse(null); setEventChoice(null) }
+      if (as === 'response') { setEventResponse(null); setEventChoice(null); setRespostaFato(null) }
       setDeals((ds) => ds.filter((d) => d.bill !== id))
       setDossieSel((cur) => { const n = { ...cur }; delete n[id]; return n })
       setBuys((cur) => { const n = { ...cur }; delete n[id]; return n })
@@ -288,6 +292,7 @@ export function GameScreen({ state, onChange, onExit }: {
       setAdvogado(null)
       setCpiDecisao(null)
       setImpeachDecisao(null)
+      setRespostaFato(null)
       setIntelOrdem(null)
       setPesquisa(null)
       setDossieSel({})
@@ -627,7 +632,7 @@ export function GameScreen({ state, onChange, onExit }: {
               <h3>🎯 Seu mês em 4 passos <span className="pn-badge">clique nos indicadores e grupos para ver o porquê</span></h3>
               <div className="pn-steps">
                 <StepButton n={1} cur={step} done={step > 1} icon="📰" title="O que aconteceu" sub={report ? `${report.headlines.length} notícias` : 'primeiro mês'} onClick={() => goStep(1)} />
-                <StepButton n={2} cur={step} done={eventChoice !== null || eventResponse !== null || !state.event} icon="🔥" title="Fato do mês" sub={!state.event ? 'mês sem crise' : eventChoice !== null || eventResponse !== null ? 'decidido' : 'aguarda você'} onClick={() => goStep(2)} />
+                <StepButton n={2} cur={step} done={eventChoice !== null || eventResponse !== null || respostaFato !== null || !state.event} icon="🔥" title="Fato do mês" sub={!state.event ? 'mês sem crise' : eventChoice !== null || eventResponse !== null || respostaFato !== null ? 'decidido' : 'aguarda você'} onClick={() => goStep(2)} />
                 <StepButton n={3} cur={step} done={selected.length > 0 || !!bill} icon="✍️" title="Suas decisões" sub={[selected.length ? `${selected.length} decreto${selected.length > 1 ? 's' : ''}` : '', bill ? '1 projeto' : '', (peekRound(state)?.articulations ?? []).length ? `${(peekRound(state)?.articulations ?? []).length} articulação` : ''].filter(Boolean).join(' · ') || 'decretos, projeto, articulação'} onClick={() => goStep(3)} />
                 <StepButton n={4} cur={step} done={false} icon="⏭️" title="Encerrar o mês" sub="ver as consequências" onClick={() => goStep(4)} />
               </div>
@@ -645,13 +650,14 @@ export function GameScreen({ state, onChange, onExit }: {
                     <div>
                       <h2>Tudo pronto para virar o mês?</h2>
                       <p className="pn-hint">
-                        {selected.length === 0 && !bill && !eventResponse && !round && (peekRound(state)?.articulations ?? []).length === 0 && !nominee && !consult && !ministry && !proposta && !casoDecisoes.length && !advogado && !cpiDecisao
+                        {selected.length === 0 && !bill && !eventResponse && !respostaFato && !round && (peekRound(state)?.articulations ?? []).length === 0 && !nominee && !consult && !ministry && !proposta && !casoDecisoes.length && !advogado && !cpiDecisao
                           ? 'Você não tomou nenhuma decisão. O país segue sozinho este mês.'
                           : [
                               selected.length ? `Decretos: ${selected.map((id) => lowerFirst(ACTION_BY_ID[id].name)).join(' e ')}.` : '',
                               round?.measure ? `Já feito na rodada: ${lowerFirst(BILL_BY_ID[round.measure].name)}${round.votes.length ? ` e ${round.votes.length} votação(ões)` : ''}.` : '',
                               bill ? `${BILL_KIND[BILL_BY_ID[bill].instrument]}: ${lowerFirst(BILL_BY_ID[bill].name)} (vota ao encerrar).` : '',
                               eventResponse ? `Resposta ao fato do mês (${BILL_KIND[BILL_BY_ID[eventResponse].instrument].toLowerCase()}): ${lowerFirst(BILL_BY_ID[eventResponse].name)}.` : '',
+                              respostaFato ? `Resposta ao fato do mês (ação do governo): ${lowerFirst(rotuloResposta(state, respostaFato))}.` : '',
                               (peekRound(state)?.articulations ?? []).length ? `Articulação: ${(peekRound(state)?.articulations ?? []).map((a) => a.kind === 'presidente' ? 'conversa com o presidente da Câmara' : a.kind === 'senado' ? 'conversa com a presidente do Senado' : `${a.kind === 'conversar' ? 'conversa com' : 'emendas para'} ${PARTY_BY_ID[a.party].sigla}`).join(' e ')}.` : '',
                               nominee ? `Supremo: indicar ${NOMINEE_BY_ID[nominee].name} (sabatina no Senado).` : '',
                               ministry ? (ministry.party ? `Ministério: ${state.cabinet[ministry.area] ? 'trocar' : 'ceder'} ${ministry.area} ${state.cabinet[ministry.area] ? 'pelo' : 'ao'} ${PARTY_BY_ID[ministry.party].sigla}.` : `Ministério: retomar ${ministry.area}.`) : '',
@@ -663,7 +669,7 @@ export function GameScreen({ state, onChange, onExit }: {
                               round?.acao ? `Ação política: ${lowerFirst(rotuloAcao(state, round.acao))}.` : '',
                               Object.values(sanctions).some((d) => d === 'vetar') ? `Vetos: ${Object.values(sanctions).filter((d) => d === 'vetar').length}.` : '',
                             ].filter(Boolean).join(' ')}
-                        {state.event && eventChoice === null && eventResponse === null ? ` ⚠️ Você não respondeu o fato do mês: vale a opção padrão${round?.acao?.tipo === 'post' || round?.acao?.tipo === 'rua' || round?.acao?.tipo === 'nacao' ? ', amenizada pela sua ação' : ''}.` : ''}
+                        {state.event && eventChoice === null && eventResponse === null && respostaFato === null ? ` ⚠️ Você não respondeu o fato do mês: vale a opção padrão${round?.acao?.tipo === 'post' || round?.acao?.tipo === 'rua' || round?.acao?.tipo === 'nacao' ? ', amenizada pela sua ação' : ''}.` : ''}
                         {state.congress.toSanction.some((x) => !sanctions[x.id]) ? ' 🖋️ Há projeto da Câmara esperando sanção ou veto (aba Governo): sem decisão, vale a sanção tácita.' : ''}
                         {isRecess(state.month) && (bill || eventResponse || state.congress.pending.length > 0) ? ' O Congresso está em recesso: a votação fica para o mês que vem.' : ''}
                         {isCopomMonth(state.month) ? ' O Banco Central decide os juros no fim do mês.' : ''}
@@ -685,7 +691,17 @@ export function GameScreen({ state, onChange, onExit }: {
                 key={`${state.month}-${state.event?.id ?? 'calmo'}`}
                 state={state}
                 choice={eventChoice}
-                onChoose={(i) => { setEventChoice(i); if (i !== null) toast(`🔥 Decisão anotada: ${currentEventLabel(state, i)}`) }}
+                resposta={respostaFato}
+                onResposta={(r) => {
+                  setRespostaFato(r)
+                  if (r) {
+                    setEventChoice(null)
+                    if (eventResponse) { dropDeals(eventResponse); setEventResponse(null) }
+                    toast(`🖊️ Ordem anotada: ${rotuloResposta(state, r)}. Vale ao encerrar o mês.`)
+                  }
+                }}
+                onIrMinisterios={() => { setTab('governo'); setGovTab('ministerios'); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
+                onChoose={(i) => { setEventChoice(i); if (i !== null) setRespostaFato(null); if (i !== null) toast(`🔥 Decisão anotada: ${currentEventLabel(state, i)}`) }}
                 response={eventResponse ?? round?.response ?? null}
                 plannedBill={bill}
                 onAddBill={addBill}
@@ -706,6 +722,7 @@ export function GameScreen({ state, onChange, onExit }: {
                     if (eventResponse && eventResponse !== id) dropDeals(eventResponse)
                     if (actsNowUi(id)) { runNow(id, 'response', title); return }
                   setEventResponse(id)
+                  if (id) setRespostaFato(null)
                   if (id && goesToVote(id)) setVoteSheet(id)
                   if (id) {
                     setEventChoice(null)

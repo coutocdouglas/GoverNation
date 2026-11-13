@@ -61,6 +61,7 @@ import { stepExplosivas } from './absurdo'
 import type { NivelPesquisa } from './data/credibilidade'
 import { acaoBlockedReason, aplicarAcao, ganhoDaAcao, initialAgenda, stepAgenda, type AcaoAgenda } from './agenda'
 import { agendaLigada } from './data/agenda'
+import { resolverComResposta, respostaBlockedReason, type RespostaFato } from './resposta'
 import { initialRisco, posseRisco, propostaAtual, propostaBlockedReason, responderProposta, sortearProposta, stepRisco, vencerLicitacoes } from './risco'
 
 import type { ActionId, Deal, Articulation, BillId, Cause, GameState, GroupId, Headline, Impulse, MonthReport, PartyId, SanctionItem, Snapshot, VetoItem, VoteRecord } from './types'
@@ -108,7 +109,8 @@ export function newGame(
   const rngState = seed ?? Math.floor(Math.random() * 2 ** 31)
   const bonus = DIFFICULTY[difficulty].approvalBonus
   const state: GameState = {
-    saveVersion: 41,
+    saveVersion: 42,
+    respostas: [],
     dilemas: initialDilemas(),
     impeachPres: initialImpeachPres(),
     pressao: initialPressao(),
@@ -265,6 +267,8 @@ export interface MonthPlan {
   inteligencia?: OrdemIntel
   /** Etapa 6A (v0.34): a ação política do mês, no lugar da medida nova. Gasta a agenda. */
   acao?: AcaoAgenda
+  /** Etapa 6G, H1 (v0.44): resposta ao fato por ação do governo (sem votação). Substitui as opções prontas e a resposta por medida. */
+  resposta?: RespostaFato
   /** Etapa 6C (v0.35): pesquisa encomendada. Gasta a agenda e dinheiro, mas não entra no lugar da medida. */
   pesquisa?: NivelPesquisa
 }
@@ -336,6 +340,12 @@ export function validatePlan(s: GameState, plan: MonthPlan): string | null {
   if (plan.bill) {
     const r = billBlockedReason(s, plan.bill)
     if (r) return `${BILL_BY_ID[plan.bill].name}: ${r}`
+  }
+  if (plan.resposta) {
+    if (plan.eventChoice !== undefined || plan.eventResponse !== undefined) return 'Uma resposta por fato: a ação do governo, uma medida ou uma opção pronta.'
+    const r = respostaBlockedReason(s, plan.resposta)
+    if (r) return `Resposta ao fato: ${r}`
+    if (plan.resposta.tipo === 'pasta' && plan.ministry?.area === plan.resposta.area) return 'A mesma pasta não pode mudar duas vezes no mês.'
   }
   if (plan.eventResponse !== undefined) {
     if (plan.eventChoice !== undefined) return 'Escolha uma opção pronta ou escreva uma resposta, não as duas.'
@@ -803,6 +813,21 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
           s.event = null
         }
       }
+    }
+  }
+  // Etapa 6G, H1 (v0.44): resposta por ação do governo (ceder pasta, verba, campanha, apurar...). Sem votação.
+  if (s.event && plan.resposta && !respostaBlockedReason(s, plan.resposta)) {
+    const def = currentEvent(s)
+    if (def) {
+      const title = fillText(def.title, s.event.origin)
+      if (def.effects) actionConfidence += applyEffects(e, impulses, def.effects, title)
+      const r = resolverComResposta(s, def, plan.resposta, title, e, impulses, headlines, taken, rivalExtra, rng)
+      actionConfidence += r.confidence
+      if (r.cobranca && !mm.cobranca) mm.cobranca = r.cobranca
+      s.eventLog.push({ id: def.id, month: s.month })
+      eventReport = { id: def.id, option: -1, chosen: true, resolved: r.alivio >= 0.5, resposta: plan.resposta.tipo }
+      if (!def.choiceOnly && def.kind !== 'bom') mm.event = { area: def.area, kind: r.alivio >= 0.5 ? 'resolvido' : 'escolha' }
+      s.event = null
     }
   }
   if (s.event) {

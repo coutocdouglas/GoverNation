@@ -14,6 +14,7 @@ import { aiReady } from '../lib/ai'
 import { askEventBrief } from '../lib/aiActions'
 import type { EventDef, EventOption } from '../game/data/events'
 import { conselhosDilema } from '../game/dilema'
+import type { RespostaFato } from '../game/resposta'
 
 /** Etapa 6F: dois do círculo, cada um defendendo um lado do dilema. De graça; só informação (texto das regras). */
 function ConselhosBox({ state, ev }: { state: GameState; ev: EventDef }) {
@@ -40,8 +41,12 @@ function ConselhosBox({ state, ev }: { state: GameState; ev: EventDef }) {
  * Fase A (02/11/2026): saíram daqui o catálogo e os "Outros caminhos" (post e rua), que eram bônus fácil demais
  * (Teste do atalho); voltam na Etapa 6 como ações de agenda, que substituem a medida em vez de somar com ela.
  */
-export function EventPanel({ state, choice, onChoose, response, onRespond, plannedBill, onAddBill, onAgenda }: {
+export function EventPanel({ state, choice, onChoose, response, onRespond, plannedBill, onAddBill, onAgenda, resposta = null, onResposta, onIrMinisterios }: {
   state: GameState
+  /** v0.44: resposta por ação do governo. */
+  resposta?: RespostaFato | null
+  onResposta?: (r: RespostaFato | null) => void
+  onIrMinisterios?: () => void
   /** Bloco 6A: abre a janela "Agenda do presidente" (o menu do mês sem crise). */
   onAgenda: () => void
   /** Põe no catálogo do mandato uma medida nova montada pela IA (etapa 3C). */
@@ -79,10 +84,11 @@ export function EventPanel({ state, choice, onChoose, response, onRespond, plann
   const stage = eventStage(state, ev)
   const kind = ev.kind ?? 'crise'
   const passOpt = ev.options[def]
-  const letPassed = choice !== null && !response && (!ev.choiceOnly || choice === def) && !acting
-  const decided = !!response || (choice !== null && ev.choiceOnly && choice !== def)
+  const agiu = !!response || !!resposta
+  const letPassed = choice !== null && !agiu && (!ev.choiceOnly || choice === def) && !acting
+  const decided = agiu || (choice !== null && ev.choiceOnly && choice !== def)
   const open = acting || decided
-  const badge = response ? '✔ você agiu' : decided ? '✔ decidido' : letPassed ? '✔ deixou passar' : 'aguarda você'
+  const badge = agiu ? '✔ você agiu' : decided ? '✔ decidido' : letPassed ? '✔ deixou passar' : 'aguarda você'
   const startActing = async () => {
     setActing(true)
     if (choice !== null && !ev.choiceOnly) onChoose(null)
@@ -127,7 +133,7 @@ export function EventPanel({ state, choice, onChoose, response, onRespond, plann
         <div className="pn-twoway">
           <button className="pn-twoway__act" onClick={startActing}>
             <span>⚡</span><b>Agir</b>
-            <small>{ev.dilema ? 'Ver as saídas: cada uma com o custo à vista.' : ev.choiceOnly ? 'Ver as saídas que o caso permite.' : `Ouvir ${resp.feminine ? 'a ministra' : 'o ministro'}, escrever a ordem e mandar a medida.`}</small>
+            <small>{ev.dilema ? 'Ver as saídas: cada uma com o custo à vista.' : ev.choiceOnly ? 'Ver as saídas que o caso permite.' : `Ouvir ${resp.feminine ? 'a ministra' : 'o ministro'}, escrever a ordem: uma medida ou uma ação do governo.`}</small>
           </button>
           <button className="pn-twoway__pass" onClick={() => onChoose(def)}>
             <span>🤷</span><b>Deixar passar</b>
@@ -179,10 +185,10 @@ export function EventPanel({ state, choice, onChoose, response, onRespond, plann
             </>
           ) : (
             <>
-              <ResponseBox key={`${state.month}-${ev.id}`} state={state} ev={ev} response={response} plannedBill={plannedBill} onRespond={onRespond} onAddBill={onAddBill} />
+              <ResponseBox key={`${state.month}-${ev.id}`} state={state} ev={ev} response={response} plannedBill={plannedBill} onRespond={onRespond} onAddBill={onAddBill} resposta={resposta} onResposta={onResposta} onIrMinisterios={onIrMinisterios} />
             </>
           )}
-          {!response && !decided && (
+          {!agiu && !decided && (
             <div className="pn-row"><button className="pn-btn pn-btn--ghost" onClick={() => setActing(false)}>← Voltar</button></div>
           )}
         </div>

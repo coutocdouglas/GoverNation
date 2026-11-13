@@ -1,6 +1,6 @@
 # Plano do bloco 6G e ajustes: fatos vivos, imprensa, grupos e requerimentos (proposta de 09/11/2026)
 
-> **Proposta, ainda não aprovada pelo Douglas.** Nasceu da revisão da partida de 09/11/2026 (10 pontos). Nada disto está no código. Segue o formato da Etapa 6: blocos pequenos, **regras** (desligadas) e depois **telas** (que ligam).
+> **Etapa 6G aprovada pelo Douglas em 13/11/2026 como etapa separada.** H0 feito (v0.43.2). H1 detalhado em `plano-h1-resposta-ao-fato.md` (aguardando aprovação). Nada dos demais blocos está no código. Segue o formato da Etapa 6: blocos pequenos, **regras** (desligadas) e depois **telas** (que ligam).
 
 ## 1. Objetivo em uma frase
 

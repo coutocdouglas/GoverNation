@@ -3,13 +3,13 @@
 > **Leia este arquivo primeiro.** Ele diz onde o projeto está e qual é o próximo passo.
 > Atualize-o a cada mudança: seção "Estado atual", "Próximo passo" e uma linha no "Histórico".
 
-**Última atualização:** 13/11/2026 · **Versão:** v0.43.2 (bloco H0: fato ciente das leis em vigor; impeachment do presidente completo na v0.43.1). A v0.43.0 e a v0.43.1 foram enviadas à `main` em 12/11/2026 (o GitHub Actions gera o instalador). Última publicada antes: v0.42.0.
+**Última atualização:** 13/11/2026 · **Versão:** v0.44.0 (bloco H1 da Etapa 6G: resposta ao fato por ação do governo; H0 na v0.43.2). A v0.43.0 e a v0.43.1 foram enviadas à `main` em 12/11/2026 (o GitHub Actions gera o instalador). Última publicada antes: v0.42.0.
 
 ---
 
 ## Próximo passo
 
-**Próximo: decidir com o Douglas o que desenvolver antes do playtest da Etapa 6** (ele quer mais desenvolvimento antes de jogar): plano 6G (fatos vivos, imprensa, grupos sociais, requerimentos; `docs/projeto/plano-etapa-6g.md`, ainda não aprovado) ou Etapa 7.
+**Próximo: H2 da Etapa 6G (ministros com personalidade e medidas úteis; Opus), que precisa dos prints das respostas ruins dos ministérios.** H0 feito na v0.43.2; **H1 feito na v0.44.0** (resposta ao fato por ação do governo, regras e telas juntas, DESIGN.md 27.42; plano em `docs/projeto/plano-h1-resposta-ao-fato.md`). Depois: H3 (grupos, precisa da lista do Douglas), H4 e H5 do `docs/projeto/plano-etapa-6g.md` (6G aprovada como etapa separada em 13/11/2026). Playtest da Etapa 6 adiado pelo Douglas.
 
 **Etapa 6 aprovada (plano em `docs/projeto/plano-etapa-6.md`, 08/11/2026).** Ordem: 6.0 → 6B → 6A → 6C → 6D → 6E → 6F. **6.0 feito na v0.32.1**, **6B feito na v0.33.0**, **6A feito** (regras na v0.34.0, telas na v0.34.1; DESIGN.md 27.31), **6C feito** (regras v0.35.0, telas v0.35.1; DESIGN.md 27.32 e 27.33). **Portão de playtest da 5B e da 5C dispensado pelo Douglas em 08/11/2026: considerado fechado.**
 
@@ -144,6 +144,7 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 - 12/11/2026 · v0.43.0 · Impeachment do presidente (regras, desligadas até a v0.43.1): pressão oculta, pedido, presidente da Câmara abre ou engaveta, Câmara 342, Senado 54 com vice interino, absolvido ou condenado (fim do mandato), quatro decisões por mês com custo à vista, um processo por mandato; `npm run sim7`; save 41; 654 testes.|
 - 12/11/2026 · v0.43.1 · Impeachment do presidente (telas): janela no Radar, pendência mais grave, previsão de votos, decisão por mês em `MonthPlan.impeach`, tela de mandato cassado, nota final em 40% para quem perde o cargo; `IMPEACH_PRES.ativo` ligado; 660 testes; conferido no navegador.|
 - 13/11/2026 · v0.43.2 · Bloco H0 da Etapa 6G: fatos conhecem as leis em vigor (`EventDef.jaFeito`, `jaFeitoDe`, peso 30% no sorteio e aviso no texto); CSS da aba Ministérios conferido no build; 663 testes; save segue em 41.|
+- 13/11/2026 · v0.44.0 · Bloco H1 da Etapa 6G: resposta ao fato por ação do governo (12 tipos, sem votação; `resposta.ts`, `data/resposta.ts`, `MonthPlan.resposta`), leitura por IA (`parseAcao`) e por regras (`interpretarResposta`), conselho do ministro sugere a ação, cartão "Entendi isto" (`RespostaSheet.tsx`), `npm run sim8`, save 42; 693 testes; conferido no navegador.|
 - 09/11/2026 · (sem versão, só documento) · Plano proposto `docs/projeto/plano-etapa-6g.md` (blocos H0 a H5: correções, resposta ao fato como ação executiva, ministros com personalidade, mais grupos sociais, requerimentos dos setores em passos, fatos vivos e imprensa). Aguarda aprovação do Douglas e a lista de grupos do jogo de referência.
 - 09/11/2026 · (sem versão, só CSS, não publicado) · Revisão do playtest, item 1: aba Ministérios com a coluna da foto em 64 px (o anel do Elo cobria o nome). Pendentes do playtest: resposta ao fato do mês sem segunda votação, ministros com personalidade, passo a passo dos requerimentos dos setores.
 - 08/11/2026 · v0.35.1 · Bloco 6C (telas): credibilidade no Radar e janela, compromisso na fala, pesquisa na agenda, grupos em faixa entre pesquisas, nota de absurdo, aviso com confirmação e janela de retirar ou revogar a medida explosiva; bloco ligado; sem mudança no save; 488 testes.
