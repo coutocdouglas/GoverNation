@@ -3,7 +3,7 @@ import { ACTION_BY_ID } from './actions'
 import { BILL_BY_ID } from './data/bills'
 import { DEMAND_BY_ID, DEMANDS } from './data/demands'
 import { EVENT_BY_ID, EVENTS } from './data/events'
-import { defaultOption } from './events'
+import { currentEvent, defaultOption, jaFeitoDe } from './events'
 import { advanceMonth, newGame, validatePlan } from './game'
 import type { GameState } from './types'
 
@@ -81,5 +81,28 @@ describe('cobranças dos grupos', () => {
       expect(s.demands.length).toBeLessThanOrEqual(3)
       s = advanceMonth(s, [])
     }
+  })
+})
+
+describe('fato ciente das leis em vigor (v0.43.2, H0)', () => {
+  it('todo "jaFeito" aponta para medida que existe', () => {
+    for (const e of EVENTS) for (const id of e.jaFeito ?? []) expect(BILL_BY_ID[id], `${e.id}: ${id}`).toBeDefined()
+  })
+
+  it('com a lei em vigor, o texto avisa que já foi feito; sem ela, não', () => {
+    const base = newGame('T', 'normal', 2)
+    const sem = withEvent(base, 'professores')
+    expect(currentEvent(sem)!.text).not.toContain('já tem em vigor')
+    const com = withEvent({ ...base, congress: { ...base.congress, laws: [...base.congress.laws, 'pisoProfessores'] } }, 'professores')
+    expect(jaFeitoDe(com, EVENT_BY_ID.professores)).toEqual(['pisoProfessores'])
+    expect(currentEvent(com)!.text).toContain('já tem em vigor')
+    // As opções e os efeitos não mudam: só as palavras.
+    expect(currentEvent(com)!.options).toEqual(EVENT_BY_ID.professores.options)
+  })
+
+  it('o fato que nasceu de uma medida não ganha o aviso', () => {
+    const base = newGame('T', 'normal', 2)
+    const s = { ...base, congress: { ...base.congress, laws: [...base.congress.laws, 'pisoProfessores'] }, event: { id: 'professores', month: 0, origin: { bill: 'pisoProfessores' as const } } }
+    expect(currentEvent(s as GameState)!.text).not.toContain('já tem em vigor')
   })
 })

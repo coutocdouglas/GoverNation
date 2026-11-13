@@ -1,5 +1,10 @@
 # Novidades
 
+## 0.43.2 (13/11/2026)
+- **Fato ciente das leis em vigor (bloco H0 da Etapa 6G).** Cada fato do mês passou a conhecer as leis que já o enfrentam (dengue, caminhoneiros, enchentes, escândalo, professores, queimadas, comida, apagão e desemprego). Com alguma em vigor, o fato sai bem menos no sorteio (peso 30%, nunca zera) e o texto avisa "O governo já tem em vigor…" em vez de agir como se nada existisse. Só as palavras mudam: opções e efeitos continuam iguais, e o fato nascido de uma medida não ganha o aviso.
+- Conferido: a coluna da foto na aba Ministérios (64 px) está no jogo compilado; falta o Douglas ver na tela.
+- 663 testes (3 novos). Sem mudança no save (continua na versão 41).
+
 ## 0.43.1 (12/11/2026)
 - **Impeachment do presidente (telas): está ligado.**
   - **No Radar:** uma linha "Impeachment" que só aparece com processo em andamento ou com o ruído alto; mostra pistas em palavras, nunca o número da pressão.

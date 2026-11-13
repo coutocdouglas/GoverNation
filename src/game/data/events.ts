@@ -1,5 +1,5 @@
 import type { ActionEffects } from '../actions'
-import type { GameState, PartyId } from '../types'
+import type { BillId, GameState, PartyId } from '../types'
 import type { AreaId } from './ministers'
 import { REP_EVENTS } from './repEvents'
 
@@ -62,6 +62,8 @@ export interface EventDef {
   /** Efeito que acontece de qualquer jeito, além da escolha. */
   effects?: ActionEffects
   weight: number
+  /** v0.43.2 (H0): medidas que já enfrentam este fato. Com alguma em vigor, o fato sai menos no sorteio e o texto diz "já foi feito". */
+  jaFeito?: BillId[]
   /** v0.24.1: versão do texto quando a medida de origem ainda está na pauta do Congresso (a história ameaça e antecipa, não conta como feito). */
   pauta?: EventVariant
   /** v0.24.1: versão do texto quando a medida de origem foi barrada. */
@@ -79,7 +81,7 @@ const last = (s: GameState) => s.history[s.history.length - 1]
 
 export const EVENTS: EventDef[] = [
   {
-    id: 'dengue', area: 'saude', tag: 'Saúde · urgente', icon: '🦟', weight: 3, importance: 4,
+    id: 'dengue', jaFeito: ['maisMedicos', 'hospitaisCampanha', 'filasCirurgias'], area: 'saude', tag: 'Saúde · urgente', icon: '🦟', weight: 3, importance: 4,
     title: 'Surto de dengue lota hospitais no Sudeste',
     text: 'Prefeitos pedem socorro e a imprensa já fala em “apagão da saúde”. Os casos dobram a cada semana.',
     presenter: { name: 'Dra. Ângela Pires', role: 'Ministra da Saúde', feminine: true, color: '#2bb3a3' },
@@ -90,7 +92,7 @@ export const EVENTS: EventDef[] = [
     ],
   },
   {
-    id: 'caminhoneiros', area: 'transportes', tag: 'Economia · greve', icon: '🚚', weight: 2, importance: 4,
+    id: 'caminhoneiros', jaFeito: ['freteMinimo', 'precoCombustivel'], area: 'transportes', tag: 'Economia · greve', icon: '🚚', weight: 2, importance: 4,
     title: 'Caminhoneiros ameaçam parar o país',
     text: 'O diesel subiu três vezes em dois meses. Postos já racionam no Centro-Oeste e as estradas começam a fechar.',
     presenter: { name: 'Neusa Galvão', role: 'Ministra dos Transportes', feminine: true, color: '#e98a15' },
@@ -102,7 +104,7 @@ export const EVENTS: EventDef[] = [
     ],
   },
   {
-    id: 'enchentes', area: 'cidades', tag: 'Clima · tragédia', icon: '🌧️', weight: 2, importance: 5,
+    id: 'enchentes', jaFeito: ['defesaCivil', 'reconstrucao'], area: 'cidades', tag: 'Clima · tragédia', icon: '🌧️', weight: 2, importance: 5,
     title: 'Enchentes deixam 40 mil desalojados no Sul',
     text: 'O governador pede ajuda federal ao vivo na TV. O país inteiro olha para você.',
     presenter: { name: 'Heitor Valadares', role: 'Governador do Sul', feminine: false, color: '#1e5bd8' },
@@ -113,7 +115,7 @@ export const EVENTS: EventDef[] = [
     ],
   },
   {
-    id: 'escandalo', area: 'politica', tag: 'Política · escândalo', icon: '🕵️', weight: 2, importance: 3,
+    id: 'escandalo', jaFeito: ['transparencia', 'leiAnticorrupcao', 'fortalecerCgu'], area: 'politica', tag: 'Política · escândalo', icon: '🕵️', weight: 2, importance: 3,
     title: 'Ministro do UCD é flagrado em esquema de licitações',
     text: 'A Polícia Federal encontrou planilhas de propina. O partido diz que é perseguição e ameaça deixar a base.',
     presenter: { name: 'Vera Toledo', role: 'Chefe da Controladoria', feminine: true, color: '#8b6fd6' },
@@ -124,7 +126,7 @@ export const EVENTS: EventDef[] = [
     ],
   },
   {
-    id: 'professores', area: 'educacao', tag: 'Educação · greve', icon: '👩‍🏫', weight: 2, importance: 3,
+    id: 'professores', jaFeito: ['pisoProfessores'], area: 'educacao', tag: 'Educação · greve', icon: '👩‍🏫', weight: 2, importance: 3,
     title: 'Professores das federais entram em greve',
     text: 'Universidades param. Os estudantes estão com os professores e prometem ocupar a Esplanada.',
     presenter: { name: 'Iara Couto', role: 'Líder do sindicato docente', feminine: true, color: '#d62d2d' },
@@ -136,7 +138,7 @@ export const EVENTS: EventDef[] = [
     ],
   },
   {
-    id: 'queimadas', area: 'ambiente', tag: 'Ambiente · imagem', icon: '🔥', weight: 2, importance: 3,
+    id: 'queimadas', jaFeito: ['fiscalizacaoAmbiental'], area: 'ambiente', tag: 'Ambiente · imagem', icon: '🔥', weight: 2, importance: 3,
     title: 'Queimadas na Amazônia batem recorde',
     text: 'Fotos de satélite rodam o mundo. Europeus ameaçam travar o acordo comercial; produtores culpam a seca.',
     presenter: { name: 'Glória Matos', role: 'Ministra do Meio Ambiente', feminine: true, color: '#4f7a2a' },
@@ -147,7 +149,7 @@ export const EVENTS: EventDef[] = [
     ],
   },
   {
-    id: 'comida', area: 'agro', tag: 'Economia · preços', icon: '🛒', weight: 2, importance: 3,
+    id: 'comida', jaFeito: ['estoquesReguladores', 'planoSafra'], area: 'agro', tag: 'Economia · preços', icon: '🛒', weight: 2, importance: 3,
     when: (s) => last(s).indicators.inflation > 4,
     title: 'Preço do arroz e do feijão dispara',
     text: 'A cesta básica subiu 15% no ano. Supermercados remarcam preços toda semana.',
@@ -170,7 +172,7 @@ export const EVENTS: EventDef[] = [
     ],
   },
   {
-    id: 'apagao', area: 'energia', tag: 'Infraestrutura · energia', icon: '💡', weight: 1, importance: 3,
+    id: 'apagao', jaFeito: ['linhasTransmissao'], area: 'energia', tag: 'Infraestrutura · energia', icon: '💡', weight: 1, importance: 3,
     title: 'Apagão deixa o Nordeste no escuro por 12 horas',
     text: 'Uma linha de transmissão caiu e derrubou o sistema. A concessionária culpa o calor.',
     presenter: { name: 'Rui Damasceno', role: 'Ministro de Minas e Energia', feminine: false, color: '#2bb3a3' },
@@ -202,7 +204,7 @@ export const EVENTS: EventDef[] = [
     ],
   },
   {
-    id: 'desemprego', area: 'trabalho', tag: 'Trabalho · fila', icon: '🧾', weight: 3, importance: 4,
+    id: 'desemprego', jaFeito: ['primeiroEmprego', 'segDesemprego', 'qualificacao'], area: 'trabalho', tag: 'Trabalho · fila', icon: '🧾', weight: 3, importance: 4,
     when: (s) => last(s).indicators.unemployment > 7.5,
     title: 'Fila de 10 mil pessoas num feirão de empregos',
     text: 'A foto da fila dando a volta no quarteirão abre todos os jornais.',
@@ -251,3 +253,5 @@ export const EVENT_BY_ID = Object.fromEntries(ALL_EVENTS.map((e) => [e.id, e])) 
 export const EVENT_CHANCE = 0.8
 /** Meses até o mesmo fato poder voltar. */
 export const EVENT_REPEAT = 18
+/** v0.43.2: peso do sorteio de um fato cuja resposta já é lei (0,3 = sai 70% menos; nunca zera, a crise pode voltar menor). */
+export const JA_FEITO_PESO = 0.3

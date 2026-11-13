@@ -1,5 +1,5 @@
 import { DEMANDS, DEMANDS_MAX, DEMAND_CHANCE, type DemandDef } from './data/demands'
-import { ALL_EVENTS, EVENT_BY_ID, EVENT_CHANCE, EVENT_REPEAT, type EventDef } from './data/events'
+import { ALL_EVENTS, EVENT_BY_ID, EVENT_CHANCE, EVENT_REPEAT, JA_FEITO_PESO, type EventDef } from './data/events'
 import { reputationEvent } from './reputacao'
 import { BILL_BY_ID } from './data/bills'
 import { PARTY_BY_ID } from './data/parties'
@@ -34,6 +34,17 @@ export function eventStage(s: GameState, ev: EventDef | null = s.event ? EVENT_B
   return billStage(s, bill)
 }
 
+/** v0.43.2 (H0): as leis em vigor que já enfrentam este fato (vazio se nenhuma). MP conta, pois vale na hora. */
+export function jaFeitoDe(s: Pick<GameState, 'congress' | 'month'>, ev: Pick<EventDef, 'jaFeito'>): BillId[] {
+  return (ev.jaFeito ?? []).filter((id) => billStage(s, id) === 'vigor')
+}
+
+/** Frase que avisa o jogador de que a resposta já existe. */
+function avisoJaFeito(ids: BillId[]): string {
+  const nomes = ids.map((id) => BILL_BY_ID[id].name)
+  return `O governo já tem em vigor ${nomes.length === 1 ? nomes[0] : nomes.slice(0, -1).join(', ') + ' e ' + nomes[nomes.length - 1]}: o problema pesa menos, mas cobram reforço e resultado.`
+}
+
 function comAliado(ev: EventDef, sigla: string): EventDef {
   const f = (x: string) => x.replaceAll('{aliado}', sigla)
   return { ...ev, title: f(ev.title), text: f(ev.text), options: ev.options.map((o) => ({ ...o, label: f(o.label), text: f(o.text), outcome: f(o.outcome) })) }
@@ -46,6 +57,9 @@ export function resolveEvent(s: GameState, ev: EventDef): EventDef {
   if (aliado) ev = comAliado(ev, PARTY_BY_ID[aliado].sigla)
   const stage = eventStage(s, ev)
   const v = stage === 'pauta' ? ev.pauta : stage === 'barrada' ? ev.barrada : undefined
+  // v0.43.2 (H0): só as palavras mudam; vale só para fato do sorteio comum (não para o que nasceu de uma medida).
+  const feito = s.event?.id === ev.id && !s.event.origin ? jaFeitoDe(s, ev) : []
+  if (feito.length) ev = { ...ev, text: `${ev.text} ${avisoJaFeito(feito)}` }
   if (!v) return ev
   return {
     ...ev,
@@ -81,11 +95,13 @@ export function drawEvent(s: GameState, rng: Rng): GameState['event'] {
   if (rng.next() >= EVENT_CHANCE) return null
   const recent = new Set(s.eventLog.filter((e) => s.month - e.month < EVENT_REPEAT).map((e) => e.id))
   const pool = ALL_EVENTS.filter((e) => e.random !== false && !e.dilema && !substituido(e.id) && !recent.has(e.id) && (!e.when || e.when(s)))
-  const total = pool.reduce((a, e) => a + e.weight, 0)
+  // v0.43.2 (H0): fato cuja resposta já é lei sai bem menos.
+  const peso = (e: EventDef) => (jaFeitoDe(s, e).length ? e.weight * JA_FEITO_PESO : e.weight)
+  const total = pool.reduce((a, e) => a + peso(e), 0)
   if (total <= 0) return null
   let r = rng.next() * total
   for (const e of pool) {
-    r -= e.weight
+    r -= peso(e)
     if (r <= 0) return { id: e.id, month: s.month }
   }
   return { id: pool[pool.length - 1].id, month: s.month }

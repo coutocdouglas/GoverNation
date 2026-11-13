@@ -3,7 +3,7 @@
 > **Leia este arquivo primeiro.** Ele diz onde o projeto está e qual é o próximo passo.
 > Atualize-o a cada mudança: seção "Estado atual", "Próximo passo" e uma linha no "Histórico".
 
-**Última atualização:** 12/11/2026 · **Versão:** v0.43.1 (impeachment do presidente completo e ligado). A v0.43.0 e a v0.43.1 foram enviadas à `main` em 12/11/2026 (o GitHub Actions gera o instalador). Última publicada antes: v0.42.0.
+**Última atualização:** 13/11/2026 · **Versão:** v0.43.2 (bloco H0: fato ciente das leis em vigor; impeachment do presidente completo na v0.43.1). A v0.43.0 e a v0.43.1 foram enviadas à `main` em 12/11/2026 (o GitHub Actions gera o instalador). Última publicada antes: v0.42.0.
 
 ---
 
@@ -143,6 +143,7 @@ Para começar numa conversa nova: *"Projeto GoverNation, repositório coutocdoug
 - 12/11/2026 · v0.42.0 · Fecho da Etapa 6 no código: `npm run sim6` (7 jeitos de jogar com 6A a 6F ligados; nada dispara nem desaba, falar sem governar não compensa, nenhum lado do dilema vale mais), dilema que volta respeita o intervalo e teto de 12 por mandato, Caixa de ideias revisada; 641 testes. Publicada a v0.41.1. Falta o portão de playtest do Douglas.
 - 12/11/2026 · v0.43.0 · Impeachment do presidente (regras, desligadas até a v0.43.1): pressão oculta, pedido, presidente da Câmara abre ou engaveta, Câmara 342, Senado 54 com vice interino, absolvido ou condenado (fim do mandato), quatro decisões por mês com custo à vista, um processo por mandato; `npm run sim7`; save 41; 654 testes.|
 - 12/11/2026 · v0.43.1 · Impeachment do presidente (telas): janela no Radar, pendência mais grave, previsão de votos, decisão por mês em `MonthPlan.impeach`, tela de mandato cassado, nota final em 40% para quem perde o cargo; `IMPEACH_PRES.ativo` ligado; 660 testes; conferido no navegador.|
+- 13/11/2026 · v0.43.2 · Bloco H0 da Etapa 6G: fatos conhecem as leis em vigor (`EventDef.jaFeito`, `jaFeitoDe`, peso 30% no sorteio e aviso no texto); CSS da aba Ministérios conferido no build; 663 testes; save segue em 41.|
 - 09/11/2026 · (sem versão, só documento) · Plano proposto `docs/projeto/plano-etapa-6g.md` (blocos H0 a H5: correções, resposta ao fato como ação executiva, ministros com personalidade, mais grupos sociais, requerimentos dos setores em passos, fatos vivos e imprensa). Aguarda aprovação do Douglas e a lista de grupos do jogo de referência.
 - 09/11/2026 · (sem versão, só CSS, não publicado) · Revisão do playtest, item 1: aba Ministérios com a coluna da foto em 64 px (o anel do Elo cobria o nome). Pendentes do playtest: resposta ao fato do mês sem segunda votação, ministros com personalidade, passo a passo dos requerimentos dos setores.
 - 08/11/2026 · v0.35.1 · Bloco 6C (telas): credibilidade no Radar e janela, compromisso na fala, pesquisa na agenda, grupos em faixa entre pesquisas, nota de absurdo, aviso com confirmação e janela de retirar ou revogar a medida explosiva; bloco ligado; sem mudança no save; 488 testes.
