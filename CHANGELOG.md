@@ -1,5 +1,14 @@
 # Novidades
 
+## 0.46.0 (13/11/2026)
+- **32 grupos sociais em 5 blocos (bloco H3 da Etapa 6G, parte 1).** Trabalho e renda, Fé, Campo e floresta, Identidade e causas, Capital e Estado. Entram aposentados, pequenos empreendedores, sindicalistas, professores, trabalhadores de aplicativo, profissionais da saúde, policiais, caminhoneiros, evangélicos, católicos, religiões afro-brasileiras, agricultura familiar, comunidades tradicionais, povos indígenas, mulheres, movimento negro, universitários, cultura digital, ambientalistas, LGBT+, artistas, comerciários e bancários, mercado financeiro, militares e ciência e universidades.
+  - **Cada grupo pesa pelo tamanho** no eleitorado, e a aprovação geral é a média ponderada.
+  - **Herança:** tudo o que já mexia com os 7 grupos de antes chega aos novos (os caminhoneiros sentem o que pesa no agronegócio e nos trabalhadores, por exemplo).
+  - **Costumes:** medida conservadora agrada evangélicos e policiais e desagrada LGBT+ e artistas; a progressista, o contrário.
+  - **Sua base:** a janela marca os grupos ligados ao partido do presidente.
+  - **Na tela:** o painel mostra os 5 blocos, com o grupo mais insatisfeito de cada um; a janela "Grupos sociais" lista os 32, com o "Por quê?" de cada grupo.
+- Save 43, com migração (quem já tem mandato vê os grupos novos com a aprovação herdada). 711 testes (8 novos). Balanceamento quase igual ao da 0.45 no simulador. Conferido no navegador com um save antigo.
+
 ## 0.45.0 (13/11/2026)
 - **Ministros com personalidade e medidas úteis (bloco H2 da Etapa 6G).**
   - **Cada ministro tem um perfil:** fiscalista ou gastador, cauteloso ou ousado, as bandeiras dele, o que ele não assina e o jeito de falar. Isso muda a medida que ele defende, o parecer antes de assinar e a fala (com IA ou sem).

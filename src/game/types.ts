@@ -14,6 +14,7 @@ export type IndicatorKey =
   | 'confidence'
   | 'fx'
 
+/** v0.46 (Etapa 6G, H3): 31 grupos. Os 7 primeiros são os de antes (mesmos ids). */
 export type GroupId =
   | 'trabalhadores'
   | 'baixaRenda'
@@ -22,6 +23,11 @@ export type GroupId =
   | 'agro'
   | 'servidores'
   | 'jovens'
+  | 'aposentados' | 'empreendedores' | 'sindicalistas' | 'professores' | 'aplicativos' | 'profSaude' | 'policiais' | 'caminhoneiros'
+  | 'evangelicos' | 'catolicos' | 'afro'
+  | 'agriculturaFamiliar' | 'tradicionais' | 'indigenas'
+  | 'mulheres' | 'negros' | 'universitarios' | 'digital' | 'ambientalistas' | 'lgbt' | 'artistas'
+  | 'comerciarios' | 'mercado' | 'militares' | 'ciencia'
 
 /** Uma causa que explica parte de uma mudança ("juros altos: -0,3"). */
 export interface Cause {
@@ -144,7 +150,7 @@ import type { ReputationState } from './reputacao'
 import type { RiscoState } from './risco'
 
 export interface GameState {
-  saveVersion: 42
+  saveVersion: 43
   /** Etapa 6G, bloco H1 (v0.44): respostas ao fato por ação do governo (retorno decrescente). Ver resposta.ts. */
   respostas: import('./resposta').RespostaLog[]
   /** Impeachment do presidente (v0.43): pressão oculta, fase e histórico. Ver impeachPres.ts. */

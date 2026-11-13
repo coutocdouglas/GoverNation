@@ -449,7 +449,7 @@ function enactBill(ctx: RoundCtx, p: PendingBill, placarS: string): void {
     const fx = concededEffects(coreEffects(bill, am), conc)
     const final = k === 1 ? fx : coreEffects({ ...bill, effects: fx }, { relator: s.playerParty, kind: 'desidrata', shift: 0, scale: k })
     // v0.26: a parte da perda que já pesou no envio não conta duas vezes.
-    ctx.conf.v += applyEffects(e, impulses, descontarEnvio(final, p.antecipado), bill.name, 1, 1, true)
+    ctx.conf.v += applyEffects(e, impulses, { ...descontarEnvio(final, p.antecipado), costumes: bill.costumes }, bill.name, 1, 1, true)
     // Etapa 2B: a parte que o mercado já tinha precificado no envio não conta duas vezes.
     if (p.priced) ctx.conf.v -= p.priced
     plantSeeds(s, p.id, bill.name, s.presidentName, s.playerParty, ctx.rng)
@@ -1036,7 +1036,7 @@ export function sendInto(s: GameState, id: BillId, opts: FloorOptions = {}, resp
   markMeasure(s, bill, response)
   let parked = false
   if (bill.instrument === 'decreto') {
-    ctx.conf.v += applyEffects(ctx.e, ctx.impulses, bill.effects, bill.name, 1, 1, true)
+    ctx.conf.v += applyEffects(ctx.e, ctx.impulses, { ...bill.effects, costumes: bill.costumes }, bill.name, 1, 1, true)
     c.laws.push(id)
     noteInForce(s, id, s.presidentName)
     plantSeeds(s, id, bill.name, s.presidentName, s.playerParty, ctx.rng)
@@ -1066,7 +1066,7 @@ export function sendInto(s: GameState, id: BillId, opts: FloorOptions = {}, resp
     ctx.conf.v += payBuys(s, id, opts.senadores ?? [], ctx.headlines, ctx.taken)
     if (bill.instrument === 'mp') {
       // A MP vale na hora e entra na fila: precisa ser pautada em até 4 meses, ou caduca.
-      ctx.conf.v += applyEffects(ctx.e, ctx.impulses, bill.effects, bill.name, 1, 1, true)
+      ctx.conf.v += applyEffects(ctx.e, ctx.impulses, { ...bill.effects, costumes: bill.costumes }, bill.name, 1, 1, true)
       plantSeeds(s, id, bill.name, s.presidentName, s.playerParty, ctx.rng)
       noteInForce(s, id, s.presidentName)
       medidaEmVigorRisco(s, ctx.e, id, ctx.headlines)

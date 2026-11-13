@@ -1,3 +1,4 @@
+import { expandirGrupos } from './groups'
 /**
  * Etapa 2B (v0.19): o fluxo do dia. Quem vai reagir (previsto no envio e sorteado nele), a prévia do que já valeu
  * no anúncio (aprovação e contas) e as duas notas da ficha (Congressual e Judicial).
@@ -125,7 +126,7 @@ export function rollReactions(ctx: ReactionCtx, id: BillId, rng: Rng): ReactionR
 /** Prévia da aprovação: hoje e logo depois do efeito da medida nos grupos (sem o resto do mês). */
 export function approvalPreview(s: GameState, id: BillId, scale = 1): { before: number; after: number } {
   const b = BILL_BY_ID[id]
-  const g = b?.effects.groups ?? {}
+  const g = b ? expandirGrupos(b.effects.groups, b.costumes) : {}
   let before = 0
   let after = 0
   for (const def of GROUPS) {

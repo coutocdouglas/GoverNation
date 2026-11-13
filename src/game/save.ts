@@ -1,3 +1,5 @@
+import { GROUPS } from './data/groups'
+import { aprovacaoHerdada } from './groups'
 import { initialAgenda } from './agenda'
 import { initialInteligencia } from './inteligencia'
 import { initialComissoes } from './cpi'
@@ -328,7 +330,27 @@ export function migrate(raw: unknown): GameState | null {
       (s as GameState).respostas ??= []
       s.saveVersion = 42
     }
-    if (s.saveVersion !== 42) return null
+    if (s.saveVersion === 42) {
+      // v0.45 → v0.46 (Etapa 6G, H3: 32 grupos): cada grupo novo nasce com a aprovação herdada dos 7 de antes,
+      // inclusive no histórico (para os gráficos não terem buraco).
+      const g = s as GameState
+      for (const def of GROUPS) {
+        if (g.groups[def.id]) continue
+        const ap = aprovacaoHerdada(g.groups, def.id)
+        g.groups[def.id] = { id: def.id, econ: ap, memory: [], approval: ap }
+      }
+      for (const h of g.history ?? []) {
+        for (const def of GROUPS) {
+          if (h.groups[def.id] !== undefined) continue
+          h.groups[def.id] = aprovacaoHerdada(Object.fromEntries(Object.entries(h.groups).map(([k, v]) => [k, { approval: v }])), def.id)
+        }
+      }
+      for (const p of g.credib?.pesquisas ?? []) {
+        for (const def of GROUPS) if (p.grupos[def.id] === undefined) p.grupos[def.id] = Math.round(aprovacaoHerdada(Object.fromEntries(Object.entries(p.grupos).map(([k, v]) => [k, { approval: v }])), def.id))
+      }
+      s.saveVersion = 43
+    }
+    if (s.saveVersion !== 43) return null
     syncCustomBills(s as GameState)
     return s as GameState
   } catch {

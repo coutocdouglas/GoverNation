@@ -29,7 +29,7 @@ export const CAUSAS = {
   /** Entradas de grupos e indicadores mais velhas que isto (meses) saem do registro. */
   keepMonths: 24,
   /** Teto de entradas no total (o mais velho sai primeiro; risco e escândalo ficam por último). */
-  maxEntries: 900,
+  maxEntries: 1200,
   /** Por mês, quantas causas de cada grupo ou indicador são guardadas (as de maior peso). */
   perSubjectMonth: 3,
   /** Abaixo disto a causa é ruído e não entra. */
@@ -37,13 +37,20 @@ export const CAUSAS = {
 } as const
 
 const PERSISTENT = /^(risco|escandalo|pessoa)/
+/** Mês da última poda, por estado. */
+const podados = new WeakMap<object, number>()
 
 /** Registra uma causa. Ignora mudança nula. */
 export function registrarCausa(s: GameState, e: Omit<CausaEntry, 'at'>): void {
   if (!e.delta || !Number.isFinite(e.delta)) return
   const list = (s.causas ??= [])
   list.push({ at: absMonth(s), ...e, delta: Math.round(e.delta * 100) / 100 })
-  podar(s)
+  // v0.46: com 32 grupos, podar a cada entrada ficou caro. Poda uma vez por estado (cada mês é um estado novo)
+  // ou quando a lista passa do teto (e então corta para 90% do teto, para não podar de novo a cada entrada).
+  if (podados.get(s) !== absMonth(s) || list.length > CAUSAS.maxEntries) {
+    podar(s)
+    podados.set(s, absMonth(s))
+  }
 }
 
 /** Registra as causas calculadas no fechamento do mês (grupos e indicadores): só as de maior peso de cada assunto. */
@@ -86,7 +93,7 @@ function podar(s: GameState): void {
   let out = list.filter((e) => PERSISTENT.test(e.subject) || now - e.at <= CAUSAS.keepMonths)
   if (out.length > CAUSAS.maxEntries) {
     const keep = out.filter((e) => PERSISTENT.test(e.subject))
-    const rest = out.filter((e) => !PERSISTENT.test(e.subject)).slice(-Math.max(0, CAUSAS.maxEntries - keep.length))
+    const rest = out.filter((e) => !PERSISTENT.test(e.subject)).slice(-Math.max(0, Math.floor(CAUSAS.maxEntries * 0.9) - keep.length))
     out = [...keep, ...rest].sort((a, b) => a.at - b.at)
   }
   s.causas = out

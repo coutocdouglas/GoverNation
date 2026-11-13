@@ -1,6 +1,7 @@
 import { rivalBoost } from './rival'
 import { BILL_BY_ID, type BillDef } from './data/bills'
 import { GROUP_BY_ID } from './data/groups'
+import { expandirGrupos } from './groups'
 import { PARTIES, PARTY_BY_ID } from './data/parties'
 import { Rng } from './rng'
 import { DEALS } from './data/deals'
@@ -150,9 +151,15 @@ export function initialSenate(parties: Record<PartyId, PartyState>, seed: number
 }
 
 /** Quanto o projeto agrada a população: média dos efeitos nos grupos, pesada pelo tamanho. */
+const popCache = new WeakMap<object, number>()
 export function billPopularity(bill: BillDef): number {
+  // v0.46: roda por deputado em cada votação; guarda o resultado por ficha de efeitos.
+  const cached = popCache.get(bill)
+  if (cached !== undefined) return cached
   let total = 0
-  for (const [gid, v] of Object.entries(bill.effects.groups ?? {}) as [GroupId, number][]) total += GROUP_BY_ID[gid].weight * v
+  // v0.46: conta nos 32 grupos (herdados dos 7 antigos e pela posição de costumes).
+  for (const [gid, v] of Object.entries(expandirGrupos(bill.effects.groups, bill.costumes)) as [GroupId, number][]) total += GROUP_BY_ID[gid].weight * v
+  popCache.set(bill, total)
   return total
 }
 

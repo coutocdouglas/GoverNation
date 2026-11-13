@@ -21,14 +21,40 @@ export const moodOf = (v: number): Mood =>
 export const VOICES: Record<GroupId, string> = {
   trabalhadores: 'Metalúrgica do ABC',
   baixaRenda: 'Mãe de três filhos na periferia',
-  classeMedia: 'Professor universitário de classe média',
+  classeMedia: 'Gerente de loja de classe média',
   empresarios: 'Presidente de uma federação de indústrias',
   agro: 'Produtor de soja do Centro-Oeste',
   servidores: 'Dirigente de sindicato de servidores',
   jovens: 'Estudante de 19 anos',
+  aposentados: 'Aposentado de 71 anos, ex-bancário',
+  empreendedores: 'Dona de uma padaria de bairro',
+  sindicalistas: 'Presidente de uma central sindical',
+  professores: 'Professora de escola estadual',
+  aplicativos: 'Entregador de moto há cinco anos',
+  profSaude: 'Enfermeira de UPA',
+  policiais: 'Sargento da Polícia Militar',
+  caminhoneiros: 'Caminhoneiro autônomo',
+  evangelicos: 'Pastor de igreja na periferia',
+  catolicos: 'Coordenadora de pastoral',
+  afro: 'Mãe de santo de um terreiro',
+  agriculturaFamiliar: 'Agricultor de cooperativa do Sul',
+  tradicionais: 'Liderança ribeirinha do Pará',
+  indigenas: 'Liderança indígena do Xingu',
+  mulheres: 'Advogada de coletivo feminista',
+  negros: 'Ativista do movimento negro',
+  universitarios: 'Presidente de diretório estudantil',
+  digital: 'Criador de conteúdo de jogos',
+  ambientalistas: 'Coordenadora de ONG ambiental',
+  lgbt: 'Ativista de direitos LGBT+',
+  artistas: 'Cantor e produtor cultural',
+  comerciarios: 'Caixa de banco no centro',
+  mercado: 'Economista-chefe de um banco',
+  militares: 'Coronel da reserva',
+  ciencia: 'Pesquisadora de universidade federal',
 }
 
-export const QUOTES: Record<GroupId, Record<Mood, string>> = {
+/** v0.46: grupo novo sem frase própria fala como o grupo antigo de que mais herda (`quoteDe`). */
+export const QUOTES: Partial<Record<GroupId, Record<Mood, string>>> = {
   trabalhadores: {
     festa: 'Finalmente uma lei que chega no bolso de quem trabalha. A fábrica inteira comemorou.',
     apoio: 'Ajuda, não resolve tudo. Mas é um passo na direção certa.',

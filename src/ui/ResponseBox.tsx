@@ -1,3 +1,4 @@
+import { expandirGrupos } from '../game/groups'
 import { useState } from 'react'
 import { isRecess } from '../game/congress'
 import { BILL_BY_ID, GDP_BILLIONS, INSTRUMENTS, type BillDef } from '../game/data/bills'
@@ -224,7 +225,7 @@ function ReadingSheet({ state, ev, order, data, plannedBill, onClose, onSign, on
   const now = b.instrument === 'decreto' || b.instrument === 'mp'
   const recess = !now && isRecess(state.month)
   const fxChips = effectChips({ ...b.effects, groups: undefined }).filter((c) => c.tone !== 'neutral' && !c.text.includes('R$'))
-  const groups = (Object.entries(b.effects.groups ?? {}) as [GroupId, number][]).sort((x, y) => Math.abs(y[1]) - Math.abs(x[1]))
+  const groups = (Object.entries(expandirGrupos(b.effects.groups, b.costumes)) as [GroupId, number][]).filter(([, v]) => Math.abs(v) >= 0.5).sort((x, y) => Math.abs(y[1]) - Math.abs(x[1])).slice(0, 8)
   const fiscal = cost.yearly + cost.once
   const summary = data.summary && id === data.ids[0] ? data.summary : b.summary
 

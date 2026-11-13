@@ -1,5 +1,5 @@
 import { MEMORY } from './data/balance'
-import { GROUPS, GROUP_BY_ID, REFERENCES, SENSITIVITY_LABELS, type Sensitivity } from './data/groups'
+import { COSTUMES, GROUPS, GROUP_BY_ID, HERDEIROS, LEGACY_GROUPS, REFERENCES, SENSITIVITY_LABELS, type BlocoId, type LegacyGroupId, type Sensitivity } from './data/groups'
 import type { Cause, Group, GroupId, Impulse, Indicators } from './types'
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v))
@@ -100,3 +100,75 @@ export function stepGroup(g: Group, ind: Indicators, bonus: number, newImpulses:
 
   return causes.sort((a, b) => Math.abs(b.value) - Math.abs(a.value))
 }
+
+// ─── Etapa 6G, H3 (v0.46): 31 grupos herdando dos 7 de antes ─────────────────────────────
+
+const round1 = (x: number) => Math.round(x * 10) / 10
+
+/**
+ * Efeito de uma ação nos 31 grupos. Grupo citado direto vale como está; os outros herdam dos 7 antigos
+ * (`herda`); a posição de costumes da medida (-100 a 100) mexe com quem liga para costumes.
+ */
+export function expandirGrupos(gr: Partial<Record<GroupId, number>> | undefined, costumes?: number): Partial<Record<GroupId, number>> {
+  const out: Partial<Record<GroupId, number>> = {}
+  for (const def of GROUPS) {
+    let v = gr?.[def.id]
+    if (v === undefined) v = (Object.entries(def.herda) as [LegacyGroupId, number][]).reduce((a, [l, w]) => a + (gr?.[l] ?? 0) * w, 0)
+    if (costumes) v += def.costumes * costumes * COSTUMES.porPonto
+    const r = round1(v)
+    if (r) out[def.id] = r
+  }
+  return out
+}
+
+/** Impulso de costumes de uma medida em cada grupo (só os que ligam para isso). */
+export function impulsosCostumes(costumes: number | undefined): Partial<Record<GroupId, number>> {
+  const out: Partial<Record<GroupId, number>> = {}
+  if (!costumes) return out
+  for (const def of GROUPS) {
+    const v = round1(def.costumes * costumes * COSTUMES.porPonto)
+    if (v) out[def.id] = v
+  }
+  return out
+}
+
+/**
+ * Leva os efeitos do mês escritos para os 7 grupos antigos aos grupos que herdam deles.
+ * Grupo que já recebeu um efeito com o mesmo nome (ação que mexe em todo mundo, ou efeito direto) não herda de novo.
+ */
+export function herdarImpulsos(impulses: Record<GroupId, Impulse[]>): void {
+  const diretos = new Map<GroupId, Set<string>>()
+  for (const def of GROUPS) diretos.set(def.id, new Set((impulses[def.id] ?? []).map((i) => i.label)))
+  const soma = new Map<string, Impulse & { id: GroupId }>()
+  for (const l of LEGACY_GROUPS) {
+    for (const imp of impulses[l] ?? []) {
+      for (const h of HERDEIROS[l]) {
+        if (diretos.get(h.id)!.has(imp.label)) continue
+        const k = `${h.id}|${imp.label}|${Math.sign(imp.value)}`
+        const cur = soma.get(k)
+        if (cur) cur.value += imp.value * h.w
+        else soma.set(k, { ...imp, id: h.id, value: imp.value * h.w })
+      }
+    }
+  }
+  for (const { id, ...imp } of soma.values()) {
+    const v = round1(imp.value)
+    if (v) (impulses[id] ??= []).push({ ...imp, value: v })
+  }
+}
+
+/** Aprovação média de um bloco (ponderada pelo tamanho dos grupos). */
+export function aprovacaoBloco(groups: Record<GroupId, Group>, bloco: BlocoId): number {
+  const gs = GROUPS.filter((g) => g.bloco === bloco)
+  const peso = gs.reduce((a, g) => a + g.weight, 0)
+  return gs.reduce((a, g) => a + g.weight * (groups[g.id]?.approval ?? 0), 0) / (peso || 1)
+}
+
+/** Aprovação inicial de um grupo novo, herdada dos 7 antigos (migração de save). */
+export function aprovacaoHerdada(groups: Partial<Record<GroupId, { approval: number }>>, id: GroupId): number {
+  const def = GROUP_BY_ID[id]
+  return (Object.entries(def.herda) as [LegacyGroupId, number][]).reduce((a, [l, w]) => a + (groups[l]?.approval ?? 50) * w, 0)
+}
+
+/** O grupo é base do presidente (vota com o partido dele). */
+export const ehBase = (s: { playerParty: string }, id: GroupId): boolean => (GROUP_BY_ID[id].partidos as string[]).includes(s.playerParty)

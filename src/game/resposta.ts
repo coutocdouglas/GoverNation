@@ -53,7 +53,7 @@ const clamp = (x: number, lo = 0, hi = 100) => Math.max(lo, Math.min(hi, x))
 const round1 = (x: number) => Math.round(x * 10) / 10
 const round2 = (x: number) => Math.round(x * 100) / 100
 const bi = (amount: number, months: number) => Math.round(((amount * months) / 12 / 100) * GDP_BILLIONS * 10) / 10
-const ARTIGO: Record<GroupId, string> = { trabalhadores: 'dos', baixaRenda: 'das', classeMedia: 'da', empresarios: 'dos', agro: 'do', servidores: 'dos', jovens: 'dos' }
+const ARTIGO: Partial<Record<GroupId, string>> = { trabalhadores: 'dos', baixaRenda: 'da', classeMedia: 'da', empresarios: 'dos', agro: 'do', servidores: 'dos', jovens: 'dos', aposentados: 'dos', empreendedores: 'dos', sindicalistas: 'dos', professores: 'dos', aplicativos: 'dos', profSaude: 'dos', policiais: 'dos', caminhoneiros: 'dos', evangelicos: 'dos', catolicos: 'dos', afro: 'das', agriculturaFamiliar: 'da', tradicionais: 'das', indigenas: 'dos', mulheres: 'das', negros: 'do', universitarios: 'dos', digital: 'da', ambientalistas: 'dos', lgbt: 'da população', artistas: 'dos', comerciarios: 'dos', mercado: 'do', militares: 'dos', ciencia: 'da' }
 /** "do agronegócio", "das famílias de baixa renda". */
 const doGrupo = (g: GroupId) => `${ARTIGO[g] ?? 'de'} ${GROUP_BY_ID[g].name.toLowerCase()}`
 /** "dos Transportes", "da Saúde": tirado do cargo do ministro, como no resto do jogo. */

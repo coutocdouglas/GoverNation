@@ -10,7 +10,6 @@ import { playerPortraitId, setPresidentPortrait } from '../game/data/cast'
 import { EVENT_BY_ID } from '../game/data/events'
 import { PARTY_BY_ID } from '../game/data/parties'
 import { ACTION_BY_ID, ACTIONS, ACTIONS_PER_MONTH, blockedReason, effectMultiplier } from '../game/actions'
-import { GROUPS } from '../game/data/groups'
 import type { AcaoImpeach } from '../game/data/impeachPres'
 import { rotuloResposta, type RespostaFato } from '../game/resposta'
 import { advanceMonth, isCopomMonth, monthLabel, TERM_MONTHS, type MonthPlan } from '../game/game'
@@ -31,9 +30,6 @@ import { CourtSheet, PendenciasCard } from './FluxoSheets'
 import type { PendingTarget } from '../game/pendencias'
 import { cancelarAcao, rotuloAcao } from '../game/agenda'
 import { AgendaJanela } from './AgendaJanela'
-import { credibilidadeLigada } from '../game/data/credibilidade'
-import { leituraGrupo } from '../game/pesquisa'
-import { faixaMeio, GrupoLeitura } from './CredibilidadeJanela'
 import type { NivelPesquisa } from '../game/data/credibilidade'
 import { FichasView } from './FichasView'
 import { LicitacaoSheet } from './LicitacaoSheet'
@@ -48,7 +44,7 @@ import { escolherLicitacao, licitacoesAbertas, nomearEmpresas } from '../game/ri
 import { CONTRATO } from '../game/data/risco'
 import { Portrait } from './Portrait'
 import { eloDe } from './Elo'
-import { ACTION_ICON, GROUP_ICON } from './icons'
+import { ACTION_ICON } from './icons'
 import { INDICATORS, lowerFirst, num } from './format'
 import { PromisesCard, RivalCard } from './OppositionCards'
 import { RulingAnimation, SupremoMini, SupremoView, TseCard } from './SupremoView'
@@ -58,8 +54,9 @@ import { absMonth } from '../game/memory'
 import { NOMINEE_BY_ID, SUPREMO } from '../game/data/supremo'
 import { justiceName } from '../game/supremo'
 import { RadarCard, conteudoDaJanela, janelaDefsDoRadar } from './Radar'
-import { ApprovalRing, Delta, KpiCard, MeasureBox, StepButton, confetti, tone, type Step } from './PainelPecas'
+import { ApprovalRing, Delta, KpiCard, MeasureBox, StepButton, confetti, type Step } from './PainelPecas'
 import { PorQueJanela, alvoPorQue, defPorQue, idPorQue } from './PorQue'
+import { BlocosCard, GruposJanela } from './GruposJanela'
 import './painel.css'
 
 /** Depois de encerrar o mês: painel de votação animado e página de reação de cada lei (etapa 4B). */
@@ -412,8 +409,8 @@ export function GameScreen({ state, onChange, onExit }: {
   )
 
   /** v0.31 (V3): as janelas de detalhe do Radar (v0.32.1: o conteúdo mora em Radar.tsx). */
-  const janelaDefs: Record<string, JanelaDef> = { ...janelaDefsDoRadar(state), ...Object.fromEntries(abertas.flatMap((id) => { const d = defPorQue(id); return d ? [[id, d] as const] : [] })) }
-  const renderJanela = (id: string) => { const alvo = alvoPorQue(id); return alvo ? <PorQueJanela state={state} alvo={alvo} /> : conteudoDaJanela(id, {
+  const janelaDefs: Record<string, JanelaDef> = { ...janelaDefsDoRadar(state), grupos: { id: 'grupos', titulo: 'Grupos sociais', icone: '👥', largura: 680 }, ...Object.fromEntries(abertas.flatMap((id) => { const d = defPorQue(id); return d ? [[id, d] as const] : [] })) }
+  const renderJanela = (id: string) => { const alvo = alvoPorQue(id); if (id === 'grupos') return <GruposJanela state={state} onPorQue={(g) => abrir(idPorQue({ kind: 'group', id: g }))} />; return alvo ? <PorQueJanela state={state} alvo={alvo} /> : conteudoDaJanela(id, {
     state, casoDecisoes, advogado, cpiDecisao, intelOrdem, ultimoMes, impeachDecisao,
     onImpeach: (a) => { setImpeachDecisao(a); if (a) toast('⚖️ Decisão no impeachment anotada: vale ao encerrar o mês.') },
     agenda: <AgendaJanela state={state} plan={plan} billPronto={!!bill} pesquisa={pesquisa} onPesquisa={setPesquisa} onState={onChange} onToast={toast} />,
@@ -833,30 +830,7 @@ export function GameScreen({ state, onChange, onExit }: {
               <p className="pn-hint">É a média dos grupos abaixo, pesada pelo tamanho de cada um.</p>
             </section>
 
-            <section className="pn-card">
-              <h3>👥 Grupos sociais</h3>
-              <div className="pn-groups">
-                {GROUPS.map((g) => {
-                  const v = now.groups[g.id]
-                  const d = prev ? v - prev.groups[g.id] : 0
-                  const lei = credibilidadeLigada() ? leituraGrupo(state, g.id) : null
-                  const largura = lei ? (lei.pesquisa ? lei.pesquisa.valor : faixaMeio(lei.faixa)) : v
-                  return (
-                    <button key={g.id} className="pn-group" onClick={() => abrir(idPorQue({ kind: 'group', id: g.id }))}>
-                      <span className="pn-group__ic">{GROUP_ICON[g.id]}</span>
-                      <span className="pn-group__body">
-                        <span className="pn-group__head">
-                          <span>{g.name}</span>
-                          <span>{lei ? <GrupoLeitura lei={lei} /> : <><b>{num(v, 0)}%</b> {prev && <Delta value={d} good={1} d={1} />}</>}</span>
-                        </span>
-                        <span className="pn-meter"><span style={{ width: `${largura}%`, background: tone(largura) }} /></span>
-                        <small>{Math.round(g.weight * 100)}% da população</small>
-                      </span>
-                    </button>
-                  )
-                })}
-              </div>
-            </section>
+            <BlocosCard state={state} onAbrir={() => abrir('grupos')} />
 
             <section className="pn-card">
               <h3>🏛️ Na Câmara</h3>

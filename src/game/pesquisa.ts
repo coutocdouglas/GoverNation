@@ -6,7 +6,7 @@
  */
 import { credibOf } from './credibilidade'
 import { credibilidadeLigada, PESQUISA, type NivelPesquisa } from './data/credibilidade'
-import { GROUPS } from './data/groups'
+import { GROUPS, type BlocoId } from './data/groups'
 import { absMonth } from './memory'
 import type { Rng } from './rng'
 import type { Economy, GameState, GroupId, Headline } from './types'
@@ -55,4 +55,26 @@ export function leituraGrupo(s: GameState, g: GroupId): LeituraGrupo {
   const seta = dif >= PESQUISA.seta.minimo ? 'sobe' : dif <= -PESQUISA.seta.minimo ? 'cai' : 'parado'
   const ult = s.credib?.pesquisas.at(-1)
   return { faixa, seta, pesquisa: ult ? { valor: ult.grupos[g], margem: ult.margem, idade: absMonth(s) - ult.at } : undefined }
+}
+
+/**
+ * Etapa 6G, H3 (v0.46): a leitura de um bloco de grupos (média pelo tamanho), no mesmo formato da leitura do grupo:
+ * faixa e tendência sempre; número só com pesquisa.
+ */
+export function leituraBloco(s: GameState, bloco: BlocoId): LeituraGrupo {
+  const gs = GROUPS.filter((g) => g.bloco === bloco)
+  const peso = gs.reduce((a, g) => a + g.weight, 0) || 1
+  const media = (f: (id: GroupId) => number | undefined) => gs.reduce((a, g) => a + g.weight * (f(g.id) ?? 50), 0) / peso
+  const real = media((id) => s.groups[id]?.approval)
+  const faixa = PESQUISA.faixas.find(([ate]) => real < ate)![1]
+  const h = s.history
+  const dif = media((id) => h[h.length - 1].groups[id]) - media((id) => h[Math.max(0, h.length - 1 - PESQUISA.seta.meses)].groups[id])
+  const seta = dif >= PESQUISA.seta.minimo ? 'sobe' : dif <= -PESQUISA.seta.minimo ? 'cai' : 'parado'
+  const ult = s.credib?.pesquisas.at(-1)
+  return { faixa, seta, pesquisa: ult ? { valor: Math.round(media((id) => ult.grupos[id])), margem: ult.margem, idade: absMonth(s) - ult.at } : undefined }
+}
+
+/** O grupo do bloco que está pior (o que a tela destaca). */
+export function piorDoBloco(s: GameState, bloco: BlocoId): GroupId {
+  return GROUPS.filter((g) => g.bloco === bloco).sort((a, b) => (s.groups[a.id]?.approval ?? 50) - (s.groups[b.id]?.approval ?? 50))[0].id
 }

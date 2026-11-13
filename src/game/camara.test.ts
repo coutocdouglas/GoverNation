@@ -1,3 +1,4 @@
+import { GROUPS } from './data/groups'
 import { describe, expect, it } from 'vitest'
 import { amendmentFor, effectiveBill, frentesOfDeputies, ministerOf, ministryBlockedReason } from './camara'
 import { forecastVote, symbolicBlockedReason } from './congress'
@@ -195,7 +196,7 @@ describe('reação da sociedade', () => {
     const r = lawReaction(s, 'isencaoIR')!
     expect(r.score).toBeGreaterThanOrEqual(0)
     expect(r.score).toBeLessThanOrEqual(10)
-    expect(r.groups).toHaveLength(7)
+    expect(r.groups).toHaveLength(GROUPS.length)
     for (let i = 1; i < r.groups.length; i++) expect(Math.abs(r.groups[i - 1].impact)).toBeGreaterThanOrEqual(Math.abs(r.groups[i].impact))
     expect(r.vote?.bill).toBe('isencaoIR')
     expect(r.groups[0].before).toBeDefined()
@@ -216,7 +217,7 @@ describe('save e mandato inteiro', () => {
     delete old.congress.bombLog
     old.saveVersion = 7
     const m = migrate(JSON.parse(JSON.stringify(old)))!
-    expect(m.saveVersion).toBe(42)
+    expect(m.saveVersion).toBe(43)
     expect(m.cabinet).toEqual({})
     expect(m.congress.speaker.relation).toBeGreaterThan(0)
     expect(() => advanceMonth(m, [])).not.toThrow()

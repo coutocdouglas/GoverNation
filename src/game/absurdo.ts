@@ -10,6 +10,7 @@ import { registrarCausa } from './causas'
 import { credibOf, mudaCredib, type ExplosivaReg } from './credibilidade'
 import { ABSURDO, credibilidadeLigada, EXPLOSIVA, type FaixaAbsurdo } from './data/credibilidade'
 import { GROUP_BY_ID } from './data/groups'
+import { expandirGrupos } from './groups'
 import { absMonth, addBio, addChronicle, yearOf } from './memory'
 import { addMark } from './reputacao'
 import type { BillId, Cause, Economy, GameState, GroupId, Headline, PartyId } from './types'
@@ -22,7 +23,8 @@ export function notaAbsurdo(b: Pick<BillDef, 'effects'>): number {
   const D = ABSURDO.desconto
   let dor = 0
   let ganho = 0
-  for (const [g, v] of Object.entries(fx.groups ?? {}) as [GroupId, number][]) {
+  // v0.46: a dor e o ganho contam nos 32 grupos (herdados dos 7 antigos).
+  for (const [g, v] of Object.entries(expandirGrupos(fx.groups)) as [GroupId, number][]) {
     if (v < 0) dor -= v * GROUP_BY_ID[g].weight
     else ganho += v * GROUP_BY_ID[g].weight
   }

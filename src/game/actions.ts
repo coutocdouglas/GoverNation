@@ -25,6 +25,8 @@ export interface ActionEffects {
   debt?: number
   /** Efeito direto na aprovação de cada grupo. */
   groups?: Partial<Record<GroupId, number>>
+  /** v0.46: posição de costumes da medida (-100 a 100): mexe com os grupos que ligam para costumes (`impulsosCostumes`). */
+  costumes?: number
 }
 
 export interface ActionDef {

@@ -1,5 +1,6 @@
 import type { ActionEffects } from './actions'
 import { curvaGanho } from './efeitos'
+import { impulsosCostumes } from './groups'
 import type { Economy, GroupId, Impulse } from './types'
 
 /** Aplica efeitos de uma ação ou lei. Devolve o choque de confiança para a economia. sign = -1 desfaz. */
@@ -25,6 +26,12 @@ export function applyEffects(
       // Ganhos caem com a repetição; perdas não. v0.26: ganho passa pela curva e tudo conta no teto do mês.
       if (medida) impulses[gid].push({ label, value: v > 0 ? curvaGanho(v) * k : v, medida: true })
       else impulses[gid].push({ label, value: v > 0 ? v * k : v })
+    }
+  }
+  // v0.46: medida de costumes mexe com quem liga para isso (evangélicos, LGBT+, policiais...).
+  if (sign > 0 && fx.costumes) {
+    for (const [gid, v] of Object.entries(impulsosCostumes(fx.costumes)) as [GroupId, number][]) {
+      impulses[gid].push({ label: `${label} (costumes)`, value: v > 0 ? (medida ? curvaGanho(v) : v) * k : v, ...(medida ? { medida: true } : {}) })
     }
   }
   if (!fx.confidence) return 0

@@ -8,6 +8,11 @@ export const INDICATOR_ICON: Record<IndicatorKey, string> = {
 export const GROUP_ICON: Record<GroupId, string> = {
   trabalhadores: '👷', baixaRenda: '🏘️', classeMedia: '🏠', empresarios: '🏢',
   agro: '🚜', servidores: '🏛️', jovens: '🎓',
+  aposentados: '👴', empreendedores: '🏪', sindicalistas: '✊', professores: '🧑‍🏫', aplicativos: '🛵', profSaude: '🩺', policiais: '👮', caminhoneiros: '🚚',
+  evangelicos: '⛪', catolicos: '✝️', afro: '🪘',
+  agriculturaFamiliar: '🌽', tradicionais: '🛶', indigenas: '🪶',
+  mulheres: '👩', negros: '✊🏿', universitarios: '📚', digital: '🎮', ambientalistas: '🌳', lgbt: '🏳️‍🌈', artistas: '🎭',
+  comerciarios: '🛍️', mercado: '📊', militares: '🎖️', ciencia: '🔬',
 }
 export const ACTION_ICON: Record<ActionId, string> = {
   cortarGastos: '✂️', liberarGastos: '💸', anteciparObras: '🏗️', pressionarBC: '📣',

@@ -5,6 +5,16 @@ import { BOMB_BY_ID } from './data/camara'
 import { SEED_RULES } from './data/consequences'
 import { GROUPS } from './data/groups'
 import { marketText, moodOf, QUOTES, verdictOf, VOICES, type Mood } from './data/reactions'
+import { expandirGrupos } from './groups'
+import { GROUP_BY_ID, type LegacyGroupId } from './data/groups'
+
+/** Frase do grupo; grupo novo sem frase própria usa a do grupo antigo de que mais herda. */
+function quoteDe(id: GroupId, mood: Mood): string {
+  const q = QUOTES[id]
+  if (q) return q[mood]
+  const pai = (Object.entries(GROUP_BY_ID[id].herda) as [LegacyGroupId, number][]).sort((a, b) => b[1] - a[1])[0][0]
+  return QUOTES[pai]![mood]
+}
 import { clamp } from './ideology'
 import type { BillId, GameState, GroupId, VoteRecord } from './types'
 
@@ -65,11 +75,12 @@ export function lawReaction(s: GameState, id: BillId, month?: number): LawReacti
   const m = month ?? vote?.month
   const before = m !== undefined ? s.history.find((h) => h.month === m) : undefined
   const after = m !== undefined ? s.history.find((h) => h.month === m + 1) : undefined
+  const grupos31 = expandirGrupos(fx.groups, bill.costumes)
   const groups: GroupReaction[] = GROUPS.map((g) => {
-    const impact = fx.groups?.[g.id] ?? 0
+    const impact = grupos31[g.id] ?? 0
     const mood = moodOf(impact)
     return {
-      group: g.id, name: g.name, weight: g.weight, impact, mood, voice: VOICES[g.id], quote: QUOTES[g.id][mood],
+      group: g.id, name: g.name, weight: g.weight, impact, mood, voice: VOICES[g.id], quote: quoteDe(g.id, mood),
       before: before?.groups[g.id], after: after?.groups[g.id],
     }
   }).sort((a, z) => Math.abs(z.impact) - Math.abs(a.impact))

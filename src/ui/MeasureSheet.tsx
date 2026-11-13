@@ -1,3 +1,4 @@
+import { expandirGrupos } from '../game/groups'
 import { useEffect, useState } from 'react'
 import { CirculoBox } from './CirculoJanela'
 import type { MembroCirculo } from '../game/circulo'
@@ -78,7 +79,8 @@ export function MeasureSheet({ state, id, ids, request, constraints, speech, not
   const n = notasFicha(state, cur)
   const labels = chainLabels(state, cur)
   const conds = constraints && constraints.length ? constraints : conditionsOf(request)
-  const groups = (Object.entries(b.effects.groups ?? {}) as [GroupId, number][]).filter(([, v]) => Math.abs(v) >= 0.5).sort((a, z) => z[1] - a[1])
+  // v0.46: os 32 grupos (herdados dos 7 antigos e pela posição de costumes); os 8 maiores efeitos.
+  const groups = (Object.entries(expandirGrupos(b.effects.groups, b.costumes)) as [GroupId, number][]).filter(([, v]) => Math.abs(v) >= 0.5).sort((a, z) => Math.abs(z[1]) - Math.abs(a[1])).slice(0, 8).sort((a, z) => z[1] - a[1])
   const acts = b.instrument === 'decreto' || b.instrument === 'mp'
   const reacts = reactionsFor(state, cur)
   const ap = approvalPreview(state, cur)
