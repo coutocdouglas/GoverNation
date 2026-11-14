@@ -73,7 +73,7 @@ describe('32 grupos sociais (v0.46)', () => {
     for (const g of GROUPS) if (!(LEGACY_GROUPS as string[]).includes(g.id)) { delete s.groups[g.id]; for (const h of s.history) delete h.groups[g.id] }
     s.saveVersion = 42
     const m = migrate(s)!
-    expect(m.saveVersion).toBe(44)
+    expect(m.saveVersion).toBe(45)
     for (const g of GROUPS) {
       expect(m.groups[g.id].approval, g.id).toBeGreaterThan(0)
       for (const h of m.history) expect(h.groups[g.id], g.id).toBeGreaterThan(0)

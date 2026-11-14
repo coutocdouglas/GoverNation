@@ -37,6 +37,8 @@ export interface EventOption {
   depois?: { evento: string; meses: [number, number]; rotulo: string; aviso: string }
   /** v0.46.1 (H3): em um fato de tensão, quanto esta saída muda a tensão do grupo (negativo = alivia). */
   tensao?: number
+  /** v0.47 (H4): em um fato de setor ofendido, quanto esta saída muda a relação do setor com o governo. */
+  relacao?: number
 }
 
 /** Texto de um fato conforme a situação da medida que o originou (pauta ou barrada). Só troca palavras; as regras são as mesmas. */
@@ -81,6 +83,8 @@ export interface EventDef {
   dilema?: { lados: [string, string] }
   /** v0.46.1 (H3): fato de tensão de um grupo (greve, protesto ou bloqueio). Só entra por tensao.ts, nunca pelo sorteio comum. */
   tensao?: { grupo: GroupId }
+  /** v0.47 (H4): fato de um setor que foi ignorado ou desacatado num requerimento (id do setor). Só nasce de semente. */
+  reqSetor?: string
   options: EventOption[]
 }
 
@@ -251,10 +255,11 @@ import { STF_EVENT, STF_LIMINAR_EVENT } from './supremo'
 import { IMPEACH_EVENT } from './impeachment'
 import { DILEMAS, DILEMA_VOLTAS } from './dilemas'
 import { TENSAO_EVENTS } from './tensao'
+import { REQUERIMENTO_EVENTS } from './requerimento'
 import { aplicarDiretosFatos } from './efeitosGrupos'
 
 /** Todos os fatos: os sorteáveis e os que só nascem de sementes (os dilemas e a tensão têm sorteio próprio). */
-export const ALL_EVENTS: EventDef[] = [...EVENTS, ...CONSEQUENCE_EVENTS, STF_EVENT, STF_LIMINAR_EVENT, IMPEACH_EVENT, ...REP_EVENTS, ...DILEMAS, ...DILEMA_VOLTAS, ...TENSAO_EVENTS]
+export const ALL_EVENTS: EventDef[] = [...EVENTS, ...CONSEQUENCE_EVENTS, STF_EVENT, STF_LIMINAR_EVENT, IMPEACH_EVENT, ...REP_EVENTS, ...DILEMAS, ...DILEMA_VOLTAS, ...TENSAO_EVENTS, ...REQUERIMENTO_EVENTS]
 
 // v0.46.2 (H3): efeitos escritos direto para os grupos novos, por saída.
 aplicarDiretosFatos(ALL_EVENTS)

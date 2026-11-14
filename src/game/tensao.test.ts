@@ -220,7 +220,7 @@ describe('save 44', () => {
     delete s.tensao
     s.saveVersion = 43
     const m = migrate(s)!
-    expect(m.saveVersion).toBe(44)
+    expect(m.saveVersion).toBe(45)
     for (const g of GROUPS) expect(Number.isFinite(m.tensao.nivel[g.id]), g.id).toBe(true)
     expect(m.tensao.log).toEqual([])
   })

@@ -16,6 +16,7 @@ import { PARTIES, PARTY_BY_ID } from './data/parties'
 import { DIFFICULTY, MACRO, START } from './data/balance'
 import { GROUPS } from './data/groups'
 import { aplicarSaidaTensao, initialTensao, lerImpulsos, stepTensao } from './tensao'
+import { aplicarSaidaSetor, initialRequerimentos, passoBlockedReason, requerimentoLigado, sortearRequerimento, stepRequerimento, type PassoReq } from './requerimento'
 import { SHOCKS, type ShockDef } from './data/shocks'
 import { indicators, initialEconomy, runCopom, stepEconomy, type ShockInput } from './economy'
 import { computeApproval, herdarImpulsos, initialGroups, overallApproval, stepGroup } from './groups'
@@ -110,7 +111,8 @@ export function newGame(
   const rngState = seed ?? Math.floor(Math.random() * 2 ** 31)
   const bonus = DIFFICULTY[difficulty].approvalBonus
   const state: GameState = {
-    saveVersion: 44,
+    saveVersion: 45,
+    requerimentos: initialRequerimentos(),
     // Preenchido logo abaixo, com a aprovação de partida dos grupos.
     tensao: undefined as unknown as GameState['tensao'],
     respostas: [],
@@ -259,6 +261,8 @@ export interface MonthPlan {
   street?: string
   /** Etapa 5A (v0.27.1): resposta à proposta de setor do mês (sem resposta, vence como recusa). */
   proposta?: 'aceitar' | 'recusar'
+  /** Etapa 6G, H4 (v0.47): o passo do requerimento do setor (ignorar, escolher a pauta, contrapor, desacatar, desistir). A reunião é a ação da agenda. */
+  requerimento?: PassoReq
   /** Etapa 5B (v0.28): saídas escolhidas para os casos abertos (uma por caso; ignorar é não escolher). Gastam a agenda. */
   casos?: DecisaoCaso[]
   /** Etapa 5B: trocar o advogado do presidente (id de data/caso.ts). Gasta a agenda. */
@@ -432,6 +436,10 @@ export function validatePlan(s: GameState, plan: MonthPlan): string | null {
   if (plan.proposta) {
     const r = propostaBlockedReason(s)
     if (r) return `Proposta de setor: ${r}`
+  }
+  if (plan.requerimento) {
+    const r = passoBlockedReason(s, plan.requerimento)
+    if (r) return `Requerimento: ${r}`
   }
   for (const id of Object.keys(plan.sanctions ?? {})) {
     if (!s.congress.toSanction.some((x) => x.id === id)) return 'Não há esse projeto para sancionar.'
@@ -880,6 +888,7 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
       const ignored = plan.eventChoice === undefined || !!opt.default
       // Etapa 6F: o dilema tem registro próprio (lado escolhido, aliado, custo que volta; indecisão marca omissão).
       if (def.tensao) aplicarSaidaTensao(s, def, idx, title)
+      if (def.reqSetor) aplicarSaidaSetor(s, def.reqSetor, opt.relacao ?? 0, opt.label)
       if (def.dilema) aplicarDilema(s, def, idx, !ignored, title, s.event.aliado, headlines, rng)
       else if (crisis && ignored && def.importance >= 3) addMark(s, 'omisso', def.importance * REPUTACAO.pts.crisePer * (assess.used ? ASSESSORIA.omissoShare : 1), assess.used ? `${title}: só com nota e presença, sem medida` : `${title}: deixou passar`, 'crise')
       else if (crisis && !ignored) addMark(s, 'enfrenta', def.importance * REPUTACAO.pts.crisePer * 0.5, `${title}: ${lowerFirst(opt.label)}`, 'crise')
@@ -943,6 +952,8 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
   if (plan.proposta && propostaAtual(s)) actionConfidence += responderProposta(s, plan.proposta === 'aceitar', impulses, headlines)
   // v0.27.2: licitação sem escolha no prazo assina com a empresa de sempre; a de medida que caiu some.
   vencerLicitacoes(s, e, headlines)
+  // v0.47 (H4): o passo do requerimento do setor (a reunião já valeu na ação da agenda). Sorteio próprio.
+  actionConfidence += stepRequerimento(s, plan.requerimento, submitted, new Rng((absMonth(s) * 69069) ^ s.rngState ^ 0x4e9a1), impulses, headlines)
   stepRisco(s, new Rng((absMonth(s) * 69069) ^ s.rngState ^ 0x5a17e5), impulses, headlines)
   // 1j. Etapa 5B: as saídas dos casos e a troca de advogado (agenda), a PF junta provas, desfechos e o vazamento.
   const rngCaso = new Rng((absMonth(s) * 48271) ^ s.rngState ^ 0xca5e5b)
@@ -1090,7 +1101,9 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
     s.event = drawEvent(s, rng)
     openMesa(s)
     // Etapa 5A: proposta de setor (no máximo uma a cada 3 meses, nunca com fato grave). Sorteio próprio.
-    sortearProposta(s, new Rng((absMonth(s) * 40961) ^ s.rngState ^ 0x9e0b05))
+    // v0.47 (H4): com os requerimentos ligados, a proposta de um clique dá lugar a eles.
+    if (requerimentoLigado()) sortearRequerimento(s, new Rng((absMonth(s) * 40961) ^ s.rngState ^ 0x3e9b07))
+    else sortearProposta(s, new Rng((absMonth(s) * 40961) ^ s.rngState ^ 0x9e0b05))
   }
   s.rngState = rng.state
   return s

@@ -24,6 +24,8 @@ import { leaderOf } from './partidos'
 import { noteRecord } from './reputacao'
 import { applyMinistryChange, peekRound, roundOf } from './rodada'
 import { PASTAS, pastasLigadas } from './data/pastas'
+import { requerimentoAtivo, reuniaoBlockedReason, reunir } from './requerimento'
+import { propostaDef } from './risco'
 import { mesesParaTroca, pastaDesgastada, pastasOf, registrarTroca } from './pastas'
 import type { Cause, Economy, GameState, GroupId, Headline, Impulse, PartyId } from './types'
 
@@ -36,6 +38,8 @@ export type AcaoAgenda =
   | { tipo: 'imprensa'; voz: string; modo: 'apoio' | 'romper' }
   /** Etapa 6E (v0.38): troca até 3 pastas de uma vez; conta como a troca de ministro do intervalo de 3 meses. */
   | { tipo: 'reforma'; trocas: MinistryChange[] }
+  /** Etapa 6G, H4 (v0.47): reunião com o setor do requerimento em andamento (gasta o espaço do mês, no lugar da medida). */
+  | { tipo: 'reuniao' }
 
 export interface AgendaState {
   /** Ações dos últimos meses (mês absoluto), para os intervalos. */
@@ -99,6 +103,8 @@ export function acaoBlockedReason(s: GameState, a: AcaoAgenda): string | null {
       return recente(s, 'ministro', a.area, COBRAR.intervalo) ? `Você cobrou esta pasta há menos de ${COBRAR.intervalo} meses.` : null
     case 'reforma':
       return reformaBlockedReason(s, a.trocas)
+    case 'reuniao':
+      return reuniaoBlockedReason(s)
     case 'imprensa': {
       if (!VOZ_BY_ID[a.voz]) return 'Veículo desconhecido.'
       if (recente(s, 'imprensa', a.voz, IMPRENSA.intervalo)) return `Você já tratou com este veículo há menos de ${IMPRENSA.intervalo} meses.`
@@ -220,6 +226,11 @@ export function previaAcao(s: GameState, a: AcaoAgenda): PreviaAcao | null {
         ],
       }
     }
+    case 'reuniao': {
+      const at = requerimentoAtivo(s)
+      if (!at) return null
+      return { ...vazio, extras: [{ texto: `o setor devolve duas pautas no mês que vem: a intermediária e a duvidosa`, bom: true }, { texto: 'você pode contrapor uma pauta limpa, com chance de o setor recusar', bom: false }] }
+    }
     case 'imprensa': {
       const v = VOZ_BY_ID[a.voz]
       if (!v) return null
@@ -246,6 +257,7 @@ export function rotuloAcao(s: GameState, a: AcaoAgenda): string {
     case 'nacao': return a.compromisso ? 'Falar à nação e assumir um compromisso' : 'Falar à nação'
     case 'lider': return `Receber ${leaderOf(s, a.partido).name} (${PARTY_BY_ID[a.partido].sigla})`
     case 'ministro': return `Cobrar ${ministerOf(s, a.area).name} ${a.tom === 'publico' ? 'em público' : 'em particular'}`
+    case 'reuniao': { const at = requerimentoAtivo(s); return `Reunião com o setor${at ? ` (${propostaDef(at.setor)?.setor.toLowerCase() ?? at.setor})` : ''}` }
     case 'reforma': return `Reforma ministerial (${a.trocas.length} ${a.trocas.length === 1 ? 'pasta' : 'pastas'})`
     case 'imprensa': return a.modo === 'apoio' ? `Pedir apoio ${ao(VOZ_BY_ID[a.voz])}` : `Romper ${comV(VOZ_BY_ID[a.voz])}`
   }
@@ -374,6 +386,10 @@ export function aplicarAcao(
       ag.log.push({ tipo: 'reforma', at })
       break
     }
+    case 'reuniao':
+      reunir(s, headlines, taken)
+      ag.log.push({ tipo: 'reuniao', at })
+      break
     case 'imprensa': {
       const v = VOZ_BY_ID[a.voz]
       const antes = ag.cobertura[a.voz] ?? IMPRENSA.inicio

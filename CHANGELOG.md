@@ -1,5 +1,14 @@
 # Novidades
 
+## 0.47.0 (14/11/2026)
+- **Requerimentos dos setores em passos (bloco H4 da Etapa 6G, regras; desligado até as telas da 0.47.1).** A proposta de setor de um clique (aceitar ou recusar) vira um requerimento com vida de meses:
+  - **Chegada (3 meses para decidir):** reunir (ação da agenda, no lugar da medida do mês) ou ignorar. Ignorar, ou deixar o prazo vencer, tira relação do setor e custa no grupo que ele representa; o descaso pode voltar mais tarde como fato do mês ("o setor cobra a conta").
+  - **Pautas (2 meses):** a reunião devolve duas pautas que o setor oferece: a intermediária e a duvidosa (a oferta de antes, com rastro e semente de risco). O jogador escolhe uma ou **contrapõe a pauta limpa** (sem risco, ganho menor), uma só vez, com sorteio. A chance depende da relação com o setor e do que já foi ignorado ou desacatado, e aparece em faixa (improvável, arriscada, provável). Se o setor recusa, só resta acatar a duvidosa ou desacatar.
+  - **Acatada (4 meses):** o ganho da pauta vem na hora. No mês seguinte o **ministro da área estrutura a medida**, com os pontos que destaca e, se for tema que ele recusa, uma ressalva.
+  - **Adoção ou desistência:** adotar é mandar a medida do setor como a medida do mês (uma por rodada); antes de o ministro estruturar, contraria a pasta. Desistir depois de acatar custa mais que recusar antes.
+  - Um requerimento por vez, 3 meses entre eles e 9 por setor. Cada passo gera crônica, biografia e Ficha. Cada setor guarda relação, ignorados e desacatados (gancho para o H5).
+- Save 45, com migração. 770 testes (27 novos). Simulador `npm run sim10`: ignorar tudo é o caminho mais barato (rastro 1,5), a pauta duvidosa sobe o rastro a 44,6 e custa 23 pontos de nota, a intermediária e a contraproposta ficam no meio.
+
 ## 0.46.2 (14/11/2026)
 - **Conteúdo dos grupos novos (bloco H3 da Etapa 6G, parte 3).** Até aqui os 25 grupos novos só recebiam o que os 7 antigos recebiam. Agora medidas e fatos têm efeito escrito para eles.
   - **Medidas:** 89 medidas mexem direto com os grupos certos. O piso dos professores agrada os professores, o frete mínimo os caminhoneiros, o marco temporal desagrada os povos indígenas, a reforma da Previdência pesa nos aposentados, e assim por diante. O que não foi citado segue herdando.

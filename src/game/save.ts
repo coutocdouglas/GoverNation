@@ -1,6 +1,7 @@
 import { GROUPS } from './data/groups'
 import { aprovacaoHerdada } from './groups'
 import { initialTensao } from './tensao'
+import { initialRequerimentos } from './requerimento'
 import { initialAgenda } from './agenda'
 import { initialInteligencia } from './inteligencia'
 import { initialComissoes } from './cpi'
@@ -357,7 +358,12 @@ export function migrate(raw: unknown): GameState | null {
       g.tensao ??= initialTensao(g.groups)
       s.saveVersion = 44
     }
-    if (s.saveVersion !== 44) return null
+    if (s.saveVersion === 44) {
+      // v0.46.2 → v0.47.0 (Etapa 6G, H4: requerimentos dos setores): nenhum requerimento em andamento; a proposta de setor antiga fica como está.
+      ;(s as GameState).requerimentos ??= initialRequerimentos()
+      s.saveVersion = 45
+    }
+    if (s.saveVersion !== 45) return null
     syncCustomBills(s as GameState)
     return s as GameState
   } catch {

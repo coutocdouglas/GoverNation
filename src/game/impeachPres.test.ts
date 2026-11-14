@@ -158,7 +158,7 @@ describe('impeachment do presidente: save', () => {
     velho.saveVersion = 40
     delete velho.impeachPres
     const m = migrate(velho)
-    expect(m?.saveVersion).toBe(44)
+    expect(m?.saveVersion).toBe(45)
     expect(m?.impeachPres).toEqual(initialImpeachPres())
   })
 })
