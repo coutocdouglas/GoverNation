@@ -13,8 +13,8 @@ import { PROPOSTAS } from './risco'
  * pautas de cada um, os prazos e os números. Desenho em docs/projeto/plano-h4-requerimentos.md.
  */
 export const REQUERIMENTO = {
-  /** Ligado nas telas (v0.47.1). Testes podem usar `ligarRequerimento`. */
-  ativo: false,
+  /** Ligado desde as telas (v0.47.1). Testes podem usar `ligarRequerimento`. */
+  ativo: true,
   /** Meses mínimos entre dois requerimentos, e entre dois do mesmo setor. */
   intervalo: 3,
   intervaloSetor: 9,

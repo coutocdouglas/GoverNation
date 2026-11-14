@@ -24,6 +24,8 @@ import { ImpeachJanela, resumoImpeach } from './ImpeachJanela'
 import type { AcaoImpeach } from '../game/data/impeachPres'
 import { GovernoJanela, resumoGoverno } from './GovernoJanela'
 import { PastaJogoJanela, resumoPastaJogo } from './PastasJanela'
+import { RequerimentoJanela, resumoRequerimentoRadar } from './RequerimentoJanela'
+import type { PassoReq } from '../game/requerimento'
 import { PropostaJanela, resumoProposta } from './PropostaJanela'
 import { CirculoJanela, resumoCirculo } from './CirculoJanela'
 
@@ -46,6 +48,7 @@ function linhasDoRadar(state: GameState, intelOrdem: OrdemIntel | null): Linha[]
   const governo = resumoGoverno(state)
   const pastaJogo = resumoPastaJogo(state)
   const proposta = resumoProposta(state)
+  const requer = resumoRequerimentoRadar(state)
   const circulo = resumoCirculo(state)
   const impeach = resumoImpeach(state)
   return [
@@ -64,6 +67,7 @@ function linhasDoRadar(state: GameState, intelOrdem: OrdemIntel | null): Linha[]
     ...(credibilidadeLigada() ? [{ id: 'credibilidade', icone: '🎖️', titulo: 'Credibilidade', texto: credibOf(state).compromisso ? `Compromisso em aberto: ${credibOf(state).compromisso!.titulo}` : 'Quanto vale a sua palavra', tag: `${Math.round(credibOf(state).valor)}/100`, tom: credibLabel(credibOf(state).valor).cls as Tom }] : []),
     ...(explosivasVivas(state).length ? [{ id: 'explosiva', icone: '💣', titulo: 'Medida explosiva', texto: 'O país reage além da conta: dá para recuar com custo', tag: 'atenção', tom: 'dn' as Tom }] : []),
     ...(circulo ? [{ id: 'circulo', icone: '🤝', titulo: 'Círculo de confiança', texto: circulo.texto, tag: circulo.tag }] : []),
+    ...(requer ? [{ id: 'requerimento', icone: '📨', titulo: 'Requerimento de um setor', texto: requer.texto, tag: requer.tag, tom: requer.tom as Tom | undefined }] : []),
     ...(proposta ? [{ id: 'proposta', icone: '💡', titulo: 'Proposta do ministro', texto: proposta.texto, tag: proposta.tag, tom: (proposta.tag === 'acatada' ? 'up' : undefined) as Tom | undefined }] : []),
     ...(pastaJogo ? [{ id: 'pastajogo', icone: '🏢', titulo: 'A pasta está em jogo', texto: `${pastaJogo.titulo}: ${pastaJogo.texto}`, tag: pastaJogo.respondida ? 'respondida' : 'responder', tom: (pastaJogo.respondida ? 'warn' : 'dn') as Tom }] : []),
     ...(governo ? [{ id: 'governo', icone: '🤝', titulo: 'Vice e líder do governo', texto: governo.texto, tag: governo.tag, tom: governo.tom as Tom | undefined }] : []),
@@ -100,6 +104,7 @@ export function janelaDefsDoRadar(state: GameState): Record<string, JanelaDef> {
     explosiva: { id: 'explosiva', titulo: 'Medida explosiva', icone: '💣', largura: 600 },
     circulo: { id: 'circulo', titulo: 'Círculo de confiança', icone: '🤝', largura: 620 },
     proposta: { id: 'proposta', titulo: 'Proposta do ministro', icone: '💡', largura: 640 },
+    requerimento: { id: 'requerimento', titulo: 'Requerimento de um setor', icone: '📨', largura: 680 },
     pastajogo: { id: 'pastajogo', titulo: 'A pasta está em jogo', icone: '🏢', largura: 620 },
     governo: { id: 'governo', titulo: 'Vice e líder do governo', icone: '🤝', largura: 640 },
     impeachment: { id: 'impeachment', titulo: 'Impeachment do presidente', icone: '⚖️', largura: 640 },
@@ -129,6 +134,9 @@ export function conteudoDaJanela(id: string, p: {
   onToast: (t: string) => void
   /** Leva uma ordem pronta para o campo da medida do mês (o mesmo do botão "Atender"). */
   onAtender: (ordem: string) => void
+  /** v0.47.1 (H4): o passo escolhido no requerimento do setor (vale ao encerrar o mês). */
+  passoReq: PassoReq | null
+  onPassoReq: (p: PassoReq | null) => void
 }): ReactNode {
   const { state, casoDecisoes, advogado, cpiDecisao, intelOrdem } = p
   switch (id) {
@@ -141,6 +149,7 @@ export function conteudoDaJanela(id: string, p: {
     case 'credibilidade': return <CredibilidadeJanela state={state} />
     case 'explosiva': return <ExplosivasJanela state={state} onState={p.onState} onToast={p.onToast} />
     case 'circulo': return <CirculoJanela state={state} />
+    case 'requerimento': return <RequerimentoJanela state={state} passo={p.passoReq} onPasso={p.onPassoReq} onState={p.onState} onToast={p.onToast} onAtender={p.onAtender} />
     case 'proposta': return <PropostaJanela state={state} onState={p.onState} onToast={p.onToast} onAtender={p.onAtender} />
     case 'pastajogo': return <PastaJogoJanela state={state} onState={p.onState} onToast={p.onToast} />
     case 'governo': return <GovernoJanela state={state} onState={p.onState} onToast={p.onToast} />

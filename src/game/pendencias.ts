@@ -19,7 +19,8 @@ import { TERM_MONTHS } from './game'
 import { baseMembers, fidelityOf } from './base'
 import { BASE, ESFRIA } from './data/base'
 import type { BillId, GameState } from './types'
-import { licitacoesAbertas, prazoLicitacao } from './risco'
+import { licitacoesAbertas, prazoLicitacao, propostaDef } from './risco'
+import { requerimentoAtivo } from './requerimento'
 import { casosAbertos, faixaGravidade } from './caso'
 import { cpiAtual } from './cpi'
 import { sementeAvisada } from './inteligencia'
@@ -33,7 +34,7 @@ import { deAuthor, justiceName } from './supremo'
 import { TSE_BY_ID } from './data/supremo'
 
 export type Urgency = 'red' | 'yellow' | 'green'
-export type PendingTarget = 'evento' | 'camara' | 'senado' | 'supremo' | 'promessas' | 'cobrancas' | 'licitacao' | 'caso' | 'cpi' | 'inteligencia' | 'pressao' | 'pasta' | 'impeachment'
+export type PendingTarget = 'evento' | 'camara' | 'senado' | 'supremo' | 'promessas' | 'cobrancas' | 'licitacao' | 'caso' | 'cpi' | 'inteligencia' | 'pressao' | 'pasta' | 'impeachment' | 'requerimento'
 
 export interface Pendencia {
   id: string
@@ -117,6 +118,20 @@ export function pendencias(s: GameState): Pendencia[] {
       title: f === 'pedido' ? 'Pedido de impeachment na mesa da Câmara' : f === 'camara' ? 'Impeachment: a Câmara vota neste fechamento' : 'Impeachment: o Senado julga',
       detail: f === 'pedido' ? 'O presidente da Câmara decide abrir ou engavetar · dá para negociar com ele · agir ou deixar passar' : 'Cobrar a base, defesa jurídica ou ato de rua · agir ou deixar passar',
       urgency: 'red', weight: 70,
+    })
+  }
+
+  // v0.47.1 (H4): requerimento de um setor em andamento. O prazo corre; sem decisão, o setor se ressente.
+  const rq = requerimentoAtivo(s)
+  if (rq) {
+    const left = Math.max(0, rq.ate - now)
+    const nome = propostaDef(rq.setor)?.setor ?? rq.setor
+    const o = { aberto: 'reunir ou ignorar', pautas: 'escolher a pauta, contrapor ou desacatar', acatado: 'o ministro estrutura a medida', estruturado: 'adotar a medida do setor ou desistir' }[rq.fase]
+    out.push({
+      id: `req-${rq.setor}`, icon: '📨', target: 'requerimento', left,
+      title: `Requerimento: ${nome.toLowerCase()}`,
+      detail: `${o} · prazo ${leftText(left)}`,
+      urgency: urgencyOf(left, false), weight: 44 - left * 5,
     })
   }
 

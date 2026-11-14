@@ -10,6 +10,7 @@ import { mesesParaTroca } from '../game/pastas'
 import { AGENDA_ACOES, IMPRENSA, VOZES } from '../game/data/agenda'
 import { COMPROMISSO, credibilidadeLigada, PESQUISA, type NivelPesquisa } from '../game/data/credibilidade'
 import { pesquisaBlockedReason } from '../game/pesquisa'
+import { requerimentoLigado, reuniaoBlockedReason } from '../game/requerimento'
 import { credibOf } from '../game/credibilidade'
 import { ASSESSORIA } from '../game/data/assessoria'
 import { AGENDA } from '../game/data/caso'
@@ -22,7 +23,7 @@ import { absMonth } from '../game/memory'
 import type { GameState, PartyId } from '../game/types'
 import { effectChips, type Chip } from './effects'
 
-type Cat = 'post' | 'rua' | 'nacao' | 'lider' | 'ministro' | 'imprensa' | 'pesquisa' | 'reforma'
+type Cat = 'post' | 'rua' | 'nacao' | 'lider' | 'ministro' | 'imprensa' | 'pesquisa' | 'reforma' | 'setor'
 const CATS: { id: Cat; nome: string }[] = [
   { id: 'post', nome: '📣 Post' },
   { id: 'rua', nome: '🚶 Rua' },
@@ -32,6 +33,7 @@ const CATS: { id: Cat; nome: string }[] = [
   { id: 'imprensa', nome: '🗞️ Imprensa' },
   { id: 'pesquisa', nome: '📊 Pesquisa' },
   { id: 'reforma', nome: '🔄 Reforma ministerial' },
+  { id: 'setor', nome: '📨 Reunião com o setor' },
 ]
 
 const pct = (x: number) => `${Math.round(x * 100)}%`
@@ -183,7 +185,7 @@ export function AgendaJanela({ state, plan, billPronto, pesquisa, onPesquisa, on
         <p className="pn-hint">🗣️ Peso do discurso nesta crise: <b>{pct(speechOf(ev))}</b>. {speechOf(ev) <= 0.35 ? 'É um problema material: falar quase não resolve.' : speechOf(ev) >= 0.65 ? 'Aqui o que se diz muda quem leva a culpa.' : 'Falar ajuda um pouco, mas não substitui agir.'} Só com post ou presença, “Foge das crises” ainda pesa {pct(ASSESSORIA.omissoShare)}.</p>
       )}
       <div className="pn-subnav" style={{ flexWrap: 'wrap' }}>
-        {CATS.filter((c) => (c.id !== 'pesquisa' || credibilidadeLigada()) && (c.id !== 'reforma' || pastasLigadas())).map((c) => <button key={c.id} type="button" className={cat === c.id ? 'on' : ''} onClick={() => setCat(c.id)}>{c.nome}</button>)}
+        {CATS.filter((c) => (c.id !== 'pesquisa' || credibilidadeLigada()) && (c.id !== 'reforma' || pastasLigadas()) && (c.id !== 'setor' || (requerimentoLigado() && reuniaoBlockedReason(state) === null || atual?.tipo === 'reuniao'))).map((c) => <button key={c.id} type="button" className={cat === c.id ? 'on' : ''} onClick={() => setCat(c.id)}>{c.nome}</button>)}
       </div>
       <div className="pn-empresas pn-caso__acoes">
         {cat === 'post' && (
@@ -214,6 +216,7 @@ export function AgendaJanela({ state, plan, billPronto, pesquisa, onPesquisa, on
             return <Opcao {...ctx} key={area} a={{ tipo: 'ministro', area, tom }} titulo={m.name} texto={m.role} direita={`${wearLabel(w)} · ${w}`} />
           })}
         </>}
+        {cat === 'setor' && <Opcao {...ctx} a={{ tipo: 'reuniao' }} titulo={`📨 ${rotuloAcao(state, { tipo: 'reuniao' })}`} texto="Ouvir o requerimento do setor. Ele devolve as pautas no mês que vem; você decide no requerimento do Painel." />}
         {cat === 'reforma' && <ReformaPainel base={base} atual={atual} travada={travada} crise={crise} escolher={escolher} />}
         {cat === 'pesquisa' && <>
           <p className="pn-hint">A pesquisa <b>não entra no lugar da medida</b>: gasta {PESQUISA.agenda} espaço da agenda e dinheiro. A aprovação geral está sempre visível; os grupos aparecem em faixa até você encomendar uma pesquisa, que mostra o número com margem de erro. O erro nunca passa da margem.</p>

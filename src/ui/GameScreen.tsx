@@ -3,6 +3,8 @@ import { isRecess } from '../game/congress'
 import { askEmpresaNames, askProposta } from '../lib/aiActions'
 import type { AreaId } from '../game/data/ministers'
 import { PropostaCard } from './IntegridadeCard'
+import { RequerimentoCard } from './RequerimentoJanela'
+import { requerimentoLigado, type PassoReq } from '../game/requerimento'
 import { PartyLogo } from './PartyLogo'
 import { BILL_BY_ID, type BillDef } from '../game/data/bills'
 import { addCustomBill } from '../game/custom'
@@ -115,6 +117,8 @@ export function GameScreen({ state, onChange, onExit }: {
   const [licSheet, setLicSheet] = useState<BillId | null>(null)
   /** Etapa 5A: resposta à proposta de setor do mês (vale ao encerrar). */
   const [proposta, setProposta] = useState<'aceitar' | 'recusar' | null>(null)
+  /** v0.47.1 (H4): o passo escolhido no requerimento do setor (vale ao encerrar). */
+  const [passoReq, setPassoReq] = useState<PassoReq | null>(null)
   /** Etapa 5B (v0.28.1): saídas escolhidas para os casos e troca de advogado (valem ao encerrar; gastam a agenda). */
   const [casoDecisoes, setCasoDecisoes] = useState<DecisaoCaso[]>([])
   const [advogado, setAdvogado] = useState<string | null>(null)
@@ -146,7 +150,7 @@ export function GameScreen({ state, onChange, onExit }: {
   const plan: MonthPlan = {
     bill: bill ?? undefined, articulations, eventChoice: eventChoice ?? undefined, eventResponse: eventResponse ?? undefined, deals,
     hold: proc.hold, urgent: proc.urgent, original: proc.original, symbolic: proc.symbolic, sanctions, ministry: ministry ?? undefined, nominee: nominee ?? undefined, consult: consult ?? undefined,
-    proposta: proposta ?? undefined, pesquisa: pesquisa ?? undefined,
+    proposta: proposta ?? undefined, requerimento: passoReq ?? undefined, pesquisa: pesquisa ?? undefined,
     casos: casoDecisoes.length ? casoDecisoes : undefined, advogado: advogado ?? undefined, cpi: cpiDecisao ?? undefined, impeach: impeachDecisao ?? undefined, inteligencia: intelOrdem ?? undefined,
     resposta: respostaFato ?? undefined,
   }
@@ -285,6 +289,7 @@ export function GameScreen({ state, onChange, onExit }: {
       setTitles({})
       setLicSheet(null)
       setProposta(null)
+      setPassoReq(null)
       setCasoDecisoes([])
       setAdvogado(null)
       setCpiDecisao(null)
@@ -362,7 +367,7 @@ export function GameScreen({ state, onChange, onExit }: {
     })
   }
   const goPending = (t: PendingTarget) => {
-    if (t === 'caso' || t === 'cpi' || t === 'inteligencia' || t === 'pressao' || t === 'pasta' || t === 'impeachment') { abrir(t === 'caso' ? 'casos' : t === 'pasta' ? 'pastajogo' : t); return }
+    if (t === 'caso' || t === 'cpi' || t === 'inteligencia' || t === 'pressao' || t === 'pasta' || t === 'impeachment' || t === 'requerimento') { abrir(t === 'caso' ? 'casos' : t === 'pasta' ? 'pastajogo' : t); return }
     if (t === 'camara' || t === 'senado' || t === 'supremo') { setTab('governo'); setGovTab(t); window.scrollTo({ top: 0, behavior: 'smooth' }); return }
     const el = document.getElementById(t === 'promessas' ? 'promessas' : t === 'evento' ? 'fato-do-mes' : 'fato-do-mes')
     if (t === 'cobrancas') { medidaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }); return }
@@ -411,7 +416,7 @@ export function GameScreen({ state, onChange, onExit }: {
   /** v0.31 (V3): as janelas de detalhe do Radar (v0.32.1: o conteúdo mora em Radar.tsx). */
   const janelaDefs: Record<string, JanelaDef> = { ...janelaDefsDoRadar(state), grupos: { id: 'grupos', titulo: 'Grupos sociais', icone: '👥', largura: 680 }, ...Object.fromEntries(abertas.flatMap((id) => { const d = defPorQue(id); return d ? [[id, d] as const] : [] })) }
   const renderJanela = (id: string) => { const alvo = alvoPorQue(id); if (id === 'grupos') return <GruposJanela state={state} onPorQue={(g) => abrir(idPorQue({ kind: 'group', id: g }))} />; return alvo ? <PorQueJanela state={state} alvo={alvo} /> : conteudoDaJanela(id, {
-    state, casoDecisoes, advogado, cpiDecisao, intelOrdem, ultimoMes, impeachDecisao,
+    state, casoDecisoes, advogado, cpiDecisao, intelOrdem, ultimoMes, impeachDecisao, passoReq, onPassoReq: setPassoReq,
     onImpeach: (a) => { setImpeachDecisao(a); if (a) toast('⚖️ Decisão no impeachment anotada: vale ao encerrar o mês.') },
     agenda: <AgendaJanela state={state} plan={plan} billPronto={!!bill} pesquisa={pesquisa} onPesquisa={setPesquisa} onState={onChange} onToast={toast} />,
     onCaso: (d) => { setCasoDecisoes(d); if (d.length > casoDecisoes.length) toast('🕵️ Decisão do caso anotada: vale ao encerrar o mês.') },
@@ -857,6 +862,7 @@ export function GameScreen({ state, onChange, onExit }: {
           </div>
 
           <div className="pn-col">
+            {requerimentoLigado() ? <RequerimentoCard state={state} passo={passoReq} onAbrir={() => abrir('requerimento')} /> : null}
             <PropostaCard state={state} value={proposta} onChange={(v) => { setProposta(v); if (v) toast(v === 'aceitar' ? '🤝 Proposta aceita: vale ao encerrar o mês.' : '🙅 Proposta recusada: vale ao encerrar o mês.') }} />
             <RadarCard state={state} intelOrdem={intelOrdem} onOpen={abrir} />
 

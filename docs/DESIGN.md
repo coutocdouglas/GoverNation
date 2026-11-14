@@ -1478,3 +1478,10 @@ Bloco próprio, pedido pelo Douglas em 12/11/2026 (antes do playtest da Etapa 6)
 - **Memória do mundo:** cada passo grava crônica, biografia e Ficha; a pauta acatada planta rastro e semente de risco como antes (5A); o registro de causas tem `setor:<id>`.
 - **Balanceamento (`npm run sim10`, 40 sementes):** sem requerimento aprovação média 48,0 e nota 586; ignorar tudo 47,6 / 585 (rastro 1,5); duvidosa 46,7 / 562 (rastro 44,6); intermediária 47,5 / 574 (rastro 20,5); contraproposta 47,5 / 575; desistir 47,5 / 580. O custo real de ignorar setor forte vem com o H5.
 - Save 45, com migração (nenhum requerimento em andamento).
+
+### 27.48 Etapa 6G, bloco H4, parte 2: telas dos requerimentos (v0.47.1)
+Liga `REQUERIMENTO.ativo`. Com o bloco ligado, `sortearRequerimento` ocupa o lugar de `sortearProposta` e o cartão de proposta de um clique não aparece mais.
+- **Cartão no Painel (`RequerimentoCard`, `src/ui/RequerimentoJanela.tsx`):** setor, fase, prazo, a frase da fase e o botão que abre a janela; mostra a escolha anotada no mês (Teste da interface: resumo na tela principal e detalhe atrás de um clique).
+- **Janela (`RequerimentoJanela`):** barra de cinco etapas; por fase, as saídas com o custo à vista (relação com o setor, grupo que ele representa, rastro e semente de risco, parecer do advogado, chance da contraproposta em faixa, desgaste do ministro). O passo escolhido fica em `passoReq` no `GameScreen` e vai em `MonthPlan.requerimento`; a reunião é `escolherAcao({ tipo: 'reuniao' })` e cancela o passo (e vice-versa). Adotar leva o nome da medida ao campo da medida do mês (`onAtender`). O histórico dos últimos requerimentos fica recolhido.
+- **Radar** (linha "Requerimento de um setor"), **central de pendências** (`target: 'requerimento'`, prazo e urgência pelo mês restante) e **agenda** (categoria "Reunião com o setor", só quando `reuniaoBlockedReason` é nulo).
+- Sem mudança no save (45).

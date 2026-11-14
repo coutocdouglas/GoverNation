@@ -1,5 +1,12 @@
 # Novidades
 
+## 0.47.1 (14/11/2026)
+- **Telas dos requerimentos dos setores (bloco H4 da Etapa 6G).** O bloco está ligado: a proposta de um clique deu lugar ao requerimento em passos.
+  - **Painel:** um cartão com o setor, a fase e o prazo, e o botão "Abrir o requerimento". Mostra o que você já anotou para o mês.
+  - **Janela do requerimento, passo a passo:** barra com as cinco etapas (chegada, pautas, acatado, ministro, adoção) e, em cada fase, as saídas com o custo à vista. Na chegada, reunir (gasta a ação do mês) ou ignorar. Nas pautas, a intermediária e a duvidosa com o ganho, o rastro e o parecer do advogado, a contraproposta da pauta limpa com a chance em faixa, e o desacato. Depois de acatar, os pontos do ministro, a ressalva dele, o botão de adotar (leva a medida para o campo da medida do mês) e a desistência. Sempre dá para desfazer a escolha até encerrar o mês.
+  - **Radar, central de pendências e agenda:** o requerimento aparece no Radar e como pendência com prazo; a agenda ganhou a categoria "Reunião com o setor" (só quando há um requerimento esperando a reunião).
+- Sem mudança no save (45). 779 testes (9 novos). Conferido no navegador com um requerimento de ruralistas: reunião anotada e fechada, pautas na janela, contraproposta aceita e pauta limpa acatada, sem erro no console.
+
 ## 0.47.0 (14/11/2026)
 - **Requerimentos dos setores em passos (bloco H4 da Etapa 6G, regras; desligado até as telas da 0.47.1).** A proposta de setor de um clique (aceitar ou recusar) vira um requerimento com vida de meses:
   - **Chegada (3 meses para decidir):** reunir (ação da agenda, no lugar da medida do mês) ou ignorar. Ignorar, ou deixar o prazo vencer, tira relação do setor e custa no grupo que ele representa; o descaso pode voltar mais tarde como fato do mês ("o setor cobra a conta").
