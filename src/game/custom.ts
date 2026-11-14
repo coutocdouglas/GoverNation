@@ -3,7 +3,7 @@ import { BILL_BY_ID, BILLS, type BillDef, type LegalRisk } from './data/bills'
 import { SEED_RULES } from './data/consequences'
 import { CUSTOM } from './data/custom'
 import { CONTROLE } from './data/risco'
-import { GROUPS } from './data/groups'
+import { GROUPS, LEGACY_GROUPS } from './data/groups'
 import { MINISTER_BY_AREA, type AreaId } from './data/ministers'
 import { ministerOf } from './camara'
 import { normalize } from './interpret'
@@ -124,11 +124,21 @@ export function fixInstrument(wanted: Instrument, matters: Matter[], effects: Ac
   return { instrument, changed: `Não dá por ${wanted === 'mp' ? 'MP' : wanted}: a medida ${reasons.join(', ')}.` }
 }
 
+/**
+ * Peso de um grupo na régua do "não existe almoço grátis" (v0.46.2): os 25 grupos novos são fatias dos 7 de antes,
+ * então o efeito direto neles conta por um quarto (senão escrever para todos os 32 estouraria o teto sem a medida ficar melhor).
+ */
+export const pesoNaRegua = (id: GroupId): number => ((LEGACY_GROUPS as string[]).includes(id) ? 1 : 0.25)
+/** Soma dos efeitos de um sinal (ganhos ou perdas) nos grupos, na escala da régua. */
+export function somaNaRegua(groups: Partial<Record<GroupId, number>> | undefined, sinal: 1 | -1): number {
+  return (Object.entries(groups ?? {}) as [GroupId, number][]).filter(([, v]) => v * sinal > 0).reduce((a, [g, v]) => a + v * sinal * pesoNaRegua(g), 0)
+}
+
 /** Custo de uma medida, na régua do "não existe almoço grátis". */
 export function measureCost(effects: ActionEffects, instrument: Instrument): number {
   // Gasto temporário conta pelo ritmo anual (o que pesa no resultado das contas enquanto dura).
   const fiscal = Math.max(effects.spending ?? 0, 0) + Math.max(-(effects.revenue ?? 0), 0) + (effects.temp?.amount ?? 0)
-  const losers = (Object.values(effects.groups ?? {}) as number[]).filter((v) => v < 0).reduce((a, v) => a - v, 0)
+  const losers = somaNaRegua(effects.groups, -1)
   const confidence = Math.max(-(effects.confidence ?? 0), 0)
   return fiscal * CUSTOM.fiscalWeight + losers + confidence * CUSTOM.confidenceWeight + CUSTOM.instrumentCost[instrument]
 }
@@ -139,7 +149,7 @@ export const gainCap = (cost: number) => CUSTOM.freeGain + CUSTOM.gainPerCost * 
 /** Corta os ganhos nos grupos (proporcionalmente) até caberem no teto. Devolve o fator aplicado. */
 export function noFreeLunch(effects: ActionEffects, instrument: Instrument): number {
   const groups = effects.groups ?? {}
-  const gains = (Object.values(groups) as number[]).filter((v) => v > 0).reduce((a, v) => a + v, 0)
+  const gains = somaNaRegua(groups, 1)
   const cap = gainCap(measureCost(effects, instrument))
   if (gains <= cap) return 1
   const k = cap / gains

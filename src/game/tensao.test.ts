@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { EVENT_BY_ID } from './data/events'
 import { GROUPS } from './data/groups'
 import { idTensao, TENSAO, TENSAO_EVENTS } from './data/tensao'
+import { TEXTO_TENSAO } from './data/tensaoTextos'
 import { currentEvent, drawEvent } from './events'
 import { advanceMonth, newGame } from './game'
 import { absMonth } from './memory'
@@ -28,7 +29,8 @@ describe('os moldes dos fatos de tensão', () => {
       expect(e.options.at(-1)!.default).toBe(true)
       expect(e.choiceOnly).toBe(true)
       expect(e.random).toBe(false)
-      expect(e.title).toContain(GROUPS.find((g) => g.id === e.tensao!.grupo)!.name)
+      // Molde: o título traz o nome do grupo; texto próprio (v0.46.2) tem título e relato escritos à mão.
+      if (!TEXTO_TENSAO[e.tensao!.grupo]) expect(e.title).toContain(GROUPS.find((g) => g.id === e.tensao!.grupo)!.name)
     }
   })
 
@@ -226,5 +228,44 @@ describe('save 44', () => {
   it('o jogo novo já nasce com a tensão', () => {
     const s = newGame('T', 'normal', 5, 'mdn')
     expect(Object.keys(s.tensao.nivel)).toHaveLength(GROUPS.length)
+  })
+})
+
+describe('texto próprio dos 12 grupos maiores (v0.46.2)', () => {
+  const ids = Object.keys(TEXTO_TENSAO) as GroupId[]
+
+  it('são 12 grupos, com título, relato e as quatro saídas escritas, e deixar passar continua a última', () => {
+    expect(ids).toHaveLength(12)
+    for (const id of ids) {
+      const t = TEXTO_TENSAO[id]!
+      const e = EVENT_BY_ID[idTensao(id)]
+      expect(e.title, id).toBe(t.titulo)
+      expect(e.text, id).toContain(t.texto)
+      expect(e.text, id).toContain('A pauta:')
+      expect(t.saidas, id).toHaveLength(4)
+      expect(e.options[3].label, id).toBe('Deixar passar')
+      expect(e.options[3].default, id).toBe(true)
+      e.options.forEach((o, i) => {
+        expect(o.label.trim().length, `${id}#${i}`).toBeGreaterThan(3)
+        expect(o.outcome.length, `${id}#${i}`).toBeGreaterThan(10)
+        expect(`${o.label}${o.text}${o.outcome}`, `${id}#${i}`).not.toMatch(/[{}]/)
+      })
+    }
+  })
+
+  it('só mudam as palavras: efeitos e tensão das saídas são os do molde', () => {
+    const molde = EVENT_BY_ID[idTensao('agriculturaFamiliar')]
+    for (const id of ids) {
+      const e = EVENT_BY_ID[idTensao(id)]
+      expect(e.options.map((o) => o.tensao), id).toEqual(molde.options.map((o) => o.tensao))
+      expect(e.options[0].effects.temp, id).toEqual(molde.options[0].effects.temp)
+      expect(e.options[0].effects.groups![id], id).toBe(3)
+      expect(e.options[3].effects.groups![id], id).toBeLessThanOrEqual(-3)
+    }
+  })
+
+  it('cada texto é diferente dos outros', () => {
+    expect(new Set(ids.map((i) => TEXTO_TENSAO[i]!.titulo)).size).toBe(ids.length)
+    expect(new Set(ids.map((i) => TEXTO_TENSAO[i]!.texto)).size).toBe(ids.length)
   })
 })

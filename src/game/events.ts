@@ -3,6 +3,7 @@ import { ALL_EVENTS, EVENT_BY_ID, EVENT_CHANCE, EVENT_REPEAT, JA_FEITO_PESO, typ
 import { reputationEvent } from './reputacao'
 import { BILL_BY_ID } from './data/bills'
 import { PARTY_BY_ID } from './data/parties'
+import { GROUPS } from './data/groups'
 import { intervaloLivre, montarDilema, sortearDilema, substituido } from './dilema'
 import { eventoTensao } from './tensao'
 import type { Rng } from './rng'
@@ -120,7 +121,8 @@ function stillPossible(s: GameState, d: DemandDef): boolean {
 export function spawnDemand(s: GameState, rng: Rng): void {
   if (s.month >= 46 || s.demands.length >= DEMANDS_MAX) return
   const approval = s.history[s.history.length - 1].groups
-  const unhappy = Object.values(approval).some((v) => v < 40)
+  // v0.46.2: com 32 grupos, "algum grupo abaixo de 40" quase sempre vale; conta a fatia do eleitorado insatisfeita (14% ou mais).
+  const unhappy = GROUPS.reduce((acc, g) => acc + (approval[g.id] < 40 ? g.weight : 0), 0) >= 0.14
   if (rng.next() >= DEMAND_CHANCE * (unhappy ? 1.5 : 1)) return
   const busy = new Set(s.demands.map((d) => DEMANDS.find((x) => x.id === d.id)!.group))
   const recent = new Set(s.demandLog.filter((d) => s.month - d.month < 12).map((d) => d.id))

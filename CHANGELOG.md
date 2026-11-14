@@ -1,5 +1,15 @@
 # Novidades
 
+## 0.46.2 (14/11/2026)
+- **Conteúdo dos grupos novos (bloco H3 da Etapa 6G, parte 3).** Até aqui os 25 grupos novos só recebiam o que os 7 antigos recebiam. Agora medidas e fatos têm efeito escrito para eles.
+  - **Medidas:** 89 medidas mexem direto com os grupos certos. O piso dos professores agrada os professores, o frete mínimo os caminhoneiros, o marco temporal desagrada os povos indígenas, a reforma da Previdência pesa nos aposentados, e assim por diante. O que não foi citado segue herdando.
+  - **Fatos e dilemas:** 25 fatos têm efeito por saída nos grupos certos (greve de professores, caminhoneiros, queimadas, terra, operação policial, barragem, vacina...).
+  - **Fatos de tensão com texto próprio** nos 12 grupos maiores (periferia, classe média, trabalhadores, aposentados, evangélicos, católicos, pequenos empresários, servidores, agro, caminhoneiros, professores e policiais); os outros 20 seguem com o molde.
+  - **18 cobranças novas** dos grupos novos (remédio dos aposentados, piso dos professores, frete dos caminhoneiros, creche, cultura, pesquisa...), atendidas por medidas que já existem.
+  - **Chance de cobrança** corrigida: o aumento por insatisfação passou a olhar a fatia do eleitorado abaixo de 40 (14% ou mais), e não "qualquer grupo", que com 32 grupos quase sempre valia.
+  - **Régua do "não existe almoço grátis"** das medidas livres da IA: o efeito direto num grupo novo conta por um quarto, porque são fatias dos 7 de antes.
+- Sem mudança no save (continua na versão 44). 743 testes (12 novos). Simulador: aprovação média igual à da 0.46.1 (47,5 com as opções prontas; 36,0 deixando passar). Conferido no navegador: fato de tensão dos professores com texto próprio e as cobranças novas na tela, sem erro no console.
+
 ## 0.46.1 (14/11/2026)
 - **Tensão dos grupos sociais (bloco H3 da Etapa 6G, parte 2).** Cada um dos 32 grupos tem uma tensão de 0 a 100, a paciência com o governo.
   - **Sobe** com aprovação baixa do grupo e com o que o fere (medida, fato, escolha). **Desce** devagar com o tempo e, mais forte, quando o governo atende de verdade: lei que ajuda, cobrança atendida ou uma saída do fato. **Post e rua não baixam a tensão.**

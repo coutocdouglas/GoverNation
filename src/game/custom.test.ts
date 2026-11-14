@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { interpretPrompt, parseInterpretation } from './ai'
-import { addCustomBill, buildCustomBill, gainCap, LIMITS, measureCost, syncCustomBills, type CustomDraft } from './custom'
+import { addCustomBill, buildCustomBill, gainCap, LIMITS, measureCost, somaNaRegua, syncCustomBills, type CustomDraft } from './custom'
 import { BILL_BY_ID, BILLS } from './data/bills'
 import { SEED_RULES } from './data/consequences'
 import { advanceMonth, newGame } from './game'
@@ -73,7 +73,7 @@ describe('medidas livres (etapa 3C): conferência da ficha', () => {
   it('a régua do almoço grátis aceita quase todo o catálogo fixo', () => {
     const fixed = BILLS.filter((b) => !b.custom)
     const ok = fixed.filter((b) => {
-      const gains = Object.values(b.effects.groups ?? {}).reduce((a, v) => a + Math.max(0, v as number), 0)
+      const gains = somaNaRegua(b.effects.groups, 1)
       return gains <= gainCap(measureCost(b.effects, b.instrument)) + 0.01
     })
     expect(ok.length / fixed.length).toBeGreaterThan(0.95)

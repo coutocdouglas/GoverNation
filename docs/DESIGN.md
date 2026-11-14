@@ -1453,3 +1453,14 @@ Bloco próprio, pedido pelo Douglas em 12/11/2026 (antes do playtest da Etapa 6)
 - **Tela (Teste da interface):** `BlocosCard` mostra o grupo mais tenso do bloco; `GruposJanela` mostra a faixa (atenta, alta, no limite) só de quem já esquentou; `PorQue` explica a tensão do grupo; `EventPanel` mostra o aviso do fato e "🔥 tensão −N" em cada saída. O número exato fica escondido: o jogador lê pela faixa.
 - **Balanceamento (`npm run sim9`, 40 sementes):** com as opções prontas, nenhum fato de tensão e quase nenhum mês de aviso; deixando tudo passar, 3,5 fatos por mandato (máximo 7), aprovação média 35,6 contra 35,9 sem a tensão. `npm run sim8` sem mudança relevante.
 - Save 44, com migração (tensão de partida pela aprovação atual).
+
+### 27.46 Etapa 6G, bloco H3, parte 3: conteúdo dos grupos novos (v0.46.2)
+**Aprovado pelo Douglas (14/11/2026).** Antes: 0 dos 25 grupos novos tinham efeito direto em medidas ou fatos (tudo por herança) e os 11 pedidos eram dos 7 antigos.
+- **Efeitos diretos (`data/efeitosGrupos.ts`):** tabela `DIRETOS_MEDIDA` (id da medida → grupos novos) e `DIRETOS_FATO` (id do fato → efeito por saída, na ordem das opções), somada às entradas quando o jogo carrega (`aplicarDiretosMedidas` em `bills.ts`, `aplicarDiretosFatos` em `events.ts`). O valor direto vale no lugar da herança naquele grupo (mesmo rótulo); o que está escrito à mão no grupo novo não é trocado. 89 medidas e 25 fatos e dilemas. Escala de -8 a +8, o grupo-alvo até ±10. Cada grupo novo é atingido direto por pelo menos 2 fontes (teste).
+- **Fatos de tensão com texto próprio (`data/tensaoTextos.ts`):** título, relato e as quatro saídas escritas para os 12 grupos maiores; só as palavras mudam (efeitos e tensão são os do molde). A frase "A pauta: …" continua vinda do `cares` do grupo.
+- **Cobranças (`data/demands.ts`):** 18 novas (de 11 para 29), cada uma atendida por medidas que têm efeito direto positivo no grupo (teste).
+- **Chance de cobrança (`spawnDemand`):** o ×1,5 por insatisfação agora vale quando a fatia do eleitorado abaixo de 40 é de 14% ou mais (antes: qualquer um dos 7 grupos; com 32, quase sempre).
+- **Régua das medidas livres (`custom.ts`):** `pesoNaRegua` conta o efeito num grupo novo por 1/4 (ganhos e perdas), porque os novos são fatias dos 7 antigos; sem isso, escrever para todos os 32 estouraria o teto sem a medida ficar melhor. Calibradas cinco medidas generosas (renegociação de dívidas, farmácia popular, vacinação, verba das universidades, energia solar). Só a `cpiCorrupcao` fica acima da régua, como já ficava.
+- **IA:** a lista dos 32 grupos já ia nos prompts desde a v0.46.0; nada a mudar.
+- **Balanceamento (`npm run sim8` e `sim9`, 40 sementes):** aprovação média 47,5 com as opções prontas (47,1 antes), 36,0 deixando passar (35,6), 42,5 com a melhor ação (42,2); fatos de tensão: nenhum com as opções prontas, 2,8 por mandato deixando passar (3,5 antes).
+- Sem mudança no save.

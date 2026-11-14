@@ -2,6 +2,7 @@ import { GROUPS } from './groups'
 import { presenterOf, type AreaId } from './ministers'
 import type { EventDef, EventOption } from './events'
 import type { GroupId } from '../types'
+import { TEXTO_TENSAO } from './tensaoTextos'
 
 /**
  * Etapa 6G, bloco H3, parte 2 (v0.46.1): tensão dos grupos sociais.
@@ -101,9 +102,12 @@ function moldeDe(id: GroupId): EventDef {
     { icon: '🛡️', label: 'Endurecer e manter a posição', text: 'Não cede. O público de fora aprova; o grupo, não.', effects: { groups: soma(soma({ [id]: -3 }, 'classeMedia', 1), 'empresarios', 1) }, tensao: -10, outcome: `Governo mantém a posição diante d${a} ${quem} de “${nome}”`, tone: 'neutral' },
     { icon: '🙈', label: 'Deixar passar', text: `${a.toUpperCase()} ${quem} acontece e o país sente.`, effects: { confidence: -2, expectations: 0.1, groups: soma({ [id]: -4 }, 'classeMedia', -1) }, tensao: -10, outcome: `${quem[0].toUpperCase()}${quem.slice(1)} de “${nome}” pesa sobre o governo`, tone: 'bad', default: true },
   ]
+  // v0.46.2: os 12 grupos maiores têm texto próprio (só as palavras; efeitos e tensão são os do molde).
+  const own = TEXTO_TENSAO[id]
+  if (own) own.saidas.forEach((s, i) => { options[i] = { ...options[i], label: s.label, text: s.text, outcome: s.outcome } })
   return {
     id: idTensao(id), area, tag: `Tensão · ${nome}`, icon: ICONE[forma], weight: 0, importance: 3, kind: 'crise', choiceOnly: true, random: false,
-    title: titulo[forma], text: `${texto[forma]} A pauta: ${def.cares}.`,
+    title: own?.titulo ?? titulo[forma], text: `${own?.texto ?? texto[forma]} A pauta: ${def.cares}.`,
     presenter: presenterOf(area),
     tensao: { grupo: id },
     // Quanto cada ação do governo resolve o caso (só vale quando a resposta por ação estiver liberada para o fato).
@@ -112,5 +116,5 @@ function moldeDe(id: GroupId): EventDef {
   }
 }
 
-/** Um molde de fato por grupo (32). Texto próprio dos grupos grandes entra na v0.46.2. */
+/** Um fato de tensão por grupo (32): molde de texto, e texto próprio nos 12 grupos maiores (`tensaoTextos.ts`). */
 export const TENSAO_EVENTS: EventDef[] = GROUPS.map((g) => moldeDe(g.id))

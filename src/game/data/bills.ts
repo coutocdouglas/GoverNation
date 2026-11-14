@@ -1,6 +1,7 @@
 import type { ActionEffects } from '../actions'
 import type { BillId, Instrument } from '../types'
 import { CATALOG } from './measures'
+import { aplicarDiretosMedidas } from './efeitosGrupos'
 import { BOMBS } from './camara'
 import type { AreaId } from './ministers'
 
@@ -132,6 +133,8 @@ const CORE_BILLS: BillDef[] = [
 
 /** Todas as medidas que o governo conhece: as 10 originais e o catálogo por área (data/measures.ts). */
 export const BILLS: BillDef[] = [...CORE_BILLS, ...CATALOG]
+// v0.46.2 (H3): efeitos escritos direto para os grupos novos (piso dos professores → professores etc.).
+aplicarDiretosMedidas(BILLS)
 
 /** Medida por decreto: vale na hora, sem votação. */
 export const isDecree = (id: BillId) => BILL_BY_ID[id]?.instrument === 'decreto'

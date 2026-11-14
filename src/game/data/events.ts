@@ -251,9 +251,13 @@ import { STF_EVENT, STF_LIMINAR_EVENT } from './supremo'
 import { IMPEACH_EVENT } from './impeachment'
 import { DILEMAS, DILEMA_VOLTAS } from './dilemas'
 import { TENSAO_EVENTS } from './tensao'
+import { aplicarDiretosFatos } from './efeitosGrupos'
 
 /** Todos os fatos: os sorteáveis e os que só nascem de sementes (os dilemas e a tensão têm sorteio próprio). */
 export const ALL_EVENTS: EventDef[] = [...EVENTS, ...CONSEQUENCE_EVENTS, STF_EVENT, STF_LIMINAR_EVENT, IMPEACH_EVENT, ...REP_EVENTS, ...DILEMAS, ...DILEMA_VOLTAS, ...TENSAO_EVENTS]
+
+// v0.46.2 (H3): efeitos escritos direto para os grupos novos, por saída.
+aplicarDiretosFatos(ALL_EVENTS)
 
 export const EVENT_BY_ID = Object.fromEntries(ALL_EVENTS.map((e) => [e.id, e])) as Record<string, EventDef>
 
