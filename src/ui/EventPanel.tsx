@@ -6,7 +6,8 @@ import { defaultOption, currentEvent, eventStage } from '../game/events'
 import { fillText } from '../game/memory'
 import type { BillId, GameState } from '../game/types'
 import { Portrait } from './Portrait'
-import { effectChips } from './effects'
+import { effectChips, type Chip } from './effects'
+import { GROUP_BY_ID } from '../game/data/groups'
 import { ResponseBox } from './ResponseBox'
 import { MINISTER_BY_AREA } from '../game/data/ministers'
 import { ministerOf } from '../game/camara'
@@ -99,7 +100,13 @@ export function EventPanel({ state, choice, onChoose, response, onRespond, plann
   }
   // Etapa 6F: no dilema, a mudança com o partido aliado entra nas etiquetas de cada saída.
   const aliado = state.event?.aliado
-  const chipsDe = (o: EventOption) => effectChips(o.effects, o.aliado && aliado ? { ...o.parties, [aliado]: (o.parties?.[aliado] ?? 0) + o.aliado } : o.parties)
+  // v0.46.1 (H3): no fato de tensão, cada saída mostra quanto alivia a tensão do grupo.
+  const chipsDe = (o: EventOption) => {
+    const chips = effectChips(o.effects, o.aliado && aliado ? { ...o.parties, [aliado]: (o.parties?.[aliado] ?? 0) + o.aliado } : o.parties)
+    if (!o.tensao || !ev.tensao) return chips
+    const chip: Chip = { text: `🔥 tensão ${o.tensao > 0 ? '+' : '−'}${Math.abs(o.tensao)}`, tone: o.tensao > 0 ? 'dn' : 'up', title: `Tensão de ${GROUP_BY_ID[ev.tensao.grupo].name}` }
+    return [...chips.filter((c) => c.text !== 'sem efeito imediato'), chip]
+  }
   const passChips = chipsDe(passOpt)
   const goodPass = kind === 'bom'
     ? (state.difficulty === 'facil' ? 'A boa notícia passa sem render nada ao governo.' : 'A oposição fica com o crédito da boa notícia.')
@@ -124,6 +131,7 @@ export function EventPanel({ state, choice, onChoose, response, onRespond, plann
           {resp.name !== p.name && <p className="pn-hint" style={{ margin: '0 0 4px' }}>{resp.icon} Área: {resp.areaName} · responsável: <b>{resp.name}</b></p>}
           <p>{fillText(ev.text, origin)}</p>
           {origin && ev.id !== 'impeachMinistro' && <p className="pn-event__origin">🌱 {stage === 'pauta' ? 'Reação a' : stage === 'barrada' ? 'Reação à tentativa de' : 'Consequência de'} <b>{origin.label}</b> · {origin.author} · {origin.year}{stage === 'pauta' ? ' · ainda na pauta do Congresso' : stage === 'barrada' ? ' · barrada' : ''}</p>}
+          {ev.tensao && <p className="pn-event__origin">🔥 <b>Tensão acima do limite:</b> {GROUP_BY_ID[ev.tensao.grupo].name} · atender de verdade baixa a tensão; post e rua não baixam</p>}
           {ev.dilema && <p className="pn-event__origin">⚖️ <b>Dilema:</b> {ev.dilema.lados[0]} × {ev.dilema.lados[1]} · cada saída protege um lado e cobra do outro</p>}
           <p className="pn-event__ask">{ev.dilema ? '“Presidente, aqui não tem saída sem custo. De que lado ficamos?”' : kind === 'bom' ?'“Presidente, temos uma boa notícia. Vamos agir em cima dela?”' : '“Presidente, precisamos de uma decisão.”'}</p>
         </div>

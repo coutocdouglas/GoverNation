@@ -3,6 +3,9 @@ import { monthLabel } from '../game/game'
 import { GROUP_BY_ID } from '../game/data/groups'
 import { econPull } from '../game/groups'
 import { absMonth } from '../game/memory'
+import { TENSAO } from '../game/data/tensao'
+import { faixaTensao, tensaoLigada, tensaoOf } from '../game/tensao'
+import { TEXTO_FAIXA } from './GruposJanela'
 import type { GameState, GroupId, IndicatorKey } from '../game/types'
 import { INDICATORS, num, signed } from './format'
 import type { JanelaDef } from './Janelas'
@@ -39,7 +42,7 @@ const ORIGEM: Record<CausaSource, string> = {
 }
 
 /** Quem mexeu, em frases: soma por motivo nos últimos 3 meses e a linha do tempo. */
-function Quem({ state, subject, decimals, unit, goodUp }: { state: GameState; subject: string; decimals: number; unit: string; goodUp: 1 | -1 | 0 }) {
+function Quem({ state, subject, decimals, unit, goodUp, titulo = 'O que mais pesou nos últimos 3 meses' }: { state: GameState; subject: string; decimals: number; unit: string; goodUp: 1 | -1 | 0; titulo?: string }) {
   const agora = absMonth(state)
   const soma = porque(state, subject, agora, 3).filter((x) => Math.abs(x.delta) >= Math.pow(10, -decimals) / 2)
   const linha = causasDe(state, subject, 12).filter((e) => Math.abs(e.delta) >= Math.pow(10, -decimals) / 2)
@@ -47,7 +50,7 @@ function Quem({ state, subject, decimals, unit, goodUp }: { state: GameState; su
   if (soma.length === 0 && linha.length === 0) return <p className="muted">Ainda não há causa registrada aqui. Ela aparece depois do primeiro fechamento de mês.</p>
   return (
     <>
-      <h3>O que mais pesou nos últimos 3 meses</h3>
+      <h3>{titulo}</h3>
       {soma.length === 0 ? <p className="muted">Nada relevante nos últimos 3 meses.</p> : (
         <ul className="causes">
           {soma.slice(0, 6).map((x) => (
@@ -105,6 +108,14 @@ export function PorQueJanela({ state, alvo }: { state: GameState; alvo: PorQueAl
       <Sparkline values={state.history.map((h) => h.groups[alvo.id])} width={500} height={70} />
       <p>Se importa com: {def.cares}. Representa {Math.round(def.weight * 100)}% da população.</p>
       <Quem state={state} subject={`grupo:${alvo.id}`} decimals={1} unit="" goodUp={1} />
+      {tensaoLigada() && (
+        <>
+          <h3>🔥 Tensão: {TEXTO_FAIXA[faixaTensao(tensaoOf(state).nivel[alvo.id] ?? 0)]}</h3>
+          <p className="muted">A tensão é a paciência do grupo. Acima de {TENSAO.aviso} ele ameaça; acima de {TENSAO.acao} ele age (greve, protesto ou bloqueio). Só baixa quando o governo atende de verdade: lei que ajuda, cobrança atendida ou uma saída do fato. Post e rua não baixam.</p>
+          <div className="pn-meter"><span style={{ width: `${tensaoOf(state).nivel[alvo.id] ?? 0}%`, background: (tensaoOf(state).nivel[alvo.id] ?? 0) >= TENSAO.aviso ? 'var(--dn, #f85149)' : 'var(--gold, #d4a72c)' }} /></div>
+          <Quem state={state} subject={`tensao:${alvo.id}`} decimals={1} unit="" goodUp={-1} titulo="O que mexeu na tensão" />
+        </>
+      )}
       <h3>O que mexeu no último mês</h3>
       {report ? <CauseList causes={report.groupCauses[alvo.id]} decimals={1} /> : <p className="muted">O mandato ainda não começou.</p>}
       <h3>Como a economia pesa para eles hoje</h3>

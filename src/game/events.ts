@@ -4,6 +4,7 @@ import { reputationEvent } from './reputacao'
 import { BILL_BY_ID } from './data/bills'
 import { PARTY_BY_ID } from './data/parties'
 import { intervaloLivre, montarDilema, sortearDilema, substituido } from './dilema'
+import { eventoTensao } from './tensao'
 import type { Rng } from './rng'
 import type { BillId, GameState } from './types'
 
@@ -89,6 +90,9 @@ export function drawEvent(s: GameState, rng: Rng): GameState['event'] {
   // Etapa 1: desdobramento da reputação (o que você fez volta como fato do mês).
   const rep = reputationEvent(s, rng)
   if (rep) return rep
+  // v0.46.1 (H3): grupo no limite da paciência age (greve, protesto ou bloqueio). Sem sorteio; um por vez.
+  const tens = eventoTensao(s)
+  if (tens) return tens
   // Etapa 6F: às vezes o fato do mês é um dilema, no lugar do fato comum.
   const dil = sortearDilema(s, rng)
   if (dil) return dil

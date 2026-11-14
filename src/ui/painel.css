@@ -1011,3 +1011,10 @@
 
 /* v0.34.1: valores negativos das listas legíveis no tema claro. */
 .pn--claro .causes .neg { color: var(--pn-red); }
+
+/* v0.46.1 (H3): tensão dos grupos */
+.tensao { display: flex; align-items: center; gap: 6px; margin-top: 2px; }
+.tensao .pn-meter { height: 4px; flex: 1; max-width: 90px; }
+.tensao small { white-space: nowrap; }
+.tensao--atenta small { color: var(--gold, #d4a72c); }
+.tensao--alta small, .tensao--limite small { color: var(--dn, #f85149); font-weight: 600; }

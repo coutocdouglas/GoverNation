@@ -150,7 +150,9 @@ import type { ReputationState } from './reputacao'
 import type { RiscoState } from './risco'
 
 export interface GameState {
-  saveVersion: 43
+  saveVersion: 44
+  /** Etapa 6G, bloco H3 parte 2 (v0.46.1): tensão de cada grupo (0 a 100) e os fatos de tensão que já vieram. Ver tensao.ts. */
+  tensao: import('./tensao').TensaoState
   /** Etapa 6G, bloco H1 (v0.44): respostas ao fato por ação do governo (retorno decrescente). Ver resposta.ts. */
   respostas: import('./resposta').RespostaLog[]
   /** Impeachment do presidente (v0.43): pressão oculta, fase e histórico. Ver impeachPres.ts. */

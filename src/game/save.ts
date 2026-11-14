@@ -1,5 +1,6 @@
 import { GROUPS } from './data/groups'
 import { aprovacaoHerdada } from './groups'
+import { initialTensao } from './tensao'
 import { initialAgenda } from './agenda'
 import { initialInteligencia } from './inteligencia'
 import { initialComissoes } from './cpi'
@@ -350,7 +351,13 @@ export function migrate(raw: unknown): GameState | null {
       }
       s.saveVersion = 43
     }
-    if (s.saveVersion !== 43) return null
+    if (s.saveVersion === 43) {
+      // v0.46.0 → v0.46.1 (Etapa 6G, H3 parte 2: tensão dos grupos): cada grupo parte da tensão que a aprovação atual pede.
+      const g = s as GameState
+      g.tensao ??= initialTensao(g.groups)
+      s.saveVersion = 44
+    }
+    if (s.saveVersion !== 44) return null
     syncCustomBills(s as GameState)
     return s as GameState
   } catch {

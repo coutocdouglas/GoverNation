@@ -1,5 +1,14 @@
 # Novidades
 
+## 0.46.1 (14/11/2026)
+- **Tensão dos grupos sociais (bloco H3 da Etapa 6G, parte 2).** Cada um dos 32 grupos tem uma tensão de 0 a 100, a paciência com o governo.
+  - **Sobe** com aprovação baixa do grupo e com o que o fere (medida, fato, escolha). **Desce** devagar com o tempo e, mais forte, quando o governo atende de verdade: lei que ajuda, cobrança atendida ou uma saída do fato. **Post e rua não baixam a tensão.**
+  - **Acima de 70:** manchete de aviso ("Tensão alta com “Caminhoneiros”: ameaça de bloqueios").
+  - **Acima de 90:** o grupo age (greve, protesto ou bloqueio) e vira o fato do mês, com quatro saídas e o custo à vista: abrir mesa e atender parte da pauta, receber as lideranças, endurecer ou deixar passar. No máximo um por vez, com intervalo de 3 meses, 10 meses de espera para o mesmo grupo e teto de 8 por mandato.
+  - **Na tela:** o painel mostra o grupo mais tenso de cada bloco; a janela "Grupos sociais" mostra a faixa de cada grupo que já esquentou (atenta, alta, no limite); o "Por quê?" do grupo explica o que mexeu na tensão; as saídas do fato mostram "🔥 tensão −35" e afins.
+  - Os textos desta versão são moldes iguais para todos os grupos (com a pauta de cada um); textos próprios dos grupos grandes entram na 0.46.2.
+- Save 44, com migração (a tensão de partida vem da aprovação atual). 731 testes (20 novos). Simulador `npm run sim9`: jogando com as opções prontas quase não há fato de tensão; deixando tudo passar saem cerca de 3,5 por mandato. Conferido no navegador: fato de tensão, escolha, queda da tensão e crônica, sem erro no console.
+
 ## 0.46.0 (13/11/2026)
 - **32 grupos sociais em 5 blocos (bloco H3 da Etapa 6G, parte 1).** Trabalho e renda, Fé, Campo e floresta, Identidade e causas, Capital e Estado. Entram aposentados, pequenos empreendedores, sindicalistas, professores, trabalhadores de aplicativo, profissionais da saúde, policiais, caminhoneiros, evangélicos, católicos, religiões afro-brasileiras, agricultura familiar, comunidades tradicionais, povos indígenas, mulheres, movimento negro, universitários, cultura digital, ambientalistas, LGBT+, artistas, comerciários e bancários, mercado financeiro, militares e ciência e universidades.
   - **Cada grupo pesa pelo tamanho** no eleitorado, e a aprovação geral é a média ponderada.

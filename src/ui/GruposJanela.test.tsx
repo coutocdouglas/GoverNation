@@ -7,6 +7,7 @@ import { ehBase, expandirGrupos, herdarImpulsos, overallApproval } from '../game
 import { migrate } from '../game/save'
 import { GROUP_ICON } from './icons'
 import { BlocosCard, GruposJanela } from './GruposJanela'
+import { PorQueJanela } from './PorQue'
 import type { GroupId, Impulse } from '../game/types'
 
 describe('32 grupos sociais (v0.46)', () => {
@@ -72,7 +73,7 @@ describe('32 grupos sociais (v0.46)', () => {
     for (const g of GROUPS) if (!(LEGACY_GROUPS as string[]).includes(g.id)) { delete s.groups[g.id]; for (const h of s.history) delete h.groups[g.id] }
     s.saveVersion = 42
     const m = migrate(s)!
-    expect(m.saveVersion).toBe(43)
+    expect(m.saveVersion).toBe(44)
     for (const g of GROUPS) {
       expect(m.groups[g.id].approval, g.id).toBeGreaterThan(0)
       for (const h of m.history) expect(h.groups[g.id], g.id).toBeGreaterThan(0)
@@ -90,5 +91,27 @@ describe('telas dos grupos (v0.46)', () => {
     const jan = renderToStaticMarkup(<GruposJanela state={s} onPorQue={() => {}} />)
     for (const g of GROUPS) expect(jan).toContain(g.name.replace('+', '+'))
     expect(jan).toContain('sua base')
+  })
+
+  it('tensão (v0.46.1): grupo calmo não aparece; grupo esquentando mostra a faixa no painel e na janela', () => {
+    const s = newGame('T', 'normal', 5, 'mdn')
+    for (const g of GROUPS) s.tensao.nivel[g.id] = 0
+    expect(renderToStaticMarkup(<GruposJanela state={s} onPorQue={() => {}} />)).not.toContain('tensão')
+    s.tensao.nivel.agro = 75
+    s.tensao.nivel.professores = 95
+    const jan = renderToStaticMarkup(<GruposJanela state={s} onPorQue={() => {}} />)
+    expect(jan).toContain('tensão alta')
+    expect(jan).toContain('tensão no limite')
+    const card = renderToStaticMarkup(<BlocosCard state={s} onAbrir={() => {}} />)
+    expect(card).toContain('Agronegócio: tensão alta')
+    expect(card).toContain('Professores: tensão no limite')
+  })
+
+  it('"Por quê?" do grupo explica a tensão', () => {
+    const s = newGame('T', 'normal', 5, 'mdn')
+    s.tensao.nivel.agro = 80
+    const html = renderToStaticMarkup(<PorQueJanela state={s} alvo={{ kind: 'group', id: 'agro' }} />)
+    expect(html).toContain('Tensão: alta')
+    expect(html).toContain('Post e rua não baixam')
   })
 })

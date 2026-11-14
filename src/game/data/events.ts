@@ -1,5 +1,5 @@
 import type { ActionEffects } from '../actions'
-import type { BillId, GameState, PartyId } from '../types'
+import type { BillId, GameState, GroupId, PartyId } from '../types'
 import type { AreaId } from './ministers'
 import type { TipoResposta } from './resposta'
 import { REP_EVENTS } from './repEvents'
@@ -35,6 +35,8 @@ export interface EventOption {
   aliado?: number
   /** Etapa 6F: o custo que volta depois (semente), mostrado antes da escolha. */
   depois?: { evento: string; meses: [number, number]; rotulo: string; aviso: string }
+  /** v0.46.1 (H3): em um fato de tensão, quanto esta saída muda a tensão do grupo (negativo = alivia). */
+  tensao?: number
 }
 
 /** Texto de um fato conforme a situação da medida que o originou (pauta ou barrada). Só troca palavras; as regras são as mesmas. */
@@ -77,6 +79,8 @@ export interface EventDef {
   when?: (s: GameState) => boolean
   /** Etapa 6F: dilema (dois bens colidem). Só entra pelo sorteio próprio (data/dilemas.ts), nunca pelo comum. */
   dilema?: { lados: [string, string] }
+  /** v0.46.1 (H3): fato de tensão de um grupo (greve, protesto ou bloqueio). Só entra por tensao.ts, nunca pelo sorteio comum. */
+  tensao?: { grupo: GroupId }
   options: EventOption[]
 }
 
@@ -246,9 +250,10 @@ import { CONSEQUENCE_EVENTS } from './consequences'
 import { STF_EVENT, STF_LIMINAR_EVENT } from './supremo'
 import { IMPEACH_EVENT } from './impeachment'
 import { DILEMAS, DILEMA_VOLTAS } from './dilemas'
+import { TENSAO_EVENTS } from './tensao'
 
-/** Todos os fatos: os sorteáveis e os que só nascem de sementes (os dilemas têm sorteio próprio). */
-export const ALL_EVENTS: EventDef[] = [...EVENTS, ...CONSEQUENCE_EVENTS, STF_EVENT, STF_LIMINAR_EVENT, IMPEACH_EVENT, ...REP_EVENTS, ...DILEMAS, ...DILEMA_VOLTAS]
+/** Todos os fatos: os sorteáveis e os que só nascem de sementes (os dilemas e a tensão têm sorteio próprio). */
+export const ALL_EVENTS: EventDef[] = [...EVENTS, ...CONSEQUENCE_EVENTS, STF_EVENT, STF_LIMINAR_EVENT, IMPEACH_EVENT, ...REP_EVENTS, ...DILEMAS, ...DILEMA_VOLTAS, ...TENSAO_EVENTS]
 
 export const EVENT_BY_ID = Object.fromEntries(ALL_EVENTS.map((e) => [e.id, e])) as Record<string, EventDef>
 

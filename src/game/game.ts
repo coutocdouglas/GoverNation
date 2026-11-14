@@ -15,6 +15,7 @@ import { BOMBS, CAMARA } from './data/camara'
 import { PARTIES, PARTY_BY_ID } from './data/parties'
 import { DIFFICULTY, MACRO, START } from './data/balance'
 import { GROUPS } from './data/groups'
+import { aplicarSaidaTensao, initialTensao, lerImpulsos, stepTensao } from './tensao'
 import { SHOCKS, type ShockDef } from './data/shocks'
 import { indicators, initialEconomy, runCopom, stepEconomy, type ShockInput } from './economy'
 import { computeApproval, herdarImpulsos, initialGroups, overallApproval, stepGroup } from './groups'
@@ -109,7 +110,9 @@ export function newGame(
   const rngState = seed ?? Math.floor(Math.random() * 2 ** 31)
   const bonus = DIFFICULTY[difficulty].approvalBonus
   const state: GameState = {
-    saveVersion: 43,
+    saveVersion: 44,
+    // Preenchido logo abaixo, com a aprovação de partida dos grupos.
+    tensao: undefined as unknown as GameState['tensao'],
     respostas: [],
     dilemas: initialDilemas(),
     impeachPres: initialImpeachPres(),
@@ -173,6 +176,7 @@ export function newGame(
     g.memory.push({ label: b.label, value: b.value })
     g.approval = computeApproval(g)
   }
+  state.tensao = initialTensao(state.groups)
   state.history.push(snapshot(state))
   state.rival = createRival(state)
   const rng = new Rng(state.rngState)
@@ -875,6 +879,7 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
       const crisis = def.kind !== 'bom' && !def.choiceOnly
       const ignored = plan.eventChoice === undefined || !!opt.default
       // Etapa 6F: o dilema tem registro próprio (lado escolhido, aliado, custo que volta; indecisão marca omissão).
+      if (def.tensao) aplicarSaidaTensao(s, def, idx, title)
       if (def.dilema) aplicarDilema(s, def, idx, !ignored, title, s.event.aliado, headlines, rng)
       else if (crisis && ignored && def.importance >= 3) addMark(s, 'omisso', def.importance * REPUTACAO.pts.crisePer * (assess.used ? ASSESSORIA.omissoShare : 1), assess.used ? `${title}: só com nota e presença, sem medida` : `${title}: deixou passar`, 'crise')
       else if (crisis && !ignored) addMark(s, 'enfrenta', def.importance * REPUTACAO.pts.crisePer * 0.5, `${title}: ${lowerFirst(opt.label)}`, 'crise')
@@ -1000,10 +1005,13 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
   // v0.26: teto por grupo para o que veio de medidas neste mês; o excesso entra no mês seguinte.
   // v0.46: efeitos escritos para os 7 grupos antigos chegam aos 31 pela herança, antes do teto do mês.
   herdarImpulsos(impulses)
+  // v0.46.1 (H3): a tensão lê o que feriu e o que atendeu cada grupo, antes de o teto apagar a marca de medida.
+  const leituraTensao = lerImpulsos(impulses)
   aplicarTeto(s, impulses)
   const groupCauses = {} as Record<GroupId, Cause[]>
   for (const def of GROUPS) groupCauses[def.id] = stepGroup(s.groups[def.id], after, bonus + offsets[def.id], impulses[def.id])
   const approvalAfter = overallApproval(s.groups)
+  stepTensao(s, leituraTensao, headlines)
   // Fase A: o registro de causas guarda o que mais pesou em cada grupo e em cada indicador neste mês.
   for (const def of GROUPS) registrarCausas(s, `grupo:${def.id}`, groupCauses[def.id], 'outro')
   for (const [key, list] of Object.entries(causes) as [string, Cause[] | undefined][]) if (list) registrarCausas(s, `indicador:${key}`, list, 'economia')

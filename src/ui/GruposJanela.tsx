@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react'
 import { credibilidadeLigada } from '../game/data/credibilidade'
-import { BLOCOS, GROUP_BY_ID, GROUPS } from '../game/data/groups'
+import { BLOCOS, GROUP_BY_ID, GROUPS, type BlocoId } from '../game/data/groups'
 import { ehBase } from '../game/groups'
+import { faixaTensao, tensaoLigada, tensaoOf, type FaixaTensao } from '../game/tensao'
 import { leituraBloco, leituraGrupo, piorDoBloco } from '../game/pesquisa'
 import type { GameState, GroupId } from '../game/types'
 import { faixaMeio, GrupoLeitura } from './CredibilidadeJanela'
@@ -10,6 +11,30 @@ import { GROUP_ICON } from './icons'
 
 const tom = (v: number) => (v >= 55 ? 'var(--up, #3fb950)' : v >= 40 ? 'var(--gold, #d4a72c)' : 'var(--dn, #f85149)')
 const pct = (x: number) => `${num(x * 100, 1)}%`
+
+/** v0.46.1 (H3): a faixa da tensão em palavras (o número exato fica escondido; o jogador lê pela faixa). */
+export const TEXTO_FAIXA: Record<FaixaTensao, string> = { calma: 'calma', atenta: 'atenta', alta: 'alta', limite: 'no limite' }
+const COR_FAIXA: Record<FaixaTensao, string> = { calma: 'var(--up, #3fb950)', atenta: 'var(--gold, #d4a72c)', alta: 'var(--dn, #f85149)', limite: 'var(--dn, #f85149)' }
+
+/** O grupo do bloco com a tensão mais alta, se já passou da faixa calma; senão nenhum. */
+export function maisTenso(state: GameState, bloco: BlocoId): GroupId | null {
+  const t = tensaoOf(state).nivel
+  const gs = GROUPS.filter((g) => g.bloco === bloco).sort((a, b) => (t[b.id] ?? 0) - (t[a.id] ?? 0))
+  return gs.length && faixaTensao(t[gs[0].id] ?? 0) !== 'calma' ? gs[0].id : null
+}
+
+/** Barra fina de tensão de um grupo, com a faixa em palavras. Só aparece quando o grupo já esquentou. */
+function TensaoLinha({ state, id }: { state: GameState; id: GroupId }): ReactNode {
+  const v = tensaoOf(state).nivel[id] ?? 0
+  const f = faixaTensao(v)
+  if (f === 'calma') return null
+  return (
+    <span className={`tensao tensao--${f}`} title="Tensão: a paciência do grupo. Acima de 70 ele ameaça; acima de 90 ele age (greve, protesto ou bloqueio). Só atender de verdade baixa; post e rua não.">
+      <span className="pn-meter"><span style={{ width: `${v}%`, background: COR_FAIXA[f] }} /></span>
+      <small>🔥 tensão {TEXTO_FAIXA[f]}</small>
+    </span>
+  )
+}
 
 /**
  * Etapa 6G, H3 (v0.46): o resumo dos grupos no painel. Cinco blocos, cada um com a leitura média e o grupo que está pior.
@@ -38,6 +63,7 @@ export function BlocosCard({ state, onAbrir }: { state: GameState; onAbrir: () =
                 </span>
                 <span className="pn-meter"><span style={{ width: `${largura}%`, background: tom(largura) }} /></span>
                 <small>{gs.length} grupos · {pct(peso)} do eleitorado · mais insatisfeito: {GROUP_ICON[pior.id]} {pior.name}</small>
+                {tensaoLigada() && maisTenso(state, b.id) && <small className={`tensao tensao--${faixaTensao(tensaoOf(state).nivel[maisTenso(state, b.id)!])}`}>🔥 {GROUP_BY_ID[maisTenso(state, b.id)!].name}: tensão {TEXTO_FAIXA[faixaTensao(tensaoOf(state).nivel[maisTenso(state, b.id)!])]}</small>}
               </span>
             </button>
           )
@@ -72,6 +98,7 @@ export function GruposJanela({ state, onPorQue }: { state: GameState; onPorQue: 
                     </span>
                     <span className="pn-meter"><span style={{ width: `${largura}%`, background: tom(largura) }} /></span>
                     <small>{pct(g.weight)} do eleitorado{ehBase(state, g.id) ? ' · sua base' : ''} · {g.cares}</small>
+                    {tensaoLigada() && <TensaoLinha state={state} id={g.id} />}
                   </span>
                 </button>
               )

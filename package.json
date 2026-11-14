@@ -1,7 +1,7 @@
 {
   "name": "governation",
   "private": true,
-  "version": "0.46.0",
+  "version": "0.46.1",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -25,7 +25,8 @@
     "sim6": "tsx scripts/sim6.ts",
     "sim6f": "tsx scripts/sim6f.ts",
     "sim7": "tsx scripts/sim7.ts",
-    "sim8": "tsx scripts/sim8.ts"
+    "sim8": "tsx scripts/sim8.ts",
+    "sim9": "tsx scripts/sim9.ts"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.12.4",
