@@ -3,7 +3,8 @@ import { acaoBlockedReason, escolherAcao } from './agenda'
 import { BILL_BY_ID } from './data/bills'
 import { EVENT_BY_ID } from './data/events'
 import { GROUPS } from './data/groups'
-import { idReqIgnorado, REQUERIMENTO, REQUERIMENTO_EVENTS, SETOR_BY_ID, SETORES } from './data/requerimento'
+import { GRUPO_REQ, idReqGrupo, idReqIgnorado, REQUERIMENTO, REQUERIMENTO_EVENTS, SETOR_BY_ID, SETORES } from './data/requerimento'
+import { idTensao, TENSAO } from './data/tensao'
 import { PROPOSTAS } from './data/risco'
 import { MINISTER_BY_AREA } from './data/ministers'
 import { advanceMonth, newGame } from './game'
@@ -11,9 +12,10 @@ import { absMonth, fillText } from './memory'
 import type { Rng } from './rng'
 import { migrate } from './save'
 import {
-  aplicarSaidaSetor, chanceContra, faixaContra, ligarRequerimento, passoBlockedReason, pautaInfo, requerimentoAtivo, requerimentosOf,
+  alvoDe, aplicarSaidaSetor, chanceContra, faixaContra, grupoReqDe, GRUPOS_COM_REQ, ligarRequerimento, passoBlockedReason, pautaInfo, requerimentoAtivo, requerimentosOf,
   sortearRequerimento, stepRequerimento, type PassoReq,
 } from './requerimento'
+import { eventoTensao, tensaoOf } from './tensao'
 import type { GameState, GroupId, Headline, Impulse } from './types'
 
 const sempre = { next: () => 0 } as unknown as Rng
@@ -418,5 +420,157 @@ describe('save 45 e o jogo seguindo', () => {
     expect(chegaram).toBeGreaterThan(0)
     for (const g of GROUPS) expect(Number.isFinite(s.groups[g.id].approval), g.id).toBe(true)
     expect(s.requerimentos.historico.length).toBeGreaterThan(0)
+  })
+})
+
+describe('requerimentos dos grupos pela tensão (v0.47.2)', () => {
+  const jogoG = (fase: 'aberto' | 'pautas' | 'acatado' | 'estruturado' = 'aberto', g: GroupId = 'caminhoneiros'): GameState => {
+    const s = jogo(fase, idReqGrupo(g))
+    tensaoOf(s).nivel[g] = 60
+    return s
+  }
+  const novo = (): GameState => { const s = structuredClone(newGame('T', 'normal', 7, 'mdn')); s.month = 8; s.event = null; return s }
+
+  it('os grupos com cobrança podem mandar requerimento, com a medida e o pedido da cobrança', () => {
+    expect(GRUPOS_COM_REQ.length).toBeGreaterThanOrEqual(20)
+    for (const g of GRUPOS_COM_REQ) {
+      const r = grupoReqDe(g)!
+      expect(BILL_BY_ID[r.medida], g).toBeTruthy()
+      expect(MINISTER_BY_AREA[r.area], g).toBeTruthy()
+      const al = alvoDe(idReqGrupo(g))
+      expect(al.grupo).toBe(g)
+      expect(al.texto.duvidosa).not.toBe(al.texto.media)
+      expect(al.texto.media).not.toBe(al.texto.limpa)
+      expect(al.rotulos.duvidosa).toBe('Pauta cheia')
+    }
+    expect(alvoDe(idReqGrupo('caminhoneiros')).medida).toBe(grupoReqDe('caminhoneiros')!.medida)
+  })
+
+  it('as pautas do grupo não têm rastro e baixam a tensão: o primeiro passo menos, a pauta cheia mais', () => {
+    const l = pautaInfo(idReqGrupo('professores'), 'limpa')
+    const m = pautaInfo(idReqGrupo('professores'), 'media')
+    const d = pautaInfo(idReqGrupo('professores'), 'duvidosa')
+    for (const p of [l, m, d]) { expect(p.rastro).toBe(0); expect(p.peso).toBe(0); expect(p.tensao!).toBeLessThan(0) }
+    expect(d.tensao!).toBeLessThan(m.tensao!)
+    expect(m.tensao!).toBeLessThan(l.tensao!)
+    // O que alivia mais custa mais (confiança) e rende mais ao grupo: não há pauta melhor em tudo.
+    expect(d.ganho.confidence).toBeLessThan(l.ganho.confidence)
+    expect(d.ganho.groups.professores!).toBeGreaterThan(l.ganho.groups.professores!)
+  })
+
+  it('chega pela tensão, sem sorteio: o grupo mais tenso primeiro, acima do aviso e uma vez a cada 9 meses', () => {
+    const s = novo()
+    tensaoOf(s).nivel.caminhoneiros = TENSAO.aviso - 1
+    sortearRequerimento(s, nunca)
+    expect(requerimentoAtivo(s)).toBeNull()
+    tensaoOf(s).nivel.caminhoneiros = 80
+    tensaoOf(s).nivel.professores = 92
+    sortearRequerimento(s, nunca)
+    expect(requerimentoAtivo(s)!.setor).toBe(idReqGrupo('professores'))
+    expect(requerimentoAtivo(s)!.fase).toBe('aberto')
+    requerimentosOf(s).ativo = null
+    s.month += REQUERIMENTO.intervalo
+    sortearRequerimento(s, nunca)
+    expect(requerimentoAtivo(s)!.setor).toBe(idReqGrupo('caminhoneiros'))
+    requerimentosOf(s).ativo = null
+    s.month += REQUERIMENTO.intervalo
+    sortearRequerimento(s, nunca)
+    expect(requerimentoAtivo(s)).toBeNull()
+    s.month += GRUPO_REQ.intervaloGrupo
+    sortearRequerimento(s, nunca)
+    expect(requerimentoAtivo(s)).toBeTruthy()
+  })
+
+  it('não chega no mês do fato de greve do próprio grupo', () => {
+    const s = novo()
+    tensaoOf(s).nivel.caminhoneiros = 95
+    s.event = { id: idTensao('caminhoneiros'), month: 8 }
+    sortearRequerimento(s, sempre)
+    expect(requerimentoAtivo(s)).toBeNull()
+  })
+
+  it('acatar baixa a tensão pela pauta, dá o ganho ao grupo e cobra a confiança', () => {
+    const s = jogoG('pautas')
+    const sem0 = s.risco.sementes.length
+    const r = fecha(s, { passo: 'pauta', pauta: 'media' })
+    expect(tensaoOf(s).nivel.caminhoneiros).toBeCloseTo(60 + GRUPO_REQ.pauta.media.tensao, 5)
+    expect(r.imp.caminhoneiros.some((i) => i.value === GRUPO_REQ.pauta.media.ganho)).toBe(true)
+    expect(r.c).toBe(GRUPO_REQ.pauta.media.confianca)
+    expect(requerimentoAtivo(s)!.fase).toBe('acatado')
+    expect(s.risco.sementes.length).toBe(sem0)
+    expect(r.h.some((h) => h.text.includes('acata o acordo parcial'))).toBe(true)
+  })
+
+  it('a contraproposta aceita vale o primeiro passo (alivia menos); a recusada deixa só a pauta cheia', () => {
+    const ok = jogoG('pautas')
+    fecha(ok, { passo: 'contrapor' }, [], sempre)
+    expect(requerimentoAtivo(ok)!.pauta).toBe('limpa')
+    expect(tensaoOf(ok).nivel.caminhoneiros).toBeCloseTo(60 + GRUPO_REQ.pauta.limpa.tensao, 5)
+    const no = jogoG('pautas')
+    const r = fecha(no, { passo: 'contrapor' }, [], nunca)
+    expect(requerimentoAtivo(no)!.oferecidas).toEqual(['duvidosa'])
+    expect(r.h.some((h) => h.text.includes('mantém a pauta cheia'))).toBe(true)
+  })
+
+  it('ignorar, desacatar e desistir sobem a tensão e tiram aprovação do grupo, sem semente de fato', () => {
+    const seeds = (s: GameState) => s.world.seeds.length
+    const i = jogoG('aberto')
+    const n0 = seeds(i)
+    const ri = fecha(i, { passo: 'ignorar' })
+    expect(tensaoOf(i).nivel.caminhoneiros).toBe(60 + GRUPO_REQ.desfecho.ignorar.tensao)
+    expect(ri.imp.caminhoneiros.some((x) => x.value === -GRUPO_REQ.desfecho.ignorar.queda)).toBe(true)
+    expect(seeds(i)).toBe(n0)
+    expect(i.requerimentos.setores['g:caminhoneiros'].ignorados).toBe(1)
+    const d = jogoG('pautas')
+    fecha(d, { passo: 'desacatar' })
+    expect(tensaoOf(d).nivel.caminhoneiros).toBe(60 + GRUPO_REQ.desfecho.desacatar.tensao)
+    const x = jogoG('acatado')
+    const rx = fecha(x, { passo: 'desistir' })
+    expect(tensaoOf(x).nivel.caminhoneiros).toBe(60 + GRUPO_REQ.desfecho.desistir.tensao)
+    expect(rx.imp.caminhoneiros.some((y) => y.value === -GRUPO_REQ.desfecho.desistir.queda)).toBe(true)
+    expect(GRUPO_REQ.desfecho.ignorar.tensao).toBeLessThan(GRUPO_REQ.desfecho.desacatar.tensao)
+    expect(GRUPO_REQ.desfecho.desacatar.tensao).toBeLessThan(GRUPO_REQ.desfecho.desistir.tensao)
+    expect(i.world.chronicle.some((c) => c.text.includes('grupo (Caminhoneiros)'))).toBe(true)
+  })
+
+  it('adotar a medida alivia a tensão mais um pouco e encerra bem', () => {
+    const s = jogoG('estruturado')
+    const medida = alvoDe(idReqGrupo('caminhoneiros')).medida
+    fecha(s, undefined, [medida])
+    expect(requerimentoAtivo(s)).toBeNull()
+    expect(tensaoOf(s).nivel.caminhoneiros).toBe(60 + GRUPO_REQ.desfecho.adotar.tensao)
+    expect(s.requerimentos.historico.at(-1)!.desfecho).toBe('adotado')
+  })
+
+  it('com o requerimento acatado, o grupo espera: o fato de greve fica suspenso; aberto, não', () => {
+    const acatado = jogoG('acatado')
+    tensaoOf(acatado).nivel.caminhoneiros = 96
+    expect(eventoTensao(acatado)).toBeNull()
+    const aberto = jogoG('aberto')
+    tensaoOf(aberto).nivel.caminhoneiros = 96
+    expect(eventoTensao(aberto)).toEqual({ id: idTensao('caminhoneiros'), month: 8 })
+    const outro = jogoG('acatado', 'professores')
+    tensaoOf(outro).nivel.caminhoneiros = 96
+    expect(eventoTensao(outro)?.id).toBe(idTensao('caminhoneiros'))
+  })
+
+  it('no jogo: a tensão alta abre o requerimento do grupo no mês seguinte, e a reunião leva às pautas', () => {
+    let s = novo()
+    s.month = 9
+    s.requerimentos.ultimo = -99
+    tensaoOf(s).nivel.caminhoneiros = 82
+    s.groups.caminhoneiros.approval = 12
+    s = advanceMonth(s, [])
+    const a = requerimentoAtivo(s)
+    expect(a).toBeTruthy()
+    expect(a!.setor.startsWith('g:')).toBe(true)
+    const com = escolherAcao(s, { tipo: 'reuniao' })
+    const fim = advanceMonth(com, [])
+    expect(requerimentoAtivo(fim)!.fase).toBe('pautas')
+    expect(fim.lastReport!.headlines.some((h) => h.text.includes('ouve o requerimento'))).toBe(true)
+  })
+
+  it('os fatos de setor ofendido continuam só nos setores', () => {
+    expect(Object.keys(EVENT_BY_ID).filter((k) => k.startsWith('reqIgnorado_'))).toHaveLength(7)
   })
 })

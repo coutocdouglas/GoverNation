@@ -4,10 +4,12 @@ import { acaoBlockedReason } from '../game/agenda'
 import { parecerAdvogado } from '../game/caso'
 import { BILL_BY_ID, INSTRUMENTS } from '../game/data/bills'
 import { GROUP_BY_ID } from '../game/data/groups'
-import { REQUERIMENTO, SETOR_BY_ID, type PautaId } from '../game/data/requerimento'
+import { GRUPO_REQ, REQUERIMENTO, type PautaId } from '../game/data/requerimento'
+import { faixaTensao, tensaoOf } from '../game/tensao'
+import { TEXTO_FAIXA } from './GruposJanela'
 import { absMonth } from '../game/memory'
 import {
-  chanceContra, faixaContra, ministroDoSetor, passoBlockedReason, pautaInfo, requerimentoAtivo, requerimentosOf,
+  alvoDe, chanceContra, faixaContra, ministroDoSetor, passoBlockedReason, pautaInfo, requerimentoAtivo, requerimentosOf, setorEstado,
   type FaseReq, type PassoReq,
 } from '../game/requerimento'
 import { peekRound, sendBlockedReason } from '../game/rodada'
@@ -34,12 +36,12 @@ export function mesesDoRequerimento(state: GameState): number | null {
 }
 
 /** Resumo para o Radar. */
-export function resumoRequerimentoRadar(state: GameState): { texto: string; tag: string; tom?: 'warn' | 'dn' } | null {
+export function resumoRequerimentoRadar(state: GameState): { titulo: string; texto: string; tag: string; tom?: 'warn' | 'dn' } | null {
   const a = requerimentoAtivo(state)
   if (!a) return null
-  const p = propostaDef(a.setor)!
+  const al = alvoDe(a.setor)
   const m = mesesDoRequerimento(state)!
-  return { texto: `${p.setor}: ${NOME_FASE[a.fase]} · ${mesesTexto(m)}`, tag: m <= 0 ? 'último mês' : 'em andamento', tom: m <= 0 ? 'dn' : undefined }
+  return { titulo: `Requerimento de um ${al.grupo ? 'grupo' : 'setor'}`, texto: `${al.nome}: ${NOME_FASE[a.fase]} · ${mesesTexto(m)}`, tag: m <= 0 ? 'último mês' : 'em andamento', tom: m <= 0 ? 'dn' : undefined }
 }
 
 const faixaRelacao = (v: number) => (v >= 70 ? 'boa' : v >= 45 ? 'neutra' : v >= 25 ? 'fria' : 'ruim')
@@ -48,17 +50,17 @@ const faixaRelacao = (v: number) => (v >= 70 ? 'boa' : v >= 45 ? 'neutra' : v >=
 export function RequerimentoCard({ state, passo, onAbrir }: { state: GameState; passo: PassoReq | null; onAbrir: () => void }): ReactNode {
   const a = requerimentoAtivo(state)
   if (!a) return null
-  const p = propostaDef(a.setor)!
+  const al = alvoDe(a.setor)
   const m = mesesDoRequerimento(state)!
   const reuniao = peekRound(state)?.acao?.tipo === 'reuniao'
   const marcado = reuniao ? 'Reunião anotada para este mês' : passo ? { ignorar: 'Ignorar anotado', pauta: 'Pauta escolhida', contrapor: 'Contraproposta anotada', desacatar: 'Desacato anotado', desistir: 'Desistência anotada' }[passo.passo] : null
   return (
     <section className="pn-card pn-card--gold">
-      <h3>{p.icon} Requerimento de um setor <span className="pn-badge">{p.setor} · {NOME_FASE[a.fase]} · {mesesTexto(m)}</span></h3>
-      <p className="pn-proposta__pede">“{a.fase === 'aberto' ? p.pede : a.fase === 'pautas' ? 'O setor devolveu as pautas da reunião.' : a.fase === 'acatado' ? 'Pauta acatada: o ministro estrutura a medida.' : 'A medida está pronta para você adotar.'}”</p>
+      <h3>{al.icon} Requerimento de um {al.grupo ? 'grupo' : 'setor'} <span className="pn-badge">{al.nome} · {NOME_FASE[a.fase]} · {mesesTexto(m)}</span></h3>
+      <p className="pn-proposta__pede">“{a.fase === 'aberto' ? al.pede : a.fase === 'pautas' ? 'O setor devolveu as pautas da reunião.' : a.fase === 'acatado' ? 'Pauta acatada: o ministro estrutura a medida.' : 'A medida está pronta para você adotar.'}”</p>
       <div className="pn-row" style={{ alignItems: 'center', gap: 8 }}>
         <button type="button" className="pn-btn pn-btn--small" onClick={onAbrir}>Abrir o requerimento ↗</button>
-        {marcado ? <small className="up">✔ {marcado}: vale ao encerrar o mês.</small> : <small className="pn-hint">Sem decisão, o prazo corre e o setor se ressente.</small>}
+        {marcado ? <small className="up">✔ {marcado}: vale ao encerrar o mês.</small> : <small className="pn-hint">Sem decisão, o prazo corre e {al.grupo ? 'o grupo' : 'o setor'} se ressente.</small>}
       </div>
     </section>
   )
@@ -100,16 +102,20 @@ export function RequerimentoJanela({ state, passo, onPasso, onState, onToast, on
 }): ReactNode {
   const a = requerimentoAtivo(state)
   if (!a) return <p className="pn-hint">Nenhum requerimento de setor em andamento. Quando um setor mandar um, ele aparece no Painel e aqui.</p>
-  const p = propostaDef(a.setor)!
-  const def = SETOR_BY_ID[a.setor]
-  const setor = requerimentosOf(state).setores[a.setor]
+  const al = alvoDe(a.setor)
+  const tipo = al.grupo ? 'grupo' : 'setor'
+  const rec = al.grupo ? null : propostaDef(a.setor)!.recusa
+  const setor = setorEstado(state, a.setor)
   const m = mesesDoRequerimento(state)!
   const ministro = ministroDoSetor(state, a.setor)
-  const bill = BILL_BY_ID[def.medida]
-  const grupo = GROUP_BY_ID[p.recusa.group].name.toLowerCase()
+  const bill = BILL_BY_ID[al.medida]
+  const grupo = rec ? GROUP_BY_ID[rec.group].name.toLowerCase() : ''
   const D = REQUERIMENTO.desfecho
+  const GD = GRUPO_REQ.desfecho
   const reuniaoOn = peekRound(state)?.acao?.tipo === 'reuniao'
-  const custoDescaso = (k: { relacao: number; grupo: number }) => `relação com o setor ${k.relacao}, ${grupo} ${num(p.recusa.value * k.grupo, 1)}; pode voltar como fato do mês`
+  const custoDescaso = (k: { relacao: number; grupo: number }, g: { tensao: number; queda: number }) => al.grupo
+    ? `relação com o grupo ${k.relacao}, tensão +${g.tensao}, aprovação −${g.queda}; a greve fica mais perto`
+    : `relação com o setor ${k.relacao}, ${grupo} ${num(rec!.value * k.grupo, 1)}; pode voltar como fato do mês`
   const escolher = (x: PassoReq) => {
     const on = passo?.passo === x.passo && (x.passo !== 'pauta' || (passo as { pauta?: PautaId }).pauta === x.pauta)
     if (on) { onPasso(null); onToast('↩️ Escolha desfeita.'); return }
@@ -132,7 +138,8 @@ export function RequerimentoJanela({ state, passo, onPasso, onState, onToast, on
     const info = pautaInfo(a.setor, id)
     const chips = effectChips({ groups: info.ganho.groups, confidence: info.ganho.confidence || undefined }, {}).filter((c) => c.text !== 'sem efeito imediato')
     if (info.ganho.baseRelacao) chips.push({ text: `partidos da base +${info.ganho.baseRelacao}`, tone: 'up', title: 'Relação com a base aliada' })
-    const par = id === 'limpa' ? null : parecerAdvogado(state, a.setor, info.peso, info.rastro)
+    const par = id === 'limpa' || al.grupo ? null : parecerAdvogado(state, a.setor, info.peso, info.rastro)
+    if (info.tensao) chips.push({ text: `🔥 tensão −${Math.abs(info.tensao)}`, tone: 'up', title: `Tensão de ${al.nome}` })
     return (
       <>
         <p style={{ margin: 0 }}>{info.texto}</p>
@@ -147,38 +154,38 @@ export function RequerimentoJanela({ state, passo, onPasso, onState, onToast, on
   const chance = chanceContra(state, a.setor)
   const faixa = faixaContra(chance)
   const FX = { improvavel: 'improvável', arriscada: 'arriscada', provavel: 'provável' } as const
-  const adotarMotivo = sendBlockedReason(state, def.medida)
+  const adotarMotivo = sendBlockedReason(state, al.medida)
 
   return (
     <div>
-      <p className="pn-hint">{p.icon} <b>{p.setor}</b> · relação com o governo: <b>{faixaRelacao(setor.relacao)}</b>{setor.ignorados || setor.desacatados ? ` · ${setor.ignorados} ignorado${setor.ignorados === 1 ? '' : 's'}, ${setor.desacatados} desacatado${setor.desacatados === 1 ? '' : 's'}` : ''} · prazo: <b>{mesesTexto(m)}</b></p>
+      <p className="pn-hint">{al.icon} <b>{al.nome}</b>{al.grupo && <> · tensão: <b>{TEXTO_FAIXA[faixaTensao(tensaoOf(state).nivel[al.grupo] ?? 0)]}</b></>} · relação com o governo: <b>{faixaRelacao(setor.relacao)}</b>{setor.ignorados || setor.desacatados ? ` · ${setor.ignorados} ignorado${setor.ignorados === 1 ? '' : 's'}, ${setor.desacatados} desacatado${setor.desacatados === 1 ? '' : 's'}` : ''} · prazo: <b>{mesesTexto(m)}</b></p>
       <Passos fase={a.fase} />
 
       {a.fase === 'aberto' && <>
-        <p className="pn-proposta__pede">“{p.pede}”</p>
-        <Escolha on={reuniaoOn} titulo="Reunir com o setor" botao="Anotar a reunião" onClick={reunir} motivo={reuniaoOn ? null : acaoBlockedReason(state, { tipo: 'reuniao' })} tom="up">
-          <small>Gasta o espaço de ação do mês, <b>no lugar da medida nova</b>. No mês seguinte o setor devolve duas pautas (a intermediária e a duvidosa) e você pode contrapor uma pauta limpa.</small>
+        <p className="pn-proposta__pede">“{al.pede}”</p>
+        <Escolha on={reuniaoOn} titulo={`Reunir com o ${tipo}`} botao="Anotar a reunião" onClick={reunir} motivo={reuniaoOn ? null : acaoBlockedReason(state, { tipo: 'reuniao' })} tom="up">
+          <small>Gasta o espaço de ação do mês, <b>no lugar da medida nova</b>. No mês seguinte o {tipo} devolve duas pautas ({al.rotulos.media.toLowerCase()} e {al.rotulos.duvidosa.toLowerCase()}) e você pode contrapor {al.grupo ? 'o primeiro passo' : 'uma pauta limpa'}.</small>
         </Escolha>
         <Escolha on={on('ignorar')} titulo="Ignorar" botao="Ignorar o requerimento" onClick={() => escolher({ passo: 'ignorar' })} motivo={motivo({ passo: 'ignorar' })}>
-          <small>Não custa agenda agora, mas o setor se ressente: {custoDescaso(D.ignorar)}. Deixar o prazo vencer custa um pouco menos ({custoDescaso(D.vencer)}).</small>
+          <small>Não custa agenda agora, mas o {tipo} se ressente: {custoDescaso(D.ignorar, GD.ignorar)}. Deixar o prazo vencer custa um pouco menos ({custoDescaso(D.vencer, GD.vencer)}).</small>
         </Escolha>
       </>}
 
       {a.fase === 'pautas' && <>
-        <p className="pn-hint">O setor oferece {a.oferecidas.length === 2 ? 'duas pautas' : 'só uma pauta'}. Você pode escolher uma, contrapor ou desacatar.{a.contra === 'recusada' ? ' O setor recusou sua contraproposta e endureceu.' : ''}</p>
-        {a.oferecidas.includes('media') && <Escolha on={on('pauta', 'media')} titulo="Pauta intermediária" botao="Acatar esta pauta" onClick={() => escolher({ passo: 'pauta', pauta: 'media' })} motivo={motivo({ passo: 'pauta', pauta: 'media' })}>{pautaBox('media')}</Escolha>}
-        {a.oferecidas.includes('duvidosa') && <Escolha on={on('pauta', 'duvidosa')} titulo="Pauta duvidosa (a oferta original)" botao="Acatar esta pauta" onClick={() => escolher({ passo: 'pauta', pauta: 'duvidosa' })} motivo={motivo({ passo: 'pauta', pauta: 'duvidosa' })} tom="dn">{pautaBox('duvidosa')}</Escolha>}
-        <Escolha on={on('contrapor')} titulo={`Contrapor a pauta limpa · chance ${FX[faixa]}`} botao="Fazer a contraproposta" onClick={() => escolher({ passo: 'contrapor' })} motivo={motivo({ passo: 'contrapor' })}>
+        <p className="pn-hint">O {tipo} oferece {a.oferecidas.length === 2 ? 'duas pautas' : 'só uma pauta'}. Você pode escolher uma, contrapor ou desacatar.{a.contra === 'recusada' ? ` O ${tipo} recusou sua contraproposta e endureceu.` : ''}</p>
+        {a.oferecidas.includes('media') && <Escolha on={on('pauta', 'media')} titulo={al.rotulos.media} botao="Acatar esta pauta" onClick={() => escolher({ passo: 'pauta', pauta: 'media' })} motivo={motivo({ passo: 'pauta', pauta: 'media' })}>{pautaBox('media')}</Escolha>}
+        {a.oferecidas.includes('duvidosa') && <Escolha on={on('pauta', 'duvidosa')} titulo={`${al.rotulos.duvidosa}${al.grupo ? ' (o que o grupo exige)' : ' (a oferta original)'}`} botao="Acatar esta pauta" onClick={() => escolher({ passo: 'pauta', pauta: 'duvidosa' })} motivo={motivo({ passo: 'pauta', pauta: 'duvidosa' })} tom="dn">{pautaBox('duvidosa')}</Escolha>}
+        <Escolha on={on('contrapor')} titulo={`Contrapor ${al.grupo ? 'o primeiro passo' : 'a pauta limpa'} · chance ${FX[faixa]}`} botao="Fazer a contraproposta" onClick={() => escolher({ passo: 'contrapor' })} motivo={motivo({ passo: 'contrapor' })}>
           {pautaBox('limpa')}
-          <small>Só uma vez. Se o setor recusar, sobra a pauta duvidosa ou o desacato. A chance depende da relação com o setor e do que já foi ignorado ou desacatado.</small>
+          <small>Só uma vez. Se o {tipo} recusar, sobra {al.grupo ? 'a pauta cheia' : 'a pauta duvidosa'} ou o desacato. A chance depende da relação e do que já foi ignorado ou desacatado.</small>
         </Escolha>
         <Escolha on={on('desacatar')} titulo="Desacatar" botao="Desacatar o requerimento" onClick={() => escolher({ passo: 'desacatar' })} motivo={motivo({ passo: 'desacatar' })}>
-          <small>Encerra o requerimento sem acatar nada: {custoDescaso(D.desacatar)}.</small>
+          <small>Encerra o requerimento sem acatar nada: {custoDescaso(D.desacatar, GD.desacatar)}.</small>
         </Escolha>
       </>}
 
       {(a.fase === 'acatado' || a.fase === 'estruturado') && <>
-        <p className="pn-hint">Pauta acatada: <b>{{ limpa: 'limpa', media: 'intermediária', duvidosa: 'duvidosa' }[a.pauta ?? 'media']}</b>. A medida do setor é <b>{bill.name}</b> ({INSTRUMENTS[bill.instrument].label}), que entra como a medida do mês.</p>
+        <p className="pn-hint">Pauta acatada: <b>{al.rotulos[a.pauta ?? 'media'].toLowerCase()}</b>. A medida do {tipo} é <b>{bill.name}</b> ({INSTRUMENTS[bill.instrument].label}), que entra como a medida do mês.</p>
         {a.fase === 'acatado'
           ? <p className="pn-hint">🧑‍💼 {ministro.name} ({ministro.role}) estrutura a medida e entrega no mês que vem. Adotar antes disso contraria a pasta (desgaste +{REQUERIMENTO.antesDoMinistro.desgaste}).</p>
           : <div className="pn-announce"><small>🧑‍💼 {ministro.name} estruturou a medida e destaca:</small><ul className="causes">{(a.pontos ?? []).map((t, i) => <li key={i}><span>{t}</span></li>)}</ul>{a.ressalva && <small className="warn">⚠️ {a.ressalva}</small>}</div>}
@@ -188,14 +195,14 @@ export function RequerimentoJanela({ state, passo, onPasso, onState, onToast, on
           {adotarMotivo && <small className="pn-hint">🔒 {adotarMotivo}</small>}
         </div>
         <Escolha on={on('desistir')} titulo="Desistir" botao="Desistir do requerimento" onClick={() => escolher({ passo: 'desistir' })} motivo={motivo({ passo: 'desistir' })}>
-          <small>Depois de acatar, desistir custa mais que recusar antes: {custoDescaso(D.desistir)}. O prazo vencido conta como falta de resposta ({custoDescaso(D.vencer)}).</small>
+          <small>Depois de acatar, desistir custa mais que recusar antes: {custoDescaso(D.desistir, GD.desistir)}. O prazo vencido conta como falta de resposta ({custoDescaso(D.vencer, GD.vencer)}).</small>
         </Escolha>
       </>}
 
       {requerimentosOf(state).historico.length > 0 && (
         <details style={{ marginTop: 10 }}>
           <summary className="pn-hint">Requerimentos anteriores</summary>
-          <ul className="causes">{requerimentosOf(state).historico.slice(-5).reverse().map((h, i) => <li key={i}><span>{propostaDef(h.setor)?.setor ?? h.setor}</span><span>{{ adotado: 'adotado', ignorado: 'ignorado', desacatado: 'desacatado', desistiu: 'desistiu', venceu: 'venceu sem resposta' }[h.desfecho]}</span></li>)}</ul>
+          <ul className="causes">{requerimentosOf(state).historico.slice(-5).reverse().map((h, i) => <li key={i}><span>{alvoDe(h.setor).nome}</span><span>{{ adotado: 'adotado', ignorado: 'ignorado', desacatado: 'desacatado', desistiu: 'desistiu', venceu: 'venceu sem resposta' }[h.desfecho]}</span></li>)}</ul>
         </details>
       )}
     </div>

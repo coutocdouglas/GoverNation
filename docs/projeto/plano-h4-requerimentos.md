@@ -1,4 +1,4 @@
-# Plano H4: requerimentos dos setores em passos (aprovado pelo Douglas em 14/11/2026)
+# Plano H4: requerimentos dos setores em passos (aprovado pelo Douglas em 14/11/2026; **feito nas v0.47.0, v0.47.1 e v0.47.2**)
 
 > **Aprovadas as 3 versões** (v0.47.0 regras, v0.47.1 telas, v0.47.2 requerimentos de grupo). Parte da Etapa 6G (`plano-etapa-6g.md`, bloco H4). Decisões do Douglas: incluir a v0.47.2; a adoção **consome a medida do mês**; a chance da contraproposta aparece em **faixa**; setor ignorado ou desacatado fica **registrado** para o H5 (sem efeito novo nesta etapa).
 

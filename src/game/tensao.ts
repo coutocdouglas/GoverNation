@@ -111,11 +111,21 @@ export function eventoTensao(s: GameState): GameState['event'] {
   if (t.log.some((l) => at - l.at < TENSAO.intervalo)) return null
   const inicio = at - s.month
   if (t.log.filter((l) => l.at >= inicio).length >= TENSAO.maxMandato) return null
-  const livres = GROUPS.filter((g) => t.nivel[g.id] >= TENSAO.acao && !t.log.some((l) => l.grupo === g.id && at - l.at < TENSAO.repeteGrupo))
+  // v0.47.2 (H4): grupo com requerimento acatado espera a medida: o fato de greve fica suspenso.
+  const emNegociacao = s.requerimentos?.ativo && ['acatado', 'estruturado'].includes(s.requerimentos.ativo.fase) ? s.requerimentos.ativo.setor : ''
+  const livres = GROUPS.filter((g) => t.nivel[g.id] >= TENSAO.acao && emNegociacao !== `g:${g.id}` && !t.log.some((l) => l.grupo === g.id && at - l.at < TENSAO.repeteGrupo))
   if (!livres.length) return null
   livres.sort((a, b) => t.nivel[b.id] - t.nivel[a.id] || b.weight - a.weight)
   t.log.push({ grupo: livres[0].id, at })
   return { id: idTensao(livres[0].id), month: s.month }
+}
+
+/** Muda a tensão de um grupo (negativo alivia) e registra o porquê. Devolve a tensão nova. */
+export function mudarTensao(s: GameState, g: GroupId, delta: number, why: string): number {
+  const t = tensaoOf(s)
+  t.nivel[g] = round1(clamp((t.nivel[g] ?? 0) + delta))
+  if (delta) registrarCausa(s, { subject: `tensao:${g}`, delta, why, source: 'escolha' })
+  return t.nivel[g]
 }
 
 /** A saída escolhida (ou a omissão) mexe na tensão do grupo e entra na crônica. */

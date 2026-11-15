@@ -33,7 +33,7 @@ const CATS: { id: Cat; nome: string }[] = [
   { id: 'imprensa', nome: '🗞️ Imprensa' },
   { id: 'pesquisa', nome: '📊 Pesquisa' },
   { id: 'reforma', nome: '🔄 Reforma ministerial' },
-  { id: 'setor', nome: '📨 Reunião com o setor' },
+  { id: 'setor', nome: '📨 Reunião de requerimento' },
 ]
 
 const pct = (x: number) => `${Math.round(x * 100)}%`
@@ -216,7 +216,7 @@ export function AgendaJanela({ state, plan, billPronto, pesquisa, onPesquisa, on
             return <Opcao {...ctx} key={area} a={{ tipo: 'ministro', area, tom }} titulo={m.name} texto={m.role} direita={`${wearLabel(w)} · ${w}`} />
           })}
         </>}
-        {cat === 'setor' && <Opcao {...ctx} a={{ tipo: 'reuniao' }} titulo={`📨 ${rotuloAcao(state, { tipo: 'reuniao' })}`} texto="Ouvir o requerimento do setor. Ele devolve as pautas no mês que vem; você decide no requerimento do Painel." />}
+        {cat === 'setor' && <Opcao {...ctx} a={{ tipo: 'reuniao' }} titulo={`📨 ${rotuloAcao(state, { tipo: 'reuniao' })}`} texto="Ouvir o requerimento. Ele devolve as pautas no mês que vem; você decide no requerimento do Painel." />}
         {cat === 'reforma' && <ReformaPainel base={base} atual={atual} travada={travada} crise={crise} escolher={escolher} />}
         {cat === 'pesquisa' && <>
           <p className="pn-hint">A pesquisa <b>não entra no lugar da medida</b>: gasta {PESQUISA.agenda} espaço da agenda e dinheiro. A aprovação geral está sempre visível; os grupos aparecem em faixa até você encomendar uma pesquisa, que mostra o número com margem de erro. O erro nunca passa da margem.</p>

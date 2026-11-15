@@ -12,14 +12,19 @@ import { ministerOf } from './camara'
 import { registrarCausa } from './causas'
 import { BILL_BY_ID } from './data/bills'
 import { EVENT_BY_ID } from './data/events'
-import { idReqIgnorado, REQUERIMENTO, SETOR_BY_ID, SETORES, type PautaId } from './data/requerimento'
+import { DEMANDS } from './data/demands'
+import { GROUP_BY_ID } from './data/groups'
+import type { AreaId } from './data/ministers'
+import { ehGrupoReq, GRUPO_REQ, idReqGrupo, idReqIgnorado, REQUERIMENTO, SETOR_BY_ID, SETORES, type PautaId } from './data/requerimento'
+import { idTensao } from './data/tensao'
 import type { PropostaDef } from './data/risco'
-import { absMonth, addBio, addChronicle, yearOf } from './memory'
+import { absMonth, addBio, addChronicle } from './memory'
 import { frase, perfilDe, recusa as recusaDoPerfil, sementeFala } from './perfil'
 import { noteRecord } from './reputacao'
 import { plantarSemente, propostaDef, subirRastro } from './risco'
 import type { Rng } from './rng'
-import type { GameState, GroupId, Headline, Impulse } from './types'
+import { mudarTensao, tensaoLigada, tensaoOf } from './tensao'
+import type { BillId, GameState, GroupId, Headline, Impulse } from './types'
 
 export type FaseReq = 'aberto' | 'pautas' | 'acatado' | 'estruturado'
 export type DesfechoReq = 'adotado' | 'ignorado' | 'desacatado' | 'desistiu' | 'venceu'
@@ -96,6 +101,66 @@ export function requerimentoAtivo(s: GameState): RequerimentoAtivo | null {
 export const setorDe = (id: string) => SETOR_BY_ID[id]
 const propostaDoSetor = (id: string): PropostaDef => propostaDef(id)!
 
+/** Quem manda o requerimento: um setor (as 7 propostas) ou um grupo com a tensão alta (v0.47.2). */
+export interface AlvoReq {
+  id: string
+  /** Só nos requerimentos de grupo. */
+  grupo?: GroupId
+  nome: string
+  icon: string
+  pede: string
+  medida: BillId
+  area: AreaId
+  /** O texto de cada pauta e o nome dela. */
+  texto: Record<PautaId, string>
+  rotulos: Record<PautaId, string>
+  /** Como a frase chama o alvo: "do setor (bancos)" ou "do grupo (Caminhoneiros)". */
+  de: string
+  /** O nome para frases em minúsculas. */
+  ref: string
+}
+
+/** A cobrança de um grupo: a medida e o pedido vêm da primeira cobrança dele em data/demands.ts. */
+export function grupoReqDe(g: GroupId): { medida: BillId; pede: string; area: AreaId } | null {
+  const d = DEMANDS.find((x) => x.group === g && x.satisfiedBy.some((b) => b in BILL_BY_ID))
+  if (!d) return null
+  const medida = d.satisfiedBy.find((b) => b in BILL_BY_ID) as BillId
+  return { medida, pede: `${d.title}. ${d.text}`, area: BILL_BY_ID[medida].area }
+}
+/** Os grupos que podem mandar requerimento (os que têm cobrança). */
+export const GRUPOS_COM_REQ: GroupId[] = [...new Set(DEMANDS.map((d) => d.group))].filter((g) => !!grupoReqDe(g))
+
+export function alvoDe(id: string): AlvoReq {
+  if (ehGrupoReq(id)) {
+    const g = id.slice(2) as GroupId
+    const r = grupoReqDe(g)!
+    const nome = GROUP_BY_ID[g].name
+    const b = BILL_BY_ID[r.medida].name
+    return {
+      id, grupo: g, nome, icon: '✊', pede: r.pede, medida: r.medida, area: r.area, de: `grupo (${nome})`, ref: nome,
+      texto: {
+        duvidosa: `Atender a pauta inteira de “${nome}”: ${b}, com tudo o que pedem. Custa mais e acalma de vez.`,
+        media: `Fechar um acordo: ${b}, com parte do que pedem e prazo para o resto.`,
+        limpa: `Um primeiro passo: ${b} em versão reduzida, sem promessa além disso.`,
+      },
+      rotulos: { limpa: GRUPO_REQ.pauta.limpa.rotulo, media: GRUPO_REQ.pauta.media.rotulo, duvidosa: GRUPO_REQ.pauta.duvidosa.rotulo },
+    }
+  }
+  const p = propostaDoSetor(id)
+  const def = SETOR_BY_ID[id]
+  return {
+    id, nome: p.setor, icon: p.icon, pede: p.pede, medida: def.medida, area: def.area, de: `setor (${p.setor.toLowerCase()})`, ref: p.setor.toLowerCase(),
+    texto: { limpa: def.texto.limpa, media: def.texto.media, duvidosa: p.pede },
+    rotulos: { limpa: 'Pauta limpa', media: 'Pauta intermediária', duvidosa: 'Pauta duvidosa' },
+  }
+}
+
+/** O estado do setor ou do grupo (criado na primeira vez). */
+export function setorEstado(s: GameState, id: string): SetorEstado {
+  const R = requerimentosOf(s)
+  return (R.setores[id] ??= { relacao: REQUERIMENTO.relacaoInicial, ignorados: 0, desacatados: 0, ultimo: -99 })
+}
+
 /** O que cada pauta é, em números e palavras (para a janela, a prévia e o motor). */
 export interface PautaInfo {
   id: PautaId
@@ -106,9 +171,17 @@ export interface PautaInfo {
   peso: number
   /** A pauta tem risco de escândalo (rastro e semente). */
   duvidosa: boolean
+  /** Quanto a tensão do grupo cai se a pauta for acatada (só nos requerimentos de grupo; negativo). */
+  tensao?: number
+  rotulo: string
 }
 
 export function pautaInfo(setor: string, id: PautaId): PautaInfo {
+  const alvo = alvoDe(setor)
+  if (alvo.grupo) {
+    const G = GRUPO_REQ.pauta[id]
+    return { id, texto: alvo.texto[id], ganho: { groups: { [alvo.grupo]: G.ganho }, confidence: G.confianca, baseRelacao: 0 }, rastro: 0, peso: 0, duvidosa: false, tensao: G.tensao, rotulo: G.rotulo }
+  }
   const p = propostaDoSetor(setor)
   const def = SETOR_BY_ID[setor]
   const k = REQUERIMENTO.pauta[id]
@@ -121,13 +194,14 @@ export function pautaInfo(setor: string, id: PautaId): PautaInfo {
     rastro: round1(p.rastro * k.rastro),
     peso: Math.round(p.peso * k.peso),
     duvidosa: id === 'duvidosa',
+    rotulo: alvo.rotulos[id],
   }
 }
 
 /** Chance de o setor aceitar a contraproposta (a pauta limpa). */
 export function chanceContra(s: GameState, setor: string): number {
   const C = REQUERIMENTO.contra
-  const e = requerimentosOf(s).setores[setor]
+  const e = setorEstado(s, setor)
   const v = C.base + (e.relacao - 50) * C.porRelacao + e.ignorados * C.porIgnorado + e.desacatados * C.porDesacatado
   return Math.min(C.max, Math.max(C.min, v))
 }
@@ -145,6 +219,20 @@ export function sortearRequerimento(s: GameState, rng: Rng): void {
   if (now - R.ultimo < REQUERIMENTO.intervalo) return
   const ev = s.event ? EVENT_BY_ID[s.event.id] : null
   if (ev && ev.importance >= REQUERIMENTO.graveDesde) return
+  // v0.47.2: o grupo mais tenso (a partir do aviso) manda o requerimento dele, sem sorteio. Não no mês do fato de greve dele.
+  if (tensaoLigada()) {
+    const t = tensaoOf(s).nivel
+    const cand = GRUPOS_COM_REQ
+      .filter((g) => (t[g] ?? 0) >= GRUPO_REQ.desdeTensao && now - setorEstado(s, idReqGrupo(g)).ultimo >= GRUPO_REQ.intervaloGrupo && s.event?.id !== idTensao(g))
+      .sort((a, b) => (t[b] ?? 0) - (t[a] ?? 0) || a.localeCompare(b))
+    if (cand.length) {
+      const id = idReqGrupo(cand[0])
+      R.ativo = { setor: id, fase: 'aberto', desde: now, em: now - 1, ate: now + REQUERIMENTO.prazoAberto - 1, oferecidas: [] }
+      R.ultimo = now
+      setorEstado(s, id).ultimo = now
+      return
+    }
+  }
   if (rng.next() >= REQUERIMENTO.chance) return
   const pool = SETORES.filter((x) => now - R.setores[x.id].ultimo >= REQUERIMENTO.intervaloSetor)
   if (!pool.length) return
@@ -193,34 +281,43 @@ export function passoBlockedReason(s: GameState, p: PassoReq): string | null {
 export function reunir(s: GameState, headlines: Headline[], taken: string[]): void {
   const a = requerimentoAtivo(s)
   if (!a || a.fase !== 'aberto') return
-  const p = propostaDoSetor(a.setor)
+  const al = alvoDe(a.setor)
+  const tipo = al.grupo ? 'grupo' : 'setor'
   const now = absMonth(s)
   a.fase = 'pautas'
   a.oferecidas = ['media', 'duvidosa']
   a.em = now
   a.ate = now + REQUERIMENTO.prazoPautas
-  headlines.push({ text: `Presidente recebe o setor (${p.setor.toLowerCase()}) e ouve o requerimento`, tone: 'neutral' })
-  taken.push(`Reuniu-se com o setor: ${p.setor.toLowerCase()}`)
-  addBio(s, s.presidentName, `Recebeu o setor (${p.setor.toLowerCase()}) para ouvir um requerimento.`)
-  noteRecord(s, { text: `Reuniu-se com o setor (${p.setor.toLowerCase()}) no lugar de mandar uma medida`, tone: 'neutral', kind: 'outro' })
+  headlines.push({ text: `Presidente recebe o ${tipo} (${al.ref}) e ouve o requerimento`, tone: 'neutral' })
+  taken.push(`Reuniu-se com o ${tipo}: ${al.ref}`)
+  addBio(s, s.presidentName, `Recebeu o ${tipo} (${al.ref}) para ouvir um requerimento.`)
+  noteRecord(s, { text: `Reuniu-se com o ${tipo} (${al.ref}) no lugar de mandar uma medida`, tone: 'neutral', kind: 'outro' })
 }
 
 function encerrar(s: GameState, a: RequerimentoAtivo, desfecho: DesfechoReq, impulses: Record<GroupId, Impulse[]>, headlines: Headline[], rng: Rng): void {
   const R = requerimentosOf(s)
-  const p = propostaDoSetor(a.setor)
-  const e = R.setores[a.setor]
+  const al = alvoDe(a.setor)
+  const p = al.grupo ? null : propostaDoSetor(a.setor)
+  const e = setorEstado(s, a.setor)
   const now = absMonth(s)
   const tabela = { adotado: REQUERIMENTO.desfecho.adotar, ignorado: REQUERIMENTO.desfecho.ignorar, desacatado: REQUERIMENTO.desfecho.desacatar, desistiu: REQUERIMENTO.desfecho.desistir, venceu: REQUERIMENTO.desfecho.vencer }[desfecho]
   e.relacao = clamp(e.relacao + tabela.relacao)
   if (desfecho === 'ignorado') e.ignorados++
   if (desfecho === 'desacatado' || desfecho === 'desistiu') e.desacatados++
   const descaso = desfecho !== 'adotado'
-  if (descaso && tabela.grupo) {
-    impulses[p.recusa.group].push({ label: `Requerimento ${desfecho === 'ignorado' ? 'ignorado' : desfecho === 'venceu' ? 'sem resposta' : desfecho === 'desacatado' ? 'desacatado' : 'abandonado'}: ${p.setor.toLowerCase()}`, value: round1(p.recusa.value * tabela.grupo) })
+  const comoFoi = desfecho === 'ignorado' ? 'ignorado' : desfecho === 'venceu' ? 'sem resposta' : desfecho === 'desacatado' ? 'desacatado' : 'abandonado'
+  if (descaso && p && tabela.grupo) {
+    impulses[p.recusa.group].push({ label: `Requerimento ${comoFoi}: ${al.ref}`, value: round1(p.recusa.value * tabela.grupo) })
+  }
+  // v0.47.2: o grupo que foi desprezado perde aprovação e a tensão sobe; adotar alivia a tensão.
+  if (al.grupo) {
+    const G = GRUPO_REQ.desfecho[{ adotado: 'adotar', ignorado: 'ignorar', desacatado: 'desacatar', desistiu: 'desistir', venceu: 'vencer' }[desfecho] as keyof typeof GRUPO_REQ.desfecho]
+    if (G.queda) impulses[al.grupo].push({ label: `Requerimento ${comoFoi}: ${al.ref}`, value: -G.queda })
+    mudarTensao(s, al.grupo, G.tensao, `Requerimento ${comoFoi}`)
   }
   if (e.relacao !== REQUERIMENTO.relacaoInicial) registrarCausa(s, { subject: `setor:${a.setor}`, delta: tabela.relacao, why: `Requerimento: ${desfecho}`, source: 'escolha' })
   // O descaso volta mais tarde como fato do mês (a semente da memória do mundo).
-  if (descaso && EVENT_BY_ID[idReqIgnorado(a.setor)]) {
+  if (descaso && !al.grupo && p && EVENT_BY_ID[idReqIgnorado(a.setor)]) {
     const { chance, atraso } = REQUERIMENTO.semente
     if (rng.next() < chance) {
       const delay = atraso[0] + Math.floor(rng.next() * (atraso[1] - atraso[0] + 1))
@@ -228,11 +325,11 @@ function encerrar(s: GameState, a: RequerimentoAtivo, desfecho: DesfechoReq, imp
     }
   }
   const texto = {
-    adotado: `Governo adota a medida pedida pelo setor (${p.setor.toLowerCase()})`,
-    ignorado: `Governo ignora o requerimento do setor (${p.setor.toLowerCase()})`,
-    desacatado: `Governo desacata o requerimento do setor (${p.setor.toLowerCase()}) e o setor se afasta`,
-    desistiu: `Governo desiste do requerimento do setor (${p.setor.toLowerCase()}) depois de acatá-lo`,
-    venceu: `O prazo do requerimento do setor (${p.setor.toLowerCase()}) vence sem resposta`,
+    adotado: `Governo adota a medida pedida pelo ${al.de}`,
+    ignorado: `Governo ignora o requerimento do ${al.de}`,
+    desacatado: `Governo desacata o requerimento do ${al.de} e ele se afasta`,
+    desistiu: `Governo desiste do requerimento do ${al.de} depois de acatá-lo`,
+    venceu: `O prazo do requerimento do ${al.de} vence sem resposta`,
   }[desfecho]
   headlines.push({ text: texto, tone: descaso ? 'bad' : 'good' })
   addChronicle(s, texto, descaso ? 'bad' : 'good')
@@ -246,36 +343,38 @@ function encerrar(s: GameState, a: RequerimentoAtivo, desfecho: DesfechoReq, imp
 
 /** Acata a pauta: o ganho vem na hora, o rastro e a semente de risco entram se ela for duvidosa, e o prazo de adoção começa. */
 function acatar(s: GameState, a: RequerimentoAtivo, pauta: PautaId, impulses: Record<GroupId, Impulse[]>, headlines: Headline[]): number {
-  const p = propostaDoSetor(a.setor)
+  const al = alvoDe(a.setor)
+  const p = al.grupo ? null : propostaDoSetor(a.setor)
   const info = pautaInfo(a.setor, pauta)
   const now = absMonth(s)
-  for (const [g, v] of Object.entries(info.ganho.groups) as [GroupId, number][]) impulses[g].push({ label: `Acordo com o setor: ${p.setor.toLowerCase()}`, value: v })
+  for (const [g, v] of Object.entries(info.ganho.groups) as [GroupId, number][]) impulses[g].push({ label: `Acordo com o ${al.de}`, value: v })
+  if (al.grupo && info.tensao) mudarTensao(s, al.grupo, info.tensao, `Acordo: ${al.rotulos[pauta].toLowerCase()}`)
   if (info.ganho.baseRelacao) {
     for (const m of baseMembers(s)) {
       const ps = s.congress.parties[m.party]
       if (ps) ps.relation = clamp(ps.relation + info.ganho.baseRelacao)
     }
   }
-  if (info.rastro > 0) subirRastro(s, info.rastro, `Acatou a pauta do setor: ${p.setor.toLowerCase()}`)
-  if (info.peso > 0) {
-    plantarSemente(s, { fonte: 'proposta', quem: p.setor, por: s.presidentName, porque: info.texto, peso: info.peso, presidente: true, bill: SETOR_BY_ID[a.setor].medida, ficha: `Acatou a pauta do setor (${p.setor}): ${minusculo(info.texto)}` })
+  if (p && info.rastro > 0) subirRastro(s, info.rastro, `Acatou a pauta do setor: ${p.setor.toLowerCase()}`)
+  if (p && info.peso > 0) {
+    plantarSemente(s, { fonte: 'proposta', quem: p.setor, por: s.presidentName, porque: info.texto, peso: info.peso, presidente: true, bill: al.medida, ficha: `Acatou a pauta do setor (${p.setor}): ${minusculo(info.texto)}` })
   }
-  requerimentosOf(s).setores[a.setor].relacao = clamp(requerimentosOf(s).setores[a.setor].relacao + 5)
+  setorEstado(s, a.setor).relacao = clamp(setorEstado(s, a.setor).relacao + 5)
   a.fase = 'acatado'
   a.pauta = pauta
   a.oferecidas = []
   a.em = now
   a.ate = now + REQUERIMENTO.prazoAcatado
-  const nome = { limpa: 'a pauta limpa', media: 'a pauta intermediária', duvidosa: 'a pauta duvidosa' }[pauta]
-  headlines.push({ text: `${p.setor}: governo acata ${nome} e a medida vai ao ministro`, tone: 'neutral' })
-  addBio(s, s.presidentName, `Acatou ${nome} do setor (${p.setor.toLowerCase()}).`)
-  noteRecord(s, { text: `Acatou ${nome} do setor (${p.setor.toLowerCase()})`, tone: pauta === 'limpa' ? 'good' : 'neutral', kind: 'risco', bill: SETOR_BY_ID[a.setor].medida })
+  const nome = al.grupo ? { limpa: 'o primeiro passo', media: 'o acordo parcial', duvidosa: 'a pauta cheia' }[pauta] : { limpa: 'a pauta limpa', media: 'a pauta intermediária', duvidosa: 'a pauta duvidosa' }[pauta]
+  headlines.push({ text: `${al.nome}: governo acata ${nome} e a medida vai ao ministro`, tone: 'neutral' })
+  addBio(s, s.presidentName, `Acatou ${nome} do ${al.de}.`)
+  noteRecord(s, { text: `Acatou ${nome} do ${al.de}`, tone: pauta === 'limpa' ? 'good' : 'neutral', kind: 'risco', bill: al.medida })
   return info.ganho.confidence
 }
 
 /** O ministro da área estrutura a medida: os pontos que ele destaca e, se for o caso, a ressalva. */
 function estruturar(s: GameState, a: RequerimentoAtivo): void {
-  const def = SETOR_BY_ID[a.setor]
+  const def = alvoDe(a.setor)
   const m = ministerOf(s, def.area)
   const perfil = perfilDe(m)
   const bill = BILL_BY_ID[def.medida]
@@ -286,7 +385,9 @@ function estruturar(s: GameState, a: RequerimentoAtivo): void {
     : perfil.gasto >= 0.4
       ? frase(['Quer a medida com verba suficiente para entregar.', 'Prefere resolver bem a economizar na medida.'], sem)
       : frase(['Quer a medida com custo e prazo claros.', 'Pede metas de entrega no texto.'], sem))
-  pontos.push(a.pauta === 'duvidosa'
+  pontos.push(def.grupo
+    ? (a.pauta === 'duvidosa' ? 'Quer a pauta cheia com cronograma e verba garantidos.' : a.pauta === 'media' ? 'Quer o acordo parcial com prazo para o restante, por escrito.' : 'O primeiro passo vai direto ao texto, sem promessa além dele.')
+    : a.pauta === 'duvidosa'
     ? 'Exige licitação aberta e acompanhamento da Controladoria: a pauta duvidosa não pode ir sem trava.'
     : a.pauta === 'media'
       ? 'Quer todas as contrapartidas do setor por escrito.'
@@ -299,7 +400,7 @@ function estruturar(s: GameState, a: RequerimentoAtivo): void {
   } else delete a.ressalva
   a.fase = 'estruturado'
   a.em = absMonth(s)
-  addBio(s, m.name, `${m.role}: estruturou a medida pedida pelo setor (${propostaDoSetor(a.setor).setor.toLowerCase()}).`)
+  addBio(s, m.name, `${m.role}: estruturou a medida pedida pelo ${def.de}.`)
 }
 
 /**
@@ -319,7 +420,7 @@ export function stepRequerimento(
   const now = absMonth(s)
   if (a.em === now) return 0
   const valido = passo && !passoBlockedReason(s, passo) ? passo : undefined
-  const def = SETOR_BY_ID[a.setor]
+  const def = alvoDe(a.setor)
   const adotou = enviadas.includes(def.medida)
   switch (a.fase) {
     case 'aberto':
@@ -331,14 +432,14 @@ export function stepRequerimento(
         const chance = chanceContra(s, a.setor)
         if (rng.next() < chance) {
           a.contra = 'aceita'
-          headlines.push({ text: `${propostaDoSetor(a.setor).setor}: o setor aceita a contraproposta`, tone: 'good' })
+          headlines.push({ text: `${def.nome}: ${def.grupo ? 'o grupo' : 'o setor'} aceita a contraproposta`, tone: 'good' })
           return acatar(s, a, 'limpa', impulses, headlines)
         }
         a.contra = 'recusada'
         a.oferecidas = ['duvidosa']
         a.em = now
         a.ate = now + REQUERIMENTO.prazoPautas
-        headlines.push({ text: `${propostaDoSetor(a.setor).setor}: o setor recusa a contraproposta e mantém a pauta duvidosa`, tone: 'bad' })
+        headlines.push({ text: `${def.nome}: ${def.grupo ? 'o grupo' : 'o setor'} recusa a contraproposta e mantém ${def.grupo ? 'a pauta cheia' : 'a pauta duvidosa'}`, tone: 'bad' })
         return 0
       }
       if (valido?.passo === 'desacatar') encerrar(s, a, 'desacatado', impulses, headlines, rng)
@@ -372,14 +473,7 @@ export function aplicarSaidaSetor(s: GameState, setor: string, relacao: number, 
   addChronicle(s, `${propostaDoSetor(setor).setor}: ${minusculo(texto)}`, relacao > 0 ? 'good' : 'bad')
 }
 
-/** Resumo para a janela e a Ficha: setor, fase e quanto falta. */
-export function resumoRequerimento(s: GameState): { setor: PropostaDef; fase: FaseReq; mesesRestantes: number; ano: number } | null {
-  const a = requerimentoAtivo(s)
-  if (!a) return null
-  const now = absMonth(s)
-  return { setor: propostaDoSetor(a.setor), fase: a.fase, mesesRestantes: Math.max(0, a.ate - now + 1), ano: yearOf(a.desde) }
-}
 
 /** O ministro da pasta que estrutura a medida do setor. */
-export const ministroDoSetor = (s: GameState, setor: string) => ministerOf(s, SETOR_BY_ID[setor].area)
+export const ministroDoSetor = (s: GameState, setor: string) => ministerOf(s, alvoDe(setor).area)
 

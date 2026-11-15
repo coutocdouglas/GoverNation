@@ -19,8 +19,8 @@ import { TERM_MONTHS } from './game'
 import { baseMembers, fidelityOf } from './base'
 import { BASE, ESFRIA } from './data/base'
 import type { BillId, GameState } from './types'
-import { licitacoesAbertas, prazoLicitacao, propostaDef } from './risco'
-import { requerimentoAtivo } from './requerimento'
+import { licitacoesAbertas, prazoLicitacao } from './risco'
+import { alvoDe, requerimentoAtivo } from './requerimento'
 import { casosAbertos, faixaGravidade } from './caso'
 import { cpiAtual } from './cpi'
 import { sementeAvisada } from './inteligencia'
@@ -125,7 +125,7 @@ export function pendencias(s: GameState): Pendencia[] {
   const rq = requerimentoAtivo(s)
   if (rq) {
     const left = Math.max(0, rq.ate - now)
-    const nome = propostaDef(rq.setor)?.setor ?? rq.setor
+    const nome = alvoDe(rq.setor).nome
     const o = { aberto: 'reunir ou ignorar', pautas: 'escolher a pauta, contrapor ou desacatar', acatado: 'o ministro estrutura a medida', estruturado: 'adotar a medida do setor ou desistir' }[rq.fase]
     out.push({
       id: `req-${rq.setor}`, icon: '📨', target: 'requerimento', left,

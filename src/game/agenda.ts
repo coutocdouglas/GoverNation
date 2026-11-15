@@ -24,8 +24,7 @@ import { leaderOf } from './partidos'
 import { noteRecord } from './reputacao'
 import { applyMinistryChange, peekRound, roundOf } from './rodada'
 import { PASTAS, pastasLigadas } from './data/pastas'
-import { requerimentoAtivo, reuniaoBlockedReason, reunir } from './requerimento'
-import { propostaDef } from './risco'
+import { alvoDe, requerimentoAtivo, reuniaoBlockedReason, reunir } from './requerimento'
 import { mesesParaTroca, pastaDesgastada, pastasOf, registrarTroca } from './pastas'
 import type { Cause, Economy, GameState, GroupId, Headline, Impulse, PartyId } from './types'
 
@@ -257,7 +256,7 @@ export function rotuloAcao(s: GameState, a: AcaoAgenda): string {
     case 'nacao': return a.compromisso ? 'Falar à nação e assumir um compromisso' : 'Falar à nação'
     case 'lider': return `Receber ${leaderOf(s, a.partido).name} (${PARTY_BY_ID[a.partido].sigla})`
     case 'ministro': return `Cobrar ${ministerOf(s, a.area).name} ${a.tom === 'publico' ? 'em público' : 'em particular'}`
-    case 'reuniao': { const at = requerimentoAtivo(s); return `Reunião com o setor${at ? ` (${propostaDef(at.setor)?.setor.toLowerCase() ?? at.setor})` : ''}` }
+    case 'reuniao': { const at = requerimentoAtivo(s); const al = at ? alvoDe(at.setor) : null; return `Reunião com o ${al?.grupo ? 'grupo' : 'setor'}${al ? ` (${al.ref})` : ''}` }
     case 'reforma': return `Reforma ministerial (${a.trocas.length} ${a.trocas.length === 1 ? 'pasta' : 'pastas'})`
     case 'imprensa': return a.modo === 'apoio' ? `Pedir apoio ${ao(VOZ_BY_ID[a.voz])}` : `Romper ${comV(VOZ_BY_ID[a.voz])}`
   }

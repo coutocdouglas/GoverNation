@@ -64,6 +64,37 @@ export const REQUERIMENTO = {
 
 export type PautaId = 'limpa' | 'media' | 'duvidosa'
 
+/**
+ * v0.47.2 (H4): requerimentos dos grupos pela tensão. Com a tensão do grupo acima de `desdeTensao`, ele manda um
+ * requerimento (se tiver uma cobrança em `data/demands.ts`, de onde vêm a medida e o pedido). Mesmo caminho dos setores,
+ * sem rastro nem semente de risco: as pautas são o primeiro passo (a contraproposta), o acordo parcial e a pauta cheia, e
+ * cada uma baixa a tensão do grupo. Acatado, o grupo espera (o fato de greve fica suspenso). Ignorar sobe a tensão.
+ */
+export const GRUPO_REQ = {
+  /** Tensão a partir da qual o grupo manda o requerimento (a mesma do aviso da tensão). */
+  desdeTensao: 70,
+  /** Meses entre dois requerimentos do mesmo grupo. */
+  intervaloGrupo: 9,
+  /** Cada pauta: quanto o grupo ganha em aprovação, quanto a tensão cai e o custo em confiança do mercado. */
+  pauta: {
+    limpa: { rotulo: 'Primeiro passo', ganho: 1, tensao: -15, confianca: 0 },
+    media: { rotulo: 'Acordo parcial', ganho: 2.5, tensao: -30, confianca: -1 },
+    duvidosa: { rotulo: 'Pauta cheia', ganho: 4, tensao: -50, confianca: -2 },
+  },
+  /** O que cada desfecho faz na tensão do grupo e quanto ele perde em aprovação (pontos). */
+  desfecho: {
+    ignorar: { tensao: 10, queda: 1 },
+    desacatar: { tensao: 20, queda: 2 },
+    desistir: { tensao: 25, queda: 3 },
+    vencer: { tensao: 8, queda: 1 },
+    adotar: { tensao: -10, queda: 0 },
+  },
+}
+
+/** Id de um requerimento de grupo (o dos setores é o id da proposta). */
+export const idReqGrupo = (g: GroupId) => `g:${g}`
+export const ehGrupoReq = (id: string) => id.startsWith('g:')
+
 export interface SetorReq {
   /** Mesmo id da proposta de setor (`PROPOSTAS.lista`). */
   id: string

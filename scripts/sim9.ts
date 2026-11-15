@@ -15,7 +15,7 @@ import { advanceMonth, newGame, type MonthPlan } from '../src/game/game'
 import { propostaPadrao } from '../src/game/governo'
 import { ligarTensao, tensaoOf } from '../src/game/tensao'
 import { pautarFila, respond, STRATEGIES } from './sim'
-import type { ActionId, GameState, GroupId } from '../src/game/types'
+import type { ActionId, GroupId } from '../src/game/types'
 
 const PROMESSAS = ['desemprego6', 'inflacaoMeta', 'crescimento', 'aprovacao50', 'juros10']
 type Estilo = 'opcoes' | 'deixa'

@@ -104,9 +104,9 @@ describe('telas do requerimento do setor (v0.47.1)', () => {
 
   it('a agenda ganha a categoria "Reunião com o setor" só com requerimento à espera da reunião', () => {
     const agenda = (s: GameState) => renderToStaticMarkup(<AgendaJanela state={s} plan={{}} billPronto={false} pesquisa={null} onPesquisa={() => {}} onState={() => {}} onToast={() => {}} />)
-    expect(agenda(jogo('aberto'))).toContain('Reunião com o setor')
-    expect(agenda(jogo('pautas'))).not.toContain('Reunião com o setor')
-    expect(agenda(newGame('T', 'normal', 7, 'mdn'))).not.toContain('Reunião com o setor')
+    expect(agenda(jogo('aberto'))).toContain('Reunião de requerimento')
+    expect(agenda(jogo('pautas'))).not.toContain('Reunião de requerimento')
+    expect(agenda(newGame('T', 'normal', 7, 'mdn'))).not.toContain('Reunião de requerimento')
     const com = escolherAcao(jogo('aberto'), { tipo: 'reuniao' })
     expect(renderToStaticMarkup(<RequerimentoJanela state={com} passo={null} onPasso={() => {}} onState={() => {}} onToast={() => {}} onAtender={() => {}} />)).toContain('(desfazer)')
     const card = renderToStaticMarkup(<RequerimentoCard state={com} passo={null} onAbrir={() => {}} />)

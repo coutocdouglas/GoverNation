@@ -1,5 +1,14 @@
 # Novidades
 
+## 0.47.2 (15/11/2026)
+- **Requerimentos dos grupos pela tensão (bloco H4 da Etapa 6G, fecho).** Quando a tensão de um grupo passa de 70, ele manda um requerimento, sem sorteio: o grupo mais tenso primeiro, uma vez a cada 9 meses, e não no mês do fato de greve dele. É o caminho de negociação antes de a greve virar fato do mês.
+  - **Mesmo passo a passo dos setores:** reunir (ação da agenda) ou ignorar; duas pautas (o acordo parcial e a pauta cheia) e a contraproposta do primeiro passo, com a chance em faixa; acato, ministro da pasta da medida (a cobrança do grupo) e adoção como medida do mês, ou desistência.
+  - **Sem rastro nem semente de risco:** o dilema aqui é entre custo e alívio. O primeiro passo baixa a tensão em 15, o acordo parcial em 30 e a pauta cheia em 50; quanto mais alivia, mais custa em confiança do mercado e mais rende ao grupo.
+  - **Acatado, o grupo espera:** o fato de greve fica suspenso enquanto o requerimento está acatado ou estruturado. Adotar a medida alivia mais 10.
+  - **Ignorar sobe a tensão** (+10), desacatar (+20) e desistir depois de acatar (+25) mais ainda, e o grupo perde aprovação.
+  - **Telas:** o cartão, a janela, o Radar, a pendência e a reunião da agenda servem aos grupos também ("Requerimento de um grupo", com a faixa de tensão na janela).
+- Sem mudança no save (45). 790 testes (11 novos). Simulador `npm run sim10` (`DEIXA=1` deixa os fatos passarem): com a tensão alta, acatar o requerimento do grupo derruba as greves de 2,9 para 1,4 a 1,8 por mandato; ignorar não ajuda (3,0). Conferido no navegador com o requerimento dos caminhoneiros.
+
 ## 0.47.1 (14/11/2026)
 - **Telas dos requerimentos dos setores (bloco H4 da Etapa 6G).** O bloco está ligado: a proposta de um clique deu lugar ao requerimento em passos.
   - **Painel:** um cartão com o setor, a fase e o prazo, e o botão "Abrir o requerimento". Mostra o que você já anotou para o mês.
