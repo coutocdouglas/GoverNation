@@ -1,4 +1,4 @@
-import { impulsosDoPartido, impulsosDoVice } from './posse'
+import { bandeirasDaPosse, impulsosDoPartido, impulsosDoVice, promessaTravada } from './posse'
 import { ACTION_BY_ID, ACTIONS_PER_MONTH, blockedReason, effectMultiplier } from './actions'
 import { stepStates } from './estados'
 import { stepSenatorReps } from './senado'
@@ -15,7 +15,7 @@ import { amendmentFor, jabutiBill, ministerOf, ministryBlockedReason, type Minis
 import { BOMBS, CAMARA } from './data/camara'
 import { PARTIES, PARTY_BY_ID } from './data/parties'
 import { DIFFICULTY, MACRO, START } from './data/balance'
-import { GROUPS } from './data/groups'
+import { GROUP_BY_ID, GROUPS } from './data/groups'
 import { aplicarSaidaTensao, initialTensao, lerImpulsos, stepTensao } from './tensao'
 import { aplicarSaidaSetor, initialRequerimentos, passoBlockedReason, requerimentoLigado, sortearRequerimento, stepRequerimento, type PassoReq } from './requerimento'
 import { SHOCKS, type ShockDef } from './data/shocks'
@@ -28,7 +28,7 @@ import type { OrdemIntel } from './data/inteligencia'
 import type { AcaoCpi } from './data/cpi'
 import { posseBlockedReason, profileOffsets, promiseSideBoosts, promisesScore, STATUS_LABEL, formatPromiseValue, type PosseChoices } from './promises'
 import { PROFILE_BY_ID } from './data/profile'
-import { PROMISE_BY_ID } from './data/promises'
+import { BANDEIRAS, PRESSAO_POSSE, PROMISE_BY_ID } from './data/promises'
 import { RIVAL_BY_PARTY } from './data/rival'
 import { Rng } from './rng'
 import { applyEffects } from './effects'
@@ -104,7 +104,7 @@ export function newGame(
   avatarPortrait?: number,
   posse: PosseChoices = {},
 ): GameState {
-  const posseError = posseBlockedReason(posse)
+  const posseError = posseBlockedReason(posse, playerParty, difficulty)
   if (posseError) throw new Error(posseError)
   const profile = { traits: [...(posse.traits ?? [])], habits: [...(posse.habits ?? [])] }
   const promises = [...(posse.promises ?? [])]
@@ -112,7 +112,7 @@ export function newGame(
   const rngState = seed ?? Math.floor(Math.random() * 2 ** 31)
   const bonus = DIFFICULTY[difficulty].approvalBonus
   const state: GameState = {
-    saveVersion: 45,
+    saveVersion: 46,
     requerimentos: initialRequerimentos(),
     // Preenchido logo abaixo, com a aprovação de partida dos grupos.
     tensao: undefined as unknown as GameState['tensao'],
@@ -157,6 +157,10 @@ export function newGame(
     rival: undefined as unknown as GameState['rival'],
     profile,
     promises,
+    // v0.48.2: só com promessas de verdade (a posse da tela); os testes sem promessas não têm pressão nem bandeiras.
+    posse: promises.length
+      ? { pressao: promessaTravada(playerParty, difficulty), bandeiras: bandeirasDaPosse(playerParty, difficulty).map((b) => ({ ...b, seguiu: !!posse.bandeiras?.includes(b.party) })) }
+      : { pressao: null, bandeiras: [] },
     // Preenchido logo abaixo (a relação dos ministros depende do partido do presidente).
     supremo: undefined as unknown as GameState['supremo'],
     ministries: undefined as unknown as GameState['ministries'],
@@ -192,6 +196,15 @@ export function newGame(
   if (promises.length) {
     addBio(state, state.presidentName, `Promessas de posse: ${promises.map((id) => PROMISE_BY_ID[id].name).join('; ')}.`)
     addChronicle(state, `${state.presidentName} toma posse com ${promises.length} promessas: ${promises.map((id) => PROMISE_BY_ID[id].name).join('; ')}`, 'neutral')
+    const pr = state.posse.pressao
+    if (pr) addBio(state, state.presidentName, `Antes da eleição, assumiu sob pressão (${GROUP_BY_ID[PRESSAO_POSSE[playerParty].grupo].name}) a promessa “${PROMISE_BY_ID[pr].name}”.`)
+  }
+  // v0.48.2: bandeiras dos apoiadores: seguir aproxima o partido, recusar afasta (e fica registrado).
+  for (const b of state.posse.bandeiras) {
+    const delta = b.seguiu ? BANDEIRAS.seguir : BANDEIRAS.recusar
+    mudaRelacaoPartido(state, b.party, delta)
+    const sigla = PARTY_BY_ID[b.party].sigla, nome = BILL_BY_ID[b.bill]?.name ?? b.bill
+    addBio(state, state.presidentName, b.seguiu ? `Assume a bandeira do ${sigla}: ${nome}.` : `Recusa a bandeira do ${sigla} (${nome}).`)
   }
   const rivalDef = RIVAL_BY_PARTY[state.rival.party]
   addBio(state, state.rival.name, `Assume a liderança da oposição (${PARTY_BY_ID[state.rival.party].sigla}) contra o governo ${state.presidentName}. ${rivalDef?.blurb ?? ''}`.trim())
@@ -1092,6 +1105,7 @@ export function advanceMonth(prev: GameState, actions: ActionId[], plan: MonthPl
   const chapter = maybeCloseChapter(s, approvalAfter)
   if (chapter) headlines.push({ text: `📖 ${chapter.title}. Leia na Ficha de governo`, tone: 'neutral' })
 
+  if (s.month === BANDEIRAS.cobrancaMes - 1) cobrarBandeiras(s, headlines)
   s.month += 1
   s.lastReport = report
   s.history.push(snapshot(s))
@@ -1153,6 +1167,32 @@ function economicHeadlines(
 // ---------------------------------------------------------------------------
 // Promessas de posse cobradas no fim do mandato (etapa 5A)
 // ---------------------------------------------------------------------------
+
+/** v0.48.2: muda a relação com o partido e o ponto para onde ela volta (escolha da posse, cobrança da bandeira). */
+function mudaRelacaoPartido(s: GameState, party: PartyId, delta: number): void {
+  const ps = s.congress.parties[party]
+  if (!ps) return
+  ps.relation = Math.max(0, Math.min(100, ps.relation + delta))
+  ps.baseRelation = Math.max(0, Math.min(100, ps.baseRelation + delta))
+}
+
+/**
+ * v0.48.2: na metade do mandato, o apoiador cobra a bandeira que o presidente assumiu e que nem chegou a ser votada
+ * (sem voto, fora da pauta e fora de vigor): a relação cai. Assumir e esquecer sai pior do que recusar.
+ */
+function cobrarBandeiras(s: GameState, headlines: Headline[]): void {
+  const c = s.congress
+  for (const b of s.posse?.bandeiras ?? []) {
+    if (!b.seguiu || b.cobrada) continue
+    const andou = c.laws.includes(b.bill) || c.votes.some((v) => v.bill === b.bill) || c.pending.some((p) => p.id === b.bill) || c.senate.pending.some((p) => p.id === b.bill)
+    if (andou) continue
+    b.cobrada = true
+    mudaRelacaoPartido(s, b.party, BANDEIRAS.cobranca)
+    const sigla = PARTY_BY_ID[b.party].sigla, nome = BILL_BY_ID[b.bill]?.name ?? b.bill
+    headlines.push({ text: `O ${sigla} cobra a bandeira assumida na posse: ${nome} nem foi a voto na metade do mandato (relação ${BANDEIRAS.cobranca})`, tone: 'bad' })
+    addBio(s, s.presidentName, `Cobrado pelo ${sigla}: a bandeira ${nome}, assumida na posse, não foi a voto até a metade do mandato.`)
+  }
+}
 
 function closePromises(s: GameState, headlines: Headline[]): void {
   const { results } = promisesScore(s)

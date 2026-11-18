@@ -1,5 +1,14 @@
 # Novidades
 
+## 0.48.2 (18/11/2026)
+- **Novo mandato, parte 3: promessas.** O passo Promessas foi refeito.
+  - **29 promessas em 5 áreas** (Economia, Grupos, Congresso, Integridade, Governo), com filtro por área. Cada uma tem de 1 a 3 estrelas de ousadia e vale 40, 60 ou 90 pontos se cumprida (40% disso se ficar perto). A nota das promessas continua com teto de 300: quem arrisca promessas de 3 estrelas pode errar uma e ainda chegar lá.
+  - **Promessas novas ligadas às mecânicas do jogo:** nenhum grupo em fúria (tensão), sem CPI, Elo de ouro, sem pedido de impeachment, palavra cumprida (credibilidade), ministério estável, base de verdade, e metas para profissionais da saúde, professores, policiais, aposentados, floresta, campo e igrejas.
+  - **Pressão antes da eleição (Normal e Difícil):** um grupo ligado ao seu partido exige um compromisso, e essa promessa já vem escolhida (o FPT com os sindicatos e o desemprego, o MRB com as igrejas, a UCD com o mercado e a dívida...). Você escolhe as outras 4. No Fácil, as 5 são livres.
+  - **Bandeiras de quem apoiou a sua eleição:** os partidos mais próximos do seu (2 no Fácil, 3 no Normal, 4 no Difícil) pedem cada um uma lei de verdade do catálogo. Seguir: relação +3 e uma promessa extra de 40 pontos se a lei passar. Recusar: relação −3. Quem segue e esquece é cobrado na metade do mandato (relação −6 se a medida nem foi a voto). O custo aparece antes de escolher.
+  - O cartão de promessas do Painel mostra a promessa travada (🔒), as bandeiras seguidas (🤝) e os pontos de cada uma.
+- Save novo (46): mandatos em andamento seguem sem pressão nem bandeiras, com as promessas que já tinham (agora com estrelas). 812 testes (7 novos). `npm run simposse` mostra quanto cada promessa se cumpre sem jogar (as fáceis demais perderam estrelas) e as bandeiras de cada partido. Conferido no navegador: posse no Normal pelo MDN com bandeiras seguidas e recusadas, e um mês jogado.
+
 ## 0.48.1 (17/11/2026)
 - **Novo mandato, parte 2: o perfil do presidente pelos 5 blocos da sociedade.** O passo Perfil agora tem 14 traços e 14 hábitos (eram 8 e 8), cada um ligado a um bloco (Trabalho e renda, Fé, Campo e floresta, Identidade e causas, Capital e Estado), com um filtro por bloco em cada lista.
   - **Traços novos:** Religioso praticante, Ecumênico, Filho do campo, Voz da floresta, Militante histórico e Acadêmico.

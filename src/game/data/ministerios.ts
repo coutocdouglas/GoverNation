@@ -41,7 +41,7 @@ export const AREA_GROUP: Record<AreaId, GroupId> = {
   politica: 'servidores',
 }
 
-const goal = (area: AreaId, g: Omit<PromiseDef, 'id' | 'side' | 'group'>): PromiseDef => ({ id: `meta-${area}`, side: 'qualquer', group: AREA_GROUP[area], ...g })
+const goal = (area: AreaId, g: Omit<PromiseDef, 'id' | 'side' | 'group' | 'cat' | 'stars' | 'mede'>): PromiseDef => ({ id: `meta-${area}`, side: 'qualquer', group: AREA_GROUP[area], cat: 'governo', stars: 2, mede: 'meta da pasta', ...g })
 
 /** Meta de cada pasta, medida pelo motor como as promessas de posse. */
 export const MINISTRY_GOALS: Record<AreaId, PromiseDef> = {

@@ -109,7 +109,7 @@ describe('regras da resposta por ação do governo', () => {
     delete s.respostas
     s.saveVersion = 41
     const l = migrate(s)
-    expect(l?.saveVersion).toBe(45)
+    expect(l?.saveVersion).toBe(46)
     expect(l?.respostas).toEqual([])
   })
 })

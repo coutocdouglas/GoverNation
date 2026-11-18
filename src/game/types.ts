@@ -150,7 +150,7 @@ import type { ReputationState } from './reputacao'
 import type { RiscoState } from './risco'
 
 export interface GameState {
-  saveVersion: 45
+  saveVersion: 46
   /** Etapa 6G, bloco H4 (v0.47): o requerimento do setor em andamento e a relação de cada setor. Ver requerimento.ts. */
   requerimentos: import('./requerimento').RequerimentoState
   /** Etapa 6G, bloco H3 parte 2 (v0.46.1): tensão de cada grupo (0 a 100) e os fatos de tensão que já vieram. Ver tensao.ts. */
@@ -228,6 +228,11 @@ export interface GameState {
   profile: { traits: string[]; habits: string[] }
   /** Etapa 5A: promessas de posse (ids de data/promises.ts). Vazio em saves anteriores à 5A. */
   promises: string[]
+  /**
+   * v0.48.2: a promessa travada pela pressão de um grupo antes da eleição (Normal e Difícil; já está em `promises`)
+   * e as bandeiras dos partidos que apoiaram (seguidas ou recusadas na posse; a seguida vira promessa extra).
+   */
+  posse: { pressao: string | null; bandeiras: { party: PartyId; bill: BillId; seguiu: boolean; cobrada?: boolean }[] }
   /** Etapa 4C2: o Supremo, com os 11 ministros, ações em andamento, decisões e vaga. */
   supremo: SupremoState
   /** Etapa 4C3: desgaste de cada ministro (0 a 100) e desde quando está no cargo (mês absoluto). */

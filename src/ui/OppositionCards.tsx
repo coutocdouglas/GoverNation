@@ -6,7 +6,7 @@ import { PROMISE_BY_ID } from '../game/data/promises'
 import { RIVAL } from '../game/data/rival'
 import { OBJETIVO } from '../game/data/cpi'
 import { absMonth } from '../game/memory'
-import { formatPromiseValue, promiseStatus, STATUS_LABEL, type PromiseStatus } from '../game/promises'
+import { bandeirasSeguidas, formatPromiseValue, promisePoints, promiseStatus, PROMISES_MAX, STATUS_LABEL, type PromiseStatus } from '../game/promises'
 import { ataqueDoMes, rivalDefOf, STANCE_LABEL, textoObjetivo } from '../game/rival'
 import type { GameState, Poll } from '../game/types'
 import { Portrait } from './Portrait'
@@ -105,7 +105,8 @@ const STATUS_ICON: Record<PromiseStatus, string> = { rumo: '🟢', cumprida: '�
 
 export function PromisesCard({ state }: { state: GameState }) {
   if (!state.promises?.length) return null
-  const items = state.promises.map((id) => PROMISE_BY_ID[id]).filter(Boolean).map((def) => ({ def, ...promiseStatus(state, def) }))
+  // v0.48.2: as bandeiras seguidas na posse entram como promessas extras.
+  const items = [...state.promises.map((id) => PROMISE_BY_ID[id]).filter(Boolean), ...bandeirasSeguidas(state)].map((def) => ({ def, ...promiseStatus(state, def) }))
   const ok = items.filter((i) => i.status === 'rumo' || i.status === 'cumprida').length
   return (
     <section className="pn-card" id="promessas">
@@ -114,15 +115,15 @@ export function PromisesCard({ state }: { state: GameState }) {
         {items.map((i) => (
           <li key={i.def.id} title={i.def.desc}>
             <div className="pn-group__head">
-              <span>{STATUS_ICON[i.status]} {i.def.name}</span>
+              <span>{STATUS_ICON[i.status]} {i.def.metric.type === 'lei' ? '🤝 ' : ''}{i.def.name}{i.def.id === state.posse?.pressao ? ' 🔒' : ''}</span>
               <span className={STATUS_TONE[i.status]}>{STATUS_LABEL[i.status]}</span>
             </div>
             <span className="pn-meter"><span style={{ width: `${Math.round(i.progress * 100)}%`, background: i.status === 'longe' ? '#ff5a5f' : i.status === 'risco' ? '#f5c542' : '#2ecc71' }} /></span>
-            <small className="pn-hint">Hoje: {formatPromiseValue(i.def, i.value)} · meta: {i.def.dir === 'max' ? 'até' : 'pelo menos'} {formatPromiseValue(i.def, i.def.target)}</small>
+            <small className="pn-hint">{i.def.metric.type === 'lei' ? <>{i.def.desc} Hoje: {formatPromiseValue(i.def, i.value)}</> : <>Hoje: {formatPromiseValue(i.def, i.value)} · meta: {i.def.dir === 'max' ? 'até' : 'pelo menos'} {formatPromiseValue(i.def, i.def.target)}</>} · {promisePoints(i.def)} pts</small>
           </li>
         ))}
       </ul>
-      <p className="pn-hint">Cobradas no fim do mandato: valem até 300 pontos da nota final (60 cada; 25 se ficar perto).</p>
+      <p className="pn-hint">Cobradas no fim do mandato: cada uma vale 40, 60 ou 90 pontos pelas estrelas (40% se ficar perto), e a nota das promessas para em {PROMISES_MAX}.</p>
     </section>
   )
 }

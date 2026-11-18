@@ -8,6 +8,13 @@ import { bonusVice, disposicaoVice, gruposBase, identidadePartido, impulsosDoPar
 import { chancesDaProposta } from './governo'
 import { newGame } from './game'
 import { seatsIn } from './congress'
+import { BANDEIRAS, PROMISE_BY_ID, PROMISE_CATS, PROMISES } from './data/promises'
+import { BILL_BY_ID } from './data/bills'
+import { apoiadores, bandeirasDaPosse, promessaTravada } from './posse'
+import { bandeirasSeguidas, posseBlockedReason, promisePoints, promisesScore, promiseValue } from './promises'
+import { advanceMonth } from './game'
+import { migrate } from './save'
+import type { PartyId } from './types'
 
 const DIFS = ['facil', 'normal', 'dificil'] as const
 
@@ -149,5 +156,103 @@ describe('v0.48.1: perfil pelos 5 blocos', () => {
       const saldo = vs.reduce((a, [g, v]) => a + GROUP_BY_ID[g as keyof typeof GROUP_BY_ID].weight * v!, 0)
       expect(Math.abs(saldo)).toBeLessThanOrEqual(0.15)
     }
+  })
+})
+
+describe('v0.48.2: promessas, pressão e bandeiras', () => {
+  const livresPara = (party: PartyId, diff: 'facil' | 'normal' | 'dificil') => {
+    const t = promessaTravada(party, diff)
+    const outras = PROMISES.map((p) => p.id).filter((id) => id !== t).slice(0, t ? 4 : 5)
+    return t ? [t, ...outras] : outras
+  }
+
+  it('toda promessa tem área, estrelas e uma meta que o motor mede', () => {
+    expect(PROMISES.length).toBeGreaterThanOrEqual(25)
+    for (const c of PROMISE_CATS) expect(PROMISES.filter((p) => p.cat === c.id).length).toBeGreaterThanOrEqual(3)
+    const s = newGame('Teste', 'facil', 3, 'mdn', undefined, undefined, { promises: livresPara('mdn', 'facil') })
+    for (const p of PROMISES) expect(Number.isFinite(promiseValue(s, p))).toBe(true)
+    // Os ids antigos continuam valendo (saves).
+    for (const id of ['desemprego6', 'inflacaoMeta', 'crescimento', 'aprovacao50', 'divida', 'superavit', 'dolar5', 'agro55', 'juros10', 'pec', 'leis12', 'jovens55', 'baixaRenda55', 'trabalhadores55', 'social3']) expect(PROMISE_BY_ID[id]).toBeDefined()
+  })
+
+  it('no Normal e no Difícil a promessa da pressão vem travada; no Fácil não', () => {
+    for (const p of PARTIES) {
+      expect(promessaTravada(p.id, 'facil')).toBeNull()
+      const t = promessaTravada(p.id, 'normal')!
+      expect(PROMISE_BY_ID[t]).toBeDefined()
+      const sem = PROMISES.map((x) => x.id).filter((id) => id !== t).slice(0, 5)
+      expect(posseBlockedReason({ promises: sem }, p.id, 'normal')).toMatch(/travada/)
+      expect(posseBlockedReason({ promises: livresPara(p.id, 'dificil') }, p.id, 'dificil')).toBeNull()
+    }
+    const s = newGame('Teste', 'normal', 4, 'mrb', undefined, undefined, { promises: livresPara('mrb', 'normal') })
+    expect(s.posse.pressao).toBe('igrejas')
+    expect(s.promises).toContain('igrejas')
+  })
+
+  it('a nota soma pelas estrelas e para no teto de 300', () => {
+    const s = newGame('Teste', 'facil', 5, 'mdn', undefined, undefined, { promises: ['pec', 'dolar5', 'superavit', 'campo', 'semFuria'] })
+    s.finished = true
+    const r = promisesScore(s)
+    expect(r.max).toBe(300)
+    expect(r.points).toBeLessThanOrEqual(300)
+    expect(r.bruto).toBe(r.results.reduce((a, x) => a + x.points, 0))
+    expect(PROMISES.map(promisePoints).sort((x, y) => x - y)[0]).toBe(40)
+    // A PEC aprovada (3 estrelas) vale 90; com o resto cumprido, os 450 brutos param em 300.
+    s.congress.votes.push({ month: 0, bill: 'reformaTributaria', yes: 320, no: 150, abstain: 10, absent: 33, needed: 308, approved: true, byParty: {} as never })
+    expect(promisesScore(s).results.find((x) => x.def.id === 'pec')!.points).toBe(90)
+    const cheio = { ...s, promises: [] as string[], posse: { pressao: null, bandeiras: [] } }
+    expect(promisesScore(cheio).points).toBe(0)
+  })
+
+  it('os apoiadores são os partidos mais próximos e cada um pede uma lei diferente do catálogo', () => {
+    for (const p of PARTIES) for (const d of DIFS) {
+      const b = bandeirasDaPosse(p.id, d)
+      expect(b).toHaveLength(BANDEIRAS.apoiadores[d])
+      expect(new Set(b.map((x) => x.bill)).size).toBe(b.length)
+      expect(b.some((x) => x.party === p.id)).toBe(false)
+      for (const x of b) expect(['decreto', 'pec']).not.toContain(BILL_BY_ID[x.bill].instrument)
+    }
+    expect(apoiadores('fpt', 'normal')).toContain('pvs')
+  })
+
+  it('seguir aproxima, recusar afasta, e a bandeira esquecida é cobrada na metade do mandato', () => {
+    const [a, b] = bandeirasDaPosse('mdn', 'normal')
+    const ref = newGame('Teste', 'normal', 6, 'mdn')
+    const s = newGame('Teste', 'normal', 6, 'mdn', undefined, undefined, { promises: livresPara('mdn', 'normal'), bandeiras: [a.party] })
+    expect(s.congress.parties[a.party].baseRelation - ref.congress.parties[a.party].baseRelation).toBe(BANDEIRAS.seguir)
+    expect(s.congress.parties[b.party].baseRelation - ref.congress.parties[b.party].baseRelation).toBe(BANDEIRAS.recusar)
+    expect(s.posse.bandeiras.find((x) => x.party === a.party)!.seguiu).toBe(true)
+    expect(bandeirasSeguidas(s)).toHaveLength(1)
+    let t = s
+    while (t.month < BANDEIRAS.cobrancaMes) t = advanceMonth(t, [])
+    const seguida = t.posse.bandeiras.find((x) => x.party === a.party)!
+    const andou = t.congress.laws.includes(seguida.bill) || t.congress.votes.some((v) => v.bill === seguida.bill)
+    if (!andou) {
+      expect(seguida.cobrada).toBe(true)
+      expect(t.lastReport!.headlines.some((h) => h.text.includes('cobra a bandeira'))).toBe(true)
+    }
+    expect(t.posse.bandeiras.find((x) => x.party === b.party)!.cobrada).toBeUndefined()
+  })
+
+  it('a bandeira seguida entra na nota como promessa de 40 pontos se virar lei', () => {
+    const [a] = bandeirasDaPosse('fpt', 'facil')
+    const s = newGame('Teste', 'facil', 7, 'fpt', undefined, undefined, { promises: livresPara('fpt', 'facil'), bandeiras: [a.party] })
+    s.finished = true
+    const sem = promisesScore(s).results.find((r) => r.bandeira)!
+    expect(sem.status).toBe('quebrada')
+    s.congress.laws.push(a.bill)
+    const com = promisesScore(s).results.find((r) => r.bandeira)!
+    expect(com.status).toBe('cumprida')
+    expect(com.points).toBe(BANDEIRAS.pontos)
+  })
+
+  it('save 45 vira 46 sem pressão nem bandeiras', () => {
+    const s = newGame('Teste', 'normal', 8, 'pol')
+    const old = JSON.parse(JSON.stringify(s))
+    delete old.posse
+    old.saveVersion = 45
+    const m = migrate(old)!
+    expect(m.saveVersion).toBe(46)
+    expect(m.posse).toEqual({ pressao: null, bandeiras: [] })
   })
 })

@@ -403,7 +403,7 @@ describe('save 45 e o jogo seguindo', () => {
     delete s.requerimentos
     s.saveVersion = 44
     const m = migrate(s)!
-    expect(m.saveVersion).toBe(45)
+    expect(m.saveVersion).toBe(46)
     expect(m.requerimentos.ativo).toBeNull()
     expect(Object.keys(m.requerimentos.setores)).toHaveLength(7)
   })

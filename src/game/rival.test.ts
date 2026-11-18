@@ -134,7 +134,7 @@ describe('promessas de posse (etapa 5A)', () => {
   })
 
   it('mede cada tipo de meta e dá cumprida, quase ou quebrada no fim', () => {
-    const s = newGame('T', 'normal', 8, 'mdn', undefined, undefined, { promises: FIVE })
+    const s = newGame('T', 'facil', 8, 'mdn', undefined, undefined, { promises: FIVE })
     const last = s.history[0]
     last.indicators.unemployment = 5.9
     last.indicators.inflation = 4.9
@@ -150,11 +150,12 @@ describe('promessas de posse (etapa 5A)', () => {
     s.congress.votes.push({ month: 0, bill: 'reformaTributaria', yes: 320, no: 150, abstain: 10, absent: 33, needed: 308, approved: true, byParty: {} as never })
     expect(promiseStatus(s, PROMISE_BY_ID.pec).status).toBe('cumprida')
     const g = promiseStatus(s, PROMISE_BY_ID.crescimento, true).status
-    expect(promisesScore(s).points).toBe(60 + 25 + 0 + 60 + (g === 'cumprida' ? 60 : g === 'quase' ? 25 : 0))
+    // v0.48.2: pontos pelas estrelas (60, 16 do quase da inflação de 1 estrela, 0, 90 da PEC de 3 estrelas).
+    expect(promisesScore(s).points).toBe(60 + 16 + 0 + 90 + (g === 'cumprida' ? 60 : g === 'quase' ? 24 : 0))
   })
 
   it('o fim do mandato cobra as promessas e a nota final soma 1000 no máximo', () => {
-    let s = newGame('T', 'normal', 9, 'mdn', undefined, undefined, { promises: FIVE })
+    let s = newGame('T', 'facil', 9, 'mdn', undefined, undefined, { promises: FIVE })
     while (!s.finished) s = advanceMonth(s, [])
     expect(s.month).toBe(TERM_MONTHS)
     expect(s.lastReport!.headlines.some((h) => h.text.startsWith('Balanço do mandato'))).toBe(true)
@@ -186,7 +187,7 @@ describe('save versão 9', () => {
     delete old.promises
     old.saveVersion = 8
     const m = migrate(old)!
-    expect(m.saveVersion).toBe(45)
+    expect(m.saveVersion).toBe(46)
     expect(m.rival.polls).toHaveLength(m.history.length)
     expect(m.rival.polls.map((p) => p.month)).toEqual(m.history.map((h) => h.month))
     expect(m.profile).toEqual({ traits: [], habits: [] })

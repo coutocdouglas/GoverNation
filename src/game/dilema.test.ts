@@ -261,7 +261,7 @@ describe('save', () => {
     delete velho.dilemas
     velho.saveVersion = 39
     const m = migrate(velho)!
-    expect(m.saveVersion).toBe(45)
+    expect(m.saveVersion).toBe(46)
     expect(m.dilemas).toEqual(initialDilemas())
   })
 })

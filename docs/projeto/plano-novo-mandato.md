@@ -17,7 +17,7 @@
 |---|---|---|---|
 | v0.48.0 ✅ (17/11) | Candidato e Vice: dossiê dos 9 partidos, bancadas pela dificuldade (save novo), vantagem do partido pequeno, efeito do partido nos 32 grupos, chance e bônus do vice, tela nova do passo 1 e 3, painel dos 32 grupos, escala adaptativa | Opus (bancadas) · Sonnet (telas) | alta |
 | v0.48.1 ✅ (17/11) | Perfil: traços e hábitos novos pelos 5 blocos | Opus (números) · Sonnet (tela) | média |
-| v0.48.2 | Promessas: lista nova, pressão do grupo (promessa travada), bandeiras dos apoiadores | Opus | média-alta |
+| v0.48.2 ✅ (18/11) | Promessas: lista nova, pressão do grupo (promessa travada), bandeiras dos apoiadores | Opus | média-alta |
 | v0.49.0 | Ministérios, regras: cenário, pedidos de pastas, 78 candidatos, entrada na base, fidelidade, custo da maioria, `sim` das 27 combinações | Opus | alta |
 | v0.49.1 | Ministérios, telas e botão automático; compromissos que voltam depois da posse | Sonnet | média |
 

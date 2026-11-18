@@ -2,8 +2,13 @@ import { GROUPS } from './data/groups'
 import { PARTIES, PARTY_BY_ID, TOTAL_SEATS } from './data/parties'
 import { POSSE } from './data/posse'
 import { VICE_BY_ID } from './data/governo'
+import { BANDEIRAS, PRESSAO_POSSE, type PromiseDef } from './data/promises'
+import { BILL_BY_ID, BILLS, type BillDef } from './data/bills'
 import { bancadasDaDificuldade } from './bancadas'
+import { affinity } from './ideology'
 import type { GameState, GroupId, PartyId } from './types'
+
+type BillId = BillDef['id']
 
 /**
  * v0.48.0: regras da reforma do Novo mandato (passos Candidato e Vice). DESIGN.md 27.50.
@@ -66,6 +71,52 @@ export function bonusVice(playerParty: PartyId, viceId: string): { grupos: Group
   const valor = r1((100 - disposicaoVice(playerParty, v.party)) / POSSE.vice.divisor)
   const grupos = GROUPS.filter((g) => g.partidos.includes(v.party)).sort((a, b) => b.tamanho - a.tamanho).slice(0, POSSE.vice.grupos).map((g) => g.id)
   return { grupos: valor > 0 ? grupos : [], valor: grupos.length ? valor : 0 }
+}
+
+// ─── v0.48.2: promessa travada pela pressão e bandeiras dos apoiadores ─────────────
+
+/** Promessa que um grupo exige antes da eleição (Normal e Difícil); null no Fácil. */
+export function promessaTravada(party: PartyId, difficulty: GameState['difficulty']): string | null {
+  return difficulty === 'facil' ? null : PRESSAO_POSSE[party].promessa
+}
+
+/** Partidos que apoiaram a eleição: os mais próximos do seu (2 no Fácil, 3 no Normal, 4 no Difícil). */
+export function apoiadores(party: PartyId, difficulty: GameState['difficulty']): PartyId[] {
+  const seats = bancadasDaDificuldade(difficulty, party)
+  return PARTIES.filter((p) => p.id !== party)
+    .map((p) => ({ id: p.id, d: distancia(party, p.id), s: seats[p.id] }))
+    .sort((a, b) => a.d - b.d || b.s - a.s)
+    .slice(0, BANDEIRAS.apoiadores[difficulty])
+    .map((x) => x.id)
+}
+
+/** A bandeira de cada apoiador: a lei do catálogo mais parecida com ele (uma diferente para cada um). */
+export function bandeirasDaPosse(party: PartyId, difficulty: GameState['difficulty']): { party: PartyId; bill: BillId }[] {
+  const usadas = new Set<BillId>()
+  const out: { party: PartyId; bill: BillId }[] = []
+  for (const a of apoiadores(party, difficulty)) {
+    const p = PARTY_BY_ID[a]
+    let best: { id: BillId; score: number } | null = null
+    for (const b of BILLS) {
+      if (b.custom || b.instrument === 'decreto' || b.instrument === 'pec' || usadas.has(b.id)) continue
+      const score = affinity(p.econ, p.costumes, b)
+      if (!best || score > best.score) best = { id: b.id, score }
+    }
+    if (!best) continue
+    usadas.add(best.id)
+    out.push({ party: a, bill: best.id })
+  }
+  return out
+}
+
+/** A bandeira seguida vista como promessa (1 estrela: vale 40 se virar lei). */
+export function bandeiraDef(b: { party: PartyId; bill: BillId }): PromiseDef {
+  const bill = BILL_BY_ID[b.bill]
+  const sigla = PARTY_BY_ID[b.party].sigla
+  return {
+    id: `band:${b.party}`, cat: 'congresso', stars: 1, name: bill?.name ?? b.bill, desc: `Bandeira do ${sigla}: aprovar a medida no mandato.`,
+    side: 'qualquer', group: gruposBase(b.party)[0] ?? 'classeMedia', metric: { type: 'lei', bill: b.bill }, dir: 'min', target: 1, slack: 0, unit: '', mede: `bandeira do ${sigla} em vigor`,
+  }
 }
 
 export function impulsosDoVice(playerParty: PartyId, viceId: string): Impulso[] {

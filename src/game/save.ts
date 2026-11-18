@@ -363,7 +363,12 @@ export function migrate(raw: unknown): GameState | null {
       ;(s as GameState).requerimentos ??= initialRequerimentos()
       s.saveVersion = 45
     }
-    if (s.saveVersion !== 45) return null
+    if (s.saveVersion === 45) {
+      // v0.48.1 → v0.48.2 (Novo mandato, promessas): mandatos em andamento não tiveram pressão nem bandeiras na posse.
+      ;(s as GameState).posse ??= { pressao: null, bandeiras: [] }
+      s.saveVersion = 46
+    }
+    if (s.saveVersion !== 46) return null
     syncCustomBills(s as GameState)
     return s as GameState
   } catch {
