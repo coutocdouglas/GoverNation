@@ -1,3 +1,4 @@
+import { bancadas } from './bancadas'
 import { baseBoost } from './base'
 import { governoBoost } from './governo'
 import type { ActionEffects } from './actions'
@@ -63,7 +64,8 @@ export function frenteSummary(s: GameState, bill: BillDef): FrenteView[] {
 // Relator e parecer
 // ---------------------------------------------------------------------------
 
-const BIG = PARTIES.filter((p) => p.seats >= 30).map((p) => p.id)
+/** Partidos com 30 deputados ou mais neste mandato (v0.48.0: a bancada muda com a dificuldade). */
+const bigOf = (s: GameState) => PARTIES.filter((p) => bancadas(s)[p.id] >= 30).map((p) => p.id)
 const CENTRAO: PartyId[] = ['ucd', 'psn', 'pra', 'mdn']
 
 /** Quem o presidente da Câmara escolhe para relatar: aliado se a relação é boa, adversário se é ruim. */
@@ -75,11 +77,11 @@ export function relatorFor(s: GameState, bill: BillDef): PartyId {
   const aff = (p: PartyId) => affinity(PARTY_BY_ID[p].econ, PARTY_BY_ID[p].costumes, bill)
   const best = (list: PartyId[], dir: 1 | -1) => list.reduce((a, b) => (aff(b) * dir > aff(a) * dir ? b : a))
   if (rel >= 60) {
-    const friends = BIG.filter((p) => s.congress.parties[p].relation >= 55 || p === s.playerParty)
+    const friends = bigOf(s).filter((p) => s.congress.parties[p].relation >= 55 || p === s.playerParty)
     return best(friends.length ? friends : [s.playerParty], 1)
   }
   if (rel >= CAMARA.speaker.holdBelow + 5) return best(CENTRAO.filter((p) => p !== s.playerParty), 1)
-  return best(BIG.filter((p) => p !== s.playerParty), -1)
+  return best(bigOf(s).filter((p) => p !== s.playerParty), -1)
 }
 
 /** O parecer do relator para um projeto do governo. Não sorteia: o gabinete consegue prever. */

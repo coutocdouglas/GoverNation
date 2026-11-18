@@ -1,3 +1,4 @@
+import { bancadas } from '../game/bancadas'
 import { PARTIES } from '../game/data/parties'
 import { MOODS } from '../game/data/reactions'
 import { monthLabel } from '../game/game'
@@ -145,7 +146,7 @@ export function ReactionSheet({ state, bill, month, onClose, nextLabel = 'Fechar
                 return (
                   <div key={p.id}>
                     <span style={{ color: p.color }}>{p.sigla}</span>
-                    <span className="pn-react__pbar"><i className="y" style={{ width: `${(x.yes / p.seats) * 100}%` }} /><i className="n" style={{ width: `${(x.no / p.seats) * 100}%` }} /></span>
+                    <span className="pn-react__pbar"><i className="y" style={{ width: `${(x.yes / bancadas(state)[p.id]) * 100}%` }} /><i className="n" style={{ width: `${(x.no / bancadas(state)[p.id]) * 100}%` }} /></span>
                     <small className="mono">{x.yes}/{x.no}</small>
                   </div>
                 )

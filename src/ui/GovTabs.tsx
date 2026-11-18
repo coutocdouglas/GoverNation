@@ -1,4 +1,5 @@
 // Etapa 4C3: abas Senado e Ministérios da aba Governo.
+import { bancadas } from '../game/bancadas'
 import { useState } from 'react'
 import { ministerOf, ministryBlockedReason, type MinistryChange } from '../game/camara'
 import { BILL_BY_ID } from '../game/data/bills'
@@ -159,7 +160,7 @@ export function MinistriosView({ state, change, onChange, done, onEfetivar, onPe
                           <Portrait name={n.name} feminine={n.feminine} color={p.color} size={28} title={n.name} />
                           <span>
                             <b style={{ color: p.color }}>{p.sigla}</b> {n.name} <EloOf state={state} name={n.name} ctx={{ papel: 'ministro', party: n.party, area }} small />
-                            <small>{r ?? `${p.seats} deputados · relação ${Math.round(state.congress.parties[n.party].relation)}`}</small>
+                            <small>{r ?? `${bancadas(state)[n.party]} deputados · relação ${Math.round(state.congress.parties[n.party].relation)}`}</small>
                             {/* Etapa 5A: pista do risco oculto de quem vai assumir (o número fica escondido). */}
                             {!r && <small className="pn-pista">🔎 {pistaDe(state, n.name, { papel: 'ministro', party: n.party, area })}</small>}
                           </span>

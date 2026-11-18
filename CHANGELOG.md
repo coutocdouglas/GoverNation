@@ -1,5 +1,17 @@
 # Novidades
 
+## 0.48.0 (17/11/2026)
+- **Novo mandato redesenhado, parte 1: candidato e vice (reforma do Novo mandato, protótipo v6 aprovado).** A tela de começo de jogo foi refeita no desenho aprovado, com o rosto em moldura redonda e um painel com os 32 grupos.
+  - **Os 9 partidos podem ser escolhidos**, em três colunas (Esquerda, Centro, Direita). Cada cartão mostra a bancada e, ao clicar, abre o **dossiê do partido**: história, por que se alinha assim, forças, fraquezas, aliados e oposição (com os logos) e os grupos que são base dele.
+  - **A dificuldade muda o tamanho das bancadas.** O Fácil aproxima os tamanhos, o Difícil afasta (os grandes crescem e os pequenos encolhem); o Normal é a Câmara de sempre. A dificuldade nunca joga contra a sua mão: no Fácil o seu partido não encolhe, no Difícil não cresce. A barra da Câmara mostra a divisão e a linha da maioria.
+  - **O partido mexe nos 32 grupos:** quem pensa parecido recebe melhor, quem pensa o contrário desconfia ("Identidade do partido", que esfria com o tempo e aparece no "Por quê?"). Isso só redistribui: nenhum partido começa com mais aprovação geral.
+  - **Partido pequeno tem vantagem:** ânimo extra nos grupos que são base dele, maior quanto menor a bancada (até +4).
+  - **Vice com chance à vista:** cada nome mostra a disposição de aceitar (alta no seu partido, baixa no campo oposto) e o bônus se aceitar. Quanto mais difícil de convencer, maior o bônus nos dois maiores grupos da base do partido dele. Com os três escolhidos, a proposta mostra a chance de cada um ser o vice.
+  - **Painel "Como o país te recebe"** com os 32 grupos em 5 blocos, sem rolagem, e o porquê (dificuldade, partido, perfil, promessas).
+  - **A tela se ajusta a qualquer resolução** (desenho de 1920×1080 escalado), com o tema claro ou escuro do jogo.
+- Sem mudança no save (45): a bancada de cada partido passa a ser contada nos deputados do mandato; os mandatos em andamento seguem com a Câmara de sempre. 802 testes (12 novos). Simulador `npm run simposse`: bancadas por dificuldade, aprovação inicial por partido (a mesma para todos, salvo o pequeno, até +0,5) e a disposição dos vices. Conferido no navegador em 1366×768, 1280×1024, 1920×1080 e 2560×1080, com posse no Difícil pelo PVS e um mês jogado.
+- O H5 (fatos vivos e imprensa) foi guardado no ramo `rascunho-h5` e volta depois da reforma do Novo mandato (números a partir da v0.50.0).
+
 ## 0.47.2 (15/11/2026)
 - **Requerimentos dos grupos pela tensão (bloco H4 da Etapa 6G, fecho).** Quando a tensão de um grupo passa de 70, ele manda um requerimento, sem sorteio: o grupo mais tenso primeiro, uma vez a cada 9 meses, e não no mês do fato de greve dele. É o caminho de negociação antes de a greve virar fato do mês.
   - **Mesmo passo a passo dos setores:** reunir (ação da agenda) ou ignorar; duas pautas (o acordo parcial e a pauta cheia) e a contraproposta do primeiro passo, com a chance em faixa; acato, ministro da pasta da medida (a cobrança do grupo) e adoção como medida do mês, ou desistência.

@@ -530,7 +530,7 @@ export function GameScreen({ state, onChange, onExit }: {
           const votesLeft = rest.filter((p) => p.kind === 'vote').length
           const total = head.n ?? state.lastReport?.votes.filter((v) => v.kind !== 'simbolica').length ?? 1
           const idx = head.i ?? Math.max(0, total - votesLeft - 1)
-          return <VoteAnimation key={`${head.v.bill}-${post.length}`} vote={head.v} index={idx} total={total} chain={head.chain}
+          return <VoteAnimation key={`${head.v.bill}-${post.length}`} state={state} vote={head.v} index={idx} total={total} chain={head.chain}
             nextLabel={nextIsReaction ? '📣 Ver a reação da sociedade →' : rest[0]?.kind === 'court' ? '⚖️ Ver o Supremo →' : rest.length ? 'Continuar →' : 'Fechar'}
             onNext={() => { if (head.v.approved && head.v.kind !== 'veto') confetti(); advance() }} />
         }

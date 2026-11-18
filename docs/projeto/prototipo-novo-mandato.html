@@ -1,0 +1,763 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>GoverNation · Protótipo do Novo mandato (v6)</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+@font-face{font-family:'Corigo';src:url('../../src/assets/fonts/Corigo.otf');font-weight:400}
+@font-face{font-family:'ZT Nature';src:url('../../src/assets/fonts/ZTNature-Regular.woff2');font-weight:400}
+@font-face{font-family:'ZT Nature';src:url('../../src/assets/fonts/ZTNature-Medium.woff2');font-weight:500 600}
+@font-face{font-family:'ZT Nature';src:url('../../src/assets/fonts/ZTNature-Bold.woff2');font-weight:700 900}
+/* tokens idênticos aos do jogo (src/ui/painel.css, .pn) */
+:root{--bg:#0a0a09;--panel:#141413;--panel2:#1c1c1a;--line:#2b2b28;--text:#ecebe6;--muted:#a09f98;--gold:#f5c542;--green:#2ecc71;--red:#ff5a5f;--accent:#9aa7e6;--well:#0f0f0e;--trk:#2a2a27;--glass:rgba(20,20,19,.78);--glass-line:rgba(255,255,255,.16);--shadow:0 1px 2px rgba(0,0,0,.5),0 14px 34px -14px rgba(0,0,0,.7);--pc:#c9a227;--font:'ZT Nature','Segoe UI',system-ui,sans-serif;--display:'Corigo','ZT Nature','Segoe UI',sans-serif;--photo:grayscale(.2)}
+:root.claro{--bg:#f3f0ea;--panel:#ffffff;--panel2:#f7f4ee;--line:#e4dfd5;--text:#17171a;--muted:#5a564e;--gold:#84600c;--green:#1f6f45;--red:#a93a28;--accent:#5565bd;--well:#f0ece4;--trk:#e6e1d6;--glass:rgba(255,255,255,.8);--glass-line:rgba(23,23,26,.22);--shadow:0 1px 2px rgba(30,25,15,.05),0 12px 32px -14px rgba(30,25,15,.2);--photo:grayscale(1) contrast(1.05)}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--text);font:14px/1.35 var(--font);display:grid;grid-template-rows:auto 1fr auto;height:100vh;overflow:hidden}
+button{font:inherit;color:inherit;cursor:pointer;text-align:left}
+h1,h2,h3,p{margin:0}
+h1,h2,h3{font-weight:500;letter-spacing:-.01em}
+small,.muted{color:var(--muted)}
+.up{color:var(--green)}.down{color:var(--red)}
+/* topo no estilo do jogo */
+.top{display:flex;align-items:center;gap:26px;padding:12px 28px;border-bottom:1px solid var(--line);background:color-mix(in srgb,var(--bg) 92%,transparent)}
+.logo{font-family:var(--display);font-size:26px;line-height:1}
+.logo small{display:block;font:11.5px var(--font);letter-spacing:.04em;text-transform:uppercase;margin-top:3px}
+.top h1{font-family:var(--display);font-size:34px;font-weight:400}
+.steps{display:flex;gap:8px;list-style:none;margin:0;padding:0}
+.steps button{background:var(--panel);border:1px solid var(--line);color:var(--muted);border-radius:999px;padding:7px 16px;text-align:center;font-weight:600;font-size:13px}
+.steps .on button{background:var(--text);color:var(--bg);border-color:var(--text)}
+.steps .done button{color:var(--text)}
+.sp{flex:1}
+.chip{background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:6px 14px;font-size:13px;font-weight:600;color:var(--muted)}
+.body{display:grid;grid-template-columns:1fr 430px;gap:20px;padding:16px 28px;min-height:0}
+.main{min-height:0;min-width:0;display:grid;gap:16px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:16px 18px;min-height:0;box-shadow:var(--shadow)}
+.lbl{font-size:11.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:10px;display:flex;justify-content:space-between;gap:10px;font-weight:600}
+.btn{background:transparent;border:1px solid var(--line);border-radius:10px;padding:9px 16px;text-align:center;font-weight:600}
+.btn:hover{border-color:var(--accent)}
+.btn.on{background:var(--text);color:var(--bg);border-color:var(--text)}
+.btn--primary{background:var(--green);color:#04120a;border:0;font-weight:700}
+:root.claro .btn--primary{color:#fff}
+.btn--primary:hover{filter:brightness(1.1)}
+/* molduras redondas */
+.ring{border-radius:50%;overflow:hidden;background:var(--well);border:2px solid var(--c,var(--pc));flex:none;display:grid;place-items:center}
+.ring img{width:100%;height:100%;object-fit:cover;object-position:50% 20%;display:block;filter:var(--photo)}
+.ring.logo-r img{object-fit:contain;padding:14%;filter:none}
+/* passo 1 */
+.s1{grid-template-columns:330px 1fr;grid-template-rows:minmax(0,1fr)}
+.face{display:flex;flex-direction:column;gap:10px;align-items:center}
+.bigring{position:relative;width:230px;height:230px;border-radius:50%;padding:6px;background:conic-gradient(from 200deg,var(--pc),color-mix(in srgb,var(--pc) 25%,#000),var(--pc));box-shadow:0 0 0 1px #000,0 12px 40px -12px var(--pc)}
+.bigring::after{content:"";position:absolute;inset:-8px;border-radius:50%;border:1px solid color-mix(in srgb,var(--pc) 50%,transparent)}
+.bigring img{width:100%;height:100%;border-radius:50%;object-fit:cover;object-position:50% 18%;display:block;filter:var(--photo);background:var(--well)}
+.plate{margin-top:-4px;text-align:center;background:var(--panel2);border:1px solid var(--pc);border-radius:999px;padding:5px 18px;font-weight:700;font-size:.9rem;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.filters{display:flex;gap:6px;margin-top:6px}
+.filters .btn{padding:5px 11px;font-size:.8rem}
+.gal{display:grid;grid-template-columns:repeat(5,1fr);gap:9px;width:100%;overflow:auto;padding:5px;flex:1;min-height:0;align-content:start}
+.gal button{border:2px solid transparent;border-radius:50%;padding:0;background:none;overflow:hidden;aspect-ratio:1}
+.gal button img{width:100%;height:100%;object-fit:cover;object-position:50% 18%;display:block;border-radius:50%;filter:var(--photo) brightness(.8)}
+.gal button:hover img,.gal button.on img{filter:var(--photo)}
+.gal button.on{border-color:var(--pc);box-shadow:0 0 12px -2px var(--pc)}
+.mid{display:grid;grid-template-rows:auto 1fr;gap:14px;min-height:0}
+.row2{display:grid;grid-template-columns:1fr 1.5fr;gap:14px}
+input{width:100%;background:var(--well);border:1px solid var(--line);border-radius:10px;padding:10px 13px;color:var(--text);font:inherit;font-size:1.05rem}
+input:focus{outline:none;border-color:var(--accent)}
+.diffs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.diff{background:var(--well);border:1px solid var(--line);border-radius:12px;padding:8px 11px}
+.diff.on{border-color:var(--gold);background:color-mix(in srgb,var(--gold) 9%,var(--well))}
+.diff b{display:block}.diff small{font-size:.72rem;line-height:1.2;display:block}
+.spec{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;min-height:0;flex:1}
+.col{display:flex;flex-direction:column;gap:9px;min-height:0}
+.colh{font-weight:700;letter-spacing:.08em;font-size:.76rem;padding-bottom:5px;border-bottom:2px solid}
+.colh.e{color:#ff6a58}.colh.c{color:var(--gold)}.colh.d{color:#6f9cff}
+.party{position:relative;display:grid;grid-template-columns:58px 1fr;gap:3px 12px;background:var(--well);border:1px solid var(--line);border-radius:14px;padding:10px 12px;flex:1;align-content:center}
+.party:hover{border-color:var(--c)}
+.party.on{border-color:var(--c);box-shadow:0 0 0 1px var(--c),0 8px 24px -12px var(--c);background:color-mix(in srgb,var(--c) 10%,var(--well))}
+.party .ring{width:58px;height:58px;grid-row:span 3;align-self:center}
+.party b{font-size:1rem}.party b small{margin-left:6px;font-weight:400;font-size:.74rem}
+.party .tg{font-size:.74rem;color:var(--muted);line-height:1.25}
+.party .ok-mark{position:absolute;top:8px;right:10px;font-size:.7rem;color:var(--green);font-weight:700}
+.chips{display:flex;gap:4px;flex-wrap:wrap;align-items:center}
+.tag{font-size:.62rem;border:1px solid var(--line);border-radius:999px;padding:1px 7px;color:var(--muted);font-weight:600}
+.tag.warn{color:var(--gold);border-color:color-mix(in srgb,var(--gold) 40%,var(--line))}
+.tag.ok{color:var(--green);border-color:color-mix(in srgb,var(--green) 40%,var(--line))}
+.meters{display:grid;grid-template-columns:1fr 1fr;gap:3px 12px;font-size:.66rem;color:var(--muted)}
+.meters i{display:block;height:4px;border-radius:3px;background:var(--trk);position:relative;margin-top:2px}
+.meters i u{position:absolute;top:-2px;width:3px;height:8px;background:var(--pc);border-radius:2px}
+.hint{font-size:.76rem;color:var(--muted)}
+/* janela de vidro do partido (igual às janelas do jogo) */
+.veil{position:fixed;inset:0;background:rgba(0,0,0,.45);display:grid;place-items:center;z-index:50;animation:fin .15s}
+@keyframes fin{from{opacity:0}}
+.win{width:min(880px,calc(100% - 80px));max-height:calc(100% - 80px);display:flex;flex-direction:column;background:var(--glass);-webkit-backdrop-filter:blur(22px) saturate(1.1);backdrop-filter:blur(22px) saturate(1.1);border:1px solid var(--glass-line);box-shadow:0 24px 70px -24px rgba(0,0,0,.6)}
+.win>header{display:flex;align-items:center;gap:12px;padding:12px 18px;border-bottom:1px solid var(--glass-line)}
+.win>header h3{flex:1;font-size:13px;font-weight:500;letter-spacing:.08em;text-transform:uppercase}
+.win>header button{border:1px solid var(--glass-line);background:transparent;width:28px;height:28px;text-align:center}
+.wbody{padding:20px 22px;overflow:auto;display:grid;grid-template-columns:200px 1fr;gap:6px 24px}
+.wl{display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center}
+.wl .ring{width:150px;height:150px;border-width:3px}
+.wl h2{font-family:var(--display);font-size:26px;font-weight:400;line-height:1.1}
+.wr{display:flex;flex-direction:column;gap:12px;font-size:.88rem}
+.wr h5{margin:0 0 3px;font-size:.66rem;letter-spacing:.1em;text-transform:uppercase;color:var(--gold)}
+.wr p,.wr li{color:var(--text);opacity:.88;line-height:1.4}
+.wr ul{margin:0;padding-left:16px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.rel{display:flex;gap:12px;flex-wrap:wrap}
+.rel span{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:.7rem;font-weight:700}
+.rel .ring{width:46px;height:46px;border-width:2px}
+.rel.foe .ring{border-color:var(--red)}.rel.fr .ring{border-color:var(--green)}
+.vant{background:color-mix(in srgb,var(--gold) 9%,transparent);border:1px solid color-mix(in srgb,var(--gold) 40%,var(--line));padding:9px 12px;font-size:.84rem}
+.vant b{color:var(--gold)}
+.win>footer{display:flex;gap:10px;justify-content:flex-end;padding:12px 18px;border-top:1px solid var(--glass-line)}
+/* painel */
+.aside{display:flex;flex-direction:column;gap:7px;min-height:0;overflow:hidden}
+.aside h3{font-size:.98rem;display:flex;justify-content:space-between;align-items:baseline}
+.aside h3 b{font-family:var(--display);font-size:1.7rem;font-weight:400;color:var(--text)}
+.blocks{display:grid;grid-template-columns:1fr 1fr;gap:6px 14px;align-content:start}
+.blk h4{margin:0 0 2px;font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;color:var(--gold)}
+.g{display:grid;grid-template-columns:1fr auto;gap:0 6px;font-size:.68rem;line-height:1.1;margin-bottom:2px}
+.g span:first-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.g span:nth-child(2){text-align:right;font-weight:600}
+.g small{font-size:.6rem;margin-left:3px}
+.g .bar{grid-column:1/-1;height:3px;background:var(--trk);border-radius:2px;margin-top:1px}
+.g .bar i{display:block;height:100%;border-radius:2px}
+.why{font-size:.68rem;color:var(--muted);border-top:1px solid var(--line);padding-top:6px;line-height:1.3}
+.rival{display:flex;gap:10px;align-items:center;border-top:1px solid var(--line);padding-top:7px;font-size:.74rem;margin-top:auto}
+.rival .ring{width:40px;height:40px;border-color:#2d5ad0}
+/* passo 2 */
+.s2{grid-template-columns:1fr 1fr}
+.cats{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:9px}
+.cats button{font-size:.72rem;border:1px solid var(--line);background:none;border-radius:999px;padding:3px 11px;color:var(--muted);font-weight:600}
+.cats button.on{background:var(--text);color:var(--bg);border-color:var(--text)}
+.pgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;overflow:auto;max-height:calc(100% - 62px);padding:2px}
+.opt{background:var(--well);border:1px solid var(--line);border-radius:14px;padding:9px 11px;display:flex;flex-direction:column;gap:3px;min-height:0}
+.opt b{font-size:.86rem}.opt p{font-size:.7rem;color:var(--muted);line-height:1.25}
+.opt.on{border-color:var(--gold);background:color-mix(in srgb,var(--gold) 9%,var(--well))}
+.opt:disabled{opacity:.4;cursor:not-allowed}
+.fx{display:flex;flex-wrap:wrap;gap:2px 8px;font-size:.68rem}
+.cat-tag{font-size:.6rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);display:flex;justify-content:space-between}
+/* passo 3 */
+.s3{grid-template-rows:repeat(3,auto);align-content:start;gap:10px}
+.lane{display:grid;grid-template-columns:30px repeat(4,1fr);gap:10px;align-items:start}
+.lane>.lh{writing-mode:vertical-rl;transform:rotate(180deg);text-align:center;font-weight:700;letter-spacing:.14em;font-size:.72rem;border-left:2px solid;padding:0 6px;align-self:stretch}
+.lh.e{color:#ff6a58}.lh.c{color:var(--gold)}.lh.d{color:#6f9cff}
+.pv{background:var(--panel);border:1px solid var(--line);border-top:3px solid var(--c);border-radius:16px;padding:9px;box-shadow:var(--shadow)}
+.pvh{display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:.8rem}
+.pvh .ring{width:26px;height:26px;border-width:1px}
+.vice{width:100%;display:grid;grid-template-columns:44px 1fr;gap:1px 9px;background:var(--well);border:1px solid var(--line);border-radius:12px;padding:5px 8px;margin-bottom:5px}
+.vice .ring{width:44px;height:44px;grid-row:span 3;align-self:center}
+.vice b{font-size:.78rem;display:flex;justify-content:space-between;gap:4px}
+.vice small{font-size:.64rem;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vice .bn{font-size:.66rem;color:var(--green)}
+.vice.on{border-color:var(--gold);background:color-mix(in srgb,var(--gold) 9%,var(--well))}
+.vice:disabled{opacity:.4}
+.ch{font-weight:600;font-size:.66rem;border-radius:999px;padding:0 6px;border:1px solid}
+.ch.hi{color:var(--green)}.ch.mid{color:var(--gold)}.ch.lo{color:var(--red)}
+.slots{display:flex;flex-direction:column;gap:5px}
+.sl{border:1px dashed var(--line);border-radius:12px;padding:6px 10px;font-size:.76rem;min-height:36px;display:flex;align-items:center;gap:8px}
+.sl.f{border-style:solid;border-color:var(--gold);background:color-mix(in srgb,var(--gold) 7%,transparent)}
+.sl.lk{border-style:solid;border-color:var(--red);background:color-mix(in srgb,var(--red) 8%,transparent)}
+.sl .ring{width:34px;height:34px;border-width:1px}
+/* passo 4 */
+.s4{grid-template-rows:auto 1fr}
+.press{display:grid;grid-template-columns:auto 1fr auto;gap:16px;align-items:center;background:color-mix(in srgb,var(--red) 10%,var(--panel));border:1px solid color-mix(in srgb,var(--red) 45%,var(--line));border-radius:20px;padding:12px 18px}
+.press .ic{font-size:1.8rem}
+.press h3{color:var(--red);font-size:.98rem;margin-bottom:2px}
+.lock{border:1px solid color-mix(in srgb,var(--red) 45%,var(--line));border-radius:14px;padding:7px 12px;background:var(--well);min-width:260px}
+.lock small{display:block;color:var(--red);font-size:.62rem;text-transform:uppercase;letter-spacing:.08em}
+.pro{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;overflow:auto;max-height:calc(100% - 96px);padding:2px;align-content:start}
+.pro .opt{min-height:116px}
+.st{color:var(--gold);letter-spacing:1px}
+.meta{font-size:.64rem;color:var(--muted);border-top:1px dashed var(--line);padding-top:3px;margin-top:auto}
+.side{font-size:.64rem;color:var(--muted)}.side.mine{color:var(--gold)}
+.mix{display:flex;gap:14px;font-size:.76rem;margin-bottom:8px;color:var(--muted)}
+.mix b{color:var(--text)}
+.foot{display:flex;gap:12px;align-items:center;padding:11px 28px;border-top:1px solid var(--line);background:color-mix(in srgb,var(--bg) 92%,transparent)}
+.foot .warn{color:var(--gold);font-size:.82rem}
+.foot .btn{padding:11px 26px;font-size:1rem}
+/* ===== v4 ===== */
+.spec{flex:none}
+.col{gap:8px;flex:none}
+.party{flex:none;grid-template-columns:46px 1fr;padding:8px 10px;gap:0 10px;align-content:center}
+.party .ring{width:46px;height:46px;grid-row:span 2}
+.party b{display:flex;align-items:center;gap:6px;font-size:.95rem}
+.party b .ok-mark{position:static;margin-left:auto}
+.party .tg{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hemi{display:flex;height:34px;border-radius:10px;overflow:hidden;position:relative;border:1px solid var(--line)}
+.hemi i{display:grid;place-items:center;font-style:normal;font-size:.7rem;font-weight:700;color:#fff;min-width:0;overflow:hidden;position:relative}
+.hemi i span{text-shadow:0 1px 2px rgba(0,0,0,.6)}
+.hemi .maj{position:absolute;left:50.1%;top:-3px;bottom:-3px;width:2px;background:var(--text)}
+.hemi.small{height:16px}
+/* vices em linhas */
+.s3{display:flex;flex-direction:column;gap:6px;overflow:hidden}
+.vhead{font-weight:700;letter-spacing:.14em;font-size:.7rem;padding:2px 0;border-bottom:2px solid;margin-top:2px}
+.vhead.e{color:#ff6a58}.vhead.c{color:var(--gold)}.vhead.d{color:#6f9cff}
+.vrow{display:grid;grid-template-columns:200px repeat(3,1fr);gap:8px;align-items:stretch}
+.vlab{display:flex;align-items:center;gap:10px;background:var(--well);border:1px solid var(--line);border-left:4px solid var(--c);border-radius:14px;padding:6px 10px;font-size:.82rem}
+.vlab .ring{width:40px;height:40px}
+.vice{margin:0;grid-template-columns:50px 1fr;padding:6px 9px;gap:0 10px}
+.vice .ring{width:50px;height:50px;grid-row:span 3}
+.vice small{font-size:.66rem}
+/* ministérios */
+.s5{grid-template-columns:230px 1fr;grid-template-rows:minmax(0,1fr) auto;gap:12px}
+.plist{grid-row:span 1;overflow:hidden;display:flex;flex-direction:column;gap:3px}
+.pas{display:flex;align-items:center;gap:9px;background:var(--well);border:1px solid var(--line);border-radius:12px;padding:3px 8px;font-size:.78rem}
+.pas small{font-size:.66rem;color:var(--muted)}
+.pas.on{border-color:var(--gold);background:color-mix(in srgb,var(--gold) 9%,var(--well))}
+.pas .ring,.pas .ico{width:34px;height:34px;display:grid;place-items:center;font-size:1.1rem;flex:none}
+.pas .ico{background:var(--panel2);border-radius:50%}
+.mgrid{display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(2,1fr);gap:10px;height:calc(100% - 28px)}
+.min{display:flex;flex-direction:column;gap:6px;background:var(--well);border:1px solid var(--line);border-top:3px solid var(--c);border-radius:14px;padding:10px 12px;min-height:0}
+.min:hover{border-color:var(--c)}
+.min.on{border-color:var(--gold);background:color-mix(in srgb,var(--gold) 9%,var(--well));box-shadow:0 0 0 1px var(--gold)}
+.mh{display:flex;gap:10px;align-items:center}
+.mh .ring{width:56px;height:56px;flex:none}
+.mh b{font-size:.92rem}.mh small{font-size:.66rem;color:var(--muted);display:block;line-height:1.2}
+.ring.mini{width:16px;height:16px;border-width:1px}
+.mhist{font-size:.7rem;color:var(--muted);line-height:1.3}
+.axes{display:grid;gap:3px}
+.ax{display:grid;grid-template-columns:62px 1fr 62px;gap:6px;align-items:center;font-size:.58rem;color:var(--muted)}
+.ax span:last-child{text-align:right}
+.ax i{height:4px;border-radius:3px;background:var(--trk);position:relative}
+.ax i::after{content:"";position:absolute;left:50%;top:-2px;bottom:-2px;width:1px;background:var(--line)}
+.ax u{position:absolute;top:-2px;width:8px;height:8px;border-radius:50%;background:var(--c);margin-left:-4px}
+.ad{display:flex;flex-direction:column;gap:2px;font-size:.66rem;margin-top:auto;line-height:1.2}
+.pedstrip{grid-column:1/-1}
+.pedrow{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.ped{display:grid;grid-template-columns:40px 1fr auto;gap:10px;align-items:center;background:var(--well);border:1px solid var(--line);border-left:4px solid var(--c);border-radius:12px;padding:7px 10px;font-size:.76rem}
+.ped .ring{width:40px;height:40px}
+.ped.sim{border-color:var(--green)}.ped.nao{border-color:var(--red)}
+.pbt{display:flex;flex-direction:column;gap:4px}
+.pbt .btn{padding:3px 12px;font-size:.74rem}
+.slx{border-style:solid;border-color:var(--accent);background:color-mix(in srgb,var(--accent) 8%,transparent)}
+/* ===== v5 ===== */
+.s4{grid-template-rows:auto auto minmax(0,1fr)}
+.bands{padding:10px 16px}
+.bands .lbl{margin-bottom:6px}
+.bandrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:8px}
+.cen{display:grid;grid-template-columns:260px 1fr 230px;gap:16px;align-items:center;padding:10px 16px}
+.cenh h3{font-size:1.05rem;margin-bottom:3px}
+.demgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:7px}
+.dem{display:grid;grid-template-columns:38px 1fr auto;gap:8px;align-items:center;background:var(--well);border:1px solid var(--line);border-left:4px solid var(--c);border-radius:12px;padding:6px 9px;font-size:.76rem}
+.dem .ring{width:38px;height:38px}
+.dem.ok{border-color:color-mix(in srgb,var(--green) 55%,var(--line));border-left-color:var(--c)}
+.dem.bad{border-color:color-mix(in srgb,var(--gold) 55%,var(--line));border-left-color:var(--c)}
+.dem small{font-size:.64rem}
+.dots{display:flex;align-items:center;gap:3px;margin:2px 0}
+.dots i{width:11px;height:11px;border-radius:50%;border:1.5px solid var(--muted)}
+.dots i.f{background:var(--green);border-color:var(--green)}
+.dots span{margin-left:4px;font-size:.66rem;color:var(--muted)}
+.cenb{display:flex;flex-direction:column;gap:6px}
+.cenb .btn{padding:7px 12px;font-size:.84rem}
+.cenb small{font-size:.62rem;line-height:1.25}
+.pas .cv{color:var(--gold);font-weight:700}
+.foot .warn{font-weight:600}
+@media (max-aspect-ratio:3/2){.body{grid-template-columns:1fr 380px}.s1{grid-template-columns:290px 1fr}}
+@media (min-aspect-ratio:21/9){.body{grid-template-columns:1fr 520px}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="logo">GoverNation<small>Novo mandato</small></div>
+  <ol class="steps" id="steps"></ol>
+  <span class="sp"></span>
+  <span class="chip">PROTÓTIPO v6 · nada grava no jogo</span><button class="btn" onclick="document.documentElement.classList.toggle('claro')">☀ / 🌙 tema</button>
+</header>
+<div class="body" id="body"></div>
+<footer class="foot" id="foot"></footer>
+
+<script>
+const IMG=id=>`../../public/portraits/${String(id).padStart(3,'0')}.webp`;
+const LOGO=p=>`../../public/logos/${p}.webp`;
+
+/* ===== grupos: [id, nome, bloco, aprovação base, tamanho, afinidade econ (+mercado), afinidade costumes (+conservador)] ===== */
+const BLOCKS=[['trabalho','Trabalho e renda'],['fe','Fé'],['campo','Campo e floresta'],['identidade','Identidade e causas'],['capital','Capital e Estado']];
+const G=[
+['baixaRenda','Periferia e informais','trabalho',58,9,-.6,.1],['classeMedia','Classe média urbana','trabalho',48,7.5,.3,.3],['trabalhadores','Trabalhadores formais','trabalho',57,7,-.4,0],['aposentados','Aposentados','trabalho',52,6.5,-.2,.3],['empreendedores','Pequenos empreendedores','trabalho',47,4.5,.6,.2],['servidores','Servidores públicos','trabalho',56,3.2,-.5,-.1],['sindicalistas','Sindicalistas','trabalho',57,2.6,-.9,-.4],['professores','Professores','trabalho',53,2.5,-.5,-.5],['aplicativos','Trab. de aplicativo','trabalho',58,2.3,.1,.1],['profSaude','Profissionais da saúde','trabalho',53,1.9,-.3,-.2],['policiais','Policiais','trabalho',53,1.7,.3,.8],['caminhoneiros','Caminhoneiros','trabalho',53,1.5,.3,.6],
+['evangelicos','Evangélicos','fe',54,10.5,.1,.9],['catolicos','Católicos','fe',53,9.5,0,.5],['afro','Religiões afro-brasileiras','fe',58,1.1,-.3,-.5],
+['agro','Agronegócio','campo',53,3.4,.8,.6],['agriculturaFamiliar','Agricultura familiar','campo',56,2.1,-.3,.2],['tradicionais','Comunidades tradicionais','campo',58,1.2,-.5,-.1],['indigenas','Povos indígenas','campo',58,.7,-.5,-.6],
+['jovens','Jovens','identidade',61,4.5,-.2,-.6],['mulheres','Mulheres','identidade',54,2.4,-.2,-.4],['negros','Movimento negro','identidade',58,2.3,-.5,-.5],['universitarios','Universitários','identidade',58,1.9,-.3,-.6],['digital','Cultura digital','identidade',61,1.5,.1,-.4],['ambientalistas','Ambientalistas','identidade',55,1.1,-.6,-.8],['lgbt','LGBT+','identidade',56,.9,-.3,-1],['artistas','Artistas','identidade',53,.7,-.4,-.7],
+['empresarios','Empresários','capital',45,2.8,.9,.2],['comerciarios','Comerciários e bancários','capital',53,2.3,.3,.2],['mercado','Mercado financeiro','capital',49,1.5,1,.1],['militares','Militares','capital',52,1.5,.4,.8],['ciencia','Ciência e universidades','capital',55,1,-.2,-.5]];
+const GN=Object.fromEntries(G.map(g=>[g[0],g[1]]));
+
+/* ===== partidos ===== */
+const PARTIES=[
+{id:'fpt',s:'FPT',n:'Frente Popular Trabalhista',w:'e',seats:90,econ:-65,cost:-45,disc:.9,c:'#d62d2d',
+ tg:'A máquina sindical do país. Fiel, disciplinada e desconfiada do mercado.',
+ hist:'Nasceu em 1983 da fusão de comitês de greve, pastorais operárias e associações de bairro. Governou quatro mandatos e carrega o orgulho e o desgaste de quem já foi poder. Quando perde vai para a rua; quando ganha, a rua a cobra.',
+ alinha:['Estatal e redistributiva: defende gasto social, piso e crédito público','Progressista em direitos, com ala sindical mais cautelosa nos costumes','Voto fechado: a direção manda e a bancada segue'],
+ f:['Sindicatos e periferia','Bancada fechada'],fr:['Mercado hostil','Marca desgastada por casos antigos'],al:['PVS','MDN'],ri:['POL','NRM'],
+ base:['sindicalistas','trabalhadores','servidores'],perk:null},
+{id:'pvs',s:'PVS',n:'Partido Verde Socialista',w:'e',seats:30,econ:-70,cost:-75,disc:.9,c:'#c2187a',
+ tg:'Ecologia e direitos. Poucos votos, muita voz.',
+ hist:'Surgiu de ONGs, ecologistas e coletivos de direitos que não cabiam em partido grande. Vive entre o purismo e a necessidade de fazer acordo: cada concessão custa caro dentro de casa e rende crítica fora.',
+ alinha:['Ambientalismo como programa de governo, não como enfeite','Costumes mais progressistas do jogo','Anticapital: desconfia de bancos e do agro grande'],
+ f:['Pauta de direitos e clima','Voz na imprensa'],fr:['Bancada pequena','Pouco alcance no interior'],al:['FPT'],ri:['MRB','POL','UCD'],
+ base:['ambientalistas','lgbt','universitarios'],perk:'Rua mobilizada: atos de rua custam menos agenda e rendem mais com jovens e ambientalistas.'},
+{id:'mdn',s:'MDN',n:'Movimento Democrático Nacional',w:'c',seats:40,econ:5,cost:0,disc:.45,c:'#c9a227',
+ tg:'O centro histórico: conversa com todo mundo.',
+ hist:'Herdeiro do centro que costurou a redemocratização. Hoje é um arquipélago de caciques estaduais: nenhum fala pelo partido inteiro. Governou com todos, por isso é aceito por todos e controlado por ninguém.',
+ alinha:['Equilíbrio fiscal moderado e política social sem alarde','Evita guerra de costumes: prefere "o que dá para aprovar"','Nunca rompe: negocia até o último voto'],
+ f:['Aceito por todos os lados','Quadros experientes'],fr:['Bancada pequena e indisciplinada','Sem identidade forte'],al:['PSN','PRA','UCD'],ri:[],
+ base:['classeMedia','catolicos','aposentados'],perk:'Ponte: partidos de qualquer lado aceitam conversar; acordos custam cerca de 20% menos emendas.'},
+{id:'psn',s:'PSN',n:'Partido Social Nacional',w:'c',seats:44,econ:10,cost:5,disc:.5,c:'#2bb3a3',
+ tg:'Forte nas prefeituras. Apoia quem estiver bem.',
+ hist:'Cresceu das prefeituras: quem controla o município controla o voto. Pragmático, apoia quem entrega obra e esfria quando a pesquisa cai. Seus prefeitos são sua moeda.',
+ alinha:['Pragmatismo municipalista: ideologia vem depois da obra','Posição de centro, mas gira com o humor do eleitor','Fisiológico moderado: troca apoio por convênio'],
+ f:['Capilaridade municipal','Flexibilidade'],fr:['Lealdade condicional','Sem projeto nacional'],al:['MDN','UCD'],ri:[],
+ base:['baixaRenda','comerciarios','servidores'],perk:'Prefeituras: emendas pagas rendem cerca de 25% mais lealdade na bancada.'},
+{id:'pra',s:'PRA',n:'Partido Renovação e Avanço',w:'c',seats:52,econ:15,cost:20,disc:.35,c:'#8b6fd6',
+ tg:'Siglas fundidas para sobreviver. Cada deputado por si.',
+ hist:'Costura de oito siglas moribundas para passar na cláusula de barreira. Sem ideologia comum: cada deputado negocia sozinho, e o líder administra o caos. Vota onde o dia pede.',
+ alinha:['Centro por falta de opção, não por convicção','Aceita qualquer pauta que renda cargo','Discurso de "renovação" vazio, mas popular entre jovens'],
+ f:['Negocia rápido','Aceita quase tudo'],fr:['Pouca coesão','Troca de lado sem aviso'],al:['MDN','UCD'],ri:[],
+ base:['jovens','empreendedores'],perk:'Maleável: fecha acordo mais rápido e sem custo político; em troca, o acordo esfria depressa.'},
+{id:'ucd',s:'UCD',n:'União Centro Democrático',w:'d',seats:86,econ:35,cost:30,disc:.55,c:'#e98a15',
+ tg:'O centrão: comissões, cargos e aritmética.',
+ hist:'O centrão profissional, nascido de ex-governistas de todos os regimes. Não faz ideologia, faz aritmética: comissões, relatorias, cargos. Já esteve em todos os governos e quer estar no próximo.',
+ alinha:['Centro-direita pelo voto da base empresarial do interior','Liberal na economia quando a pauta paga','Troca tudo por poder: o preço é o programa'],
+ f:['Controla comissões','Sabe contar votos'],fr:['Cobra caro','Some quando o governo cai'],al:['PSN','MDN','POL'],ri:['PVS'],
+ base:['empresarios','comerciarios','agro'],perk:null},
+{id:'pol',s:'POL',n:'Partido da Ordem Liberal',w:'d',seats:118,econ:55,cost:75,disc:.85,c:'#1e5bd8',
+ tg:'A maior bancada: ordem nos costumes, liberal na economia.',
+ hist:'Partido de empresários, oficiais da reserva e classe média indignada, que virou a maior bancada ao canalizar o medo da desordem. Tem uma base ideológica barulhenta e uma cúpula que negocia sem alarde.',
+ alinha:['Liberal na economia, conservador nos costumes','Segurança pública como bandeira central','Base barulhenta, cúpula pragmática'],
+ f:['Maior bancada','Disciplina alta'],fr:['A esquerda vai para a rua','Rejeição entre jovens'],al:['UCD','MRB','NRM'],ri:['FPT','PVS'],
+ base:['policiais','militares','empresarios'],perk:null},
+{id:'mrb',s:'MRB',n:'Movimento Republicano Brasileiro',w:'d',seats:41,econ:30,cost:80,disc:.7,c:'#4f7a2a',
+ tg:'A direita religiosa. Inflexível em costumes.',
+ hist:'Braço político de igrejas evangélicas. A disciplina vem do púlpito, não do estatuto. Inflexível em família e costumes; flexível na economia, desde que a igreja saia bem.',
+ alinha:['Costumes conservadores como inegociável','Economia liberal moderada, com assistência via igreja','Voto de rebanho: o pastor decide'],
+ f:['Base religiosa fiel','Capilaridade nas periferias'],fr:['Bancada pequena','Veto automático em pauta de costumes'],al:['POL','UCD'],ri:['PVS','FPT'],
+ base:['evangelicos','caminhoneiros','baixaRenda'],perk:'Púlpito: evangélicos e a base religiosa respondem melhor a discurso e gestos de fé.'},
+{id:'nrm',s:'NRM',n:'Novo Rumo',w:'d',seats:12,econ:85,cost:20,disc:.95,c:'#f07c00',
+ tg:'Liberais puros. Não trocam voto por cargo.',
+ hist:'Criado por economistas, fundos e jovens empreendedores cansados do Estado grande. Não troca voto por cargo, o que o torna incorruptível e quase isolado: ganha elogio na imprensa e perde votação no plenário.',
+ alinha:['Liberalismo econômico radical: privatizar, cortar, desregular','Costumes liberais: "o Estado fora do quarto"','Nenhuma tolerância com fisiologismo'],
+ f:['Credibilidade fiscal','Disciplina total'],fr:['Só 12 deputados','Rejeitado por sindicatos e servidores'],al:['POL'],ri:['FPT','PVS'],
+ base:['mercado','empresarios','empreendedores'],perk:'Credibilidade fiscal: o mercado reage melhor a cortes e perdoa mais; casos de fisiologismo pesam menos.'},
+];
+const PBY=Object.fromEntries(PARTIES.map(p=>[p.id,p]));
+const WL={e:['Esquerda','e'],c:['Centro','c'],d:['Direita','d']};
+const RIVALS={e:['Leopoldo Rezende','POL · Ex-governador de dois mandatos, fala em ordem nas contas e nas ruas.',113],c:['Leopoldo Rezende','POL · Ex-governador de dois mandatos, fala em ordem nas contas e nas ruas.',113],d:['Rita Lobo Neves','FPT · Líder sindical, pauta social e discurso de rua.',120]};
+
+/* ===== dificuldade: muda o tamanho das bancadas e o ânimo geral ===== */
+const DIFF={facil:{name:'Fácil',desc:'Bancadas parecidas, crises raras e eleitores pacientes.',k:.5,mood:2},normal:{name:'Normal',desc:'Bancadas como na vida real. O equilíbrio pensado para o jogo.',k:1,mood:0},dificil:{name:'Difícil',desc:'Os grandes ficam maiores e os pequenos sofrem. Crises frequentes.',k:1.3,mood:-2}};
+function seatsOf(diff){
+  const mean=513/9,k=DIFF[diff].k;
+  let v=PARTIES.map(p=>Math.max(10,mean+(p.seats-mean)*k));
+  const f=513/v.reduce((a,b)=>a+b,0);v=v.map(x=>Math.round(x*f));
+  const out={};PARTIES.forEach((p,i)=>out[p.id]=v[i]);return out;
+}
+/* vantagem do partido pequeno: quanto menor a bancada abaixo da média (57), maior o ânimo extra nos grupos da base dele */
+function smallBonus(p,seats){const deficit=Math.max(0,513/9-seats);return Math.min(4,Math.round(deficit/10*10)/10)}
+
+/* ===== efeito do alinhamento do partido em cada grupo ===== */
+function alignFx(p,g){return 4.5*(g[5]*p.econ/100+g[6]*p.cost/100)}
+function partyFx(p,seats){
+  const o={},why=[];
+  G.forEach(g=>{let v=alignFx(p,g);if(p.base.includes(g[0]))v+=2;o[g[0]]=v});
+  const sb=smallBonus(p,seats);
+  if(sb>0)p.base.forEach(g=>o[g]+=sb);
+  return {o,sb};
+}
+
+/* ===== perfil ===== */
+const CATS=['Todos','Trabalho','Fé','Campo','Identidade','Capital'];
+const T=[
+['conciliador','Conciliador','Senta com todo mundo antes de decidir.','Trabalho',{classeMedia:1.5,empresarios:1,jovens:-1.5,catolicos:1}],
+['combativo','Combativo','Compra briga em público e não recua.','Identidade',{jovens:2,sindicalistas:1.5,empresarios:-2,mercado:-1}],
+['tecnico','Técnico','Fala com planilha na mão.','Capital',{empresarios:2,mercado:1.5,ciencia:1,baixaRenda:-1.5}],
+['carismatico','Carismático','Lota praça e vira meme bom.','Identidade',{baixaRenda:1.5,digital:1.5,mercado:-1.5}],
+['austero','Austero','Corta cafezinho do Planalto.','Capital',{mercado:2,agro:1,servidores:-1.5,sindicalistas:-1}],
+['gente','Gente como a gente','Pega fila, come no boteco.','Trabalho',{baixaRenda:2,aplicativos:1,classeMedia:-1.5}],
+['linhaDura','Linha dura','Fala grosso sobre crime e ordem.','Capital',{policiais:2,militares:1.5,agro:1,jovens:-2,lgbt:-1}],
+['servidor','Servidor de carreira','Conhece a máquina por dentro.','Trabalho',{servidores:2,professores:1,empresarios:-1}],
+['devoto','Homem de fé','Fala de Deus sem constrangimento.','Fé',{evangelicos:2,catolicos:1.5,lgbt:-1.5,ambientalistas:-.5}],
+['ecumenico','Ecumênico','Abre a porta para todas as religiões.','Fé',{afro:2,catolicos:1,evangelicos:-1}],
+['ruralista','Filho do campo','Cresceu entre pasto e silo.','Campo',{agro:2,agriculturaFamiliar:1.5,caminhoneiros:1,ambientalistas:-2}],
+['verde','Voz da floresta','Defende rio, mata e quem vive nela.','Campo',{indigenas:2,tradicionais:2,ambientalistas:2,agro:-2}],
+['militante','Militante histórico','Vem de movimento social.','Identidade',{negros:1.5,mulheres:1.5,lgbt:1,militares:-1.5}],
+['academico','Acadêmico','Chega de tese e estudo na mão.','Capital',{universitarios:2,ciencia:2,professores:1,policiais:-1}],
+];
+const H=[
+['pelada','Pelada de domingo','Joga bola com os amigos de infância.','Trabalho',{trabalhadores:1,caminhoneiros:.5,empresarios:-.5}],
+['feira','Feira de sábado','Faz a própria feira e pechincha.','Trabalho',{baixaRenda:1,aposentados:.5,mercado:-.5}],
+['pescaria','Pescaria no interior','Some para o rio no feriado.','Campo',{agro:1,tradicionais:.5,jovens:-.5}],
+['corrida','Corrida de rua','Corre 10 km antes do expediente.','Identidade',{classeMedia:1,profSaude:.5,baixaRenda:-.5}],
+['lives','Lives toda semana','Conversa com o público toda quinta.','Identidade',{jovens:1.5,digital:1.5,servidores:-.5}],
+['viola','Viola caipira','Toca viola em festa do interior.','Campo',{agro:1,agriculturaFamiliar:.8,jovens:-.5}],
+['leitor','Leitor de economia','Lê relatório de banco no café.','Capital',{empresarios:1,mercado:1,trabalhadores:-.5}],
+['horta','Horta comunitária','Cuida de uma horta no bairro.','Campo',{agriculturaFamiliar:1,ambientalistas:.8,agro:-.5}],
+['culto','Culto de domingo','Não perde o culto da própria igreja.','Fé',{evangelicos:1.5,lgbt:-.5}],
+['missa','Missa das sete','Vai à missa e acende vela.','Fé',{catolicos:1.5,aposentados:.5}],
+['terreiro','Visita ao terreiro','Aparece em festa de matriz africana.','Fé',{afro:1.5,negros:.8,evangelicos:-.8}],
+['batalha','Batalha de rima','Aparece em batalha de MC e slam.','Identidade',{jovens:1,artistas:1,negros:.8,militares:-.5}],
+['bastidor','Café com a bancada','Toda manhã tem café com deputado.','Capital',{empresarios:.5,sindicalistas:-.5}],
+['estrada','Boleia com caminhoneiro','Viaja de carona na cabine.','Trabalho',{caminhoneiros:1.5,aplicativos:.8,ambientalistas:-.5}],
+];
+
+/* ===== vices: [nome, perfil, lealdade, retrato, grupo do bônus] ===== */
+/* dados reais do jogo (retratos com gênero, os 27 vices): extraídos de src/game/data */
+const DATA={"pool":[[16,"mo"],[23,"fm"],[51,"mo"],[73,"mm"],[77,"mm"],[83,"mo"],[84,"fm"],[86,"fo"],[90,"fo"],[96,"fm"],[98,"fo"],[101,"mo"],[107,"fm"],[125,"mm"],[146,"mm"],[150,"mo"],[152,"mm"],[154,"fo"],[155,"mm"],[156,"mo"],[158,"mj"],[160,"mo"],[161,"mm"],[162,"fm"],[164,"fm"],[165,"fo"],[167,"fm"],[168,"mo"],[170,"fm"],[172,"mo"],[173,"mm"],[174,"mm"],[175,"fj"],[179,"mm"],[180,"fo"],[183,"fm"],[185,"mo"],[186,"fm"],[187,"fo"],[188,"mo"],[189,"fj"],[190,"fm"],[191,"mm"],[192,"fo"],[193,"fm"],[194,"fo"],[195,"mm"],[197,"mm"]],"all":[[1,"m","o"],[2,"f","m"],[3,"f","m"],[4,"m","m"],[5,"f","m"],[6,"m","o"],[7,"m","j"],[8,"f","m"],[9,"m","o"],[10,"f","m"],[11,"f","o"],[12,"m","m"],[13,"f","m"],[14,"m","m"],[15,"f","m"],[16,"m","o"],[17,"f","m"],[18,"m","m"],[19,"f","m"],[20,"m","o"],[21,"m","m"],[22,"m","m"],[23,"f","m"],[24,"m","o"],[25,"f","m"],[26,"m","o"],[27,"f","m"],[28,"m","m"],[29,"f","o"],[30,"m","m"],[31,"f","m"],[32,"m","o"],[33,"m","m"],[34,"f","m"],[35,"m","j"],[36,"f","m"],[37,"m","m"],[38,"f","m"],[39,"m","j"],[40,"f","m"],[41,"m","o"],[42,"f","m"],[43,"m","j"],[44,"f","m"],[45,"m","j"],[46,"f","o"],[47,"m","m"],[48,"f","m"],[49,"m","o"],[50,"f","m"],[51,"m","o"],[52,"f","m"],[53,"m","m"],[54,"f","m"],[55,"m","o"],[56,"m","j"],[57,"m","m"],[58,"f","m"],[59,"m","o"],[60,"f","m"],[61,"f","o"],[62,"m","j"],[63,"f","m"],[64,"m","m"],[65,"f","m"],[66,"m","o"],[67,"f","m"],[68,"m","m"],[69,"f","o"],[70,"m","m"],[71,"m","m"],[72,"f","o"],[73,"m","m"],[74,"f","m"],[75,"m","o"],[76,"f","m"],[77,"m","m"],[78,"f","m"],[79,"m","o"],[80,"f","j"],[81,"m","o"],[82,"f","m"],[83,"m","o"],[84,"f","m"],[85,"m","m"],[86,"f","o"],[87,"m","m"],[88,"f","m"],[89,"m","m"],[90,"f","o"],[91,"m","m"],[92,"f","m"],[93,"m","o"],[94,"f","m"],[95,"m","m"],[96,"f","m"],[97,"m","m"],[98,"f","o"],[99,"m","m"],[100,"f","m"],[101,"m","o"],[102,"f","m"],[103,"m","m"],[104,"f","m"],[105,"m","o"],[106,"m","j"],[107,"f","m"],[108,"m","o"],[109,"f","m"],[110,"m","m"],[111,"m","m"],[112,"f","m"],[113,"m","o"],[114,"f","o"],[115,"m","j"],[116,"f","o"],[117,"m","m"],[118,"m","m"],[119,"m","o"],[120,"m","m"],[121,"f","m"],[122,"f","j"],[123,"f","m"],[124,"f","m"],[125,"m","m"],[126,"f","m"],[127,"m","o"],[128,"f","j"],[129,"m","m"],[130,"m","m"],[131,"m","o"],[132,"f","m"],[133,"m","o"],[134,"f","m"],[135,"m","j"],[136,"m","m"],[137,"f","o"],[138,"m","m"],[139,"m","m"],[140,"m","o"],[141,"f","m"],[142,"f","m"],[143,"m","j"],[144,"f","o"],[145,"f","j"],[146,"m","m"],[147,"f","m"],[148,"f","m"],[149,"m","m"],[150,"m","o"],[151,"f","m"],[152,"m","m"],[153,"f","m"],[154,"f","o"],[155,"m","m"],[156,"m","o"],[157,"m","m"],[158,"m","j"],[159,"f","m"],[160,"m","o"],[161,"m","m"],[162,"f","m"],[163,"m","j"],[164,"f","m"],[165,"f","o"],[166,"m","m"],[167,"f","m"],[168,"m","o"],[169,"f","j"],[170,"f","m"],[171,"m","j"],[172,"m","o"],[173,"m","m"],[174,"m","m"],[175,"f","j"],[176,"m","o"],[177,"m","o"],[178,"f","j"],[179,"m","m"],[180,"f","o"],[181,"f","m"],[182,"f","m"],[183,"f","m"],[184,"f","m"],[185,"m","o"],[186,"f","m"],[187,"f","o"],[188,"m","o"],[189,"f","j"],[190,"f","m"],[191,"m","m"],[192,"f","o"],[193,"f","m"],[194,"f","o"],[195,"m","m"],[196,"m","j"],[197,"m","m"],[198,"m","o"]],"vices":[["Hélio Brandão Vaz","pol",28,"Ex-ministro da Fazenda, técnico respeitado pelo mercado. Discreto e previsível.","confiável",false],["Marlene Cavalcanti Ribas","pol",25,"Senadora veterana, firme em segurança e ordem. Conhece cada corredor do Congresso.","confiável",true],["Fausto Mendonça Prado","pol",30,"Empresário e ex-governador. Rico, vaidoso e de olho na cadeira maior.","oscilante",false],["Ivone Barroso","fpt",34,"Sindicalista de décadas. Leal ao projeto, difícil de domar.","leal",true],["Davi Nogueira Teles","fpt",39,"Deputado jovem e carismático da esquerda. Fala bem, quer subir rápido.","oscilante",false],["Lúcia Marinho","fpt",38,"Educadora popular, querida nas periferias. Pouca vida de gabinete.","confiável",true],["Wilson Tavares Pinho","ucd",47,"Cacique do centrão. Cobra caro por cada gesto e nunca fecha a porta para ninguém.","oscilante",false],["Dagmar Esteves","ucd",42,"Operadora de bastidor, sabe onde está cada voto. Fala pouco, anota tudo.","confiável",true],["Júlio Bastos Lima","ucd",45,"Presidente de comissão aos 40 anos. Pragmático e sempre bem informado.","oscilante",false],["Elisa Cordeiro","psn",80,"Ex-prefeita de capital, boa de rua e de entrega. Apoia quem está bem.","confiável",true],["Nilton Aguiar","psn",43,"Ex-prefeito do interior, conhece cada prefeitura do país. Simpático e flexível.","confiável",false],["Regina Sapucaí","psn",50,"Articuladora municipalista. Fiel até onde o município é atendido.","confiável",true],["Ezequiel Santana","mrb",7,"Pastor e deputado jovem, voz forte nos costumes. Dedicado, mas exige respeito.","confiável",false],["Noêmia Duarte","mrb",60,"Bispa e comunicadora. Leal e inflexível em família e costumes.","confiável",true],["Moisés Alcântara","mrb",62,"Advogado da bancada evangélica. Calmo, firme e muito organizado.","confiável",false],["Heloísa Prates","mdn",52,"Cacique regional do centro histórico. Negocia tudo e não rompe com ninguém.","confiável",true],["Osvaldo Benevides","mdn",68,"Ex-presidente da Câmara, conhece o regimento melhor que o regimento. Fiel ao que lhe convém.","confiável",false],["Tereza Camargo Lins","mdn",88,"Política de carreira e boa de conciliação. Quer um governo estável.","confiável",true],["Gustavo Falcão","pra",71,"Líder de uma sigla pequena que vive de se encaixar. Vota onde o dia pede.","oscilante",false],["Mirian Tolentino","pra",74,"Deputada de fusão de siglas, hábil em acordo. Muda de lado com elegância.","oscilante",true],["Raul Pessoa Neto","pra",85,"Herdeiro político, sorridente e vazio de convicções. Fiel a quem tem a caneta.","confiável",false],["Aline Guerra","pvs",100,"Ambientalista de renome internacional. Cobra coerência e fala sem filtro.","confiável",true],["Caio Tupinambá","pvs",89,"Ativista de direitos. Faz barulho, vence debate e não aceita meio-termo.","oscilante",false],["Benedita Sá Fortes","pvs",147,"Jurista e defensora de direitos. Serena, estudiosa, muito respeitada.","confiável",true],["Rodrigo Hasselmann","nrm",97,"Economista liberal puro. Honesto e rígido; briga por cada corte.","confiável",false],["Priscila Dutra Vaz","nrm",153,"Empreendedora e deputada de primeiro mandato. Moderna, direta, impaciente.","confiável",true],["Ícaro Bittencourt","nrm",103,"Gestor de fundo e crítico do Estado. Respeitado, mas sem bancada.","oscilante",false]]};
+const hs=s=>[...s].reduce((a,c)=>(a*31+c.charCodeAt(0))>>>0,7);
+const rngOf=seed=>{let a=hs(String(seed))||1;const f=()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296};for(let i=0;i<6;i++)f();return f};
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const mean=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:0;
+const V=PARTIES.map(p=>[p.id,DATA.vices.filter(v=>v[1]===p.id).map(v=>[v[0],v[3],v[4],v[2],p.base[hs(v[0])%p.base.length]])]);
+const VLANES=[['e','fpt','pvs'],['c','mdn','psn','pra'],['d','ucd','pol','mrb','nrm']];
+
+function viceInfo(party,vp,lealdade){
+  const a=PBY[party],b=PBY[vp];
+  const dist=Math.abs(a.econ-b.econ)/2+Math.abs(a.cost-b.cost)/2;
+  let chance=vp===party?92:Math.max(15,Math.round(88-dist*0.75));
+  if(lealdade==='oscilante')chance-=5;if(lealdade==='leal')chance+=3;
+  chance=Math.max(10,Math.min(95,chance));
+  const bonus=Math.round((100-chance)/22*10)/10;
+  return{chance,bonus};
+}
+
+/* ===== promessas: [id, nome, desc, categoria, lado, estrelas, grupo que cobra, como o motor mede] ===== */
+const PR=[
+['desemprego6','Desemprego abaixo de 6%','Fechar o mandato com desemprego de 6% ou menos.','Economia','qualquer',2,'trabalhadores','Indicador no último mês'],
+['inflacao','Inflação na meta','Inflação em 12 meses de 4,5% ou menos.','Economia','qualquer',2,'classeMedia','Indicador no último mês'],
+['crescer','Crescer 2,5% ao ano','Crescimento médio de 2,5% ou mais.','Economia','qualquer',2,'empreendedores','Média dos 48 meses'],
+['juros','Juros de um dígito','Selic em 10% ou menos no fim.','Economia','c',2,'empresarios','Selic no último mês'],
+['dolar','Dólar abaixo de R$ 5','Dólar a R$ 5,00 ou menos no fim.','Economia','d',3,'mercado','Câmbio no último mês'],
+['divida','Segurar a dívida','Dívida sobe no máximo 3 pontos do PIB.','Economia','d',2,'mercado','Dívida fim − início'],
+['superavit','Contas no azul','Resultado primário positivo no fim.','Economia','d',3,'empresarios','Primário no último mês'],
+['aposent','Aposentado sem sustos','Aposentados com 55+ de aprovação.','Grupos','qualquer',1,'aposentados','Aprovação do grupo no fim'],
+['piso','Piso da saúde','Profissionais da saúde com 58+.','Grupos','e',2,'profSaude','Aprovação do grupo no fim'],
+['escola','Sala de aula valorizada','Professores com 58+ e nenhuma greve ao fim.','Grupos','e',2,'professores','Aprovação + greve'],
+['campo','Campo e floresta em paz','Agro e povos do campo, ambos com 52+.','Grupos','c',3,'agro','Dois grupos ao mesmo tempo'],
+['fe','Pacto das igrejas','Evangélicos e católicos com 55+.','Grupos','d',2,'evangelicos','Dois grupos ao mesmo tempo'],
+['app','Direitos no aplicativo','Trab. de aplicativo com 58+, sem greve.','Grupos','e',2,'aplicativos','Aprovação + greve'],
+['seguranca','Rua mais segura','Policiais com 58+ e nenhuma crise de segurança aberta.','Grupos','d',2,'policiais','Aprovação + fatos do mês'],
+['mulheres','Prioridade às mulheres','Mulheres com 58+ de aprovação.','Grupos','e',1,'mulheres','Aprovação do grupo no fim'],
+['sem_tensao','Nenhum grupo em fúria','Nenhum grupo com tensão acima de 90 no fim.','Grupos','qualquer',3,'classeMedia','Tensão dos 32 grupos (v0.46)'],
+['leis','Governo que entrega','Aprovar 12 leis ou mais na Câmara.','Congresso','c',2,'classeMedia','Votos aprovados'],
+['pec','Reforma na Constituição','Aprovar ao menos uma PEC.','Congresso','c',3,'empresarios','PEC sancionada'],
+['base','Base de verdade','3 partidos na base por 12 meses seguidos.','Congresso','qualquer',2,'trabalhadores','Pactos de base (v0.37)'],
+['sem_cpi','Sem CPI no meu governo','Terminar sem CPI aberta contra o governo.','Integridade','qualquer',2,'classeMedia','Estado da CPI (v0.29)'],
+['elo','Elo de ouro','Fechar com reputação em Ouro ou mais.','Integridade','qualquer',3,'classeMedia','Elo do presidente (v0.27)'],
+['sem_impeach','Sem pedido de impeachment','Nenhum pedido aceito pela Mesa.','Integridade','qualquer',2,'classeMedia','Impeachment (v0.43)'],
+['cred','Palavra cumprida','Credibilidade acima de 60 no fim.','Governo','qualquer',2,'mercado','Credibilidade (v0.35)'],
+['pasta','Ministérios estáveis','No máximo 4 trocas de ministro.','Governo','qualquer',1,'servidores','Trocas de pasta (v0.38)'],
+['pesq','Povo do lado','Terminar com 50% de aprovação ou mais.','Governo','qualquer',1,'classeMedia','Aprovação geral'],
+];
+const PTS={1:40,2:60,3:90};
+const PCATS=['Economia','Grupos','Congresso','Integridade','Governo'];
+const PRESS={
+ fpt:['sindicalistas','Sindicalistas','A central sindical exige gesto antes da posse: empregos e piso.','desemprego6'],
+ pvs:['ambientalistas','Ambientalistas','As ONGs ameaçam romper se não houver compromisso com a floresta.','campo'],
+ mdn:['empresarios','Empresários','O setor produtivo cobra juros e previsibilidade antes de apoiar.','juros'],
+ psn:['aposentados','Aposentados','As associações querem garantia de que o benefício não será mexido.','aposent'],
+ pra:['classeMedia','Classe média urbana','Os formadores de opinião querem ver as contas em ordem.','inflacao'],
+ ucd:['mercado','Mercado financeiro','Os bancos pedem sinal fiscal claro para fechar a favor.','divida'],
+ pol:['policiais','Policiais','As associações de segurança cobram compromisso formal com a rua.','seguranca'],
+ mrb:['evangelicos','Evangélicos','As lideranças das igrejas pedem pacto formal antes do segundo turno.','fe'],
+ nrm:['empreendedores','Pequenos empreendedores','As associações cobram menos imposto e menos papel.','crescer'],
+};
+
+/* ===== estado ===== */
+const st={modal:null,step:1,face:23,filter:'todos',name:'',diff:'normal',party:'mdn',tcat:'Todos',hcat:'Todos',pcat:'Economia',traits:[],habits:[],vices:[],promises:[],cabinet:{},bandeiras:{},pasta:'economia'};
+const $=s=>document.querySelector(s);
+const sgn=v=>(v>0?'+':'')+String(Math.round(v*10)/10).replace('.',',');
+const col=()=>PBY[st.party].c;
+const side=()=>PBY[st.party].w;
+const nPromises=()=>st.diff==='facil'?5:4;
+
+/* soma de TUDO que mexe no gráfico, com a origem de cada parcela */
+function parcels(){
+  const p=PBY[st.party],seats=seatsOf(st.diff)[st.party];
+  const parts={dif:{},part:{},perfil:{},prom:{},min:{}};
+  cabinet().forEach(m=>{PASTAS.find(x=>x[0]===m.area)[4].forEach(gid=>{const g=G.find(x=>x[0]===gid);parts.min[gid]=(parts.min[gid]||0)+3*(g[5]*m.eco/100+g[6]*m.cost/100)})});
+  G.forEach(g=>{parts.dif[g[0]]=DIFF[st.diff].mood});
+  const pf=partyFx(p,seats);parts.part=pf.o;
+  [...st.traits.map(i=>T.find(t=>t[0]===i)),...st.habits.map(i=>H.find(t=>t[0]===i))].forEach(t=>{for(const g in t[4])parts.perfil[g]=(parts.perfil[g]||0)+t[4][g]});
+  const ids=st.diff==='facil'?st.promises:[PRESS[st.party][3],...st.promises];
+  ids.forEach(id=>{const x=PR.find(a=>a[0]===id);if(x&&(x[4]===p.w||x[4]==='qualquer'&&false))parts.prom[x[6]]=(parts.prom[x[6]]||0)+1.5});
+  scenario().sup.forEach(s=>{if(st.bandeiras[s.pid]==='sim'){const gid=PBY[s.pid].base[0];parts.prom[gid]=(parts.prom[gid]||0)+1.5}});
+  return {parts,sb:pf.sb,seats};
+}
+function chartRows(){
+  const {parts}=parcels();
+  return G.map(g=>{const ex=['dif','part','perfil','prom','min'].reduce((a,k)=>a+(parts[k][g[0]]||0),0);
+    return{g,ex,after:Math.max(0,Math.min(100,g[3]+ex))}});
+}
+function chartHTML(){
+  const rows=chartRows();let tot=0,w=0;rows.forEach(r=>{tot+=r.after*r.g[4];w+=r.g[4]});
+  const apr=Math.round(tot/w);
+  const blocks=BLOCKS.map(([id,nm])=>`<div class="blk" style="${id==='trabalho'?'grid-row:span 2':''}"><h4>${nm}</h4>${rows.filter(r=>r.g[2]===id).map(r=>`<div class="g"><span>${r.g[1]}</span><span class="${r.ex>=.5?'up':r.ex<=-.5?'down':''}">${Math.round(r.after)}${Math.abs(r.ex)>=.5?`<small>${sgn(r.ex)}</small>`:''}</span><div class="bar"><i style="width:${r.after}%;background:${r.ex>=.5?'var(--green)':r.ex<=-.5?'var(--red)':'var(--gold)'}"></i></div></div>`).join('')}</div>`).join('');
+  const best=[...rows].sort((a,b)=>b.ex-a.ex),pos=best.slice(0,2).map(r=>r.g[1]),neg=best.slice(-2).map(r=>r.g[1]);
+  return {html:`<h3>Como o país te recebe <span>aprovação <b>${apr}%</b></span></h3><div class="blocks">${blocks}</div>`,
+    why:`<div class="why">Mais favorável: <span class="up">${pos.join(', ')}</span>. Mais frio: <span class="down">${neg.join(', ')}</span>. O gráfico soma dificuldade (${sgn(DIFF[st.diff].mood)}), alinhamento do partido, perfil e promessas do seu lado.</div>`};
+}
+function asideCard(top,withRival,noWhy){
+  const c=chartHTML(),rv=RIVALS[side()];
+  return `<aside class="card aside">${top||''}${c.html}${noWhy?'':c.why}${withRival?`<div class="rival"><span class="ring"><img src="${IMG(rv[2])}"></span><div><small>Seu rival</small><br><b>${rv[0]}</b><br><small>${rv[1]}</small></div></div>`:''}</aside>`;
+}
+
+/* ===== passos ===== */
+function randFace(){const g=DATA.pool.filter(x=>st.filter==='todos'||x[1][0]===st.filter);st.face=g[Math.floor(Math.random()*g.length)][0];render()}
+function step1(){
+  const p=PBY[st.party],seatsNow=seatsOf(st.diff),seatsNorm=seatsOf('normal');
+  const gal=DATA.pool.filter(x=>st.filter==='todos'||x[1][0]===st.filter).map(x=>x[0]);
+  const faceCol=`<div class="card face"><div class="lbl" style="width:100%"><span>Seu rosto</span></div>
+    <div class="bigring"><img src="${IMG(st.face)}"></div><div class="plate">${st.name||'Sem nome ainda'}</div>
+    <div class="filters">${[['todos','Todos'],['f','Mulheres'],['m','Homens']].map(([k,l])=>`<button class="btn ${st.filter===k?'on':''}" onclick="st.filter='${k}';if(st.filter!=='todos'&&!DATA.pool.some(x=>x[0]===st.face&&x[1][0]===st.filter))st.face=DATA.pool.find(x=>x[1][0]===st.filter)[0];render()">${l}</button>`).join('')}<button class="btn" onclick="randFace()">🎲</button></div>
+    <div class="gal">${gal.map(id=>`<button class="${id===st.face?'on':''}" onclick="st.face=${id};render()"><img src="${IMG(id)}"></button>`).join('')}</div></div>`;
+  const partyCols=['e','c','d'].map(w=>`<div class="col"><div class="colh ${w}">${WL[w][0].toUpperCase()}</div>${PARTIES.filter(x=>x.w===w).map(x=>{
+    const sb=smallBonus(x,seatsNow[x.id]),d=seatsNow[x.id]-seatsNorm[x.id];
+    return `<button class="party ${st.party===x.id?'on':''}" style="--c:${x.c}" onclick="st.modal='${x.id}';render()">
+      <span class="ring logo-r">${logoImg(x.id)}</span><b>${x.s}<small>${seatsNow[x.id]} cad.${d?` <span class="${d>0?'up':'down'}">${sgn(d)}</span>`:''}</small>${sb>0?`<span class="tag ok">+${String(sb).replace('.',',')}</span>`:''}${st.party===x.id?'<span class="ok-mark">✓</span>':''}</b><span class="tg">${x.tg}</span></button>`}).join('')}</div>`).join('');
+  const order=['fpt','pvs','mdn','psn','pra','ucd','pol','mrb','nrm'];
+  const bar=order.map(id=>`<i style="flex:${seatsNow[id]};background:${PBY[id].c};${id===st.party?'outline:2px solid var(--text);outline-offset:-2px;z-index:1':''}" title="${PBY[id].s} ${seatsNow[id]}"><span>${PBY[id].s}</span></i>`).join('');
+  const sp=smallBonus(p,seatsNow[p.id]);
+  return `<div class="main s1" style="display:grid">${faceCol}<div class="mid">
+    <div class="row2"><div class="card"><div class="lbl">Nome do presidente</div><input value="${st.name}" placeholder="Como você quer ser chamado" maxlength="40" oninput="st.name=this.value;document.querySelector('.plate').textContent=this.value||'Sem nome ainda'"></div>
+    <div class="card"><div class="lbl">Dificuldade · muda o tamanho das bancadas</div><div class="diffs">${Object.entries(DIFF).map(([k,d])=>`<button class="diff ${st.diff===k?'on':''}" onclick="st.diff='${k}';render()"><b>${d.name}</b><small>${d.desc}</small></button>`).join('')}</div></div></div>
+    <div class="card" style="display:flex;flex-direction:column;gap:12px"><div class="lbl" style="margin:0"><span>Seu partido · clique no cartão para ver o dossiê</span><span>${p.s}: ${seatsNow[p.id]} dos 513 deputados</span></div><div class="spec">${partyCols}</div>
+      <div><div class="lbl" style="margin:8px 0 6px"><span>A Câmara com a dificuldade ${DIFF[st.diff].name}</span><span>maioria: 257</span></div><div class="hemi">${bar}<b class="maj"></b></div>
+      <p class="hint" style="margin-top:8px">${sp>0?`<b style="color:var(--green)">${p.s} tem vantagem de partido pequeno:</b> +${String(sp).replace('.',',')} de ânimo inicial em ${p.base.map(g=>GN[g]).join(', ')}.`:`${p.s} é bancada grande: não recebe vantagem compensatória.`}</p></div></div></div></div>`;
+}
+const logoImg=id=>`<img src="${LOGO(id)}" alt="${id}">`;
+function relRing(ids,cls){return ids.length?`<div class="rel ${cls}">${ids.map(a=>`<span style="--c:${PBY[a.toLowerCase()].c}"><span class="ring logo-r">${logoImg(a.toLowerCase())}</span>${a}</span>`).join('')}</div>`:'<small>nenhum fixo</small>'}
+function modalHTML(){
+  if(!st.modal)return '';
+  const p=PBY[st.modal],seats=seatsOf(st.diff)[p.id],sb=smallBonus(p,seats),chosen=st.party===p.id;
+  return `<div class="veil" onclick="if(event.target===this){st.modal=null;render()}"><div class="win" style="--pc:${p.c};--c:${p.c}">
+   <header><h3>Dossiê do partido</h3><button onclick="st.modal=null;render()">✕</button></header>
+   <div class="wbody"><div class="wl"><span class="ring logo-r">${logoImg(p.id)}</span><h2>${p.n}</h2><div class="chips"><span class="tag">${p.s}</span><span class="tag">${WL[p.w][0]}</span><span class="tag">${seats} de 513 deputados</span></div>
+     <div class="meters" style="width:100%"><div>Economia<i><u style="left:${(p.econ+100)/2}%"></u></i></div><div>Costumes<i><u style="left:${(p.cost+100)/2}%"></u></i></div></div></div>
+   <div class="wr"><div><h5>História</h5><p>${p.hist}</p></div>
+    <div><h5>Por que se alinha assim</h5><ul>${p.alinha.map(a=>`<li>${a}</li>`).join('')}</ul></div>
+    <div class="two"><div><h5>Forças</h5><ul>${p.f.map(a=>`<li>${a}</li>`).join('')}</ul></div><div><h5>Fraquezas</h5><ul>${p.fr.map(a=>`<li>${a}</li>`).join('')}</ul></div></div>
+    <div class="two"><div><h5>Aliados</h5>${relRing(p.al,'fr')}</div><div><h5>Oposição</h5>${relRing(p.ri,'foe')}</div></div>
+    ${sb>0||p.perk?`<div class="vant"><b>Vantagem de partido pequeno</b><br>${sb>0?`+${String(sb).replace('.',',')} de ânimo inicial em ${p.base.map(g=>GN[g]).join(', ')}. `:''}${p.perk||''}</div>`:''}</div></div>
+   <footer><button class="btn" onclick="st.modal=null;render()">Fechar</button><button class="btn btn--primary" onclick="st.party='${p.id}';st.promises=[];st.modal=null;render()">${chosen?'Já é o seu partido':'Escolher este partido'}</button></footer></div></div>`;
+}
+function optGrid(list,sel,max,key,cat){
+  const f=list.filter(t=>cat==='Todos'||t[3]===cat);
+  return `<div class="pgrid">${f.map(t=>`<button class="opt ${sel.includes(t[0])?'on':''}" ${!sel.includes(t[0])&&sel.length>=max?'disabled':''} onclick="pick('${key}','${t[0]}',${max})"><span class="cat-tag">${t[3]}</span><b>${t[1]}</b><p>${t[2]}</p><div class="fx">${Object.entries(t[4]).map(([g,v])=>`<span class="${v>0?'up':'down'}">${GN[g]} ${sgn(v)}</span>`).join('')}</div></button>`).join('')}</div>`;
+}
+function step2(){
+  const cats=k=>`<div class="cats">${CATS.map(c=>`<button class="${st[k]===c?'on':''}" onclick="st.${k}='${c}';render()">${c}</button>`).join('')}</div>`;
+  return `<div class="main s2" style="display:grid"><div class="card"><div class="lbl"><span>Traços · até 2</span><span>${st.traits.length}/2</span></div>${cats('tcat')}${optGrid(T,st.traits,2,'traits',st.tcat)}</div>
+  <div class="card"><div class="lbl"><span>Hábitos · até 2</span><span>${st.habits.length}/2</span></div>${cats('hcat')}${optGrid(H,st.habits,2,'habits',st.hcat)}</div></div>`;
+}
+function step3(){
+  const rows=VLANES.map(([w,...ps])=>`<div class="vhead ${w}">${WL[w][0].toUpperCase()}</div>${ps.map(pid=>{const p=PBY[pid],vs=V.find(v=>v[0]===pid)[1];
+    return `<div class="vrow" style="--c:${p.c}"><div class="vlab"><span class="ring logo-r">${logoImg(pid)}</span><div><b>${p.s}</b><br><small>${pid===st.party?'seu partido':p.n}</small></div></div>${vs.map(v=>{const i=viceInfo(st.party,pid,v[2]);const cl=i.chance>=70?'hi':i.chance>=45?'mid':'lo';
+      return `<button class="vice ${st.vices.includes(v[0])?'on':''}" style="--c:${p.c}" ${!st.vices.includes(v[0])&&st.vices.length>=3?'disabled':''} onclick="pick('vices','${v[0]}',3)"><span class="ring"><img src="${IMG(v[3])}"></span><b>${v[0]}<span class="ch ${cl}">${i.chance}%</span></b><small>${v[1]}</small><span class="bn">${i.bonus>0?`se aceitar: +${String(i.bonus).replace('.',',')} ${GN[v[4]]}`:'sem bônus extra'}</span></button>`}).join('')}</div>`}).join('')}`).join('');
+  return `<div class="main" style="display:grid"><div class="card s3">${rows}</div></div>`;
+}
+function step3top(){
+  const all=V.flatMap(([p,vs])=>vs.map(v=>({v,p})));
+  const sl=[0,1,2].map(i=>{const x=all.find(a=>a.v[0]===st.vices[i]);if(!x)return `<div class="sl"><span class="muted">Vaga ${i+1}: escolha um nome</span></div>`;const f=viceInfo(st.party,x.p,x.v[2]);return `<div class="sl f"><span class="ring" style="--c:${PBY[x.p].c}"><img src="${IMG(x.v[3])}"></span><div><b>${x.v[0]}</b> <small>${PBY[x.p].s} · aceita ${f.chance}%</small><br><small>${f.bonus>0?`+${String(f.bonus).replace('.',',')} ${GN[x.v[4]]} se aceitar`:'sem bônus extra'}</small></div></div>`}).join('');
+  return `<h3>Sua proposta <span>${st.vices.length}/3</span></h3><div class="slots">${sl}</div><p class="muted" style="font-size:.7rem">Só um aceita, sorteado pelas chances. Quanto mais distante do seu partido, menor a chance e maior o bônus (entra no gráfico só na posse).</p>`;
+}
+function step4(){
+  const p=PBY[st.party],pr=PRESS[st.party],locked=st.diff!=='facil',N=nPromises();
+  const lp=PR.find(x=>x[0]===pr[3]),sc=scenario();
+  const list=PR.filter(x=>x[3]===st.pcat&&!(locked&&x[0]===pr[3]));
+  const sel=st.promises,stars=sel.map(i=>PR.find(a=>a[0]===i)[5]).reduce((a,b)=>a+b,0)+(locked?lp[5]:0);
+  const top=locked?`<div class="press"><div class="ic">📣</div><div><h3>Pressão antes da eleição: ${pr[1]}</h3><p style="font-size:.86rem">${pr[2]} A promessa abaixo já vem escolhida e vale na nota como as outras. Dificuldade ${DIFF[st.diff].name}.</p></div><div class="lock"><small>Promessa obrigatória · ${'★'.repeat(lp[5])}</small><b>${lp[1]}</b><br><small style="color:var(--muted);text-transform:none;letter-spacing:0">${lp[2]}</small></div></div>`
+   :`<div class="press" style="background:var(--panel);border-color:var(--line)"><div class="ic">🗳️</div><div><h3 style="color:var(--gold)">Dificuldade Fácil: sem pressão prévia</h3><p style="font-size:.86rem">Você escolhe 5 promessas livres.</p></div><span></span></div>`;
+  const bands=`<div class="card bands"><div class="lbl"><span>Cenário: ${sc.nome} · bandeiras de quem apoiou você</span><span>você decide se segue · não ocupam as ${N} promessas livres</span></div><div class="bandrow">${sc.sup.map(s=>{const q=PBY[s.pid],v=st.bandeiras[s.pid];
+    return `<div class="ped ${v||''}" style="--c:${q.c}"><span class="ring logo-r">${logoImg(s.pid)}</span><div><b>${q.s}</b> pede a bandeira <b>${BAND[s.pid]}</b><br><small>Seguir: promessa extra de 40 pts e +3 de relação. Não seguir: −3 de relação.</small></div><div class="pbt"><button class="btn ${v==='sim'?'on':''}" onclick="st.bandeiras['${s.pid}']='sim';render()">Seguir</button><button class="btn ${v==='nao'?'on':''}" onclick="st.bandeiras['${s.pid}']='nao';render()">Não seguir</button></div></div>`}).join('')}</div></div>`;
+  return `<div class="main s4" style="display:grid">${top}${bands}<div class="card"><div class="lbl"><span>Escolha ${N} promessas · cada uma vale 40, 60 ou 90 pontos, conforme a dificuldade (★)</span><span>${sel.length}/${N}</span></div>
+   <div class="mix"><span>Ousadia do pacote: <b>${'★'.repeat(Math.min(stars,15))}</b> (${stars} pontos de ousadia)</span><span>Equilíbrio: misture promessas de áreas diferentes para não depender de um só indicador.</span></div>
+   <div class="cats">${PCATS.map(c=>`<button class="${st.pcat===c?'on':''}" onclick="st.pcat='${c}';render()">${c}</button>`).join('')}</div>
+   <div class="pro">${list.map(x=>`<button class="opt ${sel.includes(x[0])?'on':''}" ${!sel.includes(x[0])&&sel.length>=N?'disabled':''} onclick="pick('promises','${x[0]}',${N})"><span class="cat-tag"><span>${x[3]}</span><span class="st">${'★'.repeat(x[5])}</span></span><b>${x[1]}</b><p>${x[2]}</p><span class="side ${x[4]===p.w?'mine':''}">${x[4]==='qualquer'?'Qualquer governo':WL[x[4]][0]}${x[4]===p.w?` · do seu lado: +1,5 em ${GN[x[6]]}`:''}</span><span class="meta">Vale ${PTS[x[5]]} pts · medida: ${x[7]}</span></button>`).join('')}</div></div></div>`;
+}
+function step4top(){
+  const pr=PRESS[st.party],locked=st.diff!=='facil',N=nPromises(),lk=PR.find(x=>x[0]===pr[3]);
+  let rows='';
+  if(locked)rows+=`<div class="sl lk">🔒 <div><b>${lk[1]}</b><br><small style="color:var(--red)">pressão: ${pr[1]}</small></div></div>`;
+  for(let i=0;i<N;i++){const x=PR.find(a=>a[0]===st.promises[i]);rows+=x?`<div class="sl f"><div><b>${x[1]}</b><br><small>${x[3]} · ${PTS[x[5]]} pts</small></div></div>`:`<div class="sl"><span class="muted">Promessa livre ${i+1}</span></div>`}
+  const acc=scenario().sup.filter(s=>st.bandeiras[s.pid]==='sim');
+  acc.forEach(s=>{rows+=`<div class="sl slx">🤝 <div><b>${BAND[s.pid]}</b><br><small>bandeira do ${PBY[s.pid].s} · extra, +40 pts</small></div></div>`});
+  return `<h3>Suas promessas <span>${(locked?1:0)+st.promises.length}/5${acc.length?` +${acc.length}`:''}</span></h3><div class="slots">${rows}</div>${acc.length?'':'<p class="muted" style="font-size:.7rem">Bandeiras que você seguir entram aqui como promessas extras.</p>'}`;
+}
+/* ===== ministérios (passo 5): 6 candidatos por pasta = 1 do seu partido + 1 aliado + 4 variados ===== */
+const PASTAS=[['economia','Economia','💰','Fazenda',['mercado','empresarios']],['saude','Saúde','🏥','Saúde',['profSaude','aposentados']],['educacao','Educação','🎓','Educação',['professores','universitarios']],['seguranca','Segurança','🚓','Justiça e Segurança',['policiais','militares']],['trabalho','Trabalho','👷','Trabalho',['trabalhadores','sindicalistas']],['social','Social','🤲','Desenv. Social',['baixaRenda','mulheres']],['agro','Agro e campo','🌾','Agricultura',['agro','agriculturaFamiliar']],['ambiente','Meio ambiente','🌳','Meio Ambiente',['ambientalistas','indigenas']],['energia','Energia','⚡','Minas e Energia',['empresarios','comerciarios']],['transportes','Transportes','🚆','Transportes',['caminhoneiros','aplicativos']],['cidades','Cidades','🏘️','Cidades',['classeMedia','baixaRenda']],['ciencia','Ciência','🔬','Ciência e Tecnologia',['ciencia','universitarios']],['politica','Política','🏛️','Relações Institucionais',['classeMedia','catolicos']]];
+const NM_F=['Ângela','Beatriz','Cláudia','Denise','Elaine','Fátima','Gisele','Helena','Isabel','Jussara','Karina','Lídia','Marta','Nádia','Olga','Patrícia','Renata','Sílvia','Teresa','Vera','Yara','Zélia','Amália','Bianca','Cecília','Dulce','Eliane','Flávia','Graça','Irene'];
+const NM_M=['Alberto','Bruno','Carlos','Diogo','Eduardo','Fábio','Gilberto','Heitor','Ivan','João','Kleber','Leandro','Mário','Nelson','Otávio','Paulo','Raimundo','Sérgio','Tadeu','Ubirajara','Valter','Wagner','Aurélio','Breno','Cássio','Demétrio','Enzo','Flávio','Gabriel','Humberto'];
+const NM_S=['Albuquerque','Barros','Camargo','Duarte','Esteves','Falcão','Guimarães','Holanda','Ibiapina','Jordão','Lacerda','Medeiros','Nogueira','Oliveira','Pacheco','Queiroz','Rezende','Siqueira','Tavares','Uchoa','Vilela','Xavier','Zanetti','Andrade','Brandão','Cordeiro','Damasceno','Ferraz','Gouveia','Henriques','Lobato','Magalhães','Neves','Paiva','Ramalho','Sampaio','Teixeira','Valadares','Moura','Prado'];
+const TRAJ={fpt:['Veio do sindicalismo','Foi secretário de estado em governo de esquerda','Liderou a oposição na Câmara'],pvs:['Fundou uma ONG que virou partido','Foi relatora de leis ambientais','Vem da militância de direitos'],mdn:['Foi governador do interior','Passou três mandatos na Câmara','Sempre foi o "homem das pontes"'],psn:['Foi prefeito de cidade média','Presidiu uma frente de prefeitos','Aprendeu política entregando obra'],pra:['Migrou por quatro siglas até chegar ao PRA','Foi suplente e virou titular por acordo','Construiu carreira como articulador de bastidor'],ucd:['Presidiu comissões por doze anos','Foi líder de governo em três governos','Conhece cada emenda do orçamento'],pol:['Foi oficial da reserva','Dirigiu uma grande empresa','Foi senador pela ordem e pela segurança'],mrb:['Foi pastor antes de entrar na política','Lidera a bancada religiosa','Vem de uma rede de igrejas do interior'],nrm:['Foi gestor de fundo de investimento','Veio da academia de economia liberal','Largou a iniciativa privada para "reformar o Estado"']};
+const ACT={economia:['e entende de contas públicas.','e fala a língua do mercado.'],saude:['e conhece o SUS por dentro.','e já geriu hospital.'],educacao:['e passou a vida em sala de aula.','e já foi reitor.'],seguranca:['e conhece a polícia por dentro.','e já presidiu comissão de segurança.'],trabalho:['e sabe negociar com patrões e sindicatos.','e conhece o chão de fábrica.'],social:['e conhece os programas sociais de perto.','e já geriu assistência social.'],agro:['e fala a língua do campo.','e conhece crédito rural.'],ambiente:['e conhece licenciamento e floresta.','e já negociou com o setor produtivo.'],energia:['e conhece o setor elétrico.','e já geriu uma estatal.'],transportes:['e já tocou grandes obras.','e conhece portos e estradas.'],cidades:['e conhece o orçamento das prefeituras.','e entende de habitação.'],ciencia:['e vem de laboratório e universidade.','e fala de inovação sem jargão.'],politica:['e conhece o regimento melhor que ninguém.','e tem telefone de todo líder.']};
+const AX={gasto:['Fiscalista','Gastador',['Pasta enxuta: o mercado confia','Corta o que ajudava os mais pobres'],['Entrega rápido em obra e programa','Estoura o orçamento da pasta']],
+ ousadia:['Cauteloso','Ousado',['Só leva ao Congresso o que passa','Medidas tímidas rendem pouco'],['Propõe medidas de grande efeito','Mais risco de rejeição no plenário']],
+ eco:['Estatal','Liberal',['Defende o papel do Estado','O mercado desconfia da pasta'],['Agrada mercado e empresários','Sindicatos e servidores torcem o nariz']],
+ cost:['Progressista','Conservador',['Ponte com jovens e causas','Evangélicos e agro se afastam'],['Ponte com igrejas e interior','Jovens e causas se afastam']],
+ perfil:['Técnico','Político',['Credibilidade técnica','Fraco na articulação no Congresso'],['Abre portas no Congresso','Acordos com risco de escândalo']],
+ leal:['Independente','Fiel a você',['Franco: avisa antes do erro','Pode romper em uma crise'],['Fiel: não vaza nem rompe','Não discorda nem alerta']]};
+const AXK=Object.keys(AX);
+let MINC={};
+function genMinisters(){
+  const key=st.party+'|'+st.diff;if(MINC.key===key)return MINC.list;if(MINC.key)st.cabinet={};
+  const my=PBY[st.party],sup=scenario().sup.map(s=>s.pid);
+  const usedP=new Set([...DATA.vices.map(v=>v[2]),st.face]);const list=[];
+  const free=g=>DATA.all.filter(x=>x[1]===g&&!usedP.has(x[0])).map(x=>x[0]);
+  PASTAS.forEach(([area,nm,ic,role,groups],ai)=>{
+    const r=rngOf(area+key);
+    const ally=sup[ai%sup.length];
+    const prio=sup.filter(p=>p!==ally);
+    const pool=PARTIES.map(p=>p.id).filter(p=>p!==st.party&&p!==ally&&!prio.includes(p)).sort(()=>r()-.5);
+    const byW={e:[],c:[],d:[]};pool.forEach(p=>byW[PBY[p].w].push(p));
+    const others=[...prio];while(others.length<4){for(const w of ['e','c','d']){if(byW[w].length&&others.length<4)others.push(byW[w].shift())}}
+    [[st.party,'meu'],[ally,'aliado'],...others.map(o=>[o,'livre'])].forEach(([pid,tipo],k)=>{
+      const rr=rngOf(area+pid+k+key),pp=PBY[pid],fem=rr()<.5;
+      const pool=free(fem?'f':'m');const portrait=pool[Math.floor(rr()*pool.length)];usedP.add(portrait);
+      const name=(fem?NM_F:NM_M)[Math.floor(rr()*30)]+' '+NM_S[Math.floor(rr()*40)];
+      const eco=clamp(Math.round(pp.econ+(rr()-.5)*50),-100,100),cost=clamp(Math.round(pp.cost+(rr()-.5)*50),-100,100);
+      const bars={gasto:clamp(Math.round(-eco*.5+(rr()-.5)*90),-100,100),ousadia:Math.round((rr()-.5)*170),eco,cost,perfil:Math.round((rr()-.5)*170),
+        leal:tipo==='meu'?Math.round(55+rr()*40):tipo==='aliado'?Math.round(15+rr()*55):Math.round(-60+rr()*75)};
+      const sorted=[...AXK].sort((a,b)=>Math.abs(bars[b])-Math.abs(bars[a]));
+      const a1=sorted[0],a2=sorted[1];
+      const adv=AX[a1][bars[a1]>=0?3:2][0],dis=AX[a2][bars[a2]>=0?3:2][1];
+      const hist=TRAJ[pid][Math.floor(rr()*3)]+' '+ACT[area][Math.floor(rr()*2)].replace(/^e /,'e ');
+      list.push({id:area+'_'+k,area,party:pid,tipo,fem,portrait,name,bars,eco,cost,adv,dis,hist,
+        align:`${eco>35?'Liberal':eco<-35?'Estatista':'Moderado'} na economia, ${cost>35?'conservador':cost<-35?'progressista':'moderado'} nos costumes`});
+    });
+  });
+  MINC={key,list};return list;
+}
+const minById=id=>genMinisters().find(m=>m.id===id);
+function cabinet(){return Object.values(st.cabinet).map(minById).filter(Boolean)}
+/* ===== cenário pós-eleição: quem apoiou você e o que cobra em pastas ===== */
+const COV={fpt:'trabalho',pvs:'ambiente',mdn:'politica',psn:'cidades',pra:'ciencia',ucd:'energia',pol:'seguranca',mrb:'educacao',nrm:'economia'};
+const BAND={fpt:'Piso nacional de salário',pvs:'Marco do clima',mdn:'Reforma política gradual',psn:'Fundo municipal de obras',pra:'Reforma partidária',ucd:'Emendas impositivas',pol:'Pacote anticrime',mrb:'Estatuto da família',nrm:'Plano de privatizações'};
+const SCEN=[
+ {id:'frente',nome:'Frente ampla',hist:'Você venceu o segundo turno com uma frente de partidos que mal se falam. Todos ajudaram e todos querem a sua parte.'},
+ {id:'apertada',nome:'Vitória apertada',hist:'Você ganhou por menos de um ponto. Os dois maiores apoios sabem que decidiram a eleição e cobram caro.'},
+ {id:'ultima',nome:'Aliança de última hora',hist:'Na reta final, um partido de outro campo declarou apoio. Em troca, exige uma pasta específica e não abre mão.'},
+ {id:'racha',nome:'Partido rachado',hist:'Sua convenção saiu dividida. Os dissidentes voltaram, mas só com cargos: seu partido exige mais pastas e os apoios menores pedem pouco.'}];
+let SC={};
+function scenario(){
+  const key=st.party+'|'+st.diff;if(SC.key===key)return SC.v;
+  const my=PBY[st.party],seats=seatsOf(st.diff),r=rngOf('cen'+key);
+  const sc=SCEN[Math.floor(r()*SCEN.length)];
+  const dist=p=>(Math.abs(p.econ-my.econ)+Math.abs(p.cost-my.cost))/2;
+  const order=PARTIES.filter(p=>p.id!==st.party).map(p=>({p,d:dist(p)+r()*50})).sort((a,b)=>a.d-b.d).map(x=>x.p);
+  const n={facil:2,normal:3,dificil:4}[st.diff];
+  let pk=order.slice(0,n);
+  if(sc.id==='ultima'){const far=order.filter(p=>!pk.includes(p)).sort((a,b)=>dist(b)-dist(a))[0];pk=[...pk.slice(0,n-1),far]}
+  const sup=pk.map(p=>({pid:p.id,min:clamp(Math.round(seats[p.id]/30),1,4),pasta:COV[p.id],hard:false}));
+  if(sc.id==='apertada')[...sup].sort((a,b)=>seats[b.pid]-seats[a.pid]).slice(0,2).forEach(s=>s.min=Math.min(4,s.min+1));
+  if(sc.id==='ultima'){const u=sup[sup.length-1];u.min=Math.max(2,u.min);u.hard=true}
+  if(sc.id==='racha')sup.forEach(s=>s.min=Math.max(1,s.min-1));
+  const own=sc.id==='racha'?4:3;
+  const tot=()=>own+sup.reduce((a,s)=>a+s.min,0);
+  while(tot()>10){[...sup].sort((a,b)=>b.min-a.min)[0].min--}
+  SC={key,v:{...sc,sup,own}};return SC.v;
+}
+function cabStats(){
+  const my=PBY[st.party],sel=cabinet(),seats=seatsOf(st.diff),sc=scenario();
+  const dist=m=>(Math.abs(m.eco-my.econ)+Math.abs(m.cost-my.cost))/2;
+  const ownN=sel.filter(m=>m.party===st.party).length;
+  const given={};sel.forEach(m=>given[m.party]=(given[m.party]||0)+1);
+  const dem=[{pid:st.party,min:sc.own,own:true},...sc.sup.map(s=>({...s}))];
+  dem.forEach(d=>{d.given=given[d.pid]||0;const m=d.pasta&&st.cabinet[d.pasta]&&minById(st.cabinet[d.pasta]);d.gotPasta=!!(m&&m.party===d.pid);d.ok=d.given>=d.min&&(!d.hard||d.gotPasta)});
+  const THR={facil:95,normal:72,dificil:48}[st.diff],FAT={facil:.85,normal:.72,dificil:.5}[st.diff];
+  const pen=sel.filter(m=>m.party!==st.party).reduce((a,m)=>a+Math.max(0,dist(m)-30)/8,0);
+  const fid=clamp(Math.round(80+ownN*3-pen-Math.max(0,sc.own-ownN)*8),20,98);
+  const aE=sel.length?my.econ+(mean(sel.map(m=>m.eco))-my.econ)*.3:my.econ,aC=sel.length?my.cost+(mean(sel.map(m=>m.cost))-my.cost)*.3:my.cost;
+  let baseSeats=seats[st.party]*fid/100*(fid<60?.85:1);const base=[],opp=[],entry={};
+  dem.filter(d=>!d.own).forEach(d=>{const f=Math.min(1,d.given/d.min)*(d.hard&&!d.gotPasta?.5:1);if(f>0){baseSeats+=seats[d.pid]*f;base.push(d.pid)}});
+  /* quem não apoiou: a distância ideológica decide quantas pastas pede; campo oposto não entra */
+  PARTIES.filter(q=>q.id!==st.party&&!dem.some(d=>d.pid===q.id)).forEach(q=>{
+    const dd=(Math.abs(q.econ-my.econ)+Math.abs(q.cost-my.cost))/2;
+    let need=dd<THR*.6?1:dd<THR?2:null;if(need&&seats[q.id]>=70)need=Math.min(3,need+1);
+    entry[q.id]={need,dist:Math.round(dd),given:given[q.id]||0};
+    if(need&&(given[q.id]||0)>=need){baseSeats+=seats[q.id]*FAT;base.push(q.id)}
+    else if(need===null)opp.push(q.id)});
+  const custo=base.filter(p=>!dem.some(d=>d.pid===p)).reduce((a,p)=>a+Math.ceil(seats[p]/20),0);
+  return{sel,fid,aE,aC,base,opp,entry,custo,baseSeats:Math.round(baseSeats),ownN,mine:seats[st.party],dem};
+}
+function axisHTML(k,v){const a=AX[k];return `<div class="ax"><span>${a[0]}</span><i><u style="left:${(v+100)/2}%"></u></i><span>${a[1]}</span></div>`}
+function minCard(m,sel){
+  const p=PBY[m.party],tag=m.tipo==='meu'?['seu partido','ok']:m.tipo==='aliado'?['aliado','ok']:['independente','warn'];
+  return `<button class="min ${sel?'on':''}" style="--c:${p.c}" onclick="st.cabinet['${m.area}']='${m.id}';render()">
+    <div class="mh"><span class="ring"><img src="${IMG(m.portrait)}"></span><div><b>${m.name}</b><div class="chips"><span class="ring logo-r mini" style="--c:${p.c}">${logoImg(m.party)}</span><span class="tag">${p.s}</span><span class="tag ${tag[1]}">${tag[0]}</span></div><small>${m.align}</small></div></div>
+    <p class="mhist">${m.hist}</p>
+    <div class="axes">${AXK.map(k=>axisHTML(k,m.bars[k])).join('')}</div>
+    <div class="ad"><span class="up">▲ ${m.adv}</span><span class="down">▼ ${m.dis}</span></div></button>`;
+}
+function autoCabinet(){
+  const sc=scenario(),ms=MINC.list,cab={},need={};
+  const dem=[...sc.sup.map(s=>({pid:s.pid,min:s.min,pasta:s.pasta})),{pid:st.party,min:sc.own}];
+  dem.forEach(d=>need[d.pid]=d.min);
+  const my=PBY[st.party],dist=m=>(Math.abs(m.eco-my.econ)+Math.abs(m.cost-my.cost))/2;
+  dem.forEach(d=>{if(d.pasta&&!cab[d.pasta]){const m=ms.find(x=>x.area===d.pasta&&x.party===d.pid);if(m){cab[d.pasta]=m.id;need[d.pid]--}}});
+  let guard=40;
+  while(guard--){
+    const d=dem.filter(x=>need[x.pid]>0).sort((a,b)=>need[b.pid]-need[a.pid])[0];if(!d)break;
+    let best=null;PASTAS.filter(p=>!cab[p[0]]).forEach(p=>{const m=ms.find(x=>x.area===p[0]&&x.party===d.pid);if(m&&(!best||dist(m)<dist(best)))best=m});
+    if(!best)break;cab[best.area]=best.id;need[d.pid]--;
+  }
+  /* o que sobrou: recruta partidos de fora enquanto a base não chega perto da maioria (pacotes de pastas), o resto fica com seu partido */
+  const free=()=>PASTAS.filter(p=>!cab[p[0]]);
+  const trial=extra=>{st.cabinet={...cab,...extra};return cabStats()};
+  for(let g=0;g<6;g++){
+    st.cabinet={...cab};const cs=cabStats();if(cs.baseSeats>=265)break;
+    let best=null;
+    Object.entries(cs.entry).forEach(([pid,e])=>{if(!e.need||e.given>=e.need||free().length<e.need)return;
+      const pick=free().map(p=>({p,m:ms.find(x=>x.area===p[0]&&x.party===pid)})).filter(x=>x.m).sort((a,b)=>dist(a.m)-dist(b.m)).slice(0,e.need);
+      if(pick.length<e.need)return;
+      const ex={};pick.forEach(x=>ex[x.p[0]]=x.m.id);const t=trial(ex);const gain=(t.baseSeats-cs.baseSeats)/e.need;
+      if(!best||gain>best.gain)best={gain,ex,tot:t.baseSeats-cs.baseSeats}});
+    if(!best||best.tot<=0)break;Object.assign(cab,best.ex);
+  }
+  PASTAS.filter(p=>!cab[p[0]]).forEach(p=>{cab[p[0]]=ms.find(x=>x.area===p[0]&&x.tipo==='meu').id});
+  st.cabinet=cab;
+}
+function demCard(d){
+  const q=PBY[d.pid],pn=d.pasta&&PASTAS.find(p=>p[0]===d.pasta)[1];
+  const dots=Array.from({length:Math.max(d.min,d.given)},(_,i)=>`<i class="${i<d.given?'f':''}"></i>`).join('');
+  const lab=d.ok?'Atendido':d.given<d.min?'Falta '+(d.min-d.given):'Falta a pasta';
+  return `<div class="dem ${d.ok?'ok':'bad'}" style="--c:${q.c}"><span class="ring logo-r">${logoImg(d.pid)}</span><div class="dd"><b>${q.s}</b> <small>${d.own?'seu partido exige':'apoiou você'}</small><div class="dots">${dots}<span>${d.given}/${d.min} pastas</span></div>${pn?`<small class="${d.gotPasta?'up':d.hard?'down':''}">${d.hard?'exige':'quer'} ${pn}${d.gotPasta?' ✓':''}</small>`:''}</div><span class="tag ${d.ok?'ok':'warn'}">${lab}</span></div>`;
+}
+function step5(){
+  genMinisters();
+  const sc=scenario(),cs=cabStats();
+  const pasta=PASTAS.find(x=>x[0]===st.pasta),cands=MINC.list.filter(m=>m.area===st.pasta);
+  const list=`<div class="card plist"><div class="lbl"><span>Pastas</span><span>${Object.keys(st.cabinet).length}/13</span></div>${PASTAS.map(x=>{const m=st.cabinet[x[0]]&&minById(st.cabinet[x[0]]);const cv=sc.sup.find(s=>s.pasta===x[0]);return `<button class="pas ${st.pasta===x[0]?'on':''}" onclick="st.pasta='${x[0]}';render()">${m?`<span class="ring" style="--c:${PBY[m.party].c}"><img src="${IMG(m.portrait)}"></span>`:`<span class="ico">${x[2]}</span>`}<span><b>${x[1]}</b>${cv?` <small class="cv" title="${PBY[cv.pid].s} ${cv.hard?'exige':'quer'} esta pasta">★ ${PBY[cv.pid].s}</small>`:''}<br><small>${m?m.name+' · '+PBY[m.party].s:'sem ministro'}</small></span></button>`}).join('')}</div>`;
+  const cc=`<div class="card"><div class="lbl"><span>${pasta[2]} ${pasta[3]} · escolha 1 de 6</span><span>1 do seu partido · 1 aliado · 4 variados</span></div><div class="mgrid">${cands.map(m=>minCard(m,st.cabinet[st.pasta]===m.id)).join('')}</div></div>`;
+  const strip=`<div class="card pedstrip cen"><div class="cenh"><div class="lbl" style="margin-bottom:4px"><span>Cenário pós-eleição</span></div><h3>${sc.nome}</h3><p class="hint">${sc.hist}</p></div><div class="demgrid">${cs.dem.map(demCard).join('')}</div><div class="cenb"><button class="btn btn--primary" onclick="autoCabinet();render()">⚙ Distribuir automaticamente</button><button class="btn" onclick="st.cabinet={};render()">Limpar tudo</button><small>O automático cumpre os pedidos primeiro e recruta partidos de fora até chegar perto da maioria. Depois você ajusta à mão.</small></div></div>`;
+  return `<div class="main s5" style="display:grid">${list}${cc}${strip}</div>`;
+}
+function step5top(){
+  const cs=cabStats(),my=PBY[st.party],falta=Math.max(0,257-cs.baseSeats);
+  return `<h3>Sua bancada no Congresso <span>${cs.fid}% fiéis</span></h3>
+   <div class="hemi small"><i style="flex:${cs.baseSeats};background:var(--green)"></i><i style="flex:${Math.max(1,513-cs.baseSeats)};background:var(--trk)"></i><b class="maj"></b></div>
+   <div class="hint"><b>${cs.baseSeats}</b> deputados na base · ${falta?`<b class="down">faltam ${falta} para a maioria (257)</b>`:'<b class="up">maioria garantida (257)</b>'}</div>
+   <div class="hint">${cs.base.length?`Na base: ${cs.base.map(p=>PBY[p].s).join(', ')}`:'Nenhum partido de fora na base'}.${cs.custo?` Custo da maioria: <b>${cs.custo} cargos de 2º escalão</b> por mês.`:''}</div>
+   <div class="hint">${cs.opp.length?`<span class="down">Fora do alcance (campo oposto):</span> ${cs.opp.map(p=>PBY[p].s).join(', ')}. `:''}Partido de fora pede 1 a 3 pastas conforme a distância e o tamanho; apoiador sem pasta suficiente sai da base.</div>
+   <div class="meters" style="gap:4px 12px"><div>Economia da bancada ${Math.round(cs.aE)} (partido: ${my.econ})<i><u style="left:${(cs.aE+100)/2}%"></u></i></div><div>Costumes da bancada ${Math.round(cs.aC)} (partido: ${my.cost})<i><u style="left:${(cs.aC+100)/2}%"></u></i></div></div>`;
+}
+
+function pick(k,id,max){const a=st[k];st[k]=a.includes(id)?a.filter(x=>x!==id):a.length<max?[...a,id]:a;render()}
+
+function render(){
+  document.documentElement.style.setProperty('--pc',col());
+  $('#steps').innerHTML=['Candidato','Perfil','Vice','Promessas','Ministérios'].map((n,i)=>`<li class="${st.step===i+1?'on':st.step>i+1?'done':''}"><button onclick="st.step=${i+1};render()">${i+1}. ${n}</button></li>`).join('');
+  const main=[step1,step2,step3,step4,step5][st.step-1]();
+  const aside=asideCard(st.step===3?step3top():st.step===4?step4top():st.step===5?step5top():'',st.step<=2,st.step===5);
+  $('#body').innerHTML=main+aside+modalHTML();
+  const last=st.step===5;
+  let warn='Começar um novo mandato apaga o mandato salvo.';
+  if(last){const cs=cabStats(),bad=cs.dem.filter(d=>!d.ok),faltam=13-cs.sel.length;
+    warn=bad.length?`⚠ Compromissos em aberto: ${bad.map(d=>PBY[d.pid].s).join(', ')}. Quem não for atendido sai da base e a relação cai.`:faltam?`Faltam ${faltam} pastas para fechar o ministério.`:'✓ Todos os compromissos atendidos.'}
+  $('#foot').innerHTML=`<span class="warn">${warn}</span><span class="sp"></span>
+   <button class="btn" onclick="st.step=Math.max(1,st.step-1);render()">Voltar</button>
+   <button class="btn btn--primary" onclick="${last?'':'st.step=Math.min(5,st.step+1);render()'}">${last?'Tomar posse · 1º de janeiro de 2027':'Continuar'}</button>`;
+}
+/* escala adaptativa: o desenho de 1920x1080 se ajusta a qualquer resolução e proporção */
+function fit(){const s=Math.max(.5,Math.min(2,Math.min(innerWidth/1920,innerHeight/1080)));const b=document.body;b.style.zoom=s;b.style.width=(innerWidth/s)+'px';b.style.height=(innerHeight/s)+'px'}
+addEventListener('resize',fit);fit();
+render();
+</script>
+</body>
+</html>

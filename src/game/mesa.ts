@@ -141,7 +141,7 @@ export function signPact(prev: GameState, party: PartyId, kind: Pact['kind']): G
   favorToStates(s, party, 'pacto')
   c.parties[party].relation = clamp(c.parties[party].relation + PACTO.signGain, 0, 100)
   if (kind === 'emendas') {
-    ctx.e.tempSpending.push({ label: `Pacto com o ${sigla}`, amount: pactEmendas(party), monthsLeft: PACTO.months })
+    ctx.e.tempSpending.push({ label: `Pacto com o ${sigla}`, amount: pactEmendas(s, party), monthsLeft: PACTO.months })
     ctx.taken.push(`Pacto de base com o ${sigla}: emendas por ${PACTO.months} meses`)
   } else {
     const flag = flagshipOf(s, party)!

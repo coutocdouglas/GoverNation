@@ -122,13 +122,13 @@ export function flagshipOf(s: GameState, party: PartyId, except?: BillId): BillI
 export type DealScope = House | 'ambas'
 
 /** Emendas da bancada, em % do PIB ao ano (durante `DEALS.emendasMonths` meses). Senador custa mais que deputado. */
-export const emendasAmount = (party: PartyId, house: DealScope = 'camara'): number =>
-  house === 'ambas' ? emendasAmount(party, 'camara') + emendasAmount(party, 'senado')
-    : (house === 'senado' ? SENADO.emendasPerSeat : DEALS.emendasPerSeat) * seatsIn(house, party)
+export const emendasAmount = (s: Pick<GameState, 'congress'>, party: PartyId, house: DealScope = 'camara'): number =>
+  house === 'ambas' ? emendasAmount(s, party, 'camara') + emendasAmount(s, party, 'senado')
+    : (house === 'senado' ? SENADO.emendasPerSeat : DEALS.emendasPerSeat) * seatsIn(s, house, party)
 
 /** Valor das emendas que o partido cobra, em R$ bi no total. */
-export const emendasMoney = (party: PartyId, house: DealScope = 'camara', terms?: Pick<DealTerms, 'tipo' | 'counter'>) =>
-  (emendasAmount(party, house) * emendasFactor(terms) / 100) * GDP_BILLIONS * (DEALS.emendasMonths / 12)
+export const emendasMoney = (s: Pick<GameState, 'congress'>, party: PartyId, house: DealScope = 'camara', terms?: Pick<DealTerms, 'tipo' | 'counter'>) =>
+  (emendasAmount(s, party, house) * emendasFactor(terms) / 100) * GDP_BILLIONS * (DEALS.emendasMonths / 12)
 
 /** Etapa 2: quanto o tipo de emenda e a contraoferta mudam o valor (1 = o preço pedido). */
 export const emendasFactor = (terms?: Pick<DealTerms, 'tipo' | 'counter'>) =>
@@ -141,8 +141,8 @@ export function askSpending(kind: DealKind, counter?: boolean): { pib: number; m
 }
 
 /** Etapa 2C: quanto o pedido custa, em R$ bi no total. */
-export function askMoney(kind: DealKind, party: PartyId, scope: DealScope, terms?: Pick<DealTerms, 'tipo' | 'counter'>): number {
-  if (kind === 'emendas') return emendasMoney(party, scope, terms)
+export function askMoney(s: Pick<GameState, 'congress'>, kind: DealKind, party: PartyId, scope: DealScope, terms?: Pick<DealTerms, 'tipo' | 'counter'>): number {
+  if (kind === 'emendas') return emendasMoney(s, party, scope, terms)
   const c = askSpending(kind, terms?.counter)
   return c ? (c.pib / 100) * GDP_BILLIONS * (c.months / 12) : 0
 }
@@ -187,7 +187,7 @@ const open = (s: GameState, party: PartyId, kind: 'favor' | 'sancionar') => s.co
 export function menuKinds(s: GameState, party: PartyId, bill: BillId, house: House): DealKind[] {
   const p = PARTY_BY_ID[party]
   const b = BILL_BY_ID[bill]
-  const seats = seatsIn(house, party)
+  const seats = seatsIn(s, house, party)
   const big = seats >= (house === 'senado' ? SENADO.cargosMinSeats : DEALS.cargosMinSeats)
   const aff = affinity(p.econ, p.costumes, b)
   const fis = p.fisiologismo
@@ -239,7 +239,7 @@ export function offerFor(s: GameState, party: PartyId, bill: BillId, planned: De
   const others = planned.filter((d) => d.party !== party)
   const fc = forecast(s, bill, others)
   const row = fc.byParty.find((r) => r.party === party)!
-  const seats = seatsIn(house, party)
+  const seats = seatsIn(s, house, party)
   const fcS = both ? forecastSenate(s, bill, others) : null
   const rowS = fcS?.byParty.find((r) => r.party === party)
   const senadoNow = rowS ? { yesNow: rowS.yes, seats: rowS.seats } : undefined
@@ -301,7 +301,7 @@ export function offerFor(s: GameState, party: PartyId, bill: BillId, planned: De
     const terms: DealTerms = { party, kind, ...(ctype ? { concession: { type: ctype, ...concessionText(ctype) } } : {}), ...(area ? { area } : {}) }
     const yesWith = forecast(s, bill, [...others, terms]).byParty.find((r) => r.party === party)!.yes
     const sen = fcS && rowS ? { yesNow: rowS.yes, yesWith: forecastSenate(s, bill, [...others, terms]).byParty.find((r) => r.party === party)!.yes, seats: rowS.seats } : undefined
-    const money = askMoney(kind, party, scope) * renewK
+    const money = askMoney(s, kind, party, scope) * renewK
     const o: AskOption = { kind, label: def.label, icon: def.icon, quote: '', ask: '', detail: '', yesWith, senado: sen, reliability: dealReliability(party, kind), money, scandal: def.scandal * renewK, ...(flagship ? { flagship } : {}), ...(area ? { area } : {}) }
     if (kind === 'concessao') {
       const cd = CONCESSION_BY_ID[ctype!]

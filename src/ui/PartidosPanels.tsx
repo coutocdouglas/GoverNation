@@ -1,3 +1,4 @@
+import { bancadas } from '../game/bancadas'
 import { useState } from 'react'
 import { PartyLogo } from './PartyLogo'
 import { articulationBlockedReason, CONGRESS } from '../game/congress'
@@ -33,7 +34,7 @@ export function AlasList({ state, p }: { state: GameState; p: PartyDef }) {
           <div key={i} className={`pn-ala ${i === lead ? 'lead' : ''}`}>
             <Portrait name={a.chief.name} feminine={a.chief.feminine} color={p.color} size={34} title={`${a.chief.name}: ${a.name}`} />
             <div>
-              <b>{a.name}</b> <small>· {Math.round(a.share * p.seats)} deputados</small>
+              <b>{a.name}</b> <small>· {Math.round(a.share * bancadas(state)[p.id])} deputados</small>
               <small>{a.chief.name} {st.icon} {st.label.toLowerCase()}{i === lead ? ' · ⭐ líder' : ''}</small>
               <span className="pn-meter" title={`Lealdade ao partido: ${Math.round(l)}`}><span style={{ width: `${l}%`, background: l >= 60 ? 'var(--pn-green)' : l >= 42 ? 'var(--pn-gold)' : 'var(--pn-red)' }} /></span>
               <small>Lealdade {Math.round(l)} · {a.blurb}</small>
@@ -233,7 +234,7 @@ export function BaseCard({ state, onState, onToast }: { state: GameState; onStat
           return (
             <div key={m.party} className="pn-basecard__row" style={{ borderLeft: `3px solid ${p.color}` }}>
               <div>
-                <PartyLogo party={m.party} size={18} /> <b style={{ color: p.color }}>{p.sigla}</b> · {p.seats} deputados
+                <PartyLogo party={m.party} size={18} /> <b style={{ color: p.color }}>{p.sigla}</b> · {bancadas(state)[m.party]} deputados
                 <br /><small>{m.via === 'pasta' ? `Pasta: ${MINISTER_BY_AREA[m.area!].areaName}` : `Pacto (${m.pact!.kind === 'emendas' ? 'emendas por mês' : 'relatoria'}) até ${monthLabel(m.pact!.until - 1)}`} · linha vermelha: {LINHA_VERMELHA[m.party]}</small>
               </div>
               <span className="mono" style={{ color }}>fidelidade {fid}</span>
@@ -251,7 +252,7 @@ export function BaseCard({ state, onState, onToast }: { state: GameState; onStat
           const sd = open ? sondar(state, p.id, flagshipOf) : null
           return (
             <div key={p.id} className="pn-basecard__row" style={{ borderLeft: `3px solid ${p.color}` }}>
-              <div><PartyLogo party={p.id} size={18} /> <b style={{ color: p.color }}>{p.sigla}</b> · {p.seats} deputados <small>· relação {Math.round(state.congress.parties[p.id].relation)}</small></div>
+              <div><PartyLogo party={p.id} size={18} /> <b style={{ color: p.color }}>{p.sigla}</b> · {bancadas(state)[p.id]} deputados <small>· relação {Math.round(state.congress.parties[p.id].relation)}</small></div>
               <button className="pn-btn pn-btn--ghost pn-btn--small" onClick={() => setSonda(open ? null : p.id)}>{open ? 'Fechar' : '🔎 Sondar (grátis)'}</button>
               {sd && (
                 <div className="pn-sonda">

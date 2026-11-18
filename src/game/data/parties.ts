@@ -40,11 +40,7 @@ export const PARTIES: PartyDef[] = [
 
 export const PARTY_BY_ID = Object.fromEntries(PARTIES.map((p) => [p.id, p])) as Record<PartyId, PartyDef>
 
-/** Partidos que o jogador pode escolher ao tomar posse. */
-export const PLAYER_PARTY_CHOICES: { id: PartyId; label: string; desc: string }[] = [
-  { id: 'fpt', label: 'Esquerda', desc: 'Frente Popular Trabalhista: base sindical, 90 deputados fiéis, mercado desconfiado.' },
-  { id: 'mdn', label: 'Centro', desc: 'Movimento Democrático Nacional: só 40 deputados, mas conversa com todo mundo.' },
-  { id: 'pol', label: 'Direita', desc: 'Partido da Ordem Liberal: a maior bancada, mas a esquerda vai para a rua.' },
-]
+// v0.48.0: os 9 partidos são escolhíveis na posse; o dossiê de cada um está em `dossie.ts`.
+// `seats` é a bancada do Normal; a do mandato vem de `bancadasDaDificuldade` (bancadas.ts).
 
 export const TOTAL_SEATS = 513

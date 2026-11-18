@@ -125,7 +125,7 @@ export function VoteSheet({ state, bill, deals, listened, onListen, listenedSena
   const frentes = frenteSummary(state, b).filter((f) => Math.abs(f.stance) >= 0.1)
   const why = (k: ProcedureKind) => procedureBlockedReason(state, plan, k, bill)
   const extraCost = am?.extra ? (((am.extra.spending ?? 0) - (am.extra.revenue ?? 0)) / 100) * GDP_BILLIONS : 0
-  const seatsOf = (pid: PartyId) => seatsIn(house, pid)
+  const seatsOf = (pid: PartyId) => seatsIn(state, house, pid)
   const order = [...PARTIES].filter((p) => seatsOf(p.id) > 0).sort((a, z) => seatsOf(z.id) - seatsOf(a.id))
   const member = senado ? 'senador' : 'deputado'
 
@@ -409,7 +409,7 @@ function OfferCard({ state, offer, house, deal, onClose, onDeal, onState }: {
     ...(o.area ? { area: o.area } : {}),
   })
   const renewK = opt?.renewal ? DEALS.validade.renewPrice : 1
-  const money = opt ? (opt.kind === 'emendas' ? emendasMoney(offer.party, scope, { tipo }) * renewK : opt.money) : offer.money
+  const money = opt ? (opt.kind === 'emendas' ? emendasMoney(state, offer.party, scope, { tipo }) * renewK : opt.money) : offer.money
   const status = !offer.options.length
   const tag = status || offer.closed ? KIND_TAG[offer.kind] : null
   return (
@@ -463,7 +463,7 @@ function OfferCard({ state, offer, house, deal, onClose, onDeal, onState }: {
             ))}
           </div>
           <p className="pn-hint" style={{ margin: 0 }}>
-            Na hora: <b>R$ {Math.round(money)} bi</b> em {DEALS.emendasMonths} meses (cerca de {num(money / GDP_BILLIONS * 100 * 12 / DEALS.emendasMonths, 2)}% do PIB ao ano no primário) e a confiança do mercado cai {num(Math.abs(emendasAmount(offer.party, scope) * emendasFactor({ tipo }) * renewK * DEALS.emendasConfidence / 100), 1)} ponto.
+            Na hora: <b>R$ {Math.round(money)} bi</b> em {DEALS.emendasMonths} meses (cerca de {num(money / GDP_BILLIONS * 100 * 12 / DEALS.emendasMonths, 2)}% do PIB ao ano no primário) e a confiança do mercado cai {num(Math.abs(emendasAmount(state, offer.party, scope) * emendasFactor({ tipo }) * renewK * DEALS.emendasConfidence / 100), 1)} ponto.
             {tipo ? ` ${DEALS.emendaTipo[tipo].desc}` : ''}{destino ? ` ${DESTINOS[destino].icon} ${GROUP_BY_ID[DESTINOS[destino].group].name} gostam.` : ''}
           </p>
         </div>

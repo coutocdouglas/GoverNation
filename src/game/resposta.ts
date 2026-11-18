@@ -6,6 +6,7 @@
  * a pressão do Centrão, liberar verba acerta a enchente, mandar apurar acerta o escândalo. Repetir o mesmo tipo
  * rende cada vez menos (Teste do atalho). Deixar passar continua possível (Teste do beco).
  */
+import { bancadas } from './bancadas'
 import type { ActionEffects } from './actions'
 import { lostCreditValue, softenEffects } from './assessoria'
 import { baseMembers } from './base'
@@ -182,9 +183,9 @@ export function completarResposta(s: GameState, ev: EventDef | null, r: Resposta
   const outros = PARTIES.filter((p) => p.id !== s.playerParty)
   // O partido do próprio fato (o que mais ganha ou perde nas saídas prontas); senão, o mais fisiológico.
   const doFato = ev ? partidoDoFato(s, ev) : undefined
-  const maisFisiologico = doFato ?? [...outros].sort((a, b) => b.fisiologismo - a.fisiologismo || b.seats - a.seats)[0].id
+  const maisFisiologico = doFato ?? [...outros].sort((a, b) => b.fisiologismo - a.fisiologismo || bancadas(s)[b.id] - bancadas(s)[a.id])[0].id
   if ((r.tipo === 'pasta' || r.tipo === 'barganha') && !out.partido) out.partido = maisFisiologico
-  if (r.tipo === 'lider' && !out.partido) out.partido = doFato ?? (ev?.area === 'politica' ? maisFisiologico : [...outros].sort((a, b) => b.seats - a.seats)[0].id)
+  if (r.tipo === 'lider' && !out.partido) out.partido = doFato ?? (ev?.area === 'politica' ? maisFisiologico : [...outros].sort((a, b) => bancadas(s)[b.id] - bancadas(s)[a.id])[0].id)
   // A pasta: a do fato, se der para ceder; senão, a primeira que o partido pode receber.
   if (r.tipo === 'pasta' && !out.area && out.partido) {
     const ordem = ev ? [ev.area, ...AREAS.filter((a) => a !== ev.area)] : AREAS

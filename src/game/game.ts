@@ -1,3 +1,4 @@
+import { impulsosDoPartido, impulsosDoVice } from './posse'
 import { ACTION_BY_ID, ACTIONS_PER_MONTH, blockedReason, effectMultiplier } from './actions'
 import { stepStates } from './estados'
 import { stepSenatorReps } from './senado'
@@ -131,7 +132,7 @@ export function newGame(
     presidentName: presidentName.trim() || 'Presidente',
     difficulty,
     playerParty,
-    congress: initialCongress(playerParty, rngState),
+    congress: initialCongress(playerParty, rngState, difficulty),
     avatarSeed: avatarSeed ?? `${presidentName}-${rngState}`,
     avatarPortrait,
     event: null,
@@ -173,7 +174,9 @@ export function newGame(
   state.comissoes = initialComissoes()
   posseRisco(state)
   syncCustomBills(state)
-  for (const b of promiseSideBoosts(promises, playerParty)) {
+  // v0.48.0: identidade do partido e vantagem do partido pequeno; o vice de fora anima a base dele (só com proposta de verdade).
+  const vicePosse = posse.vices?.length ? impulsosDoVice(playerParty, state.governo.vice.id) : []
+  for (const b of [...impulsosDoPartido(playerParty, difficulty), ...vicePosse, ...promiseSideBoosts(promises, playerParty)]) {
     const g = state.groups[b.group]
     g.memory.push({ label: b.label, value: b.value })
     g.approval = computeApproval(g)

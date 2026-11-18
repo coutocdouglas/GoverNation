@@ -75,8 +75,11 @@ export const CONGRESS = {
 type Weights = Record<'wAffinity' | 'wRelation' | 'wOrientation' | 'wPopularity' | 'wApproval' | 'wFavors' | 'statusQuo' | 'pecResistance' | 'noise' | 'abstainBand' | 'absentRate' | 'lean', number>
 const W_OF: Record<House, Weights> = { camara: CONGRESS, senado: SENADO }
 
+export { bancadas, bancadasDaDificuldade } from './bancadas'
+import { bancadas, bancadasDaDificuldade } from './bancadas'
+
 /** Bancada de cada partido na casa. */
-export const seatsIn = (house: House, party: PartyId) => (house === 'senado' ? SENATE_SEATS[party] : PARTY_BY_ID[party].seats)
+export const seatsIn = (s: Pick<GameState, 'congress'>, house: House, party: PartyId) => (house === 'senado' ? SENATE_SEATS[party] : bancadas(s)[party])
 export const houseSeats = (house: House) => (house === 'senado' ? SENADO.seats : CONGRESS.seats)
 const membersOf = (c: CongressState, house: House) => (house === 'senado' ? c.senate.senators : c.deputies)
 
@@ -90,17 +93,18 @@ function startingRelation(party: PartyId, player: PartyId): number {
   return clamp(62 - dist * 0.35 + a.fisiologismo * 14, 10, 80)
 }
 
-export function initialCongress(player: PartyId, seed: number): CongressState {
+export function initialCongress(player: PartyId, seed: number, difficulty: GameState['difficulty'] = 'normal'): CongressState {
   const rng = new Rng(seed ^ 0x5eed)
   const gauss = () => {
     const u = Math.max(1e-9, rng.next())
     return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * rng.next())
   }
   const deputies: Deputy[] = []
+  const tam = bancadasDaDificuldade(difficulty, player)
   for (const p of PARTIES) {
-    for (let i = 0; i < p.seats; i++) {
+    for (let i = 0; i < tam[p.id]; i++) {
       // Etapa 2: cada deputado é de uma das 3 alas, com posição e disciplina deslocadas pela ala.
-      const ala = alaByIndex(p.id, i, p.seats)
+      const ala = alaByIndex(p.id, i, tam[p.id])
       const a = ALAS[p.id][ala]
       deputies.push({
         party: p.id,
@@ -418,7 +422,7 @@ function forecastWith(s: GameState, bill: BillDef, boost: Partial<Record<PartyId
   const label = chance > 0.85 ? 'Fácil' : chance > 0.6 ? 'Provável' : chance > 0.35 ? 'Disputada' : chance > 0.1 ? 'Difícil' : 'Quase impossível'
   return {
     yes: Math.round(yes), no: Math.round(no), abstain: Math.round(abstain), needed, chance, label,
-    byParty: PARTIES.map((p) => ({ party: p.id, yes: Math.round(byParty.get(p.id) ?? 0), no: Math.round(noByParty.get(p.id) ?? 0), seats: seatsIn(house, p.id), orientation: orient[p.id] })),
+    byParty: PARTIES.map((p) => ({ party: p.id, yes: Math.round(byParty.get(p.id) ?? 0), no: Math.round(noByParty.get(p.id) ?? 0), seats: seatsIn(s, house, p.id), orientation: orient[p.id] })),
   }
 }
 

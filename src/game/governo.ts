@@ -8,10 +8,10 @@
  * - O líder do governo dá um reforço pequeno à base (competência x lealdade); lealdade baixa pode virar traição.
  * - Lealdade, ambição e competência são ocultas: a tela só mostra pistas em palavras.
  */
+import { disposicaoVice } from './posse'
 import { baseMembers, fidelityOf } from './base'
 import { CAMARA } from './data/camara'
 import { GOVERNO, LIDERES, propostaBlockedReason, LIDER_BY_ID, VICES, VICE_BY_ID, governoLigado, type AcaoVice, type LiderPerfil, type VicePerfil } from './data/governo'
-import { PARTY_BY_ID } from './data/parties'
 import { overallApproval } from './groups'
 import { clamp } from './ideology'
 import { absMonth, addBio, addChronicle } from './memory'
@@ -65,23 +65,12 @@ function hashSeed(seed: string | number): number {
   return h >>> 0
 }
 
-/** Partidos próximos têm afinidade perto de 1; opostos, perto de 0. */
-export function afinidadePartidos(a: PartyId, b: PartyId): number {
-  const pa = PARTY_BY_ID[a], pb = PARTY_BY_ID[b]
-  const dist = Math.hypot(pa.econ - pb.econ, pa.costumes - pb.costumes)
-  return clamp(1 - dist / 200, 0, 1)
-}
-
-/** Peso de cada nome proposto no sorteio de quem aceita (quanto maior, mais provável). */
+/** Peso de cada nome proposto no sorteio de quem aceita (quanto maior, mais provável). v0.48.0: é a disposição de aceitar, que a tela mostra. */
 export function pesosDaProposta(playerParty: PartyId, propostos: string[]): number[] {
-  const A = GOVERNO.vice.aceita
-  return propostos.map((id) => {
-    const c = VICE_BY_ID[id]
-    return A.base + A.afinidade * afinidadePartidos(playerParty, c.party) + (c.party === playerParty ? A.mesmoPartido : 0)
-  })
+  return propostos.map((id) => disposicaoVice(playerParty, VICE_BY_ID[id].party) / 100)
 }
 
-/** Chance (0 a 1) de cada nome proposto ser quem aceita. Só para testes e relatórios: a tela não mostra. */
+/** Chance (0 a 1) de cada nome proposto ser quem aceita, entre os três propostos (v0.48.0: a tela mostra). */
 export function chancesDaProposta(playerParty: PartyId, propostos: string[]): number[] {
   const w = pesosDaProposta(playerParty, propostos)
   const t = w.reduce((a, x) => a + x, 0)

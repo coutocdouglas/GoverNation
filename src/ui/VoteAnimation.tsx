@@ -6,20 +6,20 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { BILL_BY_ID, INSTRUMENTS } from '../game/data/bills'
 import { PARTIES, PARTY_BY_ID } from '../game/data/parties'
 import { houseSeats, seatsIn } from '../game/congress'
-import type { PartyId, VoteRecord } from '../game/types'
+import type { GameState, PartyId, VoteRecord } from '../game/types'
 
 type Cell = 'y' | 'n' | 'a' | 'x'
 
 /** Voto de cada cadeira, partido a partido (da esquerda para a direita na economia). Câmara ou Senado (etapa 4C1). */
-function seatsOf(v: VoteRecord): { cells: Cell[]; party: PartyId[] } {
+function seatsOf(st: Pick<GameState, 'congress'>, v: VoteRecord): { cells: Cell[]; party: PartyId[] } {
   const cells: Cell[] = []
   const party: PartyId[] = []
   const house = v.house ?? 'camara'
-  const totalRest = PARTIES.reduce((a, p) => a + seatsIn(house, p.id) - v.byParty[p.id].yes - v.byParty[p.id].no, 0) || 1
+  const totalRest = PARTIES.reduce((a, p) => a + seatsIn(st, house, p.id) - v.byParty[p.id].yes - v.byParty[p.id].no, 0) || 1
   const abstShare = v.abstain / totalRest
   for (const p of [...PARTIES].sort((a, z) => a.econ - z.econ)) {
     const r = v.byParty[p.id]
-    const n = seatsIn(house, p.id)
+    const n = seatsIn(st, house, p.id)
     const rest = n - r.yes - r.no
     const abst = Math.round(rest * abstShare)
     for (let i = 0; i < n; i++) {
@@ -46,9 +46,10 @@ const DURATION = 4200
  * Painel eletrônico da Câmara (etapa 4B): os votos acendem um a um, o placar corre e,
  * no fim, o carimbo de aprovado ou rejeitado. Dá para pular.
  */
-export function VoteAnimation({ vote, index, total, onNext, nextLabel, chain }: {
+export function VoteAnimation({ state, vote, index, total, onNext, nextLabel, chain }: {
   /** Etapa 2B: posição na corrente de janelas do dia. */
   chain?: ChainInfo | null
+  state: Pick<GameState, 'congress'>
   vote: VoteRecord
   index: number
   total: number
@@ -59,7 +60,7 @@ export function VoteAnimation({ vote, index, total, onNext, nextLabel, chain }: 
   const veto = vote.kind === 'veto'
   const senado = vote.house === 'senado'
   const total_ = houseSeats(senado ? 'senado' : 'camara')
-  const { cells, party } = useMemo(() => seatsOf(vote), [vote])
+  const { cells, party } = useMemo(() => seatsOf(state, vote), [state, vote])
   const order = useMemo(() => revealOrder(cells.length, `${vote.bill}-${vote.month}`), [cells.length, vote.bill, vote.month])
   const [shown, setShown] = useState(0)
   const raf = useRef(0)
@@ -89,7 +90,7 @@ export function VoteAnimation({ vote, index, total, onNext, nextLabel, chain }: 
   const koText = veto ? 'VETO MANTIDO' : 'REJEITADO'
   const good = veto ? !vote.approved : vote.approved
 
-  const byParty = [...PARTIES].filter((p) => seatsIn(vote.house ?? 'camara', p.id) > 0).sort((a, z) => seatsIn(vote.house ?? 'camara', z.id) - seatsIn(vote.house ?? 'camara', a.id)).map((p) => {
+  const byParty = [...PARTIES].filter((p) => seatsIn(state, vote.house ?? 'camara', p.id) > 0).sort((a, z) => seatsIn(state, vote.house ?? 'camara', z.id) - seatsIn(state, vote.house ?? 'camara', a.id)).map((p) => {
     let y = 0, n = 0
     cells.forEach((c, i) => { if (party[i] === p.id && visible.has(i)) { if (c === 'y') y++; else if (c === 'n') n++ } })
     return { p, y, n }

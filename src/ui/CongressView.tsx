@@ -1,3 +1,4 @@
+import { bancadas } from '../game/bancadas'
 import { useMemo } from 'react'
 import { PartyLogo } from './PartyLogo'
 import { articulationBlockedReason, CONGRESS, forecastSenate, forecastVote, houseSeats, isRecess, senatePending } from '../game/congress'
@@ -23,7 +24,7 @@ const relationLabel = (r: number) =>
 const emendasBillions = Math.round((CONGRESS.emendasCost / 100) * GDP_BILLIONS * (CONGRESS.emendasMonths / 12) * 10) / 10
 
 /** Cadeiras do plenário em semicírculo, da esquerda para a direita por posição econômica. */
-function useHemicycle() {
+function useHemicycle(tam: Record<PartyId, number>) {
   return useMemo(() => {
     const rows = 10
     const r0 = 70
@@ -43,9 +44,9 @@ function useHemicycle() {
     seats.sort((p, q) => q.a - p.a)
     const order = [...PARTIES].sort((p, q) => p.econ - q.econ)
     const colors: string[] = []
-    for (const p of order) for (let i = 0; i < p.seats; i++) colors.push(p.color)
+    for (const p of order) for (let i = 0; i < tam[p.id]; i++) colors.push(p.color)
     return seats.map((s, i) => ({ ...s, color: colors[i] }))
-  }, [])
+  }, [tam])
 }
 
 export function CongressView({ state, articulations, onToggle, bill, extraBill, deals, onNegotiate, plan, sanctions, onSanction, onReaction, onState, onToast }: {
@@ -64,13 +65,14 @@ export function CongressView({ state, articulations, onToggle, bill, extraBill, 
   onState?: (s: GameState) => void
   onToast?: (t: string) => void
 }) {
-  const seats = useHemicycle()
+  const tam = bancadas(state)
+  const seats = useHemicycle(tam)
   const toast = onToast ?? (() => {})
   const c = state.congress
   const left = CONGRESS.articulationsPerMonth - articulations.length
   const watching: BillId[] = [...new Set([...(bill ? [bill] : []), ...(extraBill ? [extraBill] : []), ...c.pending.map((p) => p.id), ...c.senate.pending.map((p) => p.id)])].filter((id) => BILL_BY_ID[id].instrument !== 'decreto')
   const order = [...PARTIES].sort((a, b) => c.parties[b.id].relation - c.parties[a.id].relation)
-  const allies = PARTIES.filter((p) => c.parties[p.id].relation >= 50).reduce((a, p) => a + p.seats, 0)
+  const allies = PARTIES.filter((p) => c.parties[p.id].relation >= 50).reduce((a, p) => a + tam[p.id], 0)
 
   return (
     <div className="pn-col">
@@ -89,7 +91,7 @@ export function CongressView({ state, articulations, onToggle, bill, extraBill, 
             </p>
             <div className="pn-legend">
               {[...PARTIES].sort((a, b) => a.econ - b.econ).map((p) => (
-                <span key={p.id}><i style={{ background: p.color }} />{p.sigla} {p.seats}</span>
+                <span key={p.id}><i style={{ background: p.color }} />{p.sigla} {tam[p.id]}</span>
               ))}
             </div>
             <p className="pn-hint" style={{ marginTop: 10 }}>⬅️ estatistas · liberais ➡️</p>
@@ -149,7 +151,7 @@ export function CongressView({ state, articulations, onToggle, bill, extraBill, 
                 <div className="pn-party__head">
                   <Portrait name={leaderOf(state, p.id).name} feminine={leaderOf(state, p.id).feminine} color={p.color} size={52} title={`${leaderOf(state, p.id).name}, líder do ${p.sigla}`} />
                   <b>{p.sigla}</b> <span className="pn-hint" style={{ margin: 0 }}>{p.name}</span>
-                  <span className="pn-party__seats">{p.seats} 🪑</span>
+                  <span className="pn-party__seats">{tam[p.id]} 🪑</span>
                   <PartyLogo party={p.id} size={44} />
                 </div>
                 <div className="pn-hint" style={{ margin: '2px 0 6px' }}>👤 Líder: <b>{leaderOf(state, p.id).name}</b> ({LEADER_STYLE[leaderOf(state, p.id).style].icon} {LEADER_STYLE[leaderOf(state, p.id).style].label.toLowerCase()}). {own ? '⭐ Seu partido. ' : ''}{p.blurb}</div>

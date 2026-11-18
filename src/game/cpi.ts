@@ -5,6 +5,7 @@
  * preside e relata) → uma oitiva por mês → relatório: aprovado, rejeitado (pizza) ou paralelo.
  * A CPI não condena: indicia, manda o relatório à PF e deixa registro para o impeachment (Etapa 6).
  */
+import { bancadas } from './bancadas'
 import { baseCounts, baseMembers, fidelityOf } from './base'
 import { advogadoAtual, casoPorId, casosAbertos, envolvePresidente, hitTodos, type Caso } from './caso'
 import { bumpScandal } from './causas'
@@ -106,7 +107,7 @@ export function apoioDaBancada(s: GameState, party: PartyId, c: Pick<Caso, 'grav
 
 /** Quantas assinaturas o requerimento pode alcançar agora (antes das retiradas). */
 export const potencialAssinaturas = (s: GameState, c: Pick<Caso, 'gravidade' | 'presidente' | 'delacao' | 'oculto'>) =>
-  Math.round(PARTIES.reduce((a, p) => a + p.seats * apoioDaBancada(s, p.id, c), 0))
+  Math.round(PARTIES.reduce((a, p) => a + bancadas(s)[p.id] * apoioDaBancada(s, p.id, c), 0))
 
 /** Fatia fiel da base na Câmara define o tom, e o tom define quem preside e relata. */
 export function tomDaCpi(s: GameState): TomCpi {
@@ -116,13 +117,13 @@ export function tomDaCpi(s: GameState): TomCpi {
 
 function maiorDaBase(s: GameState): PartyId {
   const ps = [s.playerParty, ...baseMembers(s).map((m) => m.party)]
-  return ps.reduce((a, b) => (PARTY_BY_ID[b].seats > PARTY_BY_ID[a].seats ? b : a))
+  return ps.reduce((a, b) => (bancadas(s)[b] > bancadas(s)[a] ? b : a))
 }
 
 function maiorDaOposicao(s: GameState): PartyId {
   const lado = ladoOposicao(s)
   if (lado.length) return lado[0]
-  return PARTIES.filter((p) => p.id !== s.playerParty).reduce((a, b) => (b.seats > a.seats ? b : a)).id
+  return PARTIES.filter((p) => p.id !== s.playerParty).reduce((a, b) => (bancadas(s)[b.id] > bancadas(s)[a.id] ? b : a)).id
 }
 
 /** Motivo pelo qual a ação não vale agora, ou null. */

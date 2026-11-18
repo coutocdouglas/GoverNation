@@ -4,6 +4,7 @@
  * todo fevereiro, traidores no placar e a eleição da Mesa da Câmara (fevereiro de 2027 e de 2029).
  * Regras e números em data/alas.ts; aqui só a mecânica.
  */
+import { bancadas } from './bancadas'
 import { ALAS, LEADER_STYLE, MESA, PARTIDOS, type LeaderStyle } from './data/alas'
 import { CAMARA } from './data/camara'
 import { PARTIES, PARTY_BY_ID } from './data/parties'
@@ -95,10 +96,12 @@ export function ensureAlas(c: CongressState): void {
     ps.leader ??= 0
   }
   const count = {} as Record<PartyId, number>
+  const tam = {} as Record<PartyId, number>
+  for (const d of c.deputies) tam[d.party] = (tam[d.party] ?? 0) + 1
   for (const d of c.deputies) {
     const i = count[d.party] ?? 0
     count[d.party] = i + 1
-    d.ala ??= alaByIndex(d.party, i, PARTY_BY_ID[d.party].seats)
+    d.ala ??= alaByIndex(d.party, i, tam[d.party])
   }
 }
 
@@ -218,7 +221,7 @@ export function noteTraitors(s: GameState, v: VoteRecord, byAla: Partial<Record<
   if (v.house === 'senado') return
   for (const p of PARTIES) {
     const n = v.traitors?.[p.id] ?? 0
-    if (n < PARTIDOS.traitorNews.min || n < p.seats * PARTIDOS.traitorNews.share) continue
+    if (n < PARTIDOS.traitorNews.min || n < bancadas(s)[p.id] * PARTIDOS.traitorNews.share) continue
     const o = v.orient?.[p.id]
     headlines.push({ text: `Racha no ${p.sigla}: ${n} deputados traem a orientação ${o === 1 ? 'pelo sim' : 'pelo não'} em “${billName}”`, tone: 'neutral' })
     addBio(s, leaderOf(s, p.id).name, `Viu ${n} deputados do ${p.sigla} votarem contra a orientação em “${billName}”.`)

@@ -14,8 +14,7 @@ export const GOVERNO = {
   vice: {
     /** Quantos nomes o jogador propõe na posse. */
     propostas: 3,
-    /** Chance relativa de aceitar: base + afinidade ideológica do partido; o mesmo partido do presidente pesa mais. */
-    aceita: { base: 0.25, afinidade: 0.75, mesmoPartido: 0.6 },
+    /** v0.48.0: a chance de aceitar saiu daqui e virou a disposição de `data/posse.ts` (POSSE.vice). */
     /** Fração do reforço de um ministério que o partido do vice dá ao governo (vezes uma curva da lealdade). */
     parcial: 0.5,
     /** Curva da lealdade no reforço: 0,5 + lealdade/100 (de 0,5 a 1,5). */

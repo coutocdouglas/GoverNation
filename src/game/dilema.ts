@@ -6,12 +6,12 @@
  * um a cada `DILEMA.intervalo` meses), o partido aliado do texto, a semente do custo que volta e o registro na Ficha.
  * Números e textos em data/dilemas.ts.
  */
+import { bancadas } from './bancadas'
 import { baseMembers } from './base'
 import { DILEMA, DILEMAS } from './data/dilemas'
 import { REPUTACAO } from './data/marks'
 import type { EventDef, EventOption } from './data/events'
 import { membrosCirculo, type MembroCirculo } from './circulo'
-import { PARTY_BY_ID } from './data/parties'
 import { billStage } from './events'
 import { viceDef } from './governo'
 import { absMonth, addChronicle, yearOf } from './memory'
@@ -63,7 +63,7 @@ export function aliadoDe(s: GameState): PartyId {
     vice = undefined
   }
   if (vice && vice !== s.playerParty) return vice
-  const base = baseMembers(s).map((m) => m.party).sort((a, b) => PARTY_BY_ID[b].seats - PARTY_BY_ID[a].seats)
+  const base = baseMembers(s).map((m) => m.party).sort((a, b) => bancadas(s)[b] - bancadas(s)[a])
   return base[0] ?? s.playerParty
 }
 

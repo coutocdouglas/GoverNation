@@ -43,6 +43,8 @@ export interface GroupDef {
   herda: Partial<Record<LegacyGroupId, number>>
   /** v0.46: reação a costumes, de -1 (progressista) a +1 (conservador); medida de costumes mexe com o grupo. */
   costumes: number
+  /** v0.48.0: lado econômico, de -1 (quer Estado e gasto social) a +1 (quer mercado livre); pesa na identidade do partido na posse. */
+  economia: number
   /** v0.46: partidos de que o grupo é base (vota com eles). */
   partidos: PartyId[]
 }
@@ -71,42 +73,42 @@ const LEGADO: Record<LegacyGroupId, { base: number; cares: string; sensitivity: 
 
 const BRUTOS: Bruto[] = [
   // Trabalho e renda
-  { id: 'baixaRenda', name: 'Periferia e informais', tamanho: 9, bloco: 'trabalho', herda: { baixaRenda: 1 }, costumes: 0.1, partidos: ['fpt', 'psn'] },
-  { id: 'classeMedia', name: 'Classe média urbana', tamanho: 7.5, bloco: 'trabalho', herda: { classeMedia: 1 }, costumes: 0.1, partidos: ['pol', 'mdn'] },
-  { id: 'trabalhadores', name: 'Trabalhadores formais', tamanho: 7, bloco: 'trabalho', herda: { trabalhadores: 1 }, costumes: 0, partidos: ['fpt'] },
-  { id: 'aposentados', name: 'Aposentados', tamanho: 6.5, bloco: 'trabalho', herda: { baixaRenda: 0.5, classeMedia: 0.5 }, costumes: 0.3, partidos: ['mdn'], cares: 'benefício em dia, remédio, inflação', sensitivity: { inflation: -4, unemployment: -0.5 } },
-  { id: 'empreendedores', name: 'Pequenos empreendedores', tamanho: 4.5, bloco: 'trabalho', herda: { classeMedia: 0.5, empresarios: 0.5 }, costumes: 0.3, partidos: ['pol', 'pra'], cares: 'imposto simples, crédito, burocracia' },
-  { id: 'servidores', name: 'Servidores públicos', tamanho: 3.2, bloco: 'trabalho', herda: { servidores: 1 }, costumes: 0, partidos: ['fpt'] },
-  { id: 'sindicalistas', name: 'Sindicalistas', tamanho: 2.6, bloco: 'trabalho', herda: { trabalhadores: 1 }, costumes: -0.3, partidos: ['fpt', 'pvs'], cares: 'direitos, salário mínimo, emprego formal' },
-  { id: 'professores', name: 'Professores', tamanho: 2.5, bloco: 'trabalho', herda: { servidores: 0.7, classeMedia: 0.3 }, costumes: -0.3, partidos: ['fpt'], cares: 'piso salarial, escola pública, carreira' },
-  { id: 'aplicativos', name: 'Trabalhadores de aplicativo', tamanho: 2.3, bloco: 'trabalho', herda: { baixaRenda: 0.5, jovens: 0.5 }, costumes: 0.2, partidos: [], cares: 'ganho por corrida, combustível, liberdade de horário', sensitivity: { inflation: -3, unemployment: -2, growth: 1 } },
-  { id: 'profSaude', name: 'Profissionais da saúde', tamanho: 1.9, bloco: 'trabalho', herda: { servidores: 0.6, classeMedia: 0.4 }, costumes: -0.1, partidos: ['mdn'], cares: 'piso salarial, SUS, condições de trabalho' },
-  { id: 'policiais', name: 'Policiais', tamanho: 1.7, bloco: 'trabalho', herda: { servidores: 0.6, classeMedia: 0.4 }, costumes: 0.6, partidos: ['mrb', 'pol'], cares: 'segurança, equipamento, salário, respaldo' },
-  { id: 'caminhoneiros', name: 'Caminhoneiros', tamanho: 1.5, bloco: 'trabalho', herda: { agro: 0.5, trabalhadores: 0.5 }, costumes: 0.5, partidos: ['pol'], cares: 'diesel, frete, estradas', sensitivity: { inflation: -2.5, growth: 1.5, fx: -1 } },
+  { id: 'baixaRenda', name: 'Periferia e informais', tamanho: 9, bloco: 'trabalho', herda: { baixaRenda: 1 }, costumes: 0.1, economia: -0.6, partidos: ['fpt', 'psn'] },
+  { id: 'classeMedia', name: 'Classe média urbana', tamanho: 7.5, bloco: 'trabalho', herda: { classeMedia: 1 }, costumes: 0.1, economia: 0.3, partidos: ['pol', 'mdn'] },
+  { id: 'trabalhadores', name: 'Trabalhadores formais', tamanho: 7, bloco: 'trabalho', herda: { trabalhadores: 1 }, costumes: 0, economia: -0.4, partidos: ['fpt'] },
+  { id: 'aposentados', name: 'Aposentados', tamanho: 6.5, bloco: 'trabalho', herda: { baixaRenda: 0.5, classeMedia: 0.5 }, costumes: 0.3, economia: -0.2, partidos: ['mdn'], cares: 'benefício em dia, remédio, inflação', sensitivity: { inflation: -4, unemployment: -0.5 } },
+  { id: 'empreendedores', name: 'Pequenos empreendedores', tamanho: 4.5, bloco: 'trabalho', herda: { classeMedia: 0.5, empresarios: 0.5 }, costumes: 0.3, economia: 0.6, partidos: ['pol', 'pra'], cares: 'imposto simples, crédito, burocracia' },
+  { id: 'servidores', name: 'Servidores públicos', tamanho: 3.2, bloco: 'trabalho', herda: { servidores: 1 }, costumes: 0, economia: -0.5, partidos: ['fpt'] },
+  { id: 'sindicalistas', name: 'Sindicalistas', tamanho: 2.6, bloco: 'trabalho', herda: { trabalhadores: 1 }, costumes: -0.3, economia: -0.9, partidos: ['fpt', 'pvs'], cares: 'direitos, salário mínimo, emprego formal' },
+  { id: 'professores', name: 'Professores', tamanho: 2.5, bloco: 'trabalho', herda: { servidores: 0.7, classeMedia: 0.3 }, costumes: -0.3, economia: -0.5, partidos: ['fpt'], cares: 'piso salarial, escola pública, carreira' },
+  { id: 'aplicativos', name: 'Trabalhadores de aplicativo', tamanho: 2.3, bloco: 'trabalho', herda: { baixaRenda: 0.5, jovens: 0.5 }, costumes: 0.2, economia: 0.1, partidos: [], cares: 'ganho por corrida, combustível, liberdade de horário', sensitivity: { inflation: -3, unemployment: -2, growth: 1 } },
+  { id: 'profSaude', name: 'Profissionais da saúde', tamanho: 1.9, bloco: 'trabalho', herda: { servidores: 0.6, classeMedia: 0.4 }, costumes: -0.1, economia: -0.3, partidos: ['mdn'], cares: 'piso salarial, SUS, condições de trabalho' },
+  { id: 'policiais', name: 'Policiais', tamanho: 1.7, bloco: 'trabalho', herda: { servidores: 0.6, classeMedia: 0.4 }, costumes: 0.6, economia: 0.3, partidos: ['mrb', 'pol'], cares: 'segurança, equipamento, salário, respaldo' },
+  { id: 'caminhoneiros', name: 'Caminhoneiros', tamanho: 1.5, bloco: 'trabalho', herda: { agro: 0.5, trabalhadores: 0.5 }, costumes: 0.5, economia: 0.3, partidos: ['pol'], cares: 'diesel, frete, estradas', sensitivity: { inflation: -2.5, growth: 1.5, fx: -1 } },
   // Fé
-  { id: 'evangelicos', name: 'Evangélicos', tamanho: 10.5, bloco: 'fe', herda: { baixaRenda: 0.6, classeMedia: 0.4 }, costumes: 1, partidos: ['mrb', 'pol'], cares: 'família, costumes, emprego' },
-  { id: 'catolicos', name: 'Católicos', tamanho: 9.5, bloco: 'fe', herda: { baixaRenda: 0.5, classeMedia: 0.5 }, costumes: 0.4, partidos: ['mdn'], cares: 'família, assistência social, paz' },
-  { id: 'afro', name: 'Religiões afro-brasileiras', tamanho: 1.1, bloco: 'fe', herda: { baixaRenda: 1 }, costumes: -0.7, partidos: ['pvs', 'fpt'], cares: 'liberdade religiosa, combate à intolerância' },
+  { id: 'evangelicos', name: 'Evangélicos', tamanho: 10.5, bloco: 'fe', herda: { baixaRenda: 0.6, classeMedia: 0.4 }, costumes: 1, economia: 0.1, partidos: ['mrb', 'pol'], cares: 'família, costumes, emprego' },
+  { id: 'catolicos', name: 'Católicos', tamanho: 9.5, bloco: 'fe', herda: { baixaRenda: 0.5, classeMedia: 0.5 }, costumes: 0.4, economia: 0, partidos: ['mdn'], cares: 'família, assistência social, paz' },
+  { id: 'afro', name: 'Religiões afro-brasileiras', tamanho: 1.1, bloco: 'fe', herda: { baixaRenda: 1 }, costumes: -0.7, economia: -0.3, partidos: ['pvs', 'fpt'], cares: 'liberdade religiosa, combate à intolerância' },
   // Campo e floresta
-  { id: 'agro', name: 'Agronegócio', tamanho: 3.4, bloco: 'campo', herda: { agro: 1 }, costumes: 0.6, partidos: ['ucd', 'pol'] },
-  { id: 'agriculturaFamiliar', name: 'Agricultura familiar', tamanho: 2.1, bloco: 'campo', herda: { agro: 0.4, baixaRenda: 0.6 }, costumes: 0.2, partidos: ['fpt'], cares: 'crédito barato, assistência técnica, preço justo' },
-  { id: 'tradicionais', name: 'Comunidades tradicionais', tamanho: 1.2, bloco: 'campo', herda: { baixaRenda: 1 }, costumes: -0.4, partidos: ['pvs'], cares: 'território, rios limpos, serviços básicos' },
-  { id: 'indigenas', name: 'Povos indígenas', tamanho: 0.7, bloco: 'campo', herda: { baixaRenda: 1 }, costumes: -0.6, partidos: ['pvs'], cares: 'demarcação, saúde indígena, floresta' },
+  { id: 'agro', name: 'Agronegócio', tamanho: 3.4, bloco: 'campo', herda: { agro: 1 }, costumes: 0.6, economia: 0.8, partidos: ['ucd', 'pol'] },
+  { id: 'agriculturaFamiliar', name: 'Agricultura familiar', tamanho: 2.1, bloco: 'campo', herda: { agro: 0.4, baixaRenda: 0.6 }, costumes: 0.2, economia: -0.3, partidos: ['fpt'], cares: 'crédito barato, assistência técnica, preço justo' },
+  { id: 'tradicionais', name: 'Comunidades tradicionais', tamanho: 1.2, bloco: 'campo', herda: { baixaRenda: 1 }, costumes: -0.4, economia: -0.5, partidos: ['pvs'], cares: 'território, rios limpos, serviços básicos' },
+  { id: 'indigenas', name: 'Povos indígenas', tamanho: 0.7, bloco: 'campo', herda: { baixaRenda: 1 }, costumes: -0.6, economia: -0.5, partidos: ['pvs'], cares: 'demarcação, saúde indígena, floresta' },
   // Identidade e causas
-  { id: 'jovens', name: 'Jovens', tamanho: 4.5, bloco: 'identidade', herda: { jovens: 1 }, costumes: -0.3, partidos: [] },
-  { id: 'mulheres', name: 'Mulheres', tamanho: 2.4, bloco: 'identidade', herda: { classeMedia: 0.4, baixaRenda: 0.4, jovens: 0.2 }, costumes: -0.4, partidos: ['fpt', 'pvs'], cares: 'segurança, creche, igualdade salarial' },
-  { id: 'negros', name: 'Movimento negro', tamanho: 2.3, bloco: 'identidade', herda: { baixaRenda: 0.7, jovens: 0.3 }, costumes: -0.6, partidos: ['fpt', 'pvs'], cares: 'combate ao racismo, cotas, segurança nas periferias' },
-  { id: 'universitarios', name: 'Universitários', tamanho: 1.9, bloco: 'identidade', herda: { jovens: 0.8, classeMedia: 0.2 }, costumes: -0.7, partidos: ['pvs'], cares: 'bolsas, universidade pública, emprego qualificado' },
-  { id: 'digital', name: 'Cultura digital', tamanho: 1.5, bloco: 'identidade', herda: { jovens: 1 }, costumes: 0, partidos: ['nrm'], cares: 'internet livre, jogos, liberdade de expressão' },
-  { id: 'ambientalistas', name: 'Ambientalistas', tamanho: 1.1, bloco: 'identidade', herda: { jovens: 0.5, classeMedia: 0.5 }, costumes: -0.8, partidos: ['pvs'], cares: 'desmatamento zero, clima, energia limpa' },
-  { id: 'lgbt', name: 'LGBT+', tamanho: 0.9, bloco: 'identidade', herda: { jovens: 0.6, classeMedia: 0.4 }, costumes: -1, partidos: ['pvs'], cares: 'direitos civis, combate à violência' },
-  { id: 'artistas', name: 'Artistas', tamanho: 0.7, bloco: 'identidade', herda: { classeMedia: 0.6, jovens: 0.4 }, costumes: -0.8, partidos: ['pvs', 'fpt'], cares: 'incentivo à cultura, liberdade de criação' },
+  { id: 'jovens', name: 'Jovens', tamanho: 4.5, bloco: 'identidade', herda: { jovens: 1 }, costumes: -0.3, economia: -0.2, partidos: [] },
+  { id: 'mulheres', name: 'Mulheres', tamanho: 2.4, bloco: 'identidade', herda: { classeMedia: 0.4, baixaRenda: 0.4, jovens: 0.2 }, costumes: -0.4, economia: -0.2, partidos: ['fpt', 'pvs'], cares: 'segurança, creche, igualdade salarial' },
+  { id: 'negros', name: 'Movimento negro', tamanho: 2.3, bloco: 'identidade', herda: { baixaRenda: 0.7, jovens: 0.3 }, costumes: -0.6, economia: -0.5, partidos: ['fpt', 'pvs'], cares: 'combate ao racismo, cotas, segurança nas periferias' },
+  { id: 'universitarios', name: 'Universitários', tamanho: 1.9, bloco: 'identidade', herda: { jovens: 0.8, classeMedia: 0.2 }, costumes: -0.7, economia: -0.3, partidos: ['pvs'], cares: 'bolsas, universidade pública, emprego qualificado' },
+  { id: 'digital', name: 'Cultura digital', tamanho: 1.5, bloco: 'identidade', herda: { jovens: 1 }, costumes: 0, economia: 0.1, partidos: ['nrm'], cares: 'internet livre, jogos, liberdade de expressão' },
+  { id: 'ambientalistas', name: 'Ambientalistas', tamanho: 1.1, bloco: 'identidade', herda: { jovens: 0.5, classeMedia: 0.5 }, costumes: -0.8, economia: -0.6, partidos: ['pvs'], cares: 'desmatamento zero, clima, energia limpa' },
+  { id: 'lgbt', name: 'LGBT+', tamanho: 0.9, bloco: 'identidade', herda: { jovens: 0.6, classeMedia: 0.4 }, costumes: -1, economia: -0.3, partidos: ['pvs'], cares: 'direitos civis, combate à violência' },
+  { id: 'artistas', name: 'Artistas', tamanho: 0.7, bloco: 'identidade', herda: { classeMedia: 0.6, jovens: 0.4 }, costumes: -0.8, economia: -0.4, partidos: ['pvs', 'fpt'], cares: 'incentivo à cultura, liberdade de criação' },
   // Capital e Estado
-  { id: 'empresarios', name: 'Empresários', tamanho: 2.8, bloco: 'capital', herda: { empresarios: 1 }, costumes: 0.4, partidos: ['pol', 'nrm'] },
-  { id: 'comerciarios', name: 'Comerciários e bancários', tamanho: 2.3, bloco: 'capital', herda: { trabalhadores: 0.6, classeMedia: 0.4 }, costumes: 0, partidos: ['mdn'], cares: 'emprego no comércio, juros, salário' },
-  { id: 'mercado', name: 'Mercado financeiro', tamanho: 1.5, bloco: 'capital', herda: { empresarios: 1 }, costumes: 0.2, partidos: ['nrm'], cares: 'contas públicas, juros, regras estáveis', sensitivity: { inflation: -1.5, growth: 1.5, confidence: 0.7, selic: 0.3 } },
-  { id: 'militares', name: 'Militares', tamanho: 1.5, bloco: 'capital', herda: { servidores: 0.5, classeMedia: 0.5 }, costumes: 0.8, partidos: ['pol', 'mrb'], cares: 'hierarquia, orçamento da defesa, previdência própria' },
-  { id: 'ciencia', name: 'Ciência e universidades', tamanho: 1, bloco: 'capital', herda: { servidores: 0.4, jovens: 0.3, classeMedia: 0.3 }, costumes: -0.5, partidos: ['pvs', 'nrm'], cares: 'verba de pesquisa, bolsas, autonomia' },
+  { id: 'empresarios', name: 'Empresários', tamanho: 2.8, bloco: 'capital', herda: { empresarios: 1 }, costumes: 0.4, economia: 0.9, partidos: ['pol', 'nrm'] },
+  { id: 'comerciarios', name: 'Comerciários e bancários', tamanho: 2.3, bloco: 'capital', herda: { trabalhadores: 0.6, classeMedia: 0.4 }, costumes: 0, economia: 0.3, partidos: ['mdn'], cares: 'emprego no comércio, juros, salário' },
+  { id: 'mercado', name: 'Mercado financeiro', tamanho: 1.5, bloco: 'capital', herda: { empresarios: 1 }, costumes: 0.2, economia: 1, partidos: ['nrm'], cares: 'contas públicas, juros, regras estáveis', sensitivity: { inflation: -1.5, growth: 1.5, confidence: 0.7, selic: 0.3 } },
+  { id: 'militares', name: 'Militares', tamanho: 1.5, bloco: 'capital', herda: { servidores: 0.5, classeMedia: 0.5 }, costumes: 0.8, economia: 0.4, partidos: ['pol', 'mrb'], cares: 'hierarquia, orçamento da defesa, previdência própria' },
+  { id: 'ciencia', name: 'Ciência e universidades', tamanho: 1, bloco: 'capital', herda: { servidores: 0.4, jovens: 0.3, classeMedia: 0.3 }, costumes: -0.5, economia: -0.2, partidos: ['pvs', 'nrm'], cares: 'verba de pesquisa, bolsas, autonomia' },
 ]
 
 const TOTAL = BRUTOS.reduce((a, g) => a + g.tamanho, 0)

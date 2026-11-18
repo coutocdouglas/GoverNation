@@ -9,6 +9,7 @@
  * - Registro: como cada partido votou cada medida do governo e quem isso agradou ou desagradou.
  * Os números estão em data/base.ts.
  */
+import { bancadas } from './bancadas'
 import { BASE, LINHA_VERMELHA, PACTO, PARTY_GROUP, PASTA_QUER, REGISTRO } from './data/base'
 import { BILL_BY_ID, GDP_BILLIONS } from './data/bills'
 import { GROUPS } from './data/groups'
@@ -59,7 +60,7 @@ export function baseBoost(s: Pick<GameState, 'congress' | 'cabinet' | 'month' | 
 
 /** Contadores "Base X · Fiel Y" de uma casa: seu partido mais a base; fiel pesa a fidelidade. */
 export function baseCounts(s: GameState, house: 'camara' | 'senado' = 'camara'): { base: number; fiel: number; total: number } {
-  const seats = (p: PartyId) => (house === 'senado' ? SENATE_SEATS[p] : PARTY_BY_ID[p].seats)
+  const seats = (p: PartyId) => (house === 'senado' ? SENATE_SEATS[p] : bancadas(s)[p])
   let base = seats(s.playerParty)
   let fiel = base
   for (const m of baseMembers(s)) {
@@ -193,7 +194,7 @@ export function stepBase(s: GameState, headlines: Headline[]): void {
   if (c.relatoria && c.relatoria.until <= s.month) delete c.relatoria
   const recent = (party: PartyId) => (c.dealLog ?? []).some((d) => d.party === party && s.month - d.month < BASE.renegotiateQuiet)
   for (const m of baseMembers(s)) {
-    if (m.via !== 'pasta' || PARTY_BY_ID[m.party].seats < BASE.renegotiateSeats || recent(m.party)) continue
+    if (m.via !== 'pasta' || bancadas(s)[m.party] < BASE.renegotiateSeats || recent(m.party)) continue
     const ps = c.parties[m.party]
     ps.fidelity = Math.max(0, fidelityOf(s, m.party) - BASE.renegotiateDrift)
   }
@@ -221,7 +222,7 @@ export interface Sondagem {
   emendasMes: number
 }
 
-export const pactEmendas = (party: PartyId) => PACTO.emendasPerSeat * PARTY_BY_ID[party].seats
+export const pactEmendas = (s: Pick<GameState, 'congress'>, party: PartyId) => PACTO.emendasPerSeat * bancadas(s)[party]
 
 /** Sondar é de graça: o partido diz o que quer, a linha vermelha e se topa um pacto. */
 export function sondar(s: GameState, party: PartyId, flagship: (s: GameState, p: PartyId) => BillId | null): Sondagem {
@@ -235,7 +236,7 @@ export function sondar(s: GameState, party: PartyId, flagship: (s: GameState, p:
   return {
     party, pastas: NOMINEE_BY_PARTY[party] ? PASTA_QUER[party] ?? [] : [], linha: LINHA_VERMELHA[party], projeto: flagship(s, party),
     willing, why: willing ? `Topa: relação ${Math.round(rel)}${p.fisiologismo >= 0.5 ? ' e gosta de estar perto do governo' : ''}.` : `Ainda não topa: relação ${Math.round(rel)}, aprovação ${Math.round(appr)}%${others ? `, ${others} pacto${others > 1 ? 's' : ''} em vigor` : ''}. Faltam uns ${falta} pontos de relação. Converse antes ou espere a aprovação subir.`,
-    emendasMes: (pactEmendas(party) / 100) * GDP_BILLIONS / 12,
+    emendasMes: (pactEmendas(s, party) / 100) * GDP_BILLIONS / 12,
   }
 }
 

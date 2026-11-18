@@ -254,7 +254,7 @@ export function applyDeals(ctx: RoundCtx, deals: Deal[]): void {
       ctx.conf.v += spend.pib * priceK * DEALS.emendasConfidence / 100
     }
     if (d.kind === 'emendas') {
-      const amount = emendasAmount(d.party, senado ? 'senado' : both ? 'ambas' : 'camara') * emendasFactor(d) * priceK
+      const amount = emendasAmount(s, d.party, senado ? 'senado' : both ? 'ambas' : 'camara') * emendasFactor(d) * priceK
       e.tempSpending.push({ label: `Emendas para o ${party.sigla}${where}`, amount, monthsLeft: DEALS.emendasMonths })
       // Etapa 2: o mercado vê o gasto na hora; o destino agrada o grupo ligado a ele.
       ctx.conf.v += amount * DEALS.emendasConfidence / 100
@@ -1221,7 +1221,7 @@ export function archiveStale(ctx: RoundCtx): void {
     if (p.priced) ctx.conf.v -= p.priced
     // Lote A2: avisa quanto foi pago nos acordos que se perdem com o arquivamento.
     const lost = [...(p.deals ?? []), ...(p.senateDeals ?? [])]
-    const paid = lost.reduce((sum, t) => sum + askMoney(t.kind, t.party, t.house === 'senado' ? 'senado' : 'camara', t), 0)
+    const paid = lost.reduce((sum, t) => sum + askMoney(s, t.kind, t.party, t.house === 'senado' ? 'senado' : 'camara', t), 0)
     const lostText = lost.length
       ? ` Os ${lost.length} ${lost.length === 1 ? 'acordo' : 'acordos'} fechados com ${[...new Set(lost.map((t) => PARTY_BY_ID[t.party].sigla))].join(', ')} se perdem${paid >= 1 ? ` (cerca de R$ ${Math.round(paid)} bi em acordos pagos; as emendas já liberadas continuam saindo)` : ''}.`
       : ''
@@ -1527,7 +1527,7 @@ export function responderPastaJogo(prev: GameState, acao: RespostaPasta): GameSt
     ps.fidelity = Math.min(100, fidelityOf(s, j.party) + R.renegociar.fidelidade)
     ps.relation = Math.min(100, ps.relation + R.renegociar.relacao)
     s.ministries[j.area].wear = Math.max(0, s.ministries[j.area].wear + R.renegociar.desgaste)
-    s.economy.tempSpending.push({ label: `Emendas para o ${p.sigla} (pasta de ${pasta})`, amount: emendasAmount(j.party, 'camara'), monthsLeft: DEALS.emendasMonths })
+    s.economy.tempSpending.push({ label: `Emendas para o ${p.sigla} (pasta de ${pasta})`, amount: emendasAmount(s, j.party, 'camara'), monthsLeft: DEALS.emendasMonths })
     ctx.round.dealsDone = (ctx.round.dealsDone ?? 0) + R.renegociar.conversas
     ctx.taken.push(`Renegociou com o ${p.sigla} a pasta de ${pasta}`)
     ctx.headlines.push({ text: `Governo renegocia com o ${p.sigla} e mantém a pasta de ${pasta}`, tone: 'neutral' })
