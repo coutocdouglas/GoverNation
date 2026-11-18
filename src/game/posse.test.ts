@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { PARTIES, TOTAL_SEATS } from './data/parties'
-import { GROUPS } from './data/groups'
+import { BLOCOS, GROUPS, GROUP_BY_ID } from './data/groups'
+import { HABITS, PROFILE_BY_ID, TRAITS } from './data/profile'
 import { VICES } from './data/governo'
 import { bancadas, bancadasDaDificuldade } from './bancadas'
 import { bonusVice, disposicaoVice, gruposBase, identidadePartido, impulsosDoPartido, impulsosDoVice, vantagemPequeno } from './posse'
@@ -120,5 +121,33 @@ describe('v0.48.0: chance e bônus do vice', () => {
     for (const g of grupos) expect(s.groups[g].memory.some((m) => m.label.startsWith('Vice de fora'))).toBe(true)
     const semProposta = newGame('Teste', 'normal', 9, 'pol')
     expect(GROUPS.some((g) => semProposta.groups[g.id].memory.some((m) => m.label.startsWith('Vice de fora')))).toBe(false)
+  })
+})
+
+describe('v0.48.1: perfil pelos 5 blocos', () => {
+  it('14 traços e 14 hábitos, com os ids antigos ainda valendo (saves)', () => {
+    expect(TRAITS).toHaveLength(14)
+    expect(HABITS).toHaveLength(14)
+    for (const id of ['conciliador', 'combativo', 'tecnico', 'carismatico', 'austero', 'genteComoAGente', 'linhaDura', 'servidorDeCarreira', 'pelada', 'feira', 'pescaria', 'corrida', 'lives', 'viola', 'leitorEconomia', 'horta']) {
+      expect(PROFILE_BY_ID[id]).toBeDefined()
+    }
+  })
+
+  it('cada bloco tem ao menos dois traços e dois hábitos', () => {
+    for (const b of BLOCOS) {
+      expect(TRAITS.filter((t) => t.bloco === b.id).length).toBeGreaterThanOrEqual(2)
+      expect(HABITS.filter((t) => t.bloco === b.id).length).toBeGreaterThanOrEqual(2)
+    }
+  })
+
+  it('todo item tem quem ganha e quem perde, e nenhum vira atalho na aprovação geral', () => {
+    for (const it of [...TRAITS, ...HABITS]) {
+      const vs = Object.entries(it.groups)
+      for (const [g] of vs) expect(GROUP_BY_ID[g as keyof typeof GROUP_BY_ID]).toBeDefined()
+      expect(vs.some(([, v]) => v! > 0)).toBe(true)
+      expect(vs.some(([, v]) => v! < 0)).toBe(true)
+      const saldo = vs.reduce((a, [g, v]) => a + GROUP_BY_ID[g as keyof typeof GROUP_BY_ID].weight * v!, 0)
+      expect(Math.abs(saldo)).toBeLessThanOrEqual(0.15)
+    }
   })
 })

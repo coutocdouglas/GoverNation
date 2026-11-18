@@ -1,5 +1,13 @@
 # Novidades
 
+## 0.48.1 (17/11/2026)
+- **Novo mandato, parte 2: o perfil do presidente pelos 5 blocos da sociedade.** O passo Perfil agora tem 14 traços e 14 hábitos (eram 8 e 8), cada um ligado a um bloco (Trabalho e renda, Fé, Campo e floresta, Identidade e causas, Capital e Estado), com um filtro por bloco em cada lista.
+  - **Traços novos:** Religioso praticante, Ecumênico, Filho do campo, Voz da floresta, Militante histórico e Acadêmico.
+  - **Hábitos novos:** Boleia de caminhão, Culto de domingo, Missa das sete, Festa no terreiro, Batalha de rima e Café com a bancada.
+  - **Efeito nos 32 grupos:** os traços e hábitos de antes também passaram a falar com os grupos novos (o Técnico agrada o mercado e a ciência, o Linha dura os policiais e os militares, o Carismático a cultura digital, e assim por diante).
+  - **Sem atalho:** todo item tem quem ganha e quem perde, e nenhum mexe mais de 0,15 ponto na aprovação geral. O "Religioso praticante" foi aparado porque evangélicos e católicos são grupos muito grandes.
+- Sem mudança no save (45). Quem já está num mandato com um traço ou hábito antigo passa a sentir o efeito novo dele, aos poucos (o ajuste é pequeno). 805 testes (3 novos). `npm run simposse` mostra o saldo de cada item. Conferido no navegador em 1366×768 e 1920×1080, com posse e um mês jogado.
+
 ## 0.48.0 (17/11/2026)
 - **Novo mandato redesenhado, parte 1: candidato e vice (reforma do Novo mandato, protótipo v6 aprovado).** A tela de começo de jogo foi refeita no desenho aprovado, com o rosto em moldura redonda e um painel com os 32 grupos.
   - **Os 9 partidos podem ser escolhidos**, em três colunas (Esquerda, Centro, Direita). Cada cartão mostra a bancada e, ao clicar, abre o **dossiê do partido**: história, por que se alinha assim, forças, fraquezas, aliados e oposição (com os logos) e os grupos que são base dele.

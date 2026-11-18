@@ -153,6 +153,14 @@
 .nm-opt.on { border-color: var(--gold); background: color-mix(in srgb, var(--gold) 9%, var(--well)); }
 .nm-opt:disabled { opacity: .4; }
 .nm-fx { display: flex; flex-wrap: wrap; gap: 2px 8px; font-size: .68rem; }
+.nm-cats { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 9px; }
+.nm-cats button { font-size: .72rem; border: 1px solid var(--line); background: none; border-radius: 999px; padding: 3px 11px; color: var(--muted); font-weight: 600; text-align: center; }
+.nm-cats button.on { background: var(--text); color: var(--bg); border-color: var(--text); }
+.nm-cat-tag { font-size: .6rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+.nm-s2 .nm-pgrid { max-height: calc(100% - 62px); grid-template-columns: repeat(3, 1fr); }
+.nm-s2 .nm-opt { padding: 7px 10px; gap: 2px; }
+.nm-s2 .nm-opt p { font-size: .66rem; line-height: 1.2; }
+.nm-s2 .nm-fx { font-size: .64rem; }
 .nm-side { font-size: .64rem; color: var(--muted); margin-top: auto; } .nm-side.mine { color: var(--gold); }
 
 /* passo 3: vices em linhas */

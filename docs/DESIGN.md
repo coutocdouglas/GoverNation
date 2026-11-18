@@ -1508,3 +1508,11 @@ Liga `REQUERIMENTO.ativo`. Com o bloco ligado, `sortearRequerimento` ocupa o lug
 - **Tela:** passo 1 (rosto, nome, dificuldade, os 9 partidos em 3 colunas, dossiê em janela de vidro, barra da Câmara), passo 2 e 4 no novo visual (conteúdo novo nas v0.48.1 e v0.48.2), passo 3 (vices em linhas por partido com disposição e bônus; proposta com a chance de cada um). Painel dos 32 grupos em 5 blocos com o porquê. Escala: zoom = mín(largura/1920, altura/1080), entre 0,5 e 2. Dossiê em `data/dossie.ts`.
 - **Balanceamento (`npm run simposse`):** aprovação inicial igual entre os partidos (Normal 54,2 a 54,7; o pequeno ganha até +0,5); 12 meses sem jogar terminam entre 35,8 e 36,5 para todos.
 - Sem mudança no save (45).
+
+### 27.51 Reforma do Novo mandato, parte 2: perfil pelos 5 blocos (v0.48.1)
+**Plano aprovado pelo Douglas (17/11/2026).** Dados em `src/game/data/profile.ts`; tela no passo 2 de `src/ui/NovoMandato.tsx`.
+- **Itens:** 14 traços e 14 hábitos (`ProfileItemDef.bloco`), ao menos 2 de cada por bloco. Os 16 ids antigos continuam (saves); os novos são `devoto`, `ecumenico`, `ruralista`, `verde`, `militante`, `academico`, `estrada`, `culto`, `missa`, `terreiro`, `batalha`, `bastidor`. Limite de escolha igual (2 e 2).
+- **Efeito:** o mesmo ajuste permanente de antes (`profileOffsets`), agora escrito para os 32 grupos. Os itens antigos ganharam efeito nos grupos novos; mandatos em andamento sentem a mudança aos poucos.
+- **Teste do atalho:** todo item tem ganho e perda, e o saldo ponderado pelo eleitorado (pontos × peso do grupo) fica entre −0,15 e +0,15 (teste em `posse.test.ts`; `npm run simposse` lista o saldo). Itens que falam a grupos grandes (fé) foram aparados.
+- **Tela:** filtro por bloco ("Todos" e os 5) em cada lista, etiqueta do bloco no cartão, três colunas para caber sem rolagem.
+- Sem mudança no save (45).

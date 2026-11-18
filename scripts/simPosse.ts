@@ -5,7 +5,8 @@
  * Rodar: npm run simposse
  */
 import { PARTIES } from '../src/game/data/parties'
-import { GROUPS } from '../src/game/data/groups'
+import { GROUPS, GROUP_BY_ID } from '../src/game/data/groups'
+import { PROFILE_ITEMS } from '../src/game/data/profile'
 import { VICES } from '../src/game/data/governo'
 import { bancadasDaDificuldade } from '../src/game/bancadas'
 import { disposicaoVice, identidadePartido, vantagemPequeno } from '../src/game/posse'
@@ -50,3 +51,9 @@ const linha = PARTIES.map((p) => {
   return `${p.sigla} ${overallApproval(s.groups).toFixed(1)}`
 })
 console.log(linha.join(' · '))
+
+console.log('\nPerfil (v0.48.1): saldo de cada item na aprovação geral (pontos × peso do grupo)')
+for (const it of PROFILE_ITEMS) {
+  const saldo = Object.entries(it.groups).reduce((a, [g, v]) => a + GROUP_BY_ID[g as keyof typeof GROUP_BY_ID].weight * (v as number), 0)
+  console.log(`${it.kind === 'traco' ? 'traço ' : 'hábito'} ${it.bloco.padEnd(10)} ${it.name.padEnd(22)} ${saldo >= 0 ? '+' : ''}${saldo.toFixed(2)}`)
+}

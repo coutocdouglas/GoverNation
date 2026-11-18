@@ -6,7 +6,7 @@ import { newGame } from '../game/game'
 import type { GameState, GroupId, PartyId } from '../game/types'
 import { castPortrait, PLAYER_POOL } from '../game/data/cast'
 import { PORTRAITS, portraitSrc } from '../game/data/portraits'
-import { BLOCOS, GROUPS, GROUP_BY_ID } from '../game/data/groups'
+import { BLOCOS, GROUPS, GROUP_BY_ID, type BlocoId } from '../game/data/groups'
 import { HABITS, MAX_HABITS, MAX_TRAITS, TRAITS, type ProfileItemDef } from '../game/data/profile'
 import { PROMISES, PROMISES_TO_PICK, SIDE_OF_PARTY } from '../game/data/promises'
 import { profileOffsets, promiseSideBoosts, type PosseChoices } from '../game/promises'
@@ -98,6 +98,8 @@ export function NovoMandato({ hasSave, onCancel, onStart }: {
   const [promises, setPromises] = useState<string[]>([])
   const [vices, setVices] = useState<string[]>([])
   const [dossie, setDossie] = useState<PartyId | null>(null)
+  const [catT, setCatT] = useState<BlocoId | 'todos'>('todos')
+  const [catH, setCatH] = useState<BlocoId | 'todos'>('todos')
 
   const cor = PARTY_BY_ID[party].color
   const bancadasJa = useMemo(() => bancadasDaDificuldade(diff, party), [diff, party])
@@ -312,13 +314,21 @@ export function NovoMandato({ hasSave, onCancel, onStart }: {
 
         {step === 2 && (
           <div className="nm-main nm-s2">
-            {([['Traços', TRAITS, traits, setTraits, MAX_TRAITS], ['Hábitos', HABITS, habits, setHabits, MAX_HABITS]] as const).map(([titulo, lista, sel, set, max]) => (
+            {([['Traços', TRAITS, traits, setTraits, MAX_TRAITS, catT, setCatT], ['Hábitos', HABITS, habits, setHabits, MAX_HABITS, catH, setCatH]] as const).map(([titulo, lista, sel, set, max, cat, setCat]) => (
               <div key={titulo} className="nm-card">
                 <div className="nm-lbl"><span>{titulo} · até {max}</span><span>{sel.length}/{max}</span></div>
+                <div className="nm-cats">
+                  {(['todos', ...BLOCOS.map((b) => b.id)] as const).map((c) => (
+                    <button key={c} className={cat === c ? 'on' : ''} onClick={() => setCat(c)}>
+                      {c === 'todos' ? 'Todos' : BLOCOS.find((b) => b.id === c)!.nome}
+                    </button>
+                  ))}
+                </div>
                 <div className="nm-pgrid">
-                  {lista.map((t) => (
+                  {lista.filter((t) => cat === 'todos' || t.bloco === cat || sel.includes(t.id)).map((t) => (
                     <button key={t.id} className={`nm-opt ${sel.includes(t.id) ? 'on' : ''}`} disabled={!sel.includes(t.id) && sel.length >= max}
                       onClick={() => toggle(sel as string[], set, t.id, max)}>
+                      <span className="nm-cat-tag">{BLOCOS.find((b) => b.id === t.bloco)!.nome}</span>
                       <b>{t.name}</b>
                       <p>{t.desc}</p>
                       <Efeitos groups={t.groups} />
